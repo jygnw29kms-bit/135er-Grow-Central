@@ -1,0 +1,205 @@
+name: Build Raspberry Pi 3B Test Image v2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/build-pi3-image-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
+      BASE_SHA256: acff736ca7945e3b305f07cda4abdb870910e12634991da69783611756e381b3
+      IMAGE_NAME: 135er_GrowControl_RPi3B_Test
+    steps:
+      - name: Checkout GrowControl
+        uses: actions/checkout@v4
+
+      - name: Install image build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils
+
+      - name: Download and verify Raspberry Pi OS Lite 64-bit
+        run: |
+          curl -L --fail --retry 5 --retry-delay 3 -o base.img.xz "$BASE_URL"
+          echo "$BASE_SHA256  base.img.xz" | sha256sum -c -
+          xz -dk base.img.xz
+          mv base.img work.img
+          truncate -s +2G work.img
+
+      - name: Customize image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ROOT=/mnt/growcontrol-root
+          sudo mkdir -p "$ROOT"
+          LOOP=$(sudo losetup --find --show --partscan work.img)
+          cleanup() {
+            set +e
+            sudo umount "$ROOT/dev/pts" 2>/dev/null
+            sudo umount "$ROOT/dev" 2>/dev/null
+            sudo umount "$ROOT/proc" 2>/dev/null
+            sudo umount "$ROOT/sys" 2>/dev/null
+            sudo umount "$ROOT/boot/firmware" 2>/dev/null
+            sudo umount "$ROOT" 2>/dev/null
+            sudo losetup -d "$LOOP" 2>/dev/null
+          }
+          trap cleanup EXIT
+
+          sudo growpart "$LOOP" 2
+          sudo e2fsck -fy "${LOOP}p2"
+          sudo resize2fs "${LOOP}p2"
+
+          sudo mount "${LOOP}p2" "$ROOT"
+          sudo mkdir -p "$ROOT/boot/firmware"
+          sudo mount "${LOOP}p1" "$ROOT/boot/firmware"
+
+          sudo mkdir -p "$ROOT/opt/135er-growcontrol"
+          sudo rsync -a --delete \
+            --exclude='.git' --exclude='.github' \
+            --exclude='base.img*' --exclude='work.img*' \
+            --exclude='*.img' --exclude='*.img.xz' \
+            ./ "$ROOT/opt/135er-growcontrol/"
+
+          sudo cp /usr/bin/qemu-aarch64-static "$ROOT/usr/bin/"
+          sudo mount --bind /dev "$ROOT/dev"
+          sudo mount --bind /dev/pts "$ROOT/dev/pts"
+          sudo mount -t proc proc "$ROOT/proc"
+          sudo mount -t sysfs sys "$ROOT/sys"
+          sudo cp /etc/resolv.conf "$ROOT/etc/resolv.conf"
+
+          sudo chroot "$ROOT" /bin/bash -eux <<'CHROOT'
+          export DEBIAN_FRONTEND=noninteractive
+          echo 'growcontrol-test' > /etc/hostname
+          sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrowcontrol-test/' /etc/hosts || true
+
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw
+
+          if ! id test >/dev/null 2>&1; then useradd -m -s /bin/bash test; fi
+          echo 'test:test' | chpasswd
+          usermod -aG sudo test
+          for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" test || true; done
+          echo 'test ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-growcontrol-test
+          chmod 0440 /etc/sudoers.d/010-growcontrol-test
+
+          if ! id growcontrol >/dev/null 2>&1; then useradd --system --home /var/lib/135er-growcontrol --create-home --shell /usr/sbin/nologin growcontrol; fi
+          getent group bluetooth >/dev/null && usermod -aG bluetooth growcontrol || true
+          install -d -o growcontrol -g growcontrol -m 0750 /var/lib/135er-growcontrol
+          install -d -o root -g growcontrol -m 0750 /etc/135er-growcontrol
+
+          cd /opt/135er-growcontrol
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip wheel
+          .venv/bin/pip install -r requirements.txt
+
+          cat >.env <<'EOF'
+          DF100M_NAME_HINT=MZ_MZF002
+          DF100M_WRITE_UUID=f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d
+          DF100M_NOTIFY_UUID=83677baa-3eb8-4866-b6b6-96e5ed5cc48d
+          DF100M_SPEED_MODE=byte
+          DF100M_ALLOW_WRITES=false
+          GC_TEST_USERNAME=test
+          GC_TEST_PASSWORD=test
+          GC_API_TOKEN=test
+          GC_CLOUD_TOKEN=test
+          GC_REMOTE_COMMANDS=false
+          GC_CLOUD_ENABLED=false
+          EOF
+          chown -R root:growcontrol /opt/135er-growcontrol
+          chmod -R g+rX /opt/135er-growcontrol
+          chmod 0640 /opt/135er-growcontrol/.env
+          mkdir -p /opt/135er-growcontrol/data
+          chown growcontrol:growcontrol /opt/135er-growcontrol/data
+
+          cat >/etc/systemd/system/135er-growcontrol.service <<'EOF'
+          [Unit]
+          Description=135er GrowControl Local
+          After=network-online.target bluetooth.target
+          Wants=network-online.target bluetooth.target
+          [Service]
+          Type=simple
+          User=growcontrol
+          Group=growcontrol
+          WorkingDirectory=/opt/135er-growcontrol
+          EnvironmentFile=/opt/135er-growcontrol/.env
+          ExecStart=/opt/135er-growcontrol/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
+          Restart=always
+          RestartSec=3
+          NoNewPrivileges=true
+          PrivateTmp=true
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          mkdir -p /etc/ssh/sshd_config.d
+          printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-growcontrol-test.conf
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw allow 8080/tcp
+          ufw --force enable
+          systemctl enable ssh bluetooth 135er-growcontrol.service
+          systemctl enable unattended-upgrades.service || true
+
+          cat >/etc/motd <<'EOF'
+          135er GrowControl - Raspberry Pi 3B TEST IMAGE
+          Hostname: growcontrol-test
+          SSH: test / test
+          Web UI: http://<PI-IP>:8080
+          Temporary application/API token: test
+          WARNING: change all test credentials after testing.
+          DF100M BLE writes and remote cloud commands are disabled by default.
+          EOF
+          truncate -s 0 /etc/machine-id
+          rm -f /var/lib/dbus/machine-id
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          CHROOT
+
+          sudo rm -f "$ROOT/usr/bin/qemu-aarch64-static"
+          sync
+          cleanup
+          trap - EXIT
+
+      - name: Compress and checksum image
+        run: |
+          mv work.img "${IMAGE_NAME}.img"
+          xz -T0 -6 -f "${IMAGE_NAME}.img"
+          sha256sum "${IMAGE_NAME}.img.xz" > "${IMAGE_NAME}.img.xz.sha256"
+          cat > "${IMAGE_NAME}-CREDENTIALS.txt" <<'EOF'
+          Hostname: growcontrol-test
+          SSH username: test
+          SSH password: test
+          Web UI: http://<PI-IP>:8080
+          Temporary API/application token: test
+          BLE device writes: disabled
+          Remote cloud commands: disabled
+          EOF
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 135er-GrowControl-RPi3B-Test-Image
+          path: |
+            135er_GrowControl_RPi3B_Test.img.xz
+            135er_GrowControl_RPi3B_Test.img.xz.sha256
+            135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+          compression-level: 0
+          retention-days: 14
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_GrowControl_RPi3B_Test.img.xz 135er_GrowControl_RPi3B_Test.img.xz.sha256 135er_GrowControl_RPi3B_Test-CREDENTIALS.txt --title "135er GrowControl Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. DF100M writes and remote cloud commands disabled by default." --prerelease
