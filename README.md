@@ -28,7 +28,11 @@ The following preview is the current **design reference for the finished 135er G
 - 🇩🇪 [Deutsch](docs/de/README.md)
 - 🇬🇧 [English](docs/en/README.md)
 - 📚 [Dokumentationsindex / Documentation index](docs/README.md)
+- 📖 [Wiki-Quelle / Wiki source](wiki/Home.md)
 - 🔎 [Quellen / Sources](docs/SOURCES.md)
+
+> **Wiki:** Die vollständige Wiki-Quelle wird versioniert im Verzeichnis `wiki/` gepflegt. Das GitHub-Wiki-Repository ist derzeit noch nicht aktiviert/erreichbar; nach Aktivierung kann dieser Inhalt 1:1 in das GitHub-Wiki gespiegelt werden.  
+> **Wiki:** The complete wiki source is versioned in `wiki/`. The GitHub wiki repository is currently not enabled/reachable; once enabled, this content can be mirrored 1:1 into the GitHub Wiki.
 
 ## Architektur / Architecture
 

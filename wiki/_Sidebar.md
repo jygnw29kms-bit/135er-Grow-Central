@@ -1,0 +1,30 @@
+## 135er GrowControl
+
+### Deutsch
+- [Start](Home)
+- [Übersicht](de/README)
+- [Architektur](de/ARCHITEKTUR)
+- [Installation](de/INSTALLATION)
+- [Sicherheit](de/SICHERHEIT)
+- [Benutzer & Rechte](de/BENUTZER_UND_RECHTE)
+- [Datenbanken](de/DATENBANKEN)
+- [Sensoren & Historie](de/SENSOREN_UND_HISTORIE)
+- [Zeitpläne & Automationen](de/ZEITPLAENE_UND_AUTOMATIONEN)
+- [GUI & Responsive Design](de/GUI_UND_RESPONSIVE_DESIGN)
+- [DF100M](de/DF100M)
+- [Cloud](de/CLOUD)
+- [Backup & Wartung](de/BACKUP_UND_WARTUNG)
+
+### English
+- [Overview](en/README)
+- [Architecture](en/ARCHITECTURE)
+- [Installation](en/INSTALLATION)
+- [Security](en/SECURITY)
+- [Users & RBAC](en/USERS_AND_RBAC)
+- [Databases](en/DATABASES)
+- [Sensors & History](en/SENSORS_AND_HISTORY)
+- [Schedules & Automations](en/SCHEDULES_AND_AUTOMATIONS)
+- [GUI & Responsive Design](en/GUI_AND_RESPONSIVE_DESIGN)
+- [DF100M](en/DF100M)
+- [Cloud](en/CLOUD)
+- [Backup & Maintenance](en/BACKUP_AND_MAINTENANCE)
