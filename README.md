@@ -30,9 +30,40 @@ The following preview is the current **design reference for the finished 135er G
 - 📚 [Dokumentationsindex / Documentation index](docs/README.md)
 - 📖 [Wiki-Quelle / Wiki source](wiki/Home.md)
 - 🔎 [Quellen / Sources](docs/SOURCES.md)
+- 🍓 [Raspberry Pi 3B Test-Image DE](docs/de/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- 🍓 [Raspberry Pi 3B Test Image EN](docs/en/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
 > **Wiki:** Die vollständige Wiki-Quelle wird versioniert im Verzeichnis `wiki/` gepflegt.  
 > **Wiki:** The complete wiki source is versioned in `wiki/`.
+
+## Raspberry Pi 3B Test-Image / Test Image
+
+Für die ersten Hardwaretests steht ein reproduzierbarer GitHub-Actions-Builder für ein **Raspberry Pi 3B / 3B+ Test-Image** bereit. Basis ist Raspberry Pi OS Lite 64-bit / Debian 13. GrowControl, Python-Venv, Bluetooth/BlueZ, SSH, UFW, automatische Sicherheitsupdates und der systemd-Autostart werden in das Image eingebaut.
+
+A reproducible GitHub Actions builder prepares a **Raspberry Pi 3B / 3B+ test image** based on Raspberry Pi OS Lite 64-bit / Debian 13 with GrowControl, Python venv, Bluetooth/BlueZ, SSH, UFW, automatic security updates and systemd autostart preinstalled.
+
+Temporäre Testdaten / Temporary test credentials:
+
+```text
+Hostname: growcontrol-test
+Username: test
+Password: test
+API/App token: test
+Cloud token: test
+Web UI: http://<PI-IP>:8080
+```
+
+**Nur für lokale Tests / Local testing only.** Diese Zugangsdaten müssen nach den Tests geändert werden. DF100M-Schreibzugriffe, Remote Commands und Cloud bleiben im Test-Image standardmäßig deaktiviert.
+
+Build-Ausgaben / build outputs:
+
+```text
+135er_GrowControl_RPi3B_Test.img.xz
+135er_GrowControl_RPi3B_Test.img.xz.sha256
+135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+```
+
+Große Image-Dateien werden nicht in die normale Git-Historie eingecheckt, sondern als GitHub Actions Artefakt bzw. Prerelease veröffentlicht. Der erste Buildlauf zeigte einen Platzfehler durch ein versehentlich mitkopiertes Basisimage; der korrigierte v2-Builder erweitert Image, Root-Partition und ext4-Dateisystem und schließt Builddateien aus der Projektkopie aus.
 
 ## Architektur / Architecture
 
@@ -80,6 +111,8 @@ Die Full-Platform-Baseline ist auf Debian-/Ubuntu-Systeme ausgerichtet:
 | Notification Capture | 🧪 experimental |
 | DF100M Speed Protocol | 🧪 not validated |
 | Future HUD / Responsive Target | ✅ defined |
+| Raspberry Pi 3B image builder | ✅ implemented |
+| Raspberry Pi 3B preinstalled image | 🧪 build/test phase |
 | Cloud Telemetry | 🧪 alpha |
 | Cloud History | 🧪 alpha |
 | RBAC / Database baseline | ✅ defined |
