@@ -5,11 +5,12 @@
 ## Ziele
 
 - lokale Gerätekommunikation ohne dauerhafte Hersteller-App
-- zentrale Weboberfläche
+- zentrale responsive Weboberfläche
 - DF100M-BLE-Analyse und spätere Steuerung
 - lokale Automationen auch ohne Internet
 - optionale Cloud für Remote-Übersicht und Historie
 - modulare Adapter für weitere Geräte
+- reproduzierbare Raspberry-Pi-Testimages für Hardwaretests
 
 ## Kernprinzipien
 
@@ -19,16 +20,31 @@
 4. Experimentelle BLE-Schreibbefehle sind standardmäßig deaktiviert.
 5. Geräteprotokolle werden vom UI getrennt.
 6. Quellen und Annahmen werden klar gekennzeichnet.
+7. Große Systemimages werden als Release-/Actions-Artefakte statt in der normalen Git-Historie veröffentlicht.
 
-## Stand v0.4.1
+## Stand v0.5 Full Platform Baseline
 
 - BLE Discovery: vorhanden
 - Connect / Disconnect: vorhanden
 - GATT Inspection: vorhanden
 - Notifications: experimentell
-- Speed Payload: nicht validiert
-- Cloud Telemetrie: Alpha
-- Cloud Historie: Alpha
+- DF100M Speed Payload: nicht validiert
+- Cloud Telemetrie / Historie: Alpha
 - Remote Commands: vorbereitet, standardmäßig aus
+- Full-Platform-Datenmodell und RBAC: definiert
+- Debian/Ubuntu/Raspberry-Pi-Installer-Baseline: vorhanden
+- GUI-Zielbild und Responsive-Regeln: definiert
+- Raspberry Pi 3B/3B+ Image-Builder: vorhanden
+- vorinstalliertes Pi-Testimage: Build-/Testphase
 - FC3000: geplant
-- Sensorik / VPD: geplant
+- Sensorik / VPD: Plattform vorbereitet
+
+## Aktuelle Testdokumentation
+
+- [Raspberry Pi 3B Test-Image](RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [GUI-Zielbild](GUI_VORSCHAU.md)
+- [DF100M-Protokollanalyse](DF100M_PROTOCOL.md)
+- [Cloud](CLOUD.md)
+- [Installation](INSTALLATION.md)
+
+Für das Test-Image werden temporär `test` / `test` sowie Token `test` verwendet. Diese Zugangsdaten sind ausschließlich für die ersten lokalen Hardwaretests vorgesehen und müssen danach ersetzt werden.
