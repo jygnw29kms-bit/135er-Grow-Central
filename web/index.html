@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05090e">
+<title>135er GrowControl</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="scanline"></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">135</div>
+      <div>
+        <div class="brand-title">GROWCONTROL</div>
+        <div class="brand-sub">LOCAL CONTROL SYSTEM</div>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-item active" data-view="dashboard">◈ <span>Dashboard</span></button>
+      <button class="nav-item" data-view="devices">⌁ <span>Geräte</span></button>
+      <button class="nav-item" data-view="automation">⟲ <span>Automation</span></button>
+      <button class="nav-item" data-view="history">⌁ <span>Historie</span></button>
+      <button class="nav-item" data-view="system">⚙ <span>System</span></button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-dot"></div>
+      <div>
+        <div class="small-label">SYSTEM</div>
+        <div class="online-text">LOCAL ONLINE</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">135ER / GROWCONTROL / RASPBERRY PI</div>
+        <h1>Climate & Device Command Center</h1>
+      </div>
+      <div class="top-actions">
+        <div class="clock" id="clock">--:--:--</div>
+        <button class="ghost" id="refreshBtn">SYNC</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="view active">
+      <div class="hero-grid">
+        <article class="metric-card glow-cyan">
+          <div class="card-top"><span>TEMPERATURE</span><span class="chip">SENSOR</span></div>
+          <div class="metric"><span id="temp">--.-</span><small>°C</small></div>
+          <div class="sparkline"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+
+        <article class="metric-card glow-violet">
+          <div class="card-top"><span>HUMIDITY</span><span class="chip">SENSOR</span></div>
+          <div class="metric"><span id="rh">--</span><small>%</small></div>
+          <div class="sparkline alt"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+
+        <article class="metric-card glow-green">
+          <div class="card-top"><span>FAN STATUS</span><span class="chip">DF100M</span></div>
+          <div class="metric compact"><span id="fanState">OFFLINE</span></div>
+          <div class="status-line"><span class="status-dot" id="fanDot"></span><span id="fanAddr">not connected</span></div>
+        </article>
+
+        <article class="metric-card glow-amber">
+          <div class="card-top"><span>PROTOCOL</span><span class="chip">BLE</span></div>
+          <div class="metric compact"><span id="protocolState">SAFE</span></div>
+          <div class="status-line"><span>WRITE MODE</span><strong id="writeState">LOCKED</strong></div>
+        </article>
+      </div>
+
+      <div class="control-grid">
+        <article class="panel fan-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">DEVICE CONTROL</div>
+              <h2>DF100M Fan</h2>
+            </div>
+            <div class="device-badge">MZ_MZF002</div>
+          </div>
+
+          <div class="fan-control">
+            <div class="ring" id="ring">
+              <div class="ring-inner">
+                <span id="speedValue">0</span>
+                <small>%</small>
+              </div>
+            </div>
+
+            <div class="slider-wrap">
+              <label for="speedSlider">Fan Speed</label>
+              <input type="range" min="0" max="100" value="0" id="speedSlider">
+              <div class="slider-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+
+              <div class="button-row">
+                <button class="primary" id="discoverBtn">DISCOVER</button>
+                <button class="secondary" id="servicesBtn">READ GATT</button>
+                <button class="danger" id="sendSpeedBtn">TEST SPEED</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel diag-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">LIVE DIAGNOSTICS</div>
+              <h2>BLE Telemetry</h2>
+            </div>
+            <span class="pulse">LIVE</span>
+          </div>
+          <pre id="diagnostics">System ready.
+Waiting for BLE action…</pre>
+        </article>
+      </div>
+
+      <div class="bottom-grid">
+        <article class="mini-panel">
+          <span class="mini-label">Raspberry Pi</span>
+          <strong>CONTROL NODE</strong>
+          <small>FastAPI / BLE / SQLite</small>
+        </article>
+        <article class="mini-panel">
+          <span class="mini-label">Operating Mode</span>
+          <strong>LOCAL-FIRST</strong>
+          <small>No ESP32 dependency</small>
+        </article>
+        <article class="mini-panel">
+          <span class="mini-label">Build</span>
+          <strong>v0.2 TEST</strong>
+          <small>Experimental DF100M adapter</small>
+        </article>
+      </div>
+    </section>
+
+    <section id="devices" class="view">
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Connected Hardware</h2></div></div>
+        <div class="device-list">
+          <div class="device-row"><div><strong>DF100M</strong><span>Mars Hydro • MZ_MZF002</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div>
+          <div class="device-row disabled"><div><strong>FC3000</strong><span>Future adapter</span></div><span>PLANNED</span></div>
+          <div class="device-row disabled"><div><strong>Climate Sensor</strong><span>Temp / RH / VPD</span></div><span>PLANNED</span></div>
+        </div>
+      </article>
+    </section>
+
+    <section id="automation" class="view">
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div>
+        <div class="empty-state">Automation is staged for a later build. The current test build focuses on DF100M discovery, GATT inspection and command validation.</div>
+      </article>
+    </section>
+
+    <section id="history" class="view">
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div>
+        <div class="empty-state">SQLite logging is prepared in the backend. A graph/history UI will be connected after validated device telemetry exists.</div>
+      </article>
+    </section>
+
+    <section id="system" class="view">
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er GrowControl</h2></div></div>
+        <div class="system-grid">
+          <div><span>Platform</span><strong>Raspberry Pi</strong></div>
+          <div><span>Frontend</span><strong>Future HUD UI</strong></div>
+          <div><span>Backend</span><strong>FastAPI</strong></div>
+          <div><span>BLE</span><strong>Bleak</strong></div>
+          <div><span>ESP32</span><strong>Not used</strong></div>
+          <div><span>Primary Device</span><strong>DF100M</strong></div>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
