@@ -1,0 +1,19 @@
+# DE: Minimaler VServer-Cloud-Stack.
+# EN: Minimal VPS cloud stack.
+services:
+  growcontrol-cloud:
+    build:
+      context: .
+      dockerfile: cloud/Dockerfile
+    container_name: 135er-growcontrol-cloud
+    restart: unless-stopped
+    env_file:
+      - ./cloud/.env
+    volumes:
+      # DE: SQLite persistent auf dem Host.
+      # EN: Persist SQLite on the host.
+      - ./cloud/data:/app/cloud/data
+    ports:
+      # DE: Nur localhost; öffentlich über Reverse Proxy.
+      # EN: Localhost only; expose publicly through a reverse proxy.
+      - "127.0.0.1:8090:8090"
