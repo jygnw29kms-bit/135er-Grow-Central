@@ -1,3 +1,7 @@
+/* 135er GrowControl Future HUD
+DE: Browser-Logik für Navigation, BLE-Aktionen, Status-Synchronisation und Diagnose.
+EN: Browser logic for navigation, BLE actions, state synchronization and diagnostics.
+*/
 
 const $=id=>document.getElementById(id);
 const diag=x=>$("diagnostics").textContent=typeof x==="string"?x:JSON.stringify(x,null,2);

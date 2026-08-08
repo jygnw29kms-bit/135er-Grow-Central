@@ -1,12 +1,28 @@
 {
   "name": "135er GrowControl",
-  "version": "0.3.2",
-  "platform": "Raspberry Pi",
-  "primary_device": "Mars Hydro DF100M / MZ_MZF002",
+  "version": "0.4.1",
   "status": "early-test",
+  "platform": "Raspberry Pi + optional Linux VPS",
+  "primary_device": "Mars Hydro DF100M / MZ_MZF002",
   "esp32": false,
-  "documentation": "complete-baseline",
-  "sources": "docs/SOURCES.md",
-  "distribution": "manual-github-upload",
-  "git_metadata_included": false
+  "languages": [
+    "de",
+    "en"
+  ],
+  "architecture": [
+    "local",
+    "cloud",
+    "shared"
+  ],
+  "cloud": {
+    "optional": true,
+    "transport": "HTTPS",
+    "remote_commands_default": false
+  },
+  "documentation": {
+    "index": "docs/README.md",
+    "german": "docs/de/README.md",
+    "english": "docs/en/README.md",
+    "sources": "docs/SOURCES.md"
+  }
 }

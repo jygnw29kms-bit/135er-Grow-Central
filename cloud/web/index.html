@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>135er GrowControl Cloud</title>
+<style>
+:root{--bg:#05090e;--card:#0d151e;--line:#1d2d38;--tx:#eef7fb;--mut:#8299a7;--g:#35f0a7;--c:#32ccff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#102330,#05090e 35%);color:var(--tx);font-family:system-ui,-apple-system,sans-serif}
+main{max-width:1150px;margin:auto;padding:28px 18px}.top{display:flex;justify-content:space-between;align-items:center}.brand{color:var(--g);font-weight:900;letter-spacing:.12em}.sub{color:var(--mut);font-size:13px;margin:8px 0 24px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#0d151edd;border:1px solid var(--line);border-radius:17px;padding:17px}.label{font-size:10px;color:var(--mut);letter-spacing:.08em}.value{font-size:30px;font-weight:900;margin-top:10px}.g{color:var(--g)}.c{color:var(--c)}
+.panel{margin-top:14px}.row{display:flex;gap:10px;flex-wrap:wrap}input,button{background:#0b1219;color:var(--tx);border:1px solid var(--line);padding:10px 12px;border-radius:10px}button{border-color:var(--g);color:var(--g);font-weight:800}pre{overflow:auto;color:#a7bfcc;font-size:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}}
+</style></head>
+<body><main>
+<div class="top"><div class="brand">135ER GROWCONTROL / CLOUD</div><div class="g">● VPS ONLINE</div></div>
+<h1>Remote Overview</h1><div class="sub">Optionaler Cloud-Layer – der Raspberry Pi bleibt lokale Steuerzentrale.</div>
+<div class="grid">
+<div class="card"><div class="label">TEMPERATUR</div><div id="t" class="value c">—</div></div>
+<div class="card"><div class="label">LUFTFEUCHTE</div><div id="h" class="value c">—</div></div>
+<div class="card"><div class="label">VPD</div><div id="v" class="value g">—</div></div>
+<div class="card"><div class="label">DF100M</div><div id="f" class="value g">—</div></div>
+</div>
+<div class="card panel">
+<div class="label">VERBINDUNG</div>
+<div class="row"><input id="site" value="garage"><input id="token" type="password" placeholder="API Token"><button onclick="load()">SYNC</button></div>
+<pre id="log">Token bleibt nur im Browser dieser Sitzung.</pre>
+</div>
+<script>
+async function load(){
+ const site=document.getElementById('site').value, token=document.getElementById('token').value;
+ try{
+  const r=await fetch('/api/v1/sites/'+encodeURIComponent(site)+'/latest',{headers:{'X-API-Token':token}});
+  const x=await r.json(); if(!r.ok) throw new Error(x.detail||r.statusText);
+  t.textContent=(x.temperature_c??'—')+(x.temperature_c!=null?' °C':'');
+  h.textContent=(x.humidity_pct??'—')+(x.humidity_pct!=null?' %':'');
+  v.textContent=(x.vpd_kpa??'—')+(x.vpd_kpa!=null?' kPa':'');
+  f.textContent=(x.fan_speed_pct??'—')+(x.fan_speed_pct!=null?' %':'');
+  log.textContent=JSON.stringify(x,null,2);
+ }catch(e){log.textContent='Fehler: '+e.message}
+}
+</script>
+</main></body></html>

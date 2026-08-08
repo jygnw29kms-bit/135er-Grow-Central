@@ -1,0 +1,14 @@
+# DE: Beispiel für Nginx Reverse Proxy; TLS für Produktion ergänzen.
+# EN: Nginx reverse proxy example; add TLS for production.
+server {
+    listen 80;
+    server_name grow.example.de;
+
+    location / {
+        proxy_pass http://127.0.0.1:8090;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
