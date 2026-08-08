@@ -2,7 +2,7 @@
 
 This document defines the current preview image as the **authoritative design reference** for the finished 135er GrowControl user interface.
 
-![135er GrowControl GUI Preview](../assets/gui/gui-preview-v0.5.webp)
+![135er GrowControl GUI Preview](../assets/gui/gui-preview-v0.5.png)
 
 ## Target design
 

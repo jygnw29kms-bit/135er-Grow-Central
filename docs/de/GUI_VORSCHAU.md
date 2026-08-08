@@ -2,7 +2,7 @@
 
 Dieses Dokument definiert das aktuelle Vorschaubild als **verbindliche Design-Referenz** für die fertige Benutzeroberfläche von 135er GrowControl.
 
-![135er GrowControl GUI Vorschau](../assets/gui/gui-preview-v0.5.webp)
+![135er GrowControl GUI Vorschau](../assets/gui/gui-preview-v0.5.png)
 
 ## Zielbild
 

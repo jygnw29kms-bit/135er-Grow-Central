@@ -18,7 +18,7 @@ Die folgende Vorschau ist die aktuelle **Design-Referenz für die fertige 135er-
 
 The following preview is the current **design reference for the finished 135er GrowControl GUI**. The real interface will be responsive and will adapt layout, navigation, cards and charts to desktop, notebook, tablet/iPad and smartphone devices.
 
-![135er GrowControl GUI Preview](docs/assets/gui/gui-preview-v0.5.webp)
+![135er GrowControl GUI Preview](docs/assets/gui/gui-preview-v0.5.png)
 
 - 🇩🇪 [GUI-Zielbild und Responsive Design](docs/de/GUI_VORSCHAU.md)
 - 🇬🇧 [GUI Target and Responsive Design](docs/en/GUI_PREVIEW.md)
@@ -31,8 +31,8 @@ The following preview is the current **design reference for the finished 135er G
 - 📖 [Wiki-Quelle / Wiki source](wiki/Home.md)
 - 🔎 [Quellen / Sources](docs/SOURCES.md)
 
-> **Wiki:** Die vollständige Wiki-Quelle wird versioniert im Verzeichnis `wiki/` gepflegt. Das GitHub-Wiki-Repository ist derzeit noch nicht aktiviert/erreichbar; nach Aktivierung kann dieser Inhalt 1:1 in das GitHub-Wiki gespiegelt werden.  
-> **Wiki:** The complete wiki source is versioned in `wiki/`. The GitHub wiki repository is currently not enabled/reachable; once enabled, this content can be mirrored 1:1 into the GitHub Wiki.
+> **Wiki:** Die vollständige Wiki-Quelle wird versioniert im Verzeichnis `wiki/` gepflegt.  
+> **Wiki:** The complete wiki source is versioned in `wiki/`.
 
 ## Architektur / Architecture
 

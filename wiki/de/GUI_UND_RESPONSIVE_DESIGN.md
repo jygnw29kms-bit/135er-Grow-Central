@@ -1,6 +1,6 @@
 # GUI und Responsive Design
 
-![135er GrowControl GUI Vorschau](../../docs/assets/gui/gui-preview-v0.5.webp)
+![135er GrowControl GUI Vorschau](../../docs/assets/gui/gui-preview-v0.5.png)
 
 Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 

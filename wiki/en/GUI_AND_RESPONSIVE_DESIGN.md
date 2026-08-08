@@ -1,6 +1,6 @@
 # GUI and Responsive Design
 
-![135er GrowControl GUI Preview](../../docs/assets/gui/gui-preview-v0.5.webp)
+![135er GrowControl GUI Preview](../../docs/assets/gui/gui-preview-v0.5.png)
 
 The image is the authoritative visual target for the finished GUI.
 
