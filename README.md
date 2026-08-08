@@ -6,11 +6,22 @@
 Aktueller Gerätefokus / Current device focus: **Mars Hydro DF100M / MZ_MZF002**  
 **Kein ESP32 erforderlich / No ESP32 required**
 
-![Version](https://img.shields.io/badge/version-0.4.1-35f0a7)
-![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-c51a4a)
+![Version](https://img.shields.io/badge/version-0.5.0-35f0a7)
+![Platform](https://img.shields.io/badge/platform-Debian%20%7C%20Ubuntu%20%7C%20Raspberry%20Pi-c51a4a)
 ![Cloud](https://img.shields.io/badge/cloud-optional-32ccff)
 ![Docs](https://img.shields.io/badge/docs-DE%20%7C%20EN-8e6cff)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+
+## GUI Zielbild / GUI Target
+
+Die folgende Vorschau ist die aktuelle **Design-Referenz für die fertige 135er-GrowControl-GUI**. Die reale Oberfläche wird responsiv umgesetzt und passt Struktur, Navigation, Karten und Diagramme an Desktop, Notebook, Tablet/iPad und Smartphone an.
+
+The following preview is the current **design reference for the finished 135er GrowControl GUI**. The real interface will be responsive and will adapt layout, navigation, cards and charts to desktop, notebook, tablet/iPad and smartphone devices.
+
+![135er GrowControl GUI Preview](docs/assets/gui/gui-preview-v0.5.webp)
+
+- 🇩🇪 [GUI-Zielbild und Responsive Design](docs/de/GUI_VORSCHAU.md)
+- 🇬🇧 [GUI Target and Responsive Design](docs/en/GUI_PREVIEW.md)
 
 ## Dokumentation / Documentation
 
@@ -39,6 +50,22 @@ Aktueller Gerätefokus / Current device focus: **Mars Hydro DF100M / MZ_MZF002**
 **DE:** Der Raspberry Pi bleibt immer die lokale Steuerinstanz. Die Cloud ist optional.  
 **EN:** The Raspberry Pi always remains the local control node. The cloud is optional.
 
+## Plattform / Platform
+
+Die Full-Platform-Baseline ist auf Debian-/Ubuntu-Systeme ausgerichtet:
+
+- Debian 12 / 13
+- Ubuntu Server 22.04 / 24.04 LTS
+- Raspberry Pi OS 64-bit auf Debian-Basis
+- systemd
+- APT / unattended-upgrades
+- Nginx / HTTPS
+- Firewall / Fail2ban
+- SQLite lokal / PostgreSQL Cloud
+- Benutzer, Rollen und Rechte (RBAC)
+- Sensoren, Historie, Zeitpläne und Automationen
+- Audit-Log, Backup/Restore und Fail-Safe-Synchronisation
+
 ## Status
 
 | Bereich / Area | Status |
@@ -48,12 +75,14 @@ Aktueller Gerätefokus / Current device focus: **Mars Hydro DF100M / MZ_MZF002**
 | GATT Inspection | ✅ implemented |
 | Notification Capture | 🧪 experimental |
 | DF100M Speed Protocol | 🧪 not validated |
-| Future HUD | ✅ available |
+| Future HUD / Responsive Target | ✅ defined |
 | Cloud Telemetry | 🧪 alpha |
 | Cloud History | 🧪 alpha |
+| RBAC / Database baseline | ✅ defined |
+| Installer / Debian-Ubuntu baseline | ✅ defined |
 | Remote Commands | 🔒 prepared, disabled by default |
 | FC3000 Adapter | 🗺️ planned |
-| Sensor / VPD Automation | 🗺️ planned |
+| Sensor / VPD Automation | 🗺️ platform prepared |
 
 ## Quick Start / Schnellstart
 
