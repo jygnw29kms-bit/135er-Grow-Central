@@ -1,55 +1,41 @@
-# API
+# API – 135er GrowControl v0.6
 
-Basis:
+## Local health/config
 
-```text
-http://<raspberry-pi>:8080
-```
+- `GET /api/health`
+- `GET /api/config` – never returns secrets
 
-## Health
+## DF100M research API
 
-```http
-GET /api/health
-```
+Legacy compatibility endpoints remain available during migration:
 
-## DF100M Status
+- `GET /api/status`
+- `GET /api/discover`
+- `POST /api/connect`
+- `POST /api/disconnect`
+- `GET /api/services`
+- `POST /api/notify/start`
+- `POST /api/notify/stop`
+- `POST /api/speed` – protected write
+- `POST /api/raw` – protected development write
 
-```http
-GET /api/df100m/status
-```
+HUD compatibility aliases:
 
-## BLE Discovery
+- `GET /api/df100m/status`
+- `GET /api/df100m/discover`
+- `POST /api/df100m/connect?address=...`
+- `GET /api/df100m/services`
+- `POST /api/df100m/speed?percent=...` – protected write
 
-```http
-GET /api/df100m/discover
-```
+Protected writes require `X-API-Token` or `Authorization: Bearer ...` matching `GC_LOCAL_API_TOKEN`. If no local token is configured, writes fail closed.
 
-## Connect
+## Smart-home API
 
-```http
-POST /api/df100m/connect?address=<BLE_ADDRESS>
-```
+- `GET /api/v1/smarthome/status`
+- `GET /api/v1/smarthome/devices`
+- `GET /api/v1/smarthome/devices/{id}/state`
+- `POST /api/v1/smarthome/devices/{id}/switch` – protected write
 
-## Disconnect
+Switch commands are accepted only for a registered device that is both `approved` and `writable`, while `GC_SMARTHOME_ENABLED=true`.
 
-```http
-POST /api/df100m/disconnect
-```
-
-## GATT Services
-
-```http
-GET /api/df100m/services
-```
-
-## Speed Test
-
-```http
-POST /api/df100m/speed?percent=30
-```
-
-**Experimental.** Nicht als validiertes DF100M-Protokoll behandeln.
-
-## Quellen
-
-Siehe [SOURCES.md](SOURCES.md).
+The API does not expose arbitrary target URLs or arbitrary Home Assistant service calls.
