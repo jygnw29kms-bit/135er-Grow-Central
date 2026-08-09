@@ -1,12 +1,25 @@
 # 135er GrowControl – Project Website
 
-Die statische Projektseite unter `website/` ist die öffentliche, domain-neutrale Präsentationsfläche von 135er GrowControl.
+Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er GrowControl.
 
 ## Design
 
 Seit v0.6 orientiert sich die öffentliche Website direkt an der lokalen GrowControl-Ziel-GUI. Verwendet werden dieselben grundlegenden UI-Muster wie in `web/`: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen, grün-cyanfarbene Zustände und responsive Layouts für Desktop, iPad und Smartphone.
 
 Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
+
+## Branding
+
+Für die Website und das Repository werden folgende Assets verwendet:
+
+- `assets/brand/135er-growcontrol-logo-jl1976.webp` – verbindliches signiertes Master-Logo
+- `assets/brand/135er-growcontrol-repo-banner.webp` – Repository-/Social-Banner
+- `assets/brand/135er-growcontrol-repo-mark.png` – quadratische Repository-Marke / App-Icon
+- `assets/brand/favicon.ico` – Browser-Favicon
+
+Das signierte **J. L. 1976** Master-Logo bleibt die verbindliche Projektmarke. Banner und quadratische Marke sind ergänzende GitHub-/Web-Präsentationsassets.
+
+`index.html` bindet die quadratische Marke als App-/Touch-Icon und das Banner als OpenGraph-/Social-Preview ein.
 
 ## GUI-Vorschau
 
@@ -15,7 +28,6 @@ Die Referenzgrafik wird auf der öffentlichen Website direkt als PNG geladen:
 - `assets/gui-preview-v0.5.png`
 - `assets/gui-preview-v0.5.webp`
 - `assets/gui-power-preview-v0.7.svg`
-- `assets/brand/135er-growcontrol-logo-jl1976.webp`
 
 Die PNG-Datei ist bewusst die primäre Web-Datei, damit keine WebP-/MIME-Abhängigkeit des Hostings besteht. Eine WebP-Version kann weiterhin als alternatives Asset im Repository verbleiben.
 
@@ -54,10 +66,10 @@ Danach sollten insbesondere folgende Dateien vorhanden sein:
 /var/www/vhosts/dezender.de/httpdocs/styles.css
 /var/www/vhosts/dezender.de/httpdocs/assets/architecture.svg
 /var/www/vhosts/dezender.de/httpdocs/assets/gui-preview-v0.5.png
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/favicon.ico
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-growcontrol-repo-mark.png
 ```
 
 ## GitHub Pages
 
 Die Pages-Workflow-Datei liegt unter `.github/workflows/pages.yml`. Der Workflow wird manuell gestartet. Für die erstmalige Nutzung muss GitHub Pages unter **Settings → Pages → Source: GitHub Actions** aktiviert werden.
-
-Es ist kein Custom-Domain-Setup im Repository hinterlegt.
