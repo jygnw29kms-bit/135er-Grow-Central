@@ -6,13 +6,9 @@ Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 
 ## Branding
 
-Für die Projektoberflächen bleibt das signierte **J. L. 1976** Master-Logo verbindlich. Für GitHub und Web-Präsentation stehen zusätzlich zwei ergänzende Assets bereit:
+Rastergrafiken werden im Projekt als **PNG** eingebunden. WebP wird nicht mehr verwendet, da die Darstellung auf dem produktiven Hosting nicht zuverlässig war. Favicons dürfen als ICO und technische Diagramme als SVG vorliegen.
 
-- `website/assets/brand/135er-growcontrol-repo-banner.webp` – Repository-/Social-Banner
-- `website/assets/brand/135er-growcontrol-repo-mark.png` – quadratische Marke / App-Icon
-- `website/assets/brand/favicon.ico` – Browser-Favicon
-
-Banner und quadratische Marke ergänzen die Projektmarke, ersetzen das signierte Master-Logo nicht.
+Website, lokale GUI und Cloud-GUI verwenden das 135er-GrowControl-Logo in PNG-Form.
 
 ## Desktop ab 1400 px
 
