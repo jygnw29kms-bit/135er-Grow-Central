@@ -1,5 +1,7 @@
 # 135er-Grow Central – Dokumentationszentrum / Documentation Hub
 
+<p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
+
 Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neuen Entwickler, Tester oder Betreiber ohne Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächsten Schritte zu verstehen.
 
 ## Zuerst lesen

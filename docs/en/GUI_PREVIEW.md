@@ -4,11 +4,11 @@ This document defines the current preview image as the **authoritative design re
 
 ## Current v0.7 design
 
-![135er-Grow Central GUI v0.7 with power and cost projections](../../website/assets/gui-power-preview-v0.7.svg)
+![135er-Grow Central Local Desktop GUI v0.9](../../website/assets/gui/local-desktop-v0.9.png)
 
 ## Original v0.5 design
 
-![135er-Grow Central GUI base HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central Local Mobile GUI v0.9](../../website/assets/gui/local-mobile-v0.9.png)
 
 The v0.7 reference adds smart-plug states, power telemetry, a configurable
 electricity tariff and hour/day/week/month/year projections. Both images remain

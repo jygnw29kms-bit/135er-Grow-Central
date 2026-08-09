@@ -20,11 +20,11 @@ The public website mirrors the patterns used by `web/index.html` and `web/app.cs
 
 ## Logo and graphics formats
 
-The public website uses the PNG logo at `website/assets/brand/135er-grow-central-logo.png`.
+The public website uses the combined PNG brand lockup at `website/assets/brand/135er-grow-central-lockup-v0.9.png` in its navigation and footer.
 
 PNG is the standard raster format. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
 
-The original GUI preview is loaded directly from `assets/gui-preview-v0.5.png`; there is no WebP source or WebP fallback logic.
+The current GUI family is loaded directly from `assets/gui/*-v0.9.png`; there is no WebP source or WebP fallback logic.
 
 ## Security boundary
 

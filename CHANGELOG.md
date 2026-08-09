@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.1 – Repository and Raspberry Pi identity synchronization (2026-08-09)
+
+- redesigned the GitHub README around a dedicated technical repository banner and structured project overview
+- synchronized combined PNG branding across local GUI, cloud GUI and documentation
+- added a full-screen v0.9 Plymouth boot splash and refreshed console banner for the Raspberry Pi image
+- updated the image workflow to install the PNG splash directly instead of decoding the obsolete Base64 logo
+- refreshed German and English GUI-preview documentation to the current v0.9 interface family
+
 ## alpha-0.7.1 – Professional JARVIS-style interface refresh (2026-08-09)
 
 - introduced detailed v0.9 desktop, tablet, mobile and cloud GUI concept images

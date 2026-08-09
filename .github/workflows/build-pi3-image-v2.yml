@@ -173,11 +173,10 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
-          # Branded boot splash. The source PNG is stored as Base64 to keep the
-          # repository transport text-safe and is decoded inside the image.
+          # Branded boot splash shared with the current repository identity.
           THEME=/usr/share/plymouth/themes/135er-grow-central
           mkdir -p "$THEME" /etc/135er-grow-central
-          base64 -d /opt/135er-grow-central/image-builder/brand/boot-logo.b64 >"$THEME/logo.png"
+          cp /opt/135er-grow-central/image-builder/brand/boot-splash-v0.9.png "$THEME/logo.png"
           cp /opt/135er-grow-central/image-builder/brand/console-banner.txt /etc/135er-grow-central/banner.txt
           cat >"$THEME/135er-grow-central.plymouth" <<'EOF'
           [Plymouth Theme]
@@ -190,9 +189,10 @@ jobs:
           EOF
           cat >"$THEME/135er-grow-central.script" <<'EOF'
           logo = Image("logo.png");
-          sprite = Sprite(logo);
-          sprite.SetX(Window.GetWidth()/2 - logo.GetWidth()/2);
-          sprite.SetY(Window.GetHeight()/2 - logo.GetHeight()/2);
+          scaled = logo.Scale(Window.GetWidth(), Window.GetHeight());
+          sprite = Sprite(scaled);
+          sprite.SetX(0);
+          sprite.SetY(0);
           EOF
           plymouth-set-default-theme 135er-grow-central || true
           update-initramfs -u || true

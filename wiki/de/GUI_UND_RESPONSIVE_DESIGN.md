@@ -1,6 +1,6 @@
 # GUI und Responsive Design
 
-![135er-Grow Central GUI Vorschau](../../docs/assets/gui/local-desktop-v0.8.svg)
+![135er-Grow Central GUI Vorschau](../../docs/assets/gui/local-desktop-v0.9.png)
 
 Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 

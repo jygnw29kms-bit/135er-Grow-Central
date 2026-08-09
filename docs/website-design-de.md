@@ -20,11 +20,11 @@ Die Website orientiert sich direkt an `web/index.html` und `web/app.css`:
 
 ## Logo und Grafikformate
 
-Die Website verwendet in der Navigation das PNG-Logo `website/assets/brand/135er-grow-central-logo.png`.
+Die Website verwendet in Navigation und Footer die kombinierte PNG-Wort-Bild-Marke `website/assets/brand/135er-grow-central-lockup-v0.9.png`.
 
 Für Rastergrafiken gilt **PNG als Standardformat**. WebP wird nicht mehr eingesetzt, da es auf dem produktiven Hosting nicht zuverlässig dargestellt wurde. ICO bleibt für Favicons und SVG für technische Vektorgrafiken/Diagramme zulässig.
 
-Die ursprüngliche GUI-Vorschau wird direkt über `assets/gui-preview-v0.5.png` geladen. Es gibt keine WebP-Quelle oder WebP-Fallback-Logik mehr.
+Die aktuelle GUI-Familie wird direkt über `assets/gui/*-v0.9.png` geladen. Es gibt keine WebP-Quelle oder WebP-Fallback-Logik.
 
 ## Sicherheitsgrenze
 

@@ -1,6 +1,6 @@
 # GUI and Responsive Design
 
-![135er-Grow Central GUI Preview](../../docs/assets/gui/local-desktop-v0.8.svg)
+![135er-Grow Central GUI Preview](../../docs/assets/gui/local-desktop-v0.9.png)
 
 The image is the authoritative visual target for the finished GUI.
 

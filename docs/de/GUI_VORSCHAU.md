@@ -4,11 +4,11 @@ Dieses Dokument definiert das aktuelle Vorschaubild als **verbindliche Design-Re
 
 ## Aktueller Stand v0.7
 
-![135er-Grow Central GUI v0.7 mit Power- und Kostenhochrechnung](../../website/assets/gui-power-preview-v0.7.svg)
+![135er-Grow Central Local Desktop GUI v0.9](../../website/assets/gui/local-desktop-v0.9.png)
 
 ## Ursprünglicher Stand v0.5
 
-![135er-Grow Central GUI Basis-HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central Local Mobile GUI v0.9](../../website/assets/gui/local-mobile-v0.9.png)
 
 Die v0.7-Referenz erweitert das Basis-HUD um Steckdosen-Schaltzustände,
 Leistungsdaten, einen frei einstellbaren Strompreis und Hochrechnungen für

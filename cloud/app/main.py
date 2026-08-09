@@ -24,7 +24,7 @@ from .db import init_db
 BASE = Path(__file__).resolve().parents[1]
 WEB = BASE / "web"
 
-app = FastAPI(title="135er-Grow Central Cloud", version="0.4.1")
+app = FastAPI(title="135er-Grow Central Cloud", version="0.7.1")
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
 
@@ -49,7 +49,7 @@ async def index():
 @app.get("/api/health")
 async def health():
     """DE: Öffentlicher Healthcheck. EN: Public health check."""
-    return {"ok": True, "service": "135er-Grow Central Cloud", "version": "0.4.1"}
+    return {"ok": True, "service": "135er-Grow Central Cloud", "version": "0.7.1"}
 
 
 @app.post("/api/v1/telemetry")
