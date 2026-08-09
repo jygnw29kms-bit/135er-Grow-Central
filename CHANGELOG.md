@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-09 – PNG-only branding migration
+
+- removed WebP usage from the public website, local HUD and cloud HUD
+- switched website branding to the PNG 135er GrowControl logo
+- changed OpenGraph/social preview to the PNG logo
+- removed the WebP `<picture>` source from the v0.5 GUI preview
+- added PNG logo aliases for local GUI, cloud GUI and documentation
+- removed obsolete WebP branding and preview assets from the repository
+- documented PNG as the standard raster format; ICO remains allowed for favicons and SVG for technical vector graphics
+
 ## v0.6 – Secure Smart-Home Platform (2026-08-09)
 
 ### Architecture
@@ -27,7 +37,7 @@
 - Added application package marker to make test/import behavior deterministic.
 
 ### Website
-- Rebuilt the public project site as a professional static website with architecture SVG, smart-home integration presentation, security model and GUI previews.
+- Rebuilt the public project site as a domain-neutral professional static website with architecture SVG, smart-home integration presentation, security model and GUI preview.
 - Added GitHub Pages deployment workflow.
 - Removed old domain-specific Nginx configuration.
 
@@ -46,20 +56,10 @@
 ## v0.4.x
 - Early FastAPI/Bleak DF100M research runtime and optional cloud-link alpha.
 
-# 2026-08-09 – Brand and GUI comparison release
+## 2026-08-09 – Brand and GUI comparison release
 
-- established the signed **J. L. 1976** circuit emblem as the mandatory project logo
-- applied the logo to the public website, local Raspberry Pi HUD, cloud HUD and repository documentation
+- established the signed **J. L. 1976** circuit emblem as the initial project brand reference
+- applied branding to the public website, local Raspberry Pi HUD, cloud HUD and repository documentation
 - embedded both GUI milestones (original v0.5 and current power/cost v0.7) directly on the public website
-- added responsive comparison layout, lazy loading and WebP delivery where appropriate
-- retained the PNG master asset and documented brand-protection rules
-
-# 2026-08-09 – GitHub/repository branding assets
-
-- added a dedicated wide repository/social banner under `website/assets/brand/135er-growcontrol-repo-banner.webp`
-- added a square repository/app mark under `website/assets/brand/135er-growcontrol-repo-mark.png`
-- added `website/assets/brand/favicon.ico` and wired it into the public site
-- added the repository banner and mark to the top of `README.md`
-- added OpenGraph/social-preview metadata and Apple touch icon support to the public website
-- kept the signed **J. L. 1976** emblem as the authoritative master trademark; the new assets are presentation derivatives only
-- documented the new branding assets in `BRANDING.md`, `website/README.md` and bilingual website-design documentation
+- added responsive comparison layout and lazy loading
+- later superseded WebP delivery with the PNG-only branding policy above
