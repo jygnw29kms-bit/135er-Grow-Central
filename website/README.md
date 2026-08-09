@@ -13,6 +13,9 @@ Die öffentliche Website bleibt technisch und sicherheitlich vollständig von de
 Die Referenzgrafik wird auf der öffentlichen Website direkt als PNG geladen:
 
 - `assets/gui-preview-v0.5.png`
+- `assets/gui-preview-v0.5.webp`
+- `assets/gui-power-preview-v0.7.svg`
+- `assets/brand/135er-growcontrol-logo-jl1976.webp`
 
 Die PNG-Datei ist bewusst die primäre Web-Datei, damit keine WebP-/MIME-Abhängigkeit des Hostings besteht. Eine WebP-Version kann weiterhin als alternatives Asset im Repository verbleiben.
 

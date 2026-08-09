@@ -1,8 +1,12 @@
 # 135er GrowControl
 
+![135er GrowControl – offizielles Markenzeichen J. L. 1976](website/assets/brand/135er-growcontrol-logo-jl1976.webp)
+
 **Secure local-first automation platform for Raspberry Pi, BLE devices and smart-home interoperability.**
 
 > Current architecture generation: **v0.6 Secure Smart-Home Platform**
+
+The project name and the cyan/green circuit emblem bearing **J. L. 1976** form the official 135er GrowControl brand. See [`BRANDING.md`](BRANDING.md) for mandatory usage.
 
 135er GrowControl began as a Raspberry-Pi controller for the Mars Hydro DF100M and is now being rebuilt as a modular local-first automation platform. The Raspberry Pi remains the authoritative controller; cloud services and smart-home ecosystems are optional integrations.
 

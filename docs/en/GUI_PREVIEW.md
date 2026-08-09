@@ -2,7 +2,17 @@
 
 This document defines the current preview image as the **authoritative design reference** for the finished 135er GrowControl user interface.
 
-![135er GrowControl GUI Preview](../assets/gui/gui-preview-v0.5.png)
+## Current v0.7 design
+
+![135er GrowControl GUI v0.7 with power and cost projections](../../website/assets/gui-power-preview-v0.7.svg)
+
+## Original v0.5 design
+
+![135er GrowControl GUI base HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+
+The v0.7 reference adds smart-plug states, power telemetry, a configurable
+electricity tariff and hour/day/week/month/year projections. Both images remain
+available as traceable design milestones.
 
 ## Target design
 

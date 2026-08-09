@@ -10,6 +10,20 @@ Technische Schreibweisen:
 - Python/interne Kennung: `135er_growcontrol`
 - UI-Logo: `135ER GROWCONTROL`
 
+## Verbindliches Markenzeichen
+
+Das cyan/grüne Leiterbahn-Emblem mit dem Schriftzug **135er GrowControl** und der
+eingearbeiteten Signatur **J. L. 1976** ist das verbindliche Master-Logo. Es wird
+bei allen öffentlichen und internen Projektoberflächen verwendet und darf nicht
+durch reine Textmarken, fremde Symbole oder ältere Varianten ersetzt werden.
+
+- Verbindliche Projektdatei: `website/assets/brand/135er-growcontrol-logo-jl1976.webp`
+- Lokale GUI: `web/brand-logo.webp`
+- Cloud-GUI: `cloud/web/brand-logo.webp`
+- Schutzraum: Logo nicht beschneiden oder überlagern.
+- Hintergrund: vorzugsweise Near Black; Seitenverhältnis immer beibehalten.
+- Signatur: `J. L. 1976` muss lesbar erhalten bleiben.
+
 ## Gerätebezeichnung
 
 `DF100M` ist kein Teil des Produktnamens mehr. Die Bezeichnung bleibt nur dort bestehen,

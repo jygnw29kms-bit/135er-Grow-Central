@@ -45,3 +45,10 @@
 
 ## v0.4.x
 - Early FastAPI/Bleak DF100M research runtime and optional cloud-link alpha.
+# 2026-08-09 – Brand and GUI comparison release
+
+- established the signed **J. L. 1976** circuit emblem as the mandatory project logo
+- applied the logo to the public website, local Raspberry Pi HUD, cloud HUD and repository documentation
+- embedded both GUI milestones (original v0.5 and current power/cost v0.7) directly on the public website
+- added responsive comparison layout, lazy loading and WebP delivery where appropriate
+- retained the PNG master asset and documented brand-protection rules
