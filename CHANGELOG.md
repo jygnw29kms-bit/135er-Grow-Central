@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-09 – WIP repository presentation refresh
+
+- marked the repository and public project interface clearly as **Work in Progress**
+- redesigned the repository front page to visually match the dark HUD/control-plane identity of 135er GrowControl
+- added project status, architecture, integration, security and repository-map blocks to the README
+- embedded the PNG GUI reference directly in the repository front page
+- updated public website status indicators to show `WIP · v0.7` instead of implying production completion
+- retained PNG/ICO as the raster branding standard
+
 ## 2026-08-09 – PNG-only branding migration
 
 - removed WebP usage from the public website, local HUD and cloud HUD
