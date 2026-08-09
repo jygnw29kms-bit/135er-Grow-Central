@@ -2,7 +2,18 @@
 
 Dieses Dokument definiert das aktuelle Vorschaubild als **verbindliche Design-Referenz** für die fertige Benutzeroberfläche von 135er GrowControl.
 
-![135er GrowControl GUI Vorschau](../assets/gui/gui-preview-v0.5.png)
+## Aktueller Stand v0.7
+
+![135er GrowControl GUI v0.7 mit Power- und Kostenhochrechnung](../../website/assets/gui-power-preview-v0.7.svg)
+
+## Ursprünglicher Stand v0.5
+
+![135er GrowControl GUI Basis-HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+
+Die v0.7-Referenz erweitert das Basis-HUD um Steckdosen-Schaltzustände,
+Leistungsdaten, einen frei einstellbaren Strompreis und Hochrechnungen für
+Stunde, Tag, Woche, Monat und Jahr. Beide Bilder bleiben als nachvollziehbare
+Entwicklungsstände erhalten.
 
 ## Zielbild
 
