@@ -23,10 +23,10 @@ WebP wird nicht mehr verwendet. Rastergrafiken werden als PNG eingebunden; ICO i
 
 ## GUI-Vorschau
 
-- `assets/gui/local-desktop-v0.8.png`
-- `assets/gui/local-tablet-v0.8.png`
-- `assets/gui/local-mobile-v0.8.png`
-- `assets/gui/cloud-desktop-v0.8.png`
+- `assets/gui/local-desktop-v0.9.png`
+- `assets/gui/local-tablet-v0.9.png`
+- `assets/gui/local-mobile-v0.9.png`
+- `assets/gui/cloud-desktop-v0.9.png`
 
 Alle vier vorhandenen GUI-Demos werden direkt als PNG geladen. Es gibt keine WebP- oder GUI-SVG-Referenzen mehr.
 
@@ -94,7 +94,7 @@ Danach sollten insbesondere folgende Dateien vorhanden sein:
 /var/www/vhosts/dezender.de/httpdocs/index.html
 /var/www/vhosts/dezender.de/httpdocs/styles.css
 /var/www/vhosts/dezender.de/httpdocs/assets/architecture.svg
-/var/www/vhosts/dezender.de/httpdocs/assets/gui/local-desktop-v0.8.png
+/var/www/vhosts/dezender.de/httpdocs/assets/gui/local-desktop-v0.9.png
 /var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-logo.png
 /var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-mark.png
 ```

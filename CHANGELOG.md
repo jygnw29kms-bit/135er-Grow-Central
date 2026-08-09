@@ -1,5 +1,12 @@
 # Changelog
 
+## alpha-0.7.1 – Professional JARVIS-style interface refresh (2026-08-09)
+
+- introduced detailed v0.9 desktop, tablet, mobile and cloud GUI concept images
+- combined the project symbol, `135er-Grow Central` wordmark and graphic `J.L.` signet into one brand lockup
+- rebuilt the public website with stronger hierarchy, restrained HUD styling and responsive interface showcases
+- retained local-first messaging, deny-by-default security and PNG-only runtime assets
+
 ## alpha-0.7.1 – Website stabilization (2026-08-09)
 
 - converted the available logo, project mark and four GUI demo graphics to PNG

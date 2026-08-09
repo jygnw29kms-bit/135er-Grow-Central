@@ -9,10 +9,10 @@
 
 ## Vier GUI-Clients · ein Design
 
-![Local Desktop](website/assets/gui/local-desktop-v0.8.png)
-![Local Tablet](website/assets/gui/local-tablet-v0.8.png)
-![Local Mobile](website/assets/gui/local-mobile-v0.8.png)
-![Cloud Desktop](website/assets/gui/cloud-desktop-v0.8.png)
+![Local Desktop](website/assets/gui/local-desktop-v0.9.png)
+![Local Tablet](website/assets/gui/local-tablet-v0.9.png)
+![Local Mobile](website/assets/gui/local-mobile-v0.9.png)
+![Cloud Desktop](website/assets/gui/cloud-desktop-v0.9.png)
 
 ## Architektur
 

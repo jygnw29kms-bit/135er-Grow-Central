@@ -1,51 +1,77 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="theme-color" content="#020608">
-<meta name="description" content="135er-Grow Central – lokale Raspberry-Pi-Automation für Klima, Geräte, Energie und Smart-Home-Integration. Work in Progress.">
-<meta property="og:title" content="135er-Grow Central · Work in Progress">
-<meta property="og:description" content="Local-first Raspberry-Pi automation platform. Active development.">
-<meta property="og:image" content="assets/brand/135er-grow-central-logo.png">
-<meta name="twitter:card" content="summary_large_image">
-<title>135er-Grow Central · Work in Progress</title>
-<link rel="icon" href="assets/brand/135er-grow-central-mark.png" sizes="any">
-<link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
-<link rel="apple-touch-icon" href="assets/brand/135er-grow-central-mark.png">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#020608">
+  <meta name="description" content="135er-Grow Central – lokale Raspberry-Pi-Automation für Klima, Energie und Smart Home.">
+  <meta property="og:title" content="135er-Grow Central · Local intelligence">
+  <meta property="og:description" content="Local-first automation. Raspberry Pi authority. Optional cloud.">
+  <meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
+  <title>135er-Grow Central · Local intelligence</title>
+  <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Zum Inhalt</a>
-<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
-<div class="site-shell">
-<header class="masthead" id="home">
-  <a class="identity" href="#home" aria-label="135er-Grow Central Startseite"><img class="identity-logo" src="assets/brand/135er-grow-central-logo.png" alt="135er-Grow Central Logo"></a>
-  <nav class="main-nav" aria-label="Hauptnavigation"><a href="#project">Projekt</a><a href="#capabilities">Features</a><a href="#architecture">Technik</a><a href="#clients">Clients</a><a href="#security">Sicherheit</a></nav>
-  <div class="mast-status"><span class="wip-badge">WIP · alpha-0.7.1</span><img class="identity-mark" src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"></div>
-  <div class="clear"></div>
-</header>
-<main id="main">
-<section class="hero" id="project">
-  <div class="hero-copy"><div class="system-label">LOCAL-FIRST / RASPBERRY PI / CONTROL NODE</div><img class="hero-logo" src="assets/brand/135er-grow-central-logo.png" alt="135er-Grow Central"><h1>Kontrolle ohne Cloud-Zwang.</h1><p class="hero-lead">Klima, Geräte, Stromverbrauch und Automationen in einer lokalen Steuerzentrale. Der Raspberry Pi bleibt Master; Cloud und Smart-Home-Ökosysteme sind optionale Erweiterungen.</p><div class="hero-actions"><a class="button button-primary" href="#clients">GUI ansehen</a><a class="button button-secondary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub öffnen</a></div><div class="trust-line"><span class="status-dot"></span> WORK IN PROGRESS · LOCAL MASTER · DENY-BY-DEFAULT WRITES</div></div>
-  <div class="hero-core"><img class="hero-mark" src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><div class="core-frame"><div class="core-orbit orbit-1"></div><div class="core-orbit orbit-2"></div><div class="core-center"><span>135</span><small>CONTROL</small></div></div><div class="core-readout"><span>CONTROL NODE</span><strong>RASPBERRY PI</strong><span>MODE</span><strong>LOCAL-FIRST</strong><span>REMOTE LAYER</span><strong>OPTIONAL</strong></div></div>
-</section>
-<section class="status-strip"><div class="status-card"><span>MASTER</span><strong>RASPBERRY PI</strong><small>lokale Autorität</small></div><div class="status-card"><span>POWER</span><strong>W · kWh · V · A</strong><small>Smart-Plug Telemetrie</small></div><div class="status-card"><span>COST MODEL</span><strong>€/kWh</strong><small>Stunde bis Jahr</small></div><div class="status-card warning"><span>STATUS</span><strong>WIP</strong><small>aktive Entwicklung</small></div></section>
-<section class="section" id="capabilities"><div class="section-heading"><span class="system-label">CORE CAPABILITIES</span><h2>Ruhige Oberfläche. Klare Kontrolle.</h2><p>Ein einheitliches dunkles, mystisches Control-Surface-Design für Website, Repository, lokale GUI und Cloud-GUI.</p></div><div class="feature-grid"><article class="feature-card"><span class="feature-index">01</span><h3>Local-first</h3><p>Lokale Steuerung bleibt ohne Internet verfügbar.</p></article><article class="feature-card"><span class="feature-index">02</span><h3>Klima & Sensorik</h3><p>Temperatur, Luftfeuchte, VPD und weitere Messwerte.</p></article><article class="feature-card"><span class="feature-index">03</span><h3>Power & Kosten</h3><p>Schaltzustände, Leistung, Energie und Kostenhochrechnung.</p></article><article class="feature-card"><span class="feature-index">04</span><h3>Smart Home</h3><p>Shelly direkt; Home Assistant als optionale Brücke.</p></article><article class="feature-card"><span class="feature-index">05</span><h3>Security Gates</h3><p>Inventory → Approval → Writable → Authenticated.</p></article></div></section>
-<section class="section split-section" id="architecture"><div class="section-copy"><span class="system-label">SYSTEM ARCHITECTURE</span><h2>Der Raspberry Pi bleibt das Zentrum.</h2><p>Lokale Kontrolle, optionale Integrationen und öffentliche Präsentation bleiben getrennte Vertrauensbereiche.</p><div class="architecture-chain"><div><span>01</span><strong>Geräte & Sensoren</strong><small>BLE · Smart Plugs · lokale APIs</small></div><div><span>02</span><strong>135er-Grow Central Local</strong><small>Raspberry Pi · FastAPI · SQLite</small></div><div><span>03</span><strong>Optional Bridges</strong><small>Home Assistant · Cloud · Matter später</small></div></div></div><div class="terminal-panel"><div class="terminal-head"><span>GC://SYSTEM/BOUNDARIES</span><em>WIP</em></div><pre>CONTROL_NODE    Raspberry Pi
-LOCAL_API       FastAPI
-LOCAL_DB        SQLite
-DF100M          experimental BLE
-SHELLY          local JSON-RPC
-HOME_ASSISTANT  optional REST bridge
-PUBLIC_WEBSITE  static only
-REMOTE_WRITES   deny by default</pre></div></section>
-<section class="section client-section" id="clients"><div class="section-heading"><span class="system-label">UNIFIED CLIENT FAMILY</span><h2>Vier Clients. Eine visuelle Sprache.</h2><p>Logo immer dominant, Markenzeichen immer sichtbar aber sekundär. Die Bilder sind Designkonzepte mit Beispielwerten – keine validierte Live-Telemetrie.</p></div><div class="client-gallery"><figure class="client-card"><img src="assets/gui/local-desktop-v0.8.png" alt="135er-Grow Central Local Desktop GUI"><figcaption><strong>Local Desktop</strong><span>Raspberry-Pi Control Client</span></figcaption></figure><figure class="client-card"><img src="assets/gui/local-tablet-v0.8.png" alt="135er-Grow Central Local Tablet GUI"><figcaption><strong>Local Tablet</strong><span>Touch-first Client</span></figcaption></figure><figure class="client-card mobile-client"><img src="assets/gui/local-mobile-v0.8.png" alt="135er-Grow Central Local Mobile GUI"><figcaption><strong>Local Mobile</strong><span>Compact Client</span></figcaption></figure><figure class="client-card"><img src="assets/gui/cloud-desktop-v0.8.png" alt="135er-Grow Central Cloud Desktop GUI"><figcaption><strong>Cloud Desktop</strong><span>Optional Remote Overview</span></figcaption></figure></div></section>
-<section class="section split-section security-section" id="security"><div class="section-copy"><span class="system-label">TRUST MODEL</span><h2>Vier Hürden vor jedem Write.</h2><p>Lesen und Anzeigen ist nicht dasselbe wie Steuern. Schreibzugriffe werden separat freigegeben und auditiert.</p></div><ol class="security-steps"><li><span>01</span><strong>Inventory</strong><small>Gerät muss bekannt sein.</small></li><li><span>02</span><strong>Approval</strong><small>Explizite Freigabe.</small></li><li><span>03</span><strong>Writable</strong><small>Write-Recht separat aktiv.</small></li><li><span>04</span><strong>Authenticated</strong><small>Tokenprüfung und Audit.</small></li></ol></section>
-<section class="cta-panel"><img class="cta-logo" src="assets/brand/135er-grow-central-logo.png" alt="135er-Grow Central"><div><span class="system-label">OPEN DEVELOPMENT</span><h2>Ein System. Eine Marke. Eine Oberfläche.</h2><p>Website, Repo, Local, Cloud und Raspberry-Pi-Startbild verwenden dieselbe Identität.</p></div><img class="cta-mark" src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><a class="button button-primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Zum Repository</a></section>
-</main>
-<footer class="footer"><div class="footer-brand"><img src="assets/brand/135er-grow-central-logo.png" alt="135er-Grow Central"><span>Work in Progress · Local-first Raspberry Pi Automation</span></div><img class="footer-mark" src="assets/brand/135er-grow-central-mark.png" alt=""><div class="footer-links"><a href="#home">Top</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a></div></footer>
-</div>
+  <a class="skip-link" href="#main">Zum Inhalt</a>
+  <div class="grid-field" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand brand-lockup" href="#home" aria-label="135er-Grow Central Startseite">
+      <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L.">
+    </a>
+    <nav aria-label="Hauptnavigation">
+      <a href="#system">System</a><a href="#interfaces">Interfaces</a><a href="#security">Security</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a>
+    </nav>
+    <div class="release"><i></i> ALPHA 0.7.1</div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="home">
+      <div class="hero-copy">
+        <div class="eyebrow"><span>GC://LOCAL/CORE</span><b>ONLINE</b></div>
+        <h1>Lokale Kontrolle.<br><span>Intelligent orchestriert.</span></h1>
+        <p>Eine souveräne Steuerzentrale für Klima, Geräte, Energie und Automationen. Der Raspberry Pi bleibt Master – schnell, privat und unabhängig.</p>
+        <div class="hero-actions"><a class="button primary" href="#interfaces">Interfaces entdecken</a><a class="button" href="#system">System ansehen</a></div>
+        <dl class="hero-metrics"><div><dt>CONTROL</dt><dd>LOCAL</dd></div><div><dt>REMOTE</dt><dd>OPTIONAL</dd></div><div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div></dl>
+      </div>
+      <div class="core-visual" aria-label="Raspberry Pi Local Core">
+        <div class="core-rings"><span></span><span></span><span></span><div><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"></div></div>
+        <div class="core-caption"><strong>LOCAL CORE</strong><small>RASPBERRY PI · ACTIVE</small></div>
+      </div>
+    </section>
+
+    <section class="system-overview" id="system">
+      <div class="section-intro"><div><span class="kicker">SYSTEM OVERVIEW</span><h2>Alles Wesentliche. Ohne visuelles Rauschen.</h2></div><p>Sensorik, Leistung und Regeln laufen in einer konsistenten lokalen Architektur zusammen.</p></div>
+      <div class="telemetry">
+        <article><span>TEMPERATUR</span><strong>24.7<small> °C</small></strong><div class="spark a"></div><em>NOMINAL</em></article>
+        <article><span>LUFTFEUCHTE</span><strong>55.2<small> %</small></strong><div class="spark b"></div><em>NOMINAL</em></article>
+        <article><span>VPD</span><strong>1.21<small> kPa</small></strong><div class="spark c"></div><em>OPTIMAL</em></article>
+        <article><span>LEISTUNG</span><strong>243<small> W</small></strong><div class="spark d"></div><em>LIVE</em></article>
+      </div>
+    </section>
+
+    <section class="showcase" id="interfaces">
+      <div class="section-intro"><div><span class="kicker">UNIFIED INTERFACE FAMILY</span><h2>Ein System. Vier präzise Perspektiven.</h2></div><p>Jede Oberfläche folgt derselben Wort-Bild-Marke, derselben Datenlogik und denselben Sicherheitsprinzipien.</p></div>
+      <article class="featured-interface">
+        <div class="interface-copy"><span>01 / LOCAL DESKTOP</span><h3>Die vollständige Kommandozentrale.</h3><p>Dichte Telemetrie, Klima-Regelung, Energie, Geräte, Alarmierung und Automations-Timeline in einer professionellen Arbeitsoberfläche.</p><ul><li>Raspberry Pi Master</li><li>24h Environmental Trends</li><li>Deny-by-default Security</li></ul></div>
+        <figure><img src="assets/gui/local-desktop-v0.9.png" alt="Detailreiche Local Desktop GUI von 135er-Grow Central"><figcaption>LOCAL DESKTOP · CONCEPT TELEMETRY</figcaption></figure>
+      </article>
+      <div class="interface-grid">
+        <figure><img src="assets/gui/local-tablet-v0.9.png" alt="Detailreiche Local Tablet GUI"><figcaption><strong>Local Tablet</strong><span>Touch-first control surface</span></figcaption></figure>
+        <figure class="mobile"><img src="assets/gui/local-mobile-v0.9.png" alt="Detailreiche Local Mobile GUI"><figcaption><strong>Local Mobile</strong><span>Control in your hand</span></figcaption></figure>
+        <figure><img src="assets/gui/cloud-desktop-v0.9.png" alt="Detailreiche Cloud Desktop GUI"><figcaption><strong>Cloud Desktop</strong><span>Optional remote overview</span></figcaption></figure>
+      </div>
+    </section>
+
+    <section class="security" id="security">
+      <div class="security-copy"><span class="kicker">TRUST ARCHITECTURE</span><h2>Cloud erweitert.<br>Local entscheidet.</h2><p>Jeder Schreibzugriff durchläuft vier explizite Hürden. Öffentliche Website, optionale Cloud und lokale Steuerung bleiben klar getrennte Vertrauensbereiche.</p></div>
+      <ol><li><b>01</b><span><strong>Inventory</strong><small>Gerät ist bekannt</small></span></li><li><b>02</b><span><strong>Approval</strong><small>Explizit freigegeben</small></span></li><li><b>03</b><span><strong>Writable</strong><small>Write-Recht aktiv</small></span></li><li><b>04</b><span><strong>Authenticated</strong><small>Token und Audit</small></span></li></ol>
+      <div class="security-seal"><img src="assets/brand/135er-grow-central-mark.png" alt=""><span>POLICY</span><strong>DENY<br>BY DEFAULT</strong></div>
+    </section>
+
+    <section class="final-cta"><div><span class="kicker">OPEN DEVELOPMENT · ALPHA 0.7.1</span><h2>Gebaut für lokale Souveränität.</h2></div><a class="button primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Repository öffnen</a></section>
+  </main>
+
+  <footer><div class="brand brand-lockup footer-brand"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L."></div><p>Konzeptwerte · keine validierte Live-Telemetrie</p><a href="#home">TOP ↑</a></footer>
 </body>
 </html>
