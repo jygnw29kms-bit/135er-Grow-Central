@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05090e">
-<meta name="description" content="135er GrowControl – Local-first Raspberry-Pi-Automationsplattform mit sicherer Smart-Plug-Telemetrie.">
-<meta property="og:title" content="135er GrowControl">
-<meta property="og:description" content="Local-first Raspberry-Pi automation platform for climate, power telemetry and smart-home interoperability.">
+<meta name="description" content="135er GrowControl – Work-in-progress Local-first Raspberry-Pi-Automationsplattform mit sicherer Smart-Plug-Telemetrie.">
+<meta property="og:title" content="135er GrowControl · Work in Progress">
+<meta property="og:description" content="Local-first Raspberry-Pi automation platform for climate, power telemetry and smart-home interoperability. Active development.">
 <meta property="og:image" content="assets/brand/135er-growcontrol-repo-mark.png">
 <meta name="twitter:card" content="summary">
-<title>135er GrowControl</title>
+<title>135er GrowControl · Work in Progress</title>
 <link rel="icon" href="assets/brand/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="assets/brand/135er-growcontrol-repo-mark.png">
 <link rel="apple-touch-icon" href="assets/brand/135er-growcontrol-repo-mark.png">
@@ -21,20 +21,20 @@
   <aside class="sidebar">
     <a class="brand" href="#dashboard"><img class="brand-logo" src="assets/brand/135er-growcontrol-repo-mark.png" alt="135er GrowControl Logo"><div><div class="brand-title">GROWCONTROL</div><div class="brand-sub">LOCAL CONTROL SYSTEM</div></div></a>
     <nav><a class="nav-item active" href="#dashboard">◈ <span>Übersicht</span></a><a class="nav-item" href="#architecture">⌁ <span>Architektur</span></a><a class="nav-item" href="#integrations">⟲ <span>Integrationen</span></a><a class="nav-item" href="#security">◇ <span>Sicherheit</span></a><a class="nav-item" href="#status">⚙ <span>Status</span></a></nav>
-    <div class="sidebar-footer"><span class="status-dot"></span><div><div class="small-label">PROJECT</div><div class="online-text">PUBLIC ONLINE</div></div></div>
+    <div class="sidebar-footer"><span class="status-dot"></span><div><div class="small-label">PROJECT</div><div class="online-text">WORK IN PROGRESS</div></div></div>
   </aside>
   <main class="main">
-    <header class="topbar"><div><div class="eyebrow">135ER / GROWCONTROL / PUBLIC PROJECT INTERFACE</div><h1>Climate, Power & Device Command Center</h1></div><div class="top-actions"><span class="clock">v0.7</span><a class="ghost" href="https://github.com/jygnw29kms-bit/135er_GrowControl">GITHUB ↗</a></div></header>
+    <header class="topbar"><div><div class="eyebrow">135ER / GROWCONTROL / PUBLIC PROJECT INTERFACE</div><h1>Climate, Power & Device Command Center</h1></div><div class="top-actions"><span class="clock">WIP · v0.7</span><a class="ghost" href="https://github.com/jygnw29kms-bit/135er_GrowControl">GITHUB ↗</a></div></header>
     <section id="dashboard">
       <div class="metric-grid">
         <article class="metric-card glow-cyan"><div class="card-top"><span>PLATFORM</span><span class="chip">MASTER</span></div><div class="metric compact">RASPBERRY PI</div><div class="status-line"><span class="status-dot"></span><span>LOCAL-FIRST CONTROL</span></div></article>
         <article class="metric-card glow-violet"><div class="card-top"><span>POWER TELEMETRY</span><span class="chip">v0.7</span></div><div class="metric compact">SMART PLUGS</div><div class="status-line"><span>W · kWh · V · A · Hz · ON/OFF</span></div></article>
         <article class="metric-card glow-green"><div class="card-top"><span>COST MODEL</span><span class="chip">€/kWh</span></div><div class="metric compact">HOCHRECHNUNG</div><div class="status-line"><span>STUNDE · TAG · WOCHE · MONAT · JAHR</span></div></article>
-        <article class="metric-card glow-amber"><div class="card-top"><span>SECURITY</span><span class="chip">WRITE</span></div><div class="metric compact">LOCKED</div><div class="status-line"><span>DENY BY DEFAULT</span></div></article>
+        <article class="metric-card glow-amber"><div class="card-top"><span>PROJECT STATUS</span><span class="chip">WIP</span></div><div class="metric compact">ACTIVE DEV</div><div class="status-line"><span>NOT PRODUCTION COMPLETE</span></div></article>
       </div>
       <div class="control-grid">
         <article class="panel fan-panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM OVERVIEW</div><h2>135er GrowControl v0.7</h2></div><div class="device-badge">LOCAL MASTER</div></div><div class="fan-control"><div class="ring"><div class="ring-inner"><span>135</span><small>CONTROL</small></div></div><div class="system-copy"><h3>Geräte, Klima, Stromverbrauch und Kosten in einem lokalen HUD.</h3><p>Die lokale Oberfläche liest Smart-Plugs aus, zeigt Leistungsdaten und berechnet auf Basis eines frei eingestellten Strompreises eine Kostenhochrechnung für Stunde, Tag, Woche, Monat und Jahr.</p><div class="button-row"><a class="primary" href="#architecture">ARCHITEKTUR</a><a class="secondary" href="#integrations">INTEGRATIONEN</a><a class="danger" href="#security">SECURITY</a></div></div></div></article>
-        <article class="panel diag-panel"><div class="panel-head"><div><div class="eyebrow">PROJECT TELEMETRY</div><h2>Runtime Boundaries</h2></div><span class="pulse">PUBLIC</span></div><pre>CONTROL NODE   Raspberry Pi
+        <article class="panel diag-panel"><div class="panel-head"><div><div class="eyebrow">PROJECT TELEMETRY</div><h2>Runtime Boundaries</h2></div><span class="pulse">WIP</span></div><pre>CONTROL NODE   Raspberry Pi
 POWER API      local-only overview
 PLUG DATA      ON/OFF · W · Wh/kWh · V · A · Hz
 COST MODEL     configurable €/kWh
@@ -43,17 +43,18 @@ SHELLY         Gen2+ local JSON-RPC
 HOME ASSISTANT optional REST bridge
 WRITE GATES    inventory + approval + writable + token
 PUBLIC SITE    static / no LAN device access
+PROJECT        active work in progress
 
 No credentials, tokens or direct smart-plug
 endpoints are exposed by this public website.</pre></article>
       </div>
-      <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Control Node</span><strong>RASPBERRY PI</strong><small>FastAPI · BLE · Smart Home</small></article><article class="mini-panel"><span class="mini-label">Power Layer</span><strong>NORMALIZED TELEMETRY</strong><small>Shelly + Home Assistant</small></article><article class="mini-panel"><span class="mini-label">Cost Layer</span><strong>FREE €/kWh INPUT</strong><small>Forecast by current load</small></article></div>
+      <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Control Node</span><strong>RASPBERRY PI</strong><small>FastAPI · BLE · Smart Home</small></article><article class="mini-panel"><span class="mini-label">Power Layer</span><strong>NORMALIZED TELEMETRY</strong><small>Shelly + Home Assistant</small></article><article class="mini-panel"><span class="mini-label">Project State</span><strong>WORK IN PROGRESS</strong><small>Experimental paths remain clearly marked</small></article></div>
     </section>
     <section id="architecture" class="content-section panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>Architektur</h2></div><span class="pulse">LOCAL MASTER</span></div><div class="architecture-layout"><img src="assets/architecture.svg" alt="135er GrowControl Architektur"><div class="system-grid"><div><span>Master</span><strong>Raspberry Pi</strong></div><div><span>Local API</span><strong>FastAPI</strong></div><div><span>Power</span><strong>Normalized Smart-Plug API</strong></div><div><span>Cost Model</span><strong>Local browser calculation</strong></div><div><span>Cloud</span><strong>Optional</strong></div><div><span>Public Web</span><strong>Static only</strong></div></div></div></section>
     <section id="integrations" class="content-section panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Smart-Home-Integrationen</h2></div></div><div class="device-list"><div class="device-row"><div><strong>Shelly Gen2+</strong><span>Lokaler JSON-RPC-Adapter mit Schaltzustand und Leistungstelemetrie</span></div><span class="badge-green">INTEGRATED</span></div><div class="device-row"><div><strong>Home Assistant</strong><span>REST-Bridge mit normalisierten Smart-Plug-Attributen</span></div><span class="badge-cyan">INTEGRATED</span></div><div class="device-row"><div><strong>Cost Projection</strong><span>Frei einstellbarer €/kWh-Tarif mit Periodenhochrechnung</span></div><span class="badge-green">INTEGRATED</span></div><div class="device-row"><div><strong>Tapo / FRITZ!SmartHome</strong><span>Über Home Assistant in dasselbe Power-HUD integrierbar</span></div><span>BRIDGE</span></div></div></section>
     <section id="security" class="content-section panel"><div class="panel-head"><div><div class="eyebrow">SECURITY GATES</div><h2>Vier Hürden vor einem Write</h2></div><span class="device-badge">DENY DEFAULT</span></div><div class="security-grid"><div><span>01</span><strong>Inventory</strong><small>Gerät muss registriert sein.</small></div><div><span>02</span><strong>Approval</strong><small>Explizite Freigabe erforderlich.</small></div><div><span>03</span><strong>Write permission</strong><small>Schreibrecht separat aktivieren.</small></div><div><span>04</span><strong>Authenticated command</strong><small>Tokenprüfung und Audit.</small></div></div></section>
     <section id="status" class="content-section panel preview-panel"><div class="panel-head"><div><div class="eyebrow">LOCAL HUD</div><h2>GUI-Entwicklung im direkten Vergleich</h2></div><span class="pulse">v0.5 → v0.7</span></div><p class="muted">Beide verbindlichen GUI-Entwürfe sind direkt eingebettet. Die aktuelle v0.7 ergänzt Gesamtleistung, kWh, frei einstellbaren Strompreis sowie Hochrechnungen für Stunde, Tag, Woche, Monat und Jahr. Alle dargestellten Werte sind Beispielwerte; echte Live-Daten bleiben ausschließlich lokal auf dem Raspberry Pi.</p><div class="preview-grid"><figure><figcaption><strong>Aktueller Stand</strong><span>v0.7 · Power & Kosten</span></figcaption><img class="gui-preview" src="assets/gui-power-preview-v0.7.svg" alt="Aktuelle 135er GrowControl GUI v0.7 mit Power- und Kostenanzeige" loading="lazy" decoding="async"></figure><figure><figcaption><strong>Ursprünglicher Stand</strong><span>v0.5 · Basis-HUD</span></figcaption><img class="gui-preview" src="assets/gui-preview-v0.5.png" alt="Ursprüngliche 135er GrowControl GUI v0.5" loading="lazy" decoding="async"></figure></div></section>
-    <footer><span>135er GrowControl · Open Development</span><a href="https://github.com/jygnw29kms-bit/135er_GrowControl">Repository ↗</a></footer>
+    <footer><span>135er GrowControl · Work in Progress · Open Development</span><a href="https://github.com/jygnw29kms-bit/135er_GrowControl">Repository ↗</a></footer>
   </main>
 </div>
 </body>
