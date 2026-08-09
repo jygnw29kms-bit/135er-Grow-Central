@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="135er GrowControl – Local-first Raspberry-Pi-Steuerplattform für Monitoring, BLE-Geräteintegration und optionale Cloud-Anbindung.">
+  <title>135er GrowControl | 135erheli.de</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap nav">
+      <a class="brand" href="#top">135er GrowControl</a>
+      <nav aria-label="Hauptnavigation">
+        <a href="#projekt">Projekt</a>
+        <a href="#architektur">Architektur</a>
+        <a href="#status">Status</a>
+        <a href="#df100m">DF100M</a>
+        <a href="#links">Links</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">LOCAL-FIRST · RASPBERRY PI · OPEN DEVELOPMENT</p>
+          <h1>135er GrowControl</h1>
+          <p class="lead">Eine lokale Steuer- und Monitoring-Plattform auf Raspberry-Pi-Basis mit BLE-Geräteintegration, Weboberfläche und optionaler Cloud-Erweiterung.</p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/jygnw29kms-bit/135er_GrowControl">GitHub öffnen</a>
+            <a class="button" href="https://github.com/jygnw29kms-bit/135er_GrowControl/wiki">Wiki</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <div class="status-line"><span class="dot green"></span> Raspberry Pi = lokale Master-Instanz</div>
+          <div class="status-line"><span class="dot blue"></span> Cloud = optional</div>
+          <div class="status-line"><span class="dot amber"></span> DF100M-Protokoll = experimentell</div>
+          <div class="status-line"><span class="dot green"></span> Remote Commands = standardmäßig aus</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="projekt" class="section">
+      <div class="wrap">
+        <p class="eyebrow">DIE IDEE</p>
+        <h2>Vom Fan-Controller zur Plattform</h2>
+        <p>Das Projekt entstand aus dem Wunsch, einen Mars Hydro DF100M lokal und unabhängig von einer dauerhaften Hersteller-App zu überwachen und später kontrolliert zu steuern. Aus dem ersten BLE-Testaufbau entwickelte sich eine allgemeine Local-first-Plattform für Geräte, Sensoren, Historie, Zeitpläne, Automationen und eine optionale Cloud-Anbindung.</p>
+        <div class="cards three">
+          <article class="card"><h3>Lokal zuerst</h3><p>Der Raspberry Pi bleibt auch ohne Internet voll funktionsfähig. Kritische Steuerlogik soll lokal ausgeführt werden.</p></article>
+          <article class="card"><h3>Browser statt App-Zwang</h3><p>Die Oberfläche ist als responsive Web-GUI für Desktop, Tablet/iPad und Smartphone ausgelegt.</p></article>
+          <article class="card"><h3>Erweiterbar</h3><p>Geräteadapter, Sensorik, Historie und Automation werden modular voneinander getrennt.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="architektur" class="section alt">
+      <div class="wrap">
+        <p class="eyebrow">ARCHITEKTUR</p>
+        <h2>Einfach, lokal, nachvollziehbar</h2>
+        <pre class="architecture">Browser / iPad
+      │
+      ▼
+135er GrowControl Local
+Raspberry Pi
+   │            │
+   │ BLE        └──── HTTPS ────► optionale Cloud
+   ▼                              Linux VPS
+DF100M                           Telemetrie / Historie
+
+Lokale Daten: SQLite
+Cloud-Ziel: PostgreSQL</pre>
+        <p class="muted">Der Pi wird nicht direkt aus dem Internet freigegeben. Cloud-Kommunikation ist ausgehend vorgesehen; Remote-Befehle benötigen explizite Freigabe und lokale Validierung.</p>
+      </div>
+    </section>
+
+    <section id="status" class="section">
+      <div class="wrap">
+        <p class="eyebrow">AKTUELLER STAND</p>
+        <h2>v0.5.x · Hardware-Validierung</h2>
+        <div class="status-grid">
+          <div class="status-card"><strong>BLE Discovery</strong><span class="badge ok">implementiert</span></div>
+          <div class="status-card"><strong>Connect / Disconnect</strong><span class="badge ok">implementiert</span></div>
+          <div class="status-card"><strong>GATT Inspection</strong><span class="badge ok">implementiert</span></div>
+          <div class="status-card"><strong>Notification Capture</strong><span class="badge exp">experimentell</span></div>
+          <div class="status-card"><strong>DF100M Speed Protocol</strong><span class="badge warn">nicht validiert</span></div>
+          <div class="status-card"><strong>Cloud Telemetrie</strong><span class="badge exp">alpha</span></div>
+          <div class="status-card"><strong>RBAC Runtime</strong><span class="badge plan">Baseline</span></div>
+          <div class="status-card"><strong>Pi 3B Test Image</strong><span class="badge exp">Build-Pipeline</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="df100m" class="section alt">
+      <div class="wrap two-col">
+        <div>
+          <p class="eyebrow">DF100M RESEARCH</p>
+          <h2>Reverse Engineering mit Sicherheitsgrenzen</h2>
+          <p>Die Integration basiert aktuell auf Beobachtungen der Mars Legacy App und realen BLE-Tests. Kandidaten-UUIDs und Payloads werden ausdrücklich nicht als bestätigt behandelt, solange sie nicht am Gerät beobachtet und reproduzierbar validiert wurden.</p>
+          <ul class="clean-list">
+            <li>Identifier: <code>MZ_MZF002_0_A0A3B35EFDC8</code></li>
+            <li>Device ID: <code>A0A3B35EFDC8</code></li>
+            <li>Firmware: <code>V1.8</code></li>
+            <li>Schreibzugriffe standardmäßig deaktiviert</li>
+          </ul>
+        </div>
+        <div class="card terminal">
+          <div class="terminal-title">Safety defaults</div>
+          <code>DF100M_ALLOW_WRITES=false</code><br>
+          <code>GC_REMOTE_COMMANDS=false</code><br>
+          <code>GC_CLOUD_ENABLED=false</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <p class="eyebrow">GUI</p>
+        <h2>Futuristische, responsive Oberfläche</h2>
+        <p>Das Interface ist als dunkles, übersichtliches Dashboard mit Fokus auf Messwerte, Geräte, Historie, Zeitpläne, Automationen und Systemstatus geplant.</p>
+        <img class="preview" src="../docs/assets/gui/gui-preview-v0.5.png" alt="135er GrowControl GUI Designreferenz">
+      </div>
+    </section>
+
+    <section id="links" class="section alt">
+      <div class="wrap">
+        <p class="eyebrow">PROJEKTRESSOURCEN</p>
+        <h2>Code & Dokumentation</h2>
+        <div class="cards three">
+          <a class="card link-card" href="https://github.com/jygnw29kms-bit/135er_GrowControl"><h3>Repository</h3><p>Quellcode, Workflows, Installer und Entwicklungsstand.</p></a>
+          <a class="card link-card" href="https://github.com/jygnw29kms-bit/135er_GrowControl/wiki"><h3>Wiki</h3><p>Projektwissen, Architektur, Tests, Sicherheit und DF100M-Forschung.</p></a>
+          <a class="card link-card" href="https://github.com/jygnw29kms-bit/135er_GrowControl/releases"><h3>Releases</h3><p>Testimages und veröffentlichte Projektstände.</p></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-grid">
+      <div><strong>135er GrowControl</strong><br><span class="muted">Unabhängiges Open-Development-Projekt</span></div>
+      <div class="muted">135erheli.de</div>
+    </div>
+  </footer>
+</body>
+</html>
