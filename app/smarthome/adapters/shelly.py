@@ -50,8 +50,35 @@ class ShellySwitchAdapter(SwitchAdapter):
 
     async def read_state(self) -> dict[str, Any]:
         result = await self._rpc("Switch.GetStatus", {"id": self.device.channel})
-        return {"on": bool(result.get("output", False)), "native": result}
+        energy_wh = None
+        aenergy = result.get("aenergy")
+        if isinstance(aenergy, dict):
+            total = aenergy.get("total")
+            if isinstance(total, (int, float)):
+                energy_wh = float(total)
+        temperature_c = None
+        temperature = result.get("temperature")
+        if isinstance(temperature, dict):
+            value = temperature.get("tC")
+            if isinstance(value, (int, float)):
+                temperature_c = float(value)
+        return {
+            "on": bool(result.get("output", False)),
+            "online": True,
+            "power_w": _number(result.get("apower")),
+            "voltage_v": _number(result.get("voltage")),
+            "current_a": _number(result.get("current")),
+            "frequency_hz": _number(result.get("freq")),
+            "energy_wh": energy_wh,
+            "temperature_c": temperature_c,
+            "source": "shelly",
+            "native": result,
+        }
 
     async def set_switch(self, on: bool) -> dict[str, Any]:
         await self._rpc("Switch.Set", {"id": self.device.channel, "on": bool(on)})
         return await self.read_state()
+
+
+def _number(value: Any) -> float | None:
+    return float(value) if isinstance(value, (int, float)) else None
