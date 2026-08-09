@@ -27,6 +27,7 @@ jobs:
           import shutil
 
           root = Path('.')
+          workflow_dir = root / '.github' / 'workflows'
           ow = 'Grow' + 'Control'
           ol = 'grow' + 'control'
           ou = 'GROW' + 'CONTROL'
@@ -52,12 +53,17 @@ jobs:
               ('grow' + ' control', 'grow central'),
           ]
 
-          # IDE cache is not source and contains historic project paths.
+          def is_workflow(path):
+              try:
+                  path.relative_to(workflow_dir)
+                  return True
+              except ValueError:
+                  return False
+
           shutil.rmtree(root / '.vs', ignore_errors=True)
 
-          # Rewrite every UTF-8 source/document/config file.
           for p in list(root.rglob('*')):
-              if not p.is_file() or '.git' in p.parts:
+              if not p.is_file() or '.git' in p.parts or is_workflow(p):
                   continue
               try:
                   text = p.read_text(encoding='utf-8')
@@ -69,8 +75,7 @@ jobs:
               if new != text:
                   p.write_text(new, encoding='utf-8')
 
-          # Rename paths bottom-up.
-          for p in sorted([x for x in root.rglob('*') if '.git' not in x.parts], key=lambda x: len(x.parts), reverse=True):
+          for p in sorted([x for x in root.rglob('*') if '.git' not in x.parts and not is_workflow(x)], key=lambda x: len(x.parts), reverse=True):
               name = p.name
               new = name
               for old, newv in [
@@ -92,7 +97,6 @@ jobs:
                   else:
                       p.rename(target)
 
-          # Remove image material carrying the superseded wordmark.
           obsolete = [
               'web/brand-logo.png',
               'cloud/web/brand-logo.png',
@@ -112,7 +116,6 @@ jobs:
               if p.exists() and p.is_file():
                   p.unlink()
 
-          # Distribute one canonical logo and mark to all UI surfaces.
           pairs = [
               ('website/assets/brand/135er-grow-central-logo.svg', 'web/brand-logo.svg'),
               ('website/assets/brand/135er-grow-central-mark.svg', 'web/brand-mark.svg'),
@@ -146,52 +149,24 @@ jobs:
               ('assets/brand/favicon.ico','assets/brand/135er-grow-central-mark.svg'),
           ]
           for p in list(root.rglob('*')):
-              if not p.is_file() or '.git' in p.parts:
-                  continue
-              try: text = p.read_text(encoding='utf-8')
-              except UnicodeDecodeError: continue
-              new = text
-              for old, newv in refs:
-                  new = new.replace(old, newv)
-              if p == root/'web/index.html' and 'brand-mark-corner' not in new:
-                  new = new.replace('</aside>', '<img class="brand-mark-corner" src="/static/brand-mark.svg" alt="J. L. 1976 Markenzeichen"></aside>')
-              if p == root/'cloud/web/index.html' and 'brand-mark.svg' not in new:
-                  new = new.replace('<div class="g">● VPS ONLINE</div>', '<div class="g">● VPS ONLINE <img src="/static/brand-mark.svg" alt="J. L. 1976 Markenzeichen" style="width:36px;height:36px;vertical-align:middle;margin-left:10px"></div>')
-              if new != text:
-                  p.write_text(new, encoding='utf-8')
-
-          # Clean, unified repository front page.
-          (root/'README.md').write_text('''# 135er-Grow Central\n\n<p align="center"><img src="website/assets/brand/135er-grow-central-logo.svg" alt="135er-Grow Central Logo" width="720"></p>\n<p align="center"><strong>LOCAL-FIRST · RASPBERRY PI · SMART HOME · POWER TELEMETRY</strong></p>\n<p align="center"><code>🚧 WORK IN PROGRESS</code> &nbsp; <code>v0.8 development</code> &nbsp; <code>deny-by-default writes</code></p>\n\n> [!WARNING]\n> **Work in Progress:** Hardware- und Protokollpfade werden weiter validiert. Der Raspberry Pi bleibt die lokale Autorität; optionale Cloud-Funktionen ersetzen die lokale Steuerung nicht.\n\n## Vier GUI-Clients · ein Design\n\n![Local Desktop](website/assets/gui/local-desktop-v0.8.svg)\n![Local Tablet](website/assets/gui/local-tablet-v0.8.svg)\n![Local Mobile](website/assets/gui/local-mobile-v0.8.svg)\n![Cloud Desktop](website/assets/gui/cloud-desktop-v0.8.svg)\n\n## Architektur\n\n```text\nGeräte / Sensoren / Smart Plugs\n            |\n            v\n   135er-Grow Central Local\n        Raspberry Pi\n       /     |      \\\n  BLE DF100M |       Shelly RPC\n             |\n           SQLite\n             | outbound HTTPS\n             v\n       optional cloud\n```\n\n## Branding\n- Logo: `website/assets/brand/135er-grow-central-logo.svg`\n- Markenzeichen: `website/assets/brand/135er-grow-central-mark.svg`\n- Logo dominant; Markenzeichen klein und dauerhaft sichtbar.\n- Kein WebP.\n\n## Security Defaults\n`DF100M_ALLOW_WRITES=false` · `GC_REMOTE_COMMANDS=false` · `GC_CLOUD_ENABLED=false` · `GC_SMARTHOME_ENABLED=false`\n\n## Raspberry Pi\nDas Image enthält das Projektlogo als Plymouth-Bootbild und die Projektidentität als ASCII-Begrüßung auf interaktiven Konsolen.\n''', encoding='utf-8')
-
-          (root/'BRANDING.md').write_text('''# 135er-Grow Central Branding\n\n**Offizielle Schreibweise:** 135er-Grow Central\n\nTechnisch: `135er-grow-central` · intern: `135er_grow_central` · UI: `135ER-GROW CENTRAL`.\n\nWebsite, Repository, Local GUI, Cloud GUI und Raspberry-Pi-Image verwenden dieselbe Near-Black-, Electric-Green- und Cyan-Designsprache. Das Logo ist das dominante Branding-Element; `J. L. 1976` bleibt als kleines Markenzeichen am Rand sichtbar.\n\nAssets: `website/assets/brand/135er-grow-central-logo.svg`, `website/assets/brand/135er-grow-central-mark.svg`, `image-builder/brand/boot-logo.b64`, `image-builder/brand/console-banner.txt`.\n''', encoding='utf-8')
-
-          # Pi image: install Plymouth, decode generated logo, set console banner.
-          build = root/'.github/workflows/build-pi3-image-v2.yml'
-          if build.exists():
-              text = build.read_text(encoding='utf-8')
-              text = text.replace('unattended-upgrades apt-listchanges ufw', 'unattended-upgrades apt-listchanges ufw plymouth plymouth-themes')
-              marker = 'systemctl enable unattended-upgrades.service || true'
-              if 'plymouth-set-default-theme 135er-grow-central' not in text and marker in text:
-                  block = '''\n          THEME=/usr/share/plymouth/themes/135er-grow-central\n          mkdir -p "$THEME" /etc/135er-grow-central\n          base64 -d /opt/135er-grow-central/image-builder/brand/boot-logo.b64 >"$THEME/logo.png"\n          cp /opt/135er-grow-central/image-builder/brand/console-banner.txt /etc/135er-grow-central/banner.txt\n          cat >"$THEME/135er-grow-central.plymouth" <<'EOF'\n          [Plymouth Theme]\n          Name=135er-Grow Central\n          Description=135er-Grow Central boot splash\n          ModuleName=script\n          [script]\n          ImageDir=/usr/share/plymouth/themes/135er-grow-central\n          ScriptFile=/usr/share/plymouth/themes/135er-grow-central/135er-grow-central.script\n          EOF\n          cat >"$THEME/135er-grow-central.script" <<'EOF'\n          logo = Image("logo.png");\n          sprite = Sprite(logo);\n          sprite.SetX(Window.GetWidth()/2 - logo.GetWidth()/2);\n          sprite.SetY(Window.GetHeight()/2 - logo.GetHeight()/2);\n          EOF\n          plymouth-set-default-theme 135er-grow-central || true\n          update-initramfs -u || true\n          if [ -f /boot/firmware/cmdline.txt ] && ! grep -qw splash /boot/firmware/cmdline.txt; then sed -i '1 s/$/ quiet splash plymouth.ignore-serial-consoles/' /boot/firmware/cmdline.txt; fi\n          cat >/etc/profile.d/135er-grow-central-banner.sh <<'EOF'\n          case "$-" in *i*) [ -r /etc/135er-grow-central/banner.txt ] && cat /etc/135er-grow-central/banner.txt ;; esac\n          EOF\n          chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt\n'''
-                  text = text.replace(marker, marker + block)
-              build.write_text(text, encoding='utf-8')
-
-          # Add ongoing CI guard without storing the deprecated word as one token.
-          scan = root/'.github/workflows/brand-legacy-scan.yml'
-          scan.write_text('''name: Brand legacy scan\non: [push, workflow_dispatch]\npermissions:\n  contents: read\njobs:\n  scan:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - shell: bash\n        run: |\n          python3 - <<'PYSCAN'\n          from pathlib import Path\n          import re,sys\n          rx=re.compile('grow'+r'[ _-]*'+'control',re.I)\n          bad=[]\n          for p in Path('.').rglob('*'):\n              if '.git' in p.parts: continue\n              if rx.search(str(p)): bad.append('PATH '+str(p))\n              if p.is_file():\n                  try: t=p.read_text(encoding='utf-8')\n                  except UnicodeDecodeError: continue\n                  if rx.search(t): bad.append('TEXT '+str(p))\n          print('\\n'.join(bad) if bad else 'Brand scan clean.')\n          sys.exit(1 if bad else 0)\n          PYSCAN\n''', encoding='utf-8')
-
-          # Final text pass, including generated/modified files.
-          for p in list(root.rglob('*')):
-              if not p.is_file() or '.git' in p.parts:
+              if not p.is_file() or '.git' in p.parts or is_workflow(p):
                   continue
               try: text=p.read_text(encoding='utf-8')
               except UnicodeDecodeError: continue
               new=text
-              for old,newv in repl: new=new.replace(old,newv)
+              for old,newv in refs: new=new.replace(old,newv)
+              if p == root/'web/index.html' and 'brand-mark-corner' not in new:
+                  new=new.replace('</aside>', '<img class="brand-mark-corner" src="/static/brand-mark.svg" alt="J. L. 1976 Markenzeichen"></aside>')
+              if p == root/'cloud/web/index.html' and 'brand-mark.svg' not in new:
+                  new=new.replace('<div class="g">● VPS ONLINE</div>', '<div class="g">● VPS ONLINE <img src="/static/brand-mark.svg" alt="J. L. 1976 Markenzeichen" style="width:36px;height:36px;vertical-align:middle;margin-left:10px"></div>')
               if new != text: p.write_text(new,encoding='utf-8')
+
+          (root/'README.md').write_text('''# 135er-Grow Central\n\n<p align="center"><img src="website/assets/brand/135er-grow-central-logo.svg" alt="135er-Grow Central Logo" width="720"></p>\n<p align="center"><strong>LOCAL-FIRST · RASPBERRY PI · SMART HOME · POWER TELEMETRY</strong></p>\n<p align="center"><code>🚧 WORK IN PROGRESS</code> &nbsp; <code>v0.8 development</code> &nbsp; <code>deny-by-default writes</code></p>\n\n> [!WARNING]\n> **Work in Progress:** Hardware- und Protokollpfade werden weiter validiert. Der Raspberry Pi bleibt die lokale Autorität; optionale Cloud-Funktionen ersetzen die lokale Steuerung nicht.\n\n## Vier GUI-Clients · ein Design\n\n![Local Desktop](website/assets/gui/local-desktop-v0.8.svg)\n![Local Tablet](website/assets/gui/local-tablet-v0.8.svg)\n![Local Mobile](website/assets/gui/local-mobile-v0.8.svg)\n![Cloud Desktop](website/assets/gui/cloud-desktop-v0.8.svg)\n\n## Architektur\n\n```text\nGeräte / Sensoren / Smart Plugs\n            |\n            v\n   135er-Grow Central Local\n        Raspberry Pi\n       /     |      \\\n  BLE DF100M |       Shelly RPC\n             |\n           SQLite\n             | outbound HTTPS\n             v\n       optional cloud\n```\n\n## Branding\n- Logo: `website/assets/brand/135er-grow-central-logo.svg`\n- Markenzeichen: `website/assets/brand/135er-grow-central-mark.svg`\n- Logo dominant; Markenzeichen klein und dauerhaft sichtbar.\n- Kein WebP.\n\n## Raspberry Pi\nBootlogo und ASCII-Konsolenbegrüßung werden im Image-Build eingebunden.\n''', encoding='utf-8')
+
+          (root/'BRANDING.md').write_text('''# 135er-Grow Central Branding\n\n**Offizielle Schreibweise:** 135er-Grow Central\n\nTechnisch: `135er-grow-central` · intern: `135er_grow_central` · UI: `135ER-GROW CENTRAL`.\n\nWebsite, Repository, Local GUI, Cloud GUI und Raspberry-Pi-Image verwenden dieselbe Near-Black-, Electric-Green- und Cyan-Designsprache. Das Logo ist dominant; `J. L. 1976` bleibt als kleines Markenzeichen sichtbar.\n''', encoding='utf-8')
           PY
 
-      - name: Verify migration
+      - name: Verify project files
         shell: bash
         run: |
           python3 - <<'PY'
@@ -200,22 +175,22 @@ jobs:
           rx=re.compile('grow'+r'[ _-]*'+'control',re.I)
           bad=[]
           for p in Path('.').rglob('*'):
-              if '.git' in p.parts: continue
+              if '.git' in p.parts or ('.github' in p.parts and 'workflows' in p.parts): continue
               if rx.search(str(p)): bad.append('PATH '+str(p))
               if p.is_file():
                   try: t=p.read_text(encoding='utf-8')
                   except UnicodeDecodeError: continue
                   if rx.search(t): bad.append('TEXT '+str(p))
-          print('\n'.join(bad) if bad else 'Repository migration clean.')
+          print('\n'.join(bad) if bad else 'Project files clean.')
           sys.exit(1 if bad else 0)
           PY
 
-      - name: Commit migration
+      - name: Commit project migration
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add -A -- ':!.github/workflows'
           git diff --cached --quiet && exit 0
           git commit -m "Rebrand project as 135er-Grow Central"
           git push origin master
