@@ -6,13 +6,9 @@ The image is the authoritative visual target for the finished GUI.
 
 ## Branding
 
-The signed **J. L. 1976** master logo remains mandatory for project surfaces. Two additional presentation assets are available for GitHub and web metadata:
+Raster graphics are embedded as **PNG**. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
 
-- `website/assets/brand/135er-growcontrol-repo-banner.webp` – repository/social banner
-- `website/assets/brand/135er-growcontrol-repo-mark.png` – square repository mark / app icon
-- `website/assets/brand/favicon.ico` – browser favicon
-
-The banner and square mark complement the signed master trademark; they do not replace it.
+The public website, local GUI and cloud GUI use the 135er GrowControl logo in PNG form.
 
 - >=1400 px: fixed sidebar, 3–4 columns, full diagnostics
 - 1024–1399 px: 2–3 columns, compact navigation
