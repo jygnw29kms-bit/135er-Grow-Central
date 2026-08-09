@@ -27,7 +27,7 @@
 - Added application package marker to make test/import behavior deterministic.
 
 ### Website
-- Rebuilt the public project site as a domain-neutral professional static website with architecture SVG, smart-home integration presentation, security model and GUI preview.
+- Rebuilt the public project site as a professional static website with architecture SVG, smart-home integration presentation, security model and GUI previews.
 - Added GitHub Pages deployment workflow.
 - Removed old domain-specific Nginx configuration.
 
@@ -45,6 +45,7 @@
 
 ## v0.4.x
 - Early FastAPI/Bleak DF100M research runtime and optional cloud-link alpha.
+
 # 2026-08-09 – Brand and GUI comparison release
 
 - established the signed **J. L. 1976** circuit emblem as the mandatory project logo
@@ -52,3 +53,13 @@
 - embedded both GUI milestones (original v0.5 and current power/cost v0.7) directly on the public website
 - added responsive comparison layout, lazy loading and WebP delivery where appropriate
 - retained the PNG master asset and documented brand-protection rules
+
+# 2026-08-09 – GitHub/repository branding assets
+
+- added a dedicated wide repository/social banner under `website/assets/brand/135er-growcontrol-repo-banner.webp`
+- added a square repository/app mark under `website/assets/brand/135er-growcontrol-repo-mark.png`
+- added `website/assets/brand/favicon.ico` and wired it into the public site
+- added the repository banner and mark to the top of `README.md`
+- added OpenGraph/social-preview metadata and Apple touch icon support to the public website
+- kept the signed **J. L. 1976** emblem as the authoritative master trademark; the new assets are presentation derivatives only
+- documented the new branding assets in `BRANDING.md`, `website/README.md` and bilingual website-design documentation
