@@ -1,12 +1,20 @@
 # 135er GrowControl
 
-![135er GrowControl – offizielles Markenzeichen J. L. 1976](website/assets/brand/135er-growcontrol-logo-jl1976.webp)
+<p align="center">
+  <img src="website/assets/brand/135er-growcontrol-repo-banner.webp" alt="135er GrowControl repository banner" width="100%">
+</p>
+
+<p align="center">
+  <img src="website/assets/brand/135er-growcontrol-repo-mark.png" alt="135er GrowControl repository mark" width="180">
+</p>
 
 **Secure local-first automation platform for Raspberry Pi, BLE devices and smart-home interoperability.**
 
 > Current architecture generation: **v0.6 Secure Smart-Home Platform**
 
-The project name and the cyan/green circuit emblem bearing **J. L. 1976** form the official 135er GrowControl brand. See [`BRANDING.md`](BRANDING.md) for mandatory usage.
+The repository banner and square mark are presentation assets for GitHub, social previews and favicons. The signed cyan/green circuit emblem bearing **J. L. 1976** remains the mandatory master trademark for project surfaces. See [`BRANDING.md`](BRANDING.md) for the binding usage rules.
+
+![135er GrowControl – offizielles Markenzeichen J. L. 1976](website/assets/brand/135er-growcontrol-logo-jl1976.webp)
 
 135er GrowControl began as a Raspberry-Pi controller for the Mars Hydro DF100M and is now being rebuilt as a modular local-first automation platform. The Raspberry Pi remains the authoritative controller; cloud services and smart-home ecosystems are optional integrations.
 
@@ -78,6 +86,7 @@ If `GC_LOCAL_API_TOKEN` is not configured, protected write endpoints refuse cont
 - `app/smarthome/` – normalized smart-home registry, policy and adapters
 - `web/` – local Raspberry-Pi HUD
 - `website/` – public static project website / GitHub Pages source
+- `website/assets/brand/` – master trademark, repository banner, repository mark and favicon
 - `cloud/` – optional cloud alpha
 - `database/` – local/cloud schema baselines
 - `config/` – safe example device inventory
@@ -88,6 +97,7 @@ If `GC_LOCAL_API_TOKEN` is not configured, protected write endpoints refuse cont
 ## Documentation
 
 - [`PROJECT_HISTORY.md`](PROJECT_HISTORY.md) – project history
+- [`BRANDING.md`](BRANDING.md) – mandatory logo and repository-artwork rules
 - [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) – authoritative implementation status
 - [`docs/ARCHITECTURE_MASTER.md`](docs/ARCHITECTURE_MASTER.md) – system architecture
 - [`docs/SMART_HOME_ARCHITECTURE.md`](docs/SMART_HOME_ARCHITECTURE.md) – smart-home architecture
