@@ -1,42 +1,44 @@
-# 135er GrowControl public project website
+# 135er GrowControl – Project Website
 
-This directory is the **domain-neutral** static project presentation and is already available through the Git repository.
+Die statische Projektseite unter `website/` ist die öffentliche, domain-neutrale Präsentationsfläche von 135er GrowControl.
 
-## Repository source
+## Design
 
-```text
-website/index.html
-website/styles.css
-website/assets/architecture.svg
-website/assets/gui-preview-v0.5.webp
-```
+Seit v0.6 folgt die Website visuell derselben HUD-/Control-Plane-Sprache wie die lokale GrowControl-GUI: dunkle technische Panels, grün-cyanfarbene Statussignale, monospace Systemlabels und responsive Tablet-/Smartphone-Layouts.
 
-## Local preview
+Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
+
+## Assets und Bild-Fallback
+
+Die GUI-Vorschau wird bevorzugt als WebP geladen. Für Hosting-Umgebungen mit fehlerhafter WebP-/MIME-Konfiguration ist zusätzlich ein PNG-Fallback vorgesehen:
+
+- `assets/gui-preview-v0.5.webp`
+- `assets/gui-preview-v0.5.png`
+
+Das HTML verwendet dafür ein `<picture>`-Element. Damit bleibt die Vorschau auch auf konservativ konfigurierten Webservern und Browsern sichtbar.
+
+## Lokale Vorschau
 
 ```bash
 cd website
 python3 -m http.server 8000
 ```
 
-Open `http://127.0.0.1:8000`.
+Danach `http://localhost:8000` im Browser öffnen.
+
+## Deployment
+
+Das Webroot auf dem aktuellen Plesk-Webspace ist `/httpdocs`. Für eine manuelle Aktualisierung vom Server aus:
+
+```bash
+cd /tmp
+rm -rf 135er_GrowControl
+git clone https://github.com/jygnw29kms-bit/135er_GrowControl.git
+cp -a 135er_GrowControl/website/. /httpdocs/
+```
 
 ## GitHub Pages
 
-A manual deployment workflow exists at `.github/workflows/pages.yml`.
+Die Pages-Workflow-Datei liegt unter `.github/workflows/pages.yml`. Der Workflow wird manuell gestartet. Für die erstmalige Nutzung muss GitHub Pages unter **Settings → Pages → Source: GitHub Actions** aktiviert werden.
 
-GitHub currently requires the repository owner to enable **Settings → Pages → Source: GitHub Actions** once before the workflow can deploy. The GitHub Actions token cannot perform that first repository-level enablement in this repository (`Resource not accessible by integration`). After Pages has been enabled once, run **Publish project website** from the Actions tab.
-
-The workflow is deliberately manual until this one-time repository setting is enabled so ordinary pushes do not create expected red deployment failures.
-
-No custom domain is configured. The earlier domain-specific Nginx prototype has been removed.
-
-## Security
-
-The public website is static HTML/CSS/SVG/WebP only. It contains:
-
-- no GrowControl API credentials;
-- no control endpoints;
-- no analytics/tracking;
-- no direct connection to the Raspberry Pi.
-
-The public presentation and the local control UI are intentionally separate trust surfaces.
+Es ist kein Custom-Domain-Setup im Repository hinterlegt.
