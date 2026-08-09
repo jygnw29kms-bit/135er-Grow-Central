@@ -4,6 +4,16 @@
 
 Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 
+## Branding
+
+Für die Projektoberflächen bleibt das signierte **J. L. 1976** Master-Logo verbindlich. Für GitHub und Web-Präsentation stehen zusätzlich zwei ergänzende Assets bereit:
+
+- `website/assets/brand/135er-growcontrol-repo-banner.webp` – Repository-/Social-Banner
+- `website/assets/brand/135er-growcontrol-repo-mark.png` – quadratische Marke / App-Icon
+- `website/assets/brand/favicon.ico` – Browser-Favicon
+
+Banner und quadratische Marke ergänzen die Projektmarke, ersetzen das signierte Master-Logo nicht.
+
 ## Desktop ab 1400 px
 
 Feste Sidebar, 3–4 Spalten, große Charts, vollständige Diagnose- und Cloud-Karten.
