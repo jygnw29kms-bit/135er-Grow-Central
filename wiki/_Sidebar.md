@@ -1,11 +1,17 @@
 ## 135er GrowControl
 
-### Deutsch
+### Projekt / Project
 - [Start](Home)
+- [DE · Projektgeschichte](de/PROJEKTGESCHICHTE)
+- [DE · Projektstatus](de/PROJEKTSTATUS)
+- [EN · Project History](en/PROJECT_HISTORY)
+- [EN · Project Status](en/PROJECT_STATUS)
+
+### Deutsch
 - [Übersicht](de/README)
 - [Architektur](de/ARCHITEKTUR)
 - [Installation](de/INSTALLATION)
-- [Raspberry Pi 3B Test-Image](de/RASPBERRY_PI_3B_TEST_IMAGE)
+- [Pi 3B Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE)
 - [Sicherheit](de/SICHERHEIT)
 - [Benutzer & Rechte](de/BENUTZER_UND_RECHTE)
 - [Datenbanken](de/DATENBANKEN)
@@ -20,7 +26,7 @@
 - [Overview](en/README)
 - [Architecture](en/ARCHITECTURE)
 - [Installation](en/INSTALLATION)
-- [Raspberry Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE)
+- [Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE)
 - [Security](en/SECURITY)
 - [Users & RBAC](en/USERS_AND_RBAC)
 - [Databases](en/DATABASES)

@@ -1,35 +1,53 @@
-# Dokumentation / Documentation
+# 135er GrowControl – Dokumentationszentrum / Documentation Hub
+
+Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neuen Entwickler, Tester oder Betreiber ohne Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächsten Schritte zu verstehen.
+
+## Zuerst lesen
+
+1. [Projektgeschichte](../PROJECT_HISTORY.md) – Idee bis heutiger Stand
+2. [Aktueller Projektstatus](PROJECT_STATUS.md) – was ist wirklich implementiert?
+3. [Architektur-Master](ARCHITECTURE_MASTER.md) – Systemgrenzen und Datenflüsse
+4. [Hardware-Testplan](HARDWARE_TEST_PLAN.md) – nächste reale DF100M-Tests
+5. [DF100M Research Log](DF100M_RESEARCH_LOG.md) – Beobachtungen und Hypothesen
+6. [Security & Trust Model](SECURITY_AND_TRUST_MODEL.md)
+7. [Image & Release Process](RELEASE_AND_IMAGE_PROCESS.md)
+8. [Decision Log](DECISION_LOG.md)
+9. [Known Limitations](KNOWN_LIMITATIONS.md)
+10. [Roadmap](ROADMAP.md)
+
+## Bestehende Fachdokumentation
+
+- [API](API.md)
+- [Architecture](ARCHITECTURE.md)
+- [Cloud](CLOUD.md)
+- [DF100M Protocol](DF100M_PROTOCOL.md)
+- [Installation](INSTALLATION.md)
+- [Protocol Notes](PROTOCOL_NOTES.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [Sources](SOURCES.md)
+- [Merge Audit v0.5](MERGE_AUDIT_v0.5.md)
 
 ## Deutsch
 
 - [Übersicht](de/README.md)
-- [Architektur](de/ARCHITEKTUR.md)
-- [Installation](de/INSTALLATION.md)
-- [Raspberry Pi 3B Test-Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
-- [GUI-Zielbild und Responsive Design](de/GUI_VORSCHAU.md)
-- [API](de/API.md)
-- [DF100M Protokollanalyse](de/DF100M_PROTOCOL.md)
-- [Cloud](de/CLOUD.md)
-- [Code-Leitfaden](de/CODE_GUIDE.md)
+- [Full Platform](de/FULL_PLATFORM.md)
+- [Datenbank & Rechte](de/DATENBANK_UND_RECHTE.md)
+- [GUI-Vorschau](de/GUI_VORSCHAU.md)
+- [Raspberry Pi 3B Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
 ## English
 
 - [Overview](en/README.md)
-- [Architecture](en/ARCHITECTURE.md)
-- [Installation](en/INSTALLATION.md)
+- [Full Platform](en/FULL_PLATFORM.md)
+- [Database & RBAC](en/DATABASE_AND_RBAC.md)
+- [GUI Preview](en/GUI_PREVIEW.md)
 - [Raspberry Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
-- [GUI Target and Responsive Design](en/GUI_PREVIEW.md)
-- [API](en/API.md)
-- [DF100M protocol research](en/DF100M_PROTOCOL.md)
-- [Cloud](en/CLOUD.md)
-- [Code guide](en/CODE_GUIDE.md)
 
-## Test- und Build-Stand / Test and build status
+## Dokumentationsregeln
 
-Der aktuelle Raspberry-Pi-3B/3B+-Testimage-Builder basiert auf Raspberry Pi OS Lite 64-bit / Debian 13. Das Test-Image enthält GrowControl, Bluetooth/BlueZ, SSH, UFW, automatische Sicherheitsupdates und systemd-Autostart. Temporäre Zugangsdaten sind `test` / `test`; DF100M-Schreibzugriffe, Remote Commands und Cloud bleiben standardmäßig deaktiviert.
-
-The current Raspberry Pi 3B/3B+ test-image builder is based on Raspberry Pi OS Lite 64-bit / Debian 13. The test image includes GrowControl, Bluetooth/BlueZ, SSH, UFW, automatic security updates and systemd autostart. Temporary credentials are `test` / `test`; DF100M writes, remote commands and cloud remain disabled by default.
-
-## Quellen / Sources
-
-[Quellen und Referenzen / Sources and references](SOURCES.md)
+- `implemented`: Code/Laufzeit ist nachweisbar vorhanden.
+- `experimental`: vorhanden, aber nicht ausreichend am Zielgerät validiert.
+- `baseline/design`: Schema, Architektur oder Interface ist definiert, aber nicht zwingend komplett verdrahtet.
+- `planned`: noch nicht implementiert.
+- Reverse-Engineering-Angaben müssen als Beobachtung/Hypothese gekennzeichnet werden.
+- Herstellerangaben, Open-Source-Referenzen, APK-Beobachtungen und Experimente werden getrennt geführt.

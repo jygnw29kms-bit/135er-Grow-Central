@@ -1,47 +1,67 @@
 # 135er GrowControl Wiki
 
-**135er GrowControl** ist eine Local-First-Steuer- und Monitoring-Plattform auf Debian-/Ubuntu-Basis mit Raspberry Pi als lokaler Master-Instanz und optionalem Linux-VServer als Cloud-Erweiterung.
+**135er GrowControl** ist eine Local-First-Steuer-, Monitoring- und Automationsplattform auf Raspberry-Pi-/Debian-Basis mit optionaler Linux-VPS-Cloud.
 
-Die Wiki-Quelle wird im Haupt-Repository versioniert. Sie dient als verbindliche Wissensbasis für Installation, Betrieb, Sicherheit, Datenmodell, Sensorik, Historie, Zeitpläne, Automationen, GUI, DF100M-Integration und die Raspberry-Pi-Testimages.
+> Der Raspberry Pi bleibt Master. Die Cloud ist optional. DF100M-Schreibzugriffe bleiben experimentell, bis reale Hardwaretests das Protokoll validieren.
 
-## Sprache / Language
+## Einstieg
 
-- [Deutsch](de/README.md)
-- [English](en/README.md)
+- [Projektgeschichte](de/PROJEKTGESCHICHTE.md) – von der Idee bis zum Hardware-Teststand
+- [Projektstatus](de/PROJEKTSTATUS.md) – implementiert vs. experimentell vs. geplant
+- [Architektur](de/ARCHITEKTUR.md)
+- [Installation](de/INSTALLATION.md)
+- [Raspberry Pi Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [Sicherheit](de/SICHERHEIT.md)
+- [DF100M](de/DF100M.md)
+- [GUI](de/GUI_UND_RESPONSIVE_DESIGN.md)
+- [Cloud](de/CLOUD.md)
+- [Datenbanken](de/DATENBANKEN.md)
+- [Benutzer & Rechte](de/BENUTZER_UND_RECHTE.md)
+- [Sensoren & Historie](de/SENSOREN_UND_HISTORIE.md)
+- [Zeitpläne & Automationen](de/ZEITPLAENE_UND_AUTOMATIONEN.md)
+- [Backup & Wartung](de/BACKUP_UND_WARTUNG.md)
 
-## Kernprinzipien
+## English
 
-- Raspberry Pi bleibt lokale Master-Instanz.
-- Cloud ist optional und darf den lokalen Betrieb nicht blockieren.
-- Debian/Ubuntu/Raspberry Pi OS 64-bit sind die Zielplattformen.
-- Remote Commands sind standardmäßig deaktiviert und benötigen doppelte Freigabe.
-- Experimentelle DF100M-BLE-Schreibzugriffe bleiben deaktiviert, bis das Protokoll validiert ist.
-- Benutzer, Rollen, Rechte, Sensoren, Historie, Zeitpläne, Automationen und Audit-Daten werden strukturiert gespeichert.
-- GUI ist responsiv für Desktop, Notebook, Tablet/iPad und Smartphone.
-- Test-Images werden reproduzierbar gebaut, per SHA256 abgesichert und nicht als große Binärdateien in der normalen Git-Historie abgelegt.
+- [Project History](en/PROJECT_HISTORY.md)
+- [Project Status](en/PROJECT_STATUS.md)
+- [Architecture](en/ARCHITECTURE.md)
+- [Installation](en/INSTALLATION.md)
+- [Raspberry Pi Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [Security](en/SECURITY.md)
+- [DF100M](en/DF100M.md)
+- [GUI](en/GUI_AND_RESPONSIVE_DESIGN.md)
+- [Cloud](en/CLOUD.md)
 
-## Raspberry Pi 3B Test-Image
+## Aktueller Meilenstein
 
-Für die ersten Hardwaretests existiert ein reproduzierbarer GitHub-Actions-Builder für Raspberry Pi 3B / 3B+ auf Raspberry Pi OS Lite 64-bit / Debian 13.
+**v0.5.x Hardware Validation**
 
-Temporäre Testdaten:
+Aktueller Fokus:
+
+1. reproduzierbares Raspberry-Pi-3B-Testimage;
+2. erster realer Pi-Boot;
+3. DF100M Discovery/GATT/Notifications;
+4. Legacy-Korrelation bei definierten Lüfterwerten;
+5. kontrollierte Payload-Validierung.
+
+## Verbindliche Fakten zum Testgerät
 
 ```text
-Hostname: growcontrol-test
-Username: test
-Password: test
-API/App token: test
-Cloud token: test
-Web UI: http://<PI-IP>:8080
+Identifier: MZ_MZF002_0_A0A3B35EFDC8
+Device ID:  A0A3B35EFDC8
+Firmware:   V1.8
 ```
 
-DF100M-Schreibzugriffe, Remote Commands und Cloud bleiben standardmäßig deaktiviert.
+## Architekturgrundsätze
 
-- [Deutsch: Raspberry Pi 3B Test-Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
-- [English: Raspberry Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- kein ESP32 im Core;
+- lokale Funktionen ohne Cloud;
+- Pi → Cloud ausschließlich ausgehend über HTTPS;
+- kein öffentliches Pi:8080;
+- Remote Commands als lokal validierte Requests;
+- SQLite lokal, PostgreSQL als Cloud-Ziel;
+- responsive Browser-GUI für Desktop bis iPad/Smartphone;
+- experimentelle Schreibzugriffe standardmäßig aus.
 
-## Projektstatus
-
-Version: **v0.5 Full Platform Baseline**
-
-Aktueller Fokus: erste reale Raspberry-Pi-/DF100M-Hardwaretests auf Basis der konsolidierten Local/Cloud-/BLE-Plattform. Der korrigierte v2-Image-Builder erweitert das Basisimage sowie Root-Partition und Dateisystem vor der Installation und schließt temporäre Builddateien aus der Projektkopie aus.
+Die vollständige technische Projektdokumentation liegt zusätzlich unter `docs/` im Hauptrepository.
