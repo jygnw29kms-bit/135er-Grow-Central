@@ -1,6 +1,15 @@
 # 135er GrowControl public project website
 
-This directory is the **domain-neutral** static project presentation.
+This directory is the **domain-neutral** static project presentation and is already available through the Git repository.
+
+## Repository source
+
+```text
+website/index.html
+website/styles.css
+website/assets/architecture.svg
+website/assets/gui-preview-v0.5.webp
+```
 
 ## Local preview
 
@@ -13,9 +22,13 @@ Open `http://127.0.0.1:8000`.
 
 ## GitHub Pages
 
-`.github/workflows/pages.yml` publishes the `website/` directory when website files change on `master` or when the workflow is started manually. The workflow asks `actions/configure-pages` to enable Pages for the repository when possible.
+A manual deployment workflow exists at `.github/workflows/pages.yml`.
 
-No custom domain is configured. Domain-specific Nginx configuration from the earlier prototype has been removed.
+GitHub currently requires the repository owner to enable **Settings → Pages → Source: GitHub Actions** once before the workflow can deploy. The GitHub Actions token cannot perform that first repository-level enablement in this repository (`Resource not accessible by integration`). After Pages has been enabled once, run **Publish project website** from the Actions tab.
+
+The workflow is deliberately manual until this one-time repository setting is enabled so ordinary pushes do not create expected red deployment failures.
+
+No custom domain is configured. The earlier domain-specific Nginx prototype has been removed.
 
 ## Security
 
