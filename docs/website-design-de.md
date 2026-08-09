@@ -20,7 +20,7 @@ Die Website orientiert sich direkt an `web/index.html` und `web/app.css`:
 
 ## Logo und Grafikformate
 
-Die Website verwendet in der Navigation das PNG-Logo `website/assets/brand/135er-grow-central-logo.svg`.
+Die Website verwendet in der Navigation das PNG-Logo `website/assets/brand/135er-grow-central-logo.png`.
 
 Für Rastergrafiken gilt **PNG als Standardformat**. WebP wird nicht mehr eingesetzt, da es auf dem produktiven Hosting nicht zuverlässig dargestellt wurde. ICO bleibt für Favicons und SVG für technische Vektorgrafiken/Diagramme zulässig.
 

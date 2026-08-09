@@ -76,3 +76,12 @@ img{max-width:100%;height:auto;border:0}
 }
 
 @media print{body{background:#fff;color:#111}.ambient,.main-nav,.wip-badge,.hero-core,.hero-actions,.cta-panel{display:none}.site-shell{width:100%;max-width:none}.masthead,.hero,.section{border-color:#bbb;background:#fff;color:#111;-webkit-box-shadow:none;box-shadow:none}.hero-copy{width:100%}.hero h1,.section h2{color:#111}.hero-lead,.section p{color:#444}}
+
+/* alpha-0.7.1: consistent PNG branding and responsive client previews */
+.identity-logo{display:block;width:196px;height:52px;object-fit:contain;margin-right:0}
+.identity-mark{position:absolute;right:16px;top:62px;width:34px;height:34px;object-fit:contain;border-radius:7px}
+.hero-logo{width:260px;max-width:72%}.hero-mark{display:block;width:54px;height:54px;object-fit:contain;margin:0 auto 12px;border-radius:9px}
+.client-gallery{font-size:0}.client-card{display:inline-block;vertical-align:top;width:49%;margin:0 2% 18px 0;padding:10px;border:1px solid #15343c;background:#02070a;border-radius:12px}.client-card:nth-child(2n){margin-right:0}.client-card img{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#020608}.client-card figcaption{padding:10px 3px 2px}.client-card figcaption strong,.client-card figcaption span{display:block}.client-card figcaption strong{font-size:13px;color:#dffaf5}.client-card figcaption span{font-size:10px;color:#6f898d;margin-top:3px}
+.cta-panel .cta-logo{width:180px}.cta-panel .cta-mark{width:52px;height:52px;object-fit:contain;border-radius:8px}.footer>div{width:42%}.footer-brand img{display:block;width:190px;margin-bottom:8px}.footer-mark{width:38px;height:38px;object-fit:contain;margin:0 4%;border-radius:6px}
+@media(max-width:700px){.identity-logo{width:156px;height:42px}.identity-mark{display:none}.hero-logo{width:220px}.client-card{display:block;width:100%;margin:0 0 14px}.cta-panel .cta-logo{width:150px}.cta-panel .cta-mark{width:44px;height:44px}.footer>div{width:100%}.footer-mark{margin:12px 0}}
+@media(max-width:380px){.identity-logo{width:126px;height:36px}.hero-logo{width:180px}}

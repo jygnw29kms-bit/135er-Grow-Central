@@ -1,18 +1,18 @@
 # 135er-Grow Central
 
-<p align="center"><img src="website/assets/brand/135er-grow-central-logo.svg" alt="135er-Grow Central Logo" width="720"></p>
+<p align="center"><img src="website/assets/brand/135er-grow-central-logo.png" alt="135er-Grow Central Logo" width="720"></p>
 <p align="center"><strong>LOCAL-FIRST · RASPBERRY PI · SMART HOME · POWER TELEMETRY</strong></p>
-<p align="center"><code>🚧 WORK IN PROGRESS</code> &nbsp; <code>v0.8 development</code> &nbsp; <code>deny-by-default writes</code></p>
+<p align="center"><code>🚧 WORK IN PROGRESS</code> &nbsp; <code>alpha-0.7.1</code> &nbsp; <code>deny-by-default writes</code></p>
 
 > [!WARNING]
 > **Work in Progress:** Hardware- und Protokollpfade werden weiter validiert. Der Raspberry Pi bleibt die lokale Autorität; optionale Cloud-Funktionen ersetzen die lokale Steuerung nicht.
 
 ## Vier GUI-Clients · ein Design
 
-![Local Desktop](website/assets/gui/local-desktop-v0.8.svg)
-![Local Tablet](website/assets/gui/local-tablet-v0.8.svg)
-![Local Mobile](website/assets/gui/local-mobile-v0.8.svg)
-![Cloud Desktop](website/assets/gui/cloud-desktop-v0.8.svg)
+![Local Desktop](website/assets/gui/local-desktop-v0.8.png)
+![Local Tablet](website/assets/gui/local-tablet-v0.8.png)
+![Local Mobile](website/assets/gui/local-mobile-v0.8.png)
+![Cloud Desktop](website/assets/gui/cloud-desktop-v0.8.png)
 
 ## Architektur
 
@@ -32,8 +32,8 @@ Geräte / Sensoren / Smart Plugs
 ```
 
 ## Branding
-- Logo: `website/assets/brand/135er-grow-central-logo.svg`
-- Markenzeichen: `website/assets/brand/135er-grow-central-mark.svg`
+- Logo: `website/assets/brand/135er-grow-central-logo.png`
+- Markenzeichen: `website/assets/brand/135er-grow-central-mark.png`
 - Logo dominant; Markenzeichen klein und dauerhaft sichtbar.
 - Kein WebP.
 

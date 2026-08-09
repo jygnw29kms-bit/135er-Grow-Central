@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.1 – Website stabilization (2026-08-09)
+
+- converted the available logo, project mark and four GUI demo graphics to PNG
+- removed SVG and missing legacy GUI references from the public website and its documentation
+- unified logo and project-mark usage across header, hero, call-to-action and footer
+- corrected responsive logo sizing and added a responsive four-client preview gallery
+- aligned repository and website documentation with `alpha-0.7.1`
+
 ## 2026-08-09 – WIP repository presentation refresh
 
 - marked the repository and public project interface clearly as **Work in Progress**

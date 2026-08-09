@@ -2,6 +2,8 @@
 
 Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er-Grow Central.
 
+**Website-Version:** `alpha-0.7.1`
+
 > **Status: WORK IN PROGRESS** – die Projektseite zeigt bewusst den aktiven Entwicklungsstand und darf nicht als Hinweis auf vollständig validierte Produktionsreife verstanden werden.
 
 ## Design
@@ -14,17 +16,19 @@ Die öffentliche Website bleibt technisch und sicherheitlich vollständig von de
 
 Die öffentliche Website verwendet das PNG-Logo:
 
-- `assets/brand/135er-grow-central-logo.svg`
-- `assets/brand/135er-grow-central-mark.svg`
+- `assets/brand/135er-grow-central-logo.png`
+- `assets/brand/135er-grow-central-mark.png`
 
 WebP wird nicht mehr verwendet. Rastergrafiken werden als PNG eingebunden; ICO ist für das Browser-Favicon zulässig. SVG bleibt für technische Vektorgrafiken und Diagramme erlaubt.
 
 ## GUI-Vorschau
 
-- `assets/gui-preview-v0.5.png`
-- `assets/gui-power-preview-v0.7.svg`
+- `assets/gui/local-desktop-v0.8.png`
+- `assets/gui/local-tablet-v0.8.png`
+- `assets/gui/local-mobile-v0.8.png`
+- `assets/gui/cloud-desktop-v0.8.png`
 
-Die v0.5-Vorschau wird direkt als PNG geladen. Es gibt kein `<picture>`-Element mit WebP-Quelle mehr.
+Alle vier vorhandenen GUI-Demos werden direkt als PNG geladen. Es gibt keine WebP- oder GUI-SVG-Referenzen mehr.
 
 ## Lokale Vorschau
 
@@ -90,9 +94,9 @@ Danach sollten insbesondere folgende Dateien vorhanden sein:
 /var/www/vhosts/dezender.de/httpdocs/index.html
 /var/www/vhosts/dezender.de/httpdocs/styles.css
 /var/www/vhosts/dezender.de/httpdocs/assets/architecture.svg
-/var/www/vhosts/dezender.de/httpdocs/assets/gui-preview-v0.5.png
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-logo.svg
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-mark.svg
+/var/www/vhosts/dezender.de/httpdocs/assets/gui/local-desktop-v0.8.png
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-logo.png
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-mark.png
 ```
 
 ## GitHub Pages
