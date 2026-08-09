@@ -24,6 +24,21 @@ durch reine Textmarken, fremde Symbole oder ältere Varianten ersetzt werden.
 - Hintergrund: vorzugsweise Near Black; Seitenverhältnis immer beibehalten.
 - Signatur: `J. L. 1976` muss lesbar erhalten bleiben.
 
+## GitHub- und Repository-Artwork
+
+Für Repository-Darstellung, Social Preview und Browser-Icon existieren zusätzlich zwei abgeleitete Präsentationsassets. Sie ergänzen das Master-Logo, ersetzen es aber nicht:
+
+- Repository-Banner: `website/assets/brand/135er-growcontrol-repo-banner.webp`
+- Quadratische Repository-Marke: `website/assets/brand/135er-growcontrol-repo-mark.png`
+- Browser-Favicon: `website/assets/brand/favicon.ico`
+
+Verwendung:
+
+- README / Repository-Startseite: Repository-Banner als visuelle Kopfzeile.
+- GitHub-Avatar oder Social-Preview-Konfiguration: quadratische Repository-Marke bzw. Banner verwenden.
+- Öffentliche Website: quadratische Marke als Favicon/App-Icon; das signierte **J. L. 1976** Master-Logo bleibt sichtbar in der eigentlichen Oberfläche.
+- OpenGraph/Social-Metadaten: Repository-Banner.
+
 ## Gerätebezeichnung
 
 `DF100M` ist kein Teil des Produktnamens mehr. Die Bezeichnung bleibt nur dort bestehen,
