@@ -2,6 +2,8 @@
 
 Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er GrowControl.
 
+> **Status: WORK IN PROGRESS** – die Projektseite zeigt bewusst den aktiven Entwicklungsstand und darf nicht als Hinweis auf vollständig validierte Produktionsreife verstanden werden.
+
 ## Design
 
 Die Website orientiert sich direkt an der lokalen GrowControl-Ziel-GUI: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen sowie grün-cyanfarbene Zustände. Das Layout ist für Desktop, iPad und Smartphone responsive ausgelegt.
@@ -41,15 +43,45 @@ Der per SSH bestätigte absolute Plesk-Webroot ist:
 /var/www/vhosts/dezender.de/httpdocs
 ```
 
-Der Login-Benutzer sieht dasselbe Verzeichnis als `~/httpdocs`.
+**Wichtig:** Der Verzeichnisname lautet `vhosts` (Plural). Der Login-Benutzer `dezender` sieht denselben Bereich als `~/httpdocs`.
 
-Für eine vollständige Aktualisierung vom Server aus:
+### Deployment als root
 
 ```bash
-cd /tmp
-rm -rf 135er_GrowControl
-git clone https://github.com/jygnw29kms-bit/135er_GrowControl.git
-cp -a 135er_GrowControl/website/. /var/www/vhosts/dezender.de/httpdocs/
+set -e
+WEBROOT=/var/www/vhosts/dezender.de/httpdocs
+TMP=/tmp/135er_GrowControl
+
+rm -rf "$TMP"
+git clone --depth 1 https://github.com/jygnw29kms-bit/135er_GrowControl.git "$TMP"
+mkdir -p "$WEBROOT"
+cp -a "$TMP/website/." "$WEBROOT/"
+```
+
+### Eigentümer und sichere Standardrechte
+
+Nach einem Root-Deployment werden Eigentümer und Rechte auf den Systembenutzer `dezender` zurückgesetzt. Die primäre Gruppe wird dynamisch ermittelt, damit keine Plesk-Gruppenbezeichnung geraten werden muss:
+
+```bash
+WEBROOT=/var/www/vhosts/dezender.de/httpdocs
+DEZENDER_GROUP="$(id -gn dezender)"
+
+chown -R dezender:"$DEZENDER_GROUP" "$WEBROOT"
+find "$WEBROOT" -type d -exec chmod 755 {} +
+find "$WEBROOT" -type f -exec chmod 644 {} +
+```
+
+Für diese statische Website werden keine ausführbaren Dateien im Webroot benötigt. Deshalb sind `755` für Verzeichnisse und `644` für reguläre Dateien die vorgesehenen Standardrechte.
+
+### Prüfung
+
+```bash
+stat -c '%U:%G %a %n' \
+  /var/www/vhosts/dezender.de/httpdocs \
+  /var/www/vhosts/dezender.de/httpdocs/index.html \
+  /var/www/vhosts/dezender.de/httpdocs/styles.css
+
+find /var/www/vhosts/dezender.de/httpdocs -maxdepth 2 -type f | sort
 ```
 
 Danach sollten insbesondere folgende Dateien vorhanden sein:
