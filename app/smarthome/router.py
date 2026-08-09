@@ -1,6 +1,9 @@
 """Restricted smart-home API router."""
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.audit import append_audit
@@ -54,6 +57,47 @@ async def list_devices():
         )
         for item in _registry().list()
     ]
+
+
+async def _overview_row(device):
+    base = {
+        "id": device.id,
+        "name": device.name,
+        "adapter": device.adapter,
+        "approved": device.approved,
+        "writable": device.writable,
+        "metadata": device.metadata,
+    }
+    if not device.approved:
+        return {**base, "online": False, "error": "not approved", "state": None}
+    try:
+        state = await build_switch_adapter(device).read_state()
+        return {**base, "online": bool(state.get("online", True)), "error": None, "state": state}
+    except AdapterError as exc:
+        return {**base, "online": False, "error": str(exc), "state": None}
+
+
+@router.get("/overview")
+async def device_overview():
+    """Read all configured smart plugs without exposing credentials or control tokens."""
+    devices = _registry().list()
+    rows = await asyncio.gather(*(_overview_row(device) for device in devices))
+    power_w = sum((row.get("state") or {}).get("power_w") or 0.0 for row in rows)
+    energy_wh = sum((row.get("state") or {}).get("energy_wh") or 0.0 for row in rows)
+    online = sum(1 for row in rows if row.get("online"))
+    switched_on = sum(1 for row in rows if (row.get("state") or {}).get("on") is True)
+    return {
+        "enabled": smart_home_enabled(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "configured": len(rows),
+            "online": online,
+            "switched_on": switched_on,
+            "power_w": round(power_w, 3),
+            "energy_wh": round(energy_wh, 3),
+        },
+        "devices": rows,
+    }
 
 
 @router.get("/devices/{device_id}/state")
