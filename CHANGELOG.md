@@ -4,6 +4,7 @@
 
 - introduced detailed v0.9 desktop, tablet, mobile and cloud GUI concept images
 - combined the project symbol, `135er-Grow Central` wordmark and graphic `J.L.` signet into one brand lockup
+- replaced the separate branding elements inside all four v0.9 GUI images with the approved combined logo
 - rebuilt the public website with stronger hierarchy, restrained HUD styling and responsive interface showcases
 - retained local-first messaging, deny-by-default security and PNG-only runtime assets
 
