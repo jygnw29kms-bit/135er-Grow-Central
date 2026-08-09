@@ -1,38 +1,12 @@
-## 135er GrowControl
+# 135er GrowControl
 
-### Projekt / Project
-- [Start](Home)
-- [DE · Projektgeschichte](de/PROJEKTGESCHICHTE)
-- [DE · Projektstatus](de/PROJEKTSTATUS)
-- [EN · Project History](en/PROJECT_HISTORY)
-- [EN · Project Status](en/PROJECT_STATUS)
+- [Home](Home)
+- [Projektgeschichte](de/PROJEKTGESCHICHTE)
+- [Projektstatus](de/PROJEKTSTATUS)
+- [Smart Home](de/SMART_HOME)
+- [Raspberry Pi Image](de/RASPBERRY_PI_3B_TEST_IMAGE)
+- [English Smart Home](en/SMART_HOME)
+- [English History](en/PROJECT_HISTORY)
+- [English Status](en/PROJECT_STATUS)
 
-### Deutsch
-- [Übersicht](de/README)
-- [Architektur](de/ARCHITEKTUR)
-- [Installation](de/INSTALLATION)
-- [Pi 3B Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE)
-- [Sicherheit](de/SICHERHEIT)
-- [Benutzer & Rechte](de/BENUTZER_UND_RECHTE)
-- [Datenbanken](de/DATENBANKEN)
-- [Sensoren & Historie](de/SENSOREN_UND_HISTORIE)
-- [Zeitpläne & Automationen](de/ZEITPLAENE_UND_AUTOMATIONEN)
-- [GUI & Responsive Design](de/GUI_UND_RESPONSIVE_DESIGN)
-- [DF100M](de/DF100M)
-- [Cloud](de/CLOUD)
-- [Backup & Wartung](de/BACKUP_UND_WARTUNG)
-
-### English
-- [Overview](en/README)
-- [Architecture](en/ARCHITECTURE)
-- [Installation](en/INSTALLATION)
-- [Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE)
-- [Security](en/SECURITY)
-- [Users & RBAC](en/USERS_AND_RBAC)
-- [Databases](en/DATABASES)
-- [Sensors & History](en/SENSORS_AND_HISTORY)
-- [Schedules & Automations](en/SCHEDULES_AND_AUTOMATIONS)
-- [GUI & Responsive Design](en/GUI_AND_RESPONSIVE_DESIGN)
-- [DF100M](en/DF100M)
-- [Cloud](en/CLOUD)
-- [Backup & Maintenance](en/BACKUP_AND_MAINTENANCE)
+Canonical technical docs are versioned under `docs/` in the repository.

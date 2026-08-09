@@ -1,56 +1,40 @@
 # Architecture Decision Log
 
-## ADR-001 – Raspberry Pi is the local master
+## ADR-001 – Raspberry Pi is the master
+All local safety-critical control remains authoritative on the Pi.
 
-**Decision:** All core local control/monitoring runs on Raspberry Pi.  
-**Reason:** Linux tooling, BLE access, local DB, web server and maintainability.  
-**Consequence:** No ESP32 dependency in core architecture.
+## ADR-002 – No ESP32 core architecture
+One Raspberry-Pi deployment model remains the project standard.
 
-## ADR-002 – Local-first, cloud optional
+## ADR-003 – Optional cloud is outbound-only
+The Pi is not directly published to the internet.
 
-**Decision:** Cloud is an extension, not a requirement.  
-**Reason:** Reliability, privacy, resilience against internet/vendor outages.  
-**Consequence:** Local functions and automation must continue without VPS.
+## ADR-004 – SQLite local / PostgreSQL cloud target
+Low local operational complexity; scalable relational cloud model.
 
-## ADR-003 – Outbound cloud connection
+## ADR-005 – Vendor protocols live behind adapters
+UI and automations target normalized capabilities, not vendor payloads.
 
-**Decision:** Pi initiates HTTPS communication to VPS.  
-**Reason:** Avoid direct public Pi exposure.  
-**Consequence:** Remote commands are represented as requests fetched/received and validated locally.
+## ADR-006 – Home Assistant is the interoperability bridge
+Apple Home/Siri, Tapo, FRITZ!SmartHome and broad ecosystem compatibility are handled through a maintained optional bridge instead of duplicating every vendor protocol.
 
-## ADR-004 – SQLite local / PostgreSQL cloud
+## ADR-007 – Shelly Gen2+ gets a native local adapter
+Shelly documents a local JSON-RPC interface suitable for direct local control.
 
-**Decision:** SQLite for Pi-local state; PostgreSQL as cloud target.  
-**Reason:** low operational overhead locally, stronger concurrency/querying centrally.
+## ADR-008 – Tapo direct protocol is not v0.6 core
+Tapo is supported through Home Assistant to reduce credential duplication and protocol churn risk.
 
-## ADR-005 – Experimental device writes default off
+## ADR-009 – FRITZ!SmartHome uses the Home Assistant bridge in v0.6
+This avoids adding another credential/authentication implementation to the GrowControl core while still supporting FRITZ smart plugs and related devices.
 
-**Decision:** `DF100M_ALLOW_WRITES=false`.  
-**Reason:** BLE protocol is not yet validated.  
-**Consequence:** discovery/read/notify work can proceed safely before control validation.
+## ADR-010 – Apple Home uses HomeKit Bridge first
+Practical local Apple Home/Siri interoperability is achieved through Home Assistant. Native Matter bridging remains the standards-based future target.
 
-## ADR-006 – Device protocol separated from UI
+## ADR-011 – Discovery never grants write permission
+Every controllable device requires explicit inventory approval and a writable flag.
 
-**Decision:** Device-specific code belongs behind adapters.  
-**Reason:** DF100M is first device, not the entire platform.  
-**Consequence:** later FC3000 or sensor adapters should not require UI rewrite.
+## ADR-012 – No arbitrary proxy APIs
+Browser/cloud callers cannot choose arbitrary LAN URLs, vendor methods or Home Assistant service names.
 
-## ADR-007 – Responsive futuristic HUD
-
-**Decision:** Dark, future-oriented responsive UI supporting desktop through smartphone, including iPad-class tablet.  
-**Reason:** intended permanent wall/tablet dashboard usage.
-
-## ADR-008 – Versioned Wiki source
-
-**Decision:** Canonical wiki content also lives inside main Git repository.  
-**Reason:** GitHub Wiki uses a separate repository and can be unavailable/uninitialized; project knowledge must remain versioned with code.
-
-## ADR-009 – Raspberry Pi image built in CI
-
-**Decision:** Preinstalled `.img.xz` generated reproducibly through GitHub Actions.  
-**Reason:** reduce setup friction for hardware tests and make build steps auditable.
-
-## ADR-010 – Firewall initialized on physical first boot
-
-**Decision:** Do not run UFW initialization in ARM chroot. Use first-boot systemd service.  
-**Reason:** GitHub runner/chroot cannot reliably determine target iptables kernel behavior.
+## ADR-013 – Protected writes fail closed without a local token
+An unset token disables protected write endpoints rather than silently allowing them.

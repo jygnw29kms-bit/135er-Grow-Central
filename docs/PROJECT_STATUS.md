@@ -1,86 +1,45 @@
 # Project Status – 135er GrowControl
 
 **Stand:** 2026-08-09  
-**Phase:** v0.5.x Full Platform Baseline → Raspberry Pi / DF100M Hardware Validation
+**Architecture:** v0.6 Secure Smart-Home Platform  
+**Phase:** platform consolidation + Raspberry Pi / DF100M hardware validation
 
-## Statusprinzip
-
-Dieses Dokument ist die verbindliche Gegenmaßnahme gegen Überclaiming. Ein geplantes Datenmodell oder eine dokumentierte Plattformfunktion gilt nicht automatisch als fertig implementierte Runtime.
-
-## Runtime-Matrix
+A documented capability is not considered runtime-complete until code, tests and operating documentation exist.
 
 | Capability | Status | Notes |
 |---|---|---|
-| Local FastAPI service | Implemented | `app/main.py` baseline |
-| BLE discovery | Implemented | Bleak based |
-| BLE connect/disconnect | Implemented | one client at a time |
-| GATT inspection | Implemented | used for protocol research |
-| Notification capture | Experimental | last notifications retained |
-| Raw BLE writes | Experimental / guarded | disabled by default |
-| DF100M percentage speed control | Not validated | payload modes are hypotheses |
-| Local web UI | Implemented baseline | production HUD still evolving |
-| Responsive GUI target | Defined | desktop/tablet/iPad/mobile |
-| Local SQLite | Baseline | intended for local configuration/history/sync state |
-| Cloud FastAPI | Alpha | telemetry/history/commands endpoints exist |
-| Static cloud token auth | Alpha | not final user/session auth model |
-| Cloud PostgreSQL runtime | Not complete | target/schema baseline exists |
-| RBAC runtime | Not complete | role/permission model defined |
-| User/session login | Not complete | future runtime work |
-| Sensor history engine | Baseline | schema/domain direction defined |
-| Schedule engine | Baseline | model direction defined |
-| Automation engine | Baseline | model direction defined |
-| Audit middleware/runtime | Not complete | schema/concept defined |
-| WebSocket live data | Planned | not to be claimed as implemented |
-| Backup/restore executable workflow | Partial/baseline | operational implementation still required |
-| Pi cloud-link | Alpha | outbound HTTPS telemetry; commands opt-in |
-| Remote commands | Prepared / disabled | local validation + dual opt-in concept |
-| Pi 3B prebuilt image | Build pipeline in progress | GitHub Actions v2 workflow |
+| Local FastAPI | Implemented baseline | existing local service |
+| BLE discovery/connect/GATT | Implemented baseline | hardware validation pending |
+| DF100M notification capture | Experimental | hardware validation required |
+| DF100M speed protocol | Not validated | payload hypotheses only |
+| Local HUD | Implemented baseline | API alignment/security refinement ongoing |
+| Smart-home normalized models | Implemented baseline | v0.6 |
+| Smart-home device registry | Implemented baseline | file-backed explicit inventory |
+| Smart-home deny-by-default policy | Implemented baseline | global + per-device gates |
+| Local write-token helper | Implemented baseline | fail-closed when unconfigured |
+| Smart-home audit JSONL | Implemented baseline | DB-backed audit remains future work |
+| Shelly Gen2+ switch adapter | Implemented baseline | hardware test required |
+| Home Assistant switch connector | Implemented baseline | hardware test required |
+| Tapo | Bridge architecture | through Home Assistant |
+| FRITZ!SmartHome | Bridge architecture | through Home Assistant |
+| Apple Home / Siri | Bridge architecture | Home Assistant HomeKit Bridge |
+| Native Matter bridge | Planned | after authentication/audit maturity |
+| Local SQLite | Baseline | existing direction |
+| Cloud FastAPI | Alpha | telemetry/history/commands baseline |
+| Cloud PostgreSQL | Architecture baseline | runtime migration incomplete |
+| Full RBAC/user sessions | Not complete | high-priority security work |
+| Pi 3B image | Build pipeline | workflow validation ongoing |
+| Public project website | Implemented | GitHub Pages workflow added |
 
-## Current DF100M facts
+## Immediate next milestones
 
-```text
-Model focus:       DF100M
-Legacy identifier: MZ_MZF002_0_A0A3B35EFDC8
-Device ID:         A0A3B35EFDC8
-Firmware:          V1.8
-Working vendor UI: Mars Legacy app
-```
-
-Candidate BLE UUIDs remain experimental until hardware validation.
-
-## Current safe defaults
-
-```text
-DF100M_ALLOW_WRITES=false
-GC_REMOTE_COMMANDS=false
-GC_CLOUD_ENABLED=false
-```
-
-## Test-image status
-
-Target contents:
-
-- Raspberry Pi OS Lite 64-bit / Debian 13
-- hostname `growcontrol-test`
-- temporary SSH login `test/test`
-- token `test`
-- BlueZ enabled
-- GrowControl installed under `/opt/135er-growcontrol`
-- systemd autostart
-- ports 22 and 8080 permitted locally by UFW after first-boot initialization
-- unattended security updates
-
-Known build fixes:
-
-1. root filesystem size/copy-loop issue fixed;
-2. UFW chroot initialization replaced by first-boot service.
-
-## Immediate next tasks
-
-1. Complete successful image build and publish prerelease.
-2. Flash image to Pi 3B/3B+.
-3. Verify boot/network/SSH/UI/systemd/Bluetooth.
-4. Capture real DF100M GATT and notification data.
-5. Compare Legacy app behavior at controlled fan levels.
-6. Validate write UUID and payload only after observation.
-7. Update protocol state from candidate to observed/replayed/validated.
+1. run CI against v0.6 code;
+2. complete Pi image build;
+3. validate DF100M BLE hardware;
+4. hardware-test Shelly local RPC;
+5. test Home Assistant connector with read-only mode first;
+6. add Tapo and FRITZ! entities through Home Assistant;
+7. expose selected GrowControl entities to Apple Home through HomeKit Bridge;
+8. implement user/session authentication and RBAC runtime;
+9. migrate audit to structured persistence;
+10. evaluate native Matter bridge.

@@ -1,90 +1,69 @@
-# Security & Trust Model
+# Security and Trust Model – 135er GrowControl v0.6
 
-## Core assumption
+## Objective
 
-135er GrowControl can eventually issue physical device commands. Therefore protocol uncertainty, remote access and account privileges must be treated as safety boundaries, not merely UX concerns.
+Compromise of an IoT device, cloud account, browser session or third-party integration must not automatically grant unrestricted control over the Raspberry Pi or every connected device.
 
 ## Trust zones
 
-### Zone 1 – Local Raspberry Pi
-Highest operational authority. Owns device adapter, local state and final command validation.
+1. GrowControl Core – highest trust.
+2. Authenticated admin/operator client.
+3. Home Assistant / MQTT – explicit integration trust.
+4. IoT devices – untrusted network peers by default.
+5. Optional cloud – never authoritative for local safety.
+6. Internet – untrusted.
 
-### Zone 2 – Local browser/tablet
-Trusted only after application authentication is implemented; during early hardware tests the LAN itself must not be treated as globally trusted.
+## v0.6 controls
 
-### Zone 3 – Optional VPS cloud
-May store telemetry/history and request remote commands, but cannot bypass local validation.
+- smart-home writes disabled globally by default;
+- DF100M writes disabled by default;
+- missing local write token causes protected commands to fail closed;
+- explicit device inventory;
+- explicit `approved` and `writable` flags;
+- restricted adapter factory;
+- Shelly targets restricted to private/link-local literal IP addresses;
+- Home Assistant connector limited to registered `switch.*` entities;
+- Home Assistant read-only mode enabled by default;
+- no arbitrary URL proxy;
+- no arbitrary Home Assistant service proxy;
+- append-only JSONL audit events for smart-home writes;
+- credentials referenced through server-side environment variables only.
 
-### Zone 4 – Vendor ecosystem / internet
-External dependency. Not trusted as a requirement for local operation.
-
-## Default-deny behaviors
+## Default environment
 
 ```text
 DF100M_ALLOW_WRITES=false
 GC_REMOTE_COMMANDS=false
 GC_CLOUD_ENABLED=false
+GC_SMARTHOME_ENABLED=false
+GC_HA_READ_ONLY=true
+GC_LOCAL_API_TOKEN=
 ```
 
-These defaults are intentional.
+## Production secrets
 
-## Test credentials
-
-The Pi test image currently uses:
+Recommended file:
 
 ```text
-username: test
-password: test
-token: test
+/etc/135er-growcontrol/secrets.env
+owner root
+group growcontrol
+mode 0640
 ```
 
-This is only acceptable for short-lived isolated hardware testing. Before connecting to an untrusted/shared network:
+Production credentials must never use `test`, `CHANGE_ME` or values committed to Git.
 
-- change password;
-- replace tokens;
-- remove passwordless sudo for the test user;
-- review SSH configuration;
-- prefer proper application login/RBAC when available.
+## Network guidance
 
-## Network rules
+Recommended topology separates trusted clients and IoT devices where possible. The Pi should be permitted to reach configured local device endpoints, while unsolicited IoT-to-trusted-LAN traffic is blocked. Port 8080 must not be exposed directly to the public internet.
 
-- Never port-forward Pi:8080 directly to the internet.
-- Use outbound HTTPS from Pi to optional cloud.
-- VPS should terminate TLS through Nginx or equivalent reverse proxy.
-- Firewall and Fail2ban are part of server hardening baseline.
-- Pi test image initializes UFW on first real boot because chroot initialization is unreliable.
+## Remaining security work
 
-## Remote command model
-
-A cloud command is a **request**, not direct actuator access. Pi validates:
-
-- target device/site;
-- action type;
-- allowed value range;
-- local remote-command enable flag;
-- local device/write safety state.
-
-## Protocol safety
-
-Unvalidated BLE payloads must not be generalized into automatic control. Evidence progression:
-
-```text
-candidate → observed → replayed → validated
-```
-
-## Secrets
-
-Secrets belong in environment/configuration files with restricted permissions. Do not commit real API tokens, passwords, private keys or cloud credentials.
-
-## RBAC target
-
-- Admin: full platform/user/system/device authority.
-- Operator: operational control, schedules and automations.
-- Viewer: read-only dashboard/sensor/history access.
-- Device/Agent: restricted telemetry/status/command channel.
-
-The RBAC target is defined, but full production enforcement must be verified in runtime before claiming completion.
-
-## Audit target
-
-Security-relevant changes should produce audit records including actor, action, target, timestamp and outcome. This remains part of platform implementation work.
+- full user/session authentication;
+- RBAC enforcement in runtime;
+- CSRF protection for cookie-authenticated writes;
+- login rate limiting;
+- stronger systemd filesystem/capability sandboxing;
+- encrypted/managed secret backend;
+- formal audit database and retention policy;
+- recovery/rollback tests.

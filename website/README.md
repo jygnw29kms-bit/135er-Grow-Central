@@ -1,38 +1,22 @@
-# 135erheli.de – Projektwebseite
+# 135er GrowControl public project website
 
-Statische Projektseite für **135er GrowControl**.
+This directory is the static public project presentation. It is intentionally domain-neutral.
 
-## Inhalt
-
-- `index.html` – Startseite
-- `styles.css` – responsive Dark/HUD-Optik
-- `nginx/135erheli.de.conf` – Beispielkonfiguration für Nginx
-
-## Deployment auf einen Linux-VServer
-
-Beispiel:
+## Local preview
 
 ```bash
-sudo mkdir -p /var/www/135erheli.de
-sudo cp website/index.html website/styles.css /var/www/135erheli.de/
-sudo mkdir -p /var/www/135erheli.de/docs/assets/gui
-sudo cp docs/assets/gui/gui-preview-v0.5.png /var/www/135erheli.de/docs/assets/gui/
-
-sudo cp website/nginx/135erheli.de.conf /etc/nginx/sites-available/135erheli.de
-sudo ln -s /etc/nginx/sites-available/135erheli.de /etc/nginx/sites-enabled/135erheli.de
-sudo nginx -t
-sudo systemctl reload nginx
+cd website
+python3 -m http.server 8000
 ```
 
-## HTTPS
+Open `http://127.0.0.1:8000`.
 
-Nach korrekter DNS-Zuordnung von `135erheli.de` und `www.135erheli.de` auf den Webserver kann TLS z. B. über Certbot aktiviert werden:
+## GitHub Pages
 
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d 135erheli.de -d www.135erheli.de
-```
+`.github/workflows/pages.yml` publishes the `website/` directory when website files change on `master` or when the workflow is started manually.
 
-## Hinweise
+GitHub repository settings must have **Pages → Source: GitHub Actions** enabled once. No custom domain is required.
 
-Die Webseite ist bewusst statisch gehalten. Sie hat keine direkte Steuerfunktion für GrowControl und exponiert keine lokale Raspberry-Pi-API. Dies hält die öffentliche Projektseite klar getrennt von der lokalen Steuerplattform.
+## Security
+
+The public website is static HTML/CSS/SVG only. It contains no GrowControl API credentials, no control endpoints, no analytics and no direct connection to the Raspberry Pi.

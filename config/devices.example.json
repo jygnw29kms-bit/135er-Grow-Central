@@ -1,0 +1,38 @@
+{
+  "devices": [
+    {
+      "id": "shelly-test-plug",
+      "name": "Shelly Test Plug",
+      "adapter": "shelly",
+      "native_id": "switch:0",
+      "capability": "switch",
+      "host": "192.168.178.50",
+      "channel": 0,
+      "approved": false,
+      "writable": false,
+      "username_env": "GC_SHELLY_TEST_USER",
+      "password_env": "GC_SHELLY_TEST_PASSWORD",
+      "metadata": {"vendor": "Shelly", "zone": "test"}
+    },
+    {
+      "id": "tapo-via-ha",
+      "name": "Tapo Plug via Home Assistant",
+      "adapter": "home_assistant",
+      "native_id": "switch.tapo_plug",
+      "capability": "switch",
+      "approved": false,
+      "writable": false,
+      "metadata": {"vendor": "TP-Link Tapo", "bridge": "Home Assistant"}
+    },
+    {
+      "id": "fritz-via-ha",
+      "name": "FRITZ Smart Plug via Home Assistant",
+      "adapter": "home_assistant",
+      "native_id": "switch.fritz_plug",
+      "capability": "switch",
+      "approved": false,
+      "writable": false,
+      "metadata": {"vendor": "FRITZ!", "bridge": "Home Assistant"}
+    }
+  ]
+}
