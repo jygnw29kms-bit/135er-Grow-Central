@@ -2,7 +2,7 @@
 
 ## Goal
 
-Starting with v0.6, the public 135er GrowControl project website follows the same structural and visual language as the local control GUI while preserving the trust boundary between both surfaces.
+The public 135er GrowControl project site follows the same structural and visual language as the local control GUI while preserving the trust boundary between both surfaces.
 
 ## Design principles
 
@@ -18,29 +18,17 @@ The public website mirrors the patterns used by `web/index.html` and `web/app.cs
 - responsive iPhone, iPad and desktop layouts
 - explicit status communication instead of overpromising
 
-The site is therefore aligned with the target GUI not only by color, but also by navigation, panel hierarchy and dashboard structure.
+## Logo and graphics formats
 
-## Branding and repository artwork
+The public website uses the PNG logo at `website/assets/brand/135er-growcontrol-repo-mark.png`.
 
-The public site keeps the signed **J. L. 1976** master logo as the visible project trademark. Two additional repository presentation assets are maintained alongside it:
+PNG is the standard raster format. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
 
-- `website/assets/brand/135er-growcontrol-repo-banner.webp` – GitHub/social banner
-- `website/assets/brand/135er-growcontrol-repo-mark.png` – square repository mark / app icon
-- `website/assets/brand/favicon.ico` – browser favicon generated from the square mark
-
-The banner is used in the repository README and social/OpenGraph metadata. The square mark is used for favicon/app-icon purposes. These assets complement the signed master logo and do not replace it.
+The original GUI preview is loaded directly from `assets/gui-preview-v0.5.png`; there is no WebP source or WebP fallback logic.
 
 ## Security boundary
 
 The public website remains fully static. It contains no tokens, passwords, device commands or direct local API endpoints. The Raspberry Pi and local control UI remain separate trust zones.
-
-## GUI preview
-
-The GUI reference image is loaded directly as PNG:
-
-`assets/gui-preview-v0.5.png`
-
-PNG is the primary format to avoid WebP/MIME hosting issues.
 
 ## Production deployment
 
