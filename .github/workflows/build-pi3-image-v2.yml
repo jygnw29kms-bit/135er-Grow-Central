@@ -123,7 +123,7 @@ jobs:
           cat >/etc/systemd/system/135er-growcontrol.service <<'EOF'
           [Unit]
           Description=135er GrowControl Local
-          After=network-online.target bluetooth.target
+          After=network-online.target bluetooth.target growcontrol-firstboot-firewall.service
           Wants=network-online.target bluetooth.target
           [Service]
           Type=simple
@@ -142,13 +142,42 @@ jobs:
 
           mkdir -p /etc/ssh/sshd_config.d
           printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-growcontrol-test.conf
+
+          # UFW cannot be initialized reliably inside the GitHub Actions ARM chroot.
+          # Prepare a first-boot service instead; the real Raspberry Pi kernel then
+          # applies the firewall before GrowControl starts.
+          cat >/usr/local/sbin/growcontrol-firstboot-firewall.sh <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+          MARKER=/var/lib/135er-growcontrol/.firewall-initialized
+          [ -e "$MARKER" ] && exit 0
           ufw --force reset
           ufw default deny incoming
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 8080/tcp
           ufw --force enable
-          systemctl enable ssh bluetooth 135er-growcontrol.service
+          install -o growcontrol -g growcontrol -m 0640 /dev/null "$MARKER"
+          EOF
+          chmod 0755 /usr/local/sbin/growcontrol-firstboot-firewall.sh
+
+          cat >/etc/systemd/system/growcontrol-firstboot-firewall.service <<'EOF'
+          [Unit]
+          Description=135er GrowControl first-boot firewall initialization
+          After=local-fs.target
+          Before=135er-growcontrol.service
+          ConditionPathExists=!/var/lib/135er-growcontrol/.firewall-initialized
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/growcontrol-firstboot-firewall.sh
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl enable ssh bluetooth growcontrol-firstboot-firewall.service 135er-growcontrol.service
           systemctl enable unattended-upgrades.service || true
 
           cat >/etc/motd <<'EOF'
@@ -159,6 +188,7 @@ jobs:
           Temporary application/API token: test
           WARNING: change all test credentials after testing.
           DF100M BLE writes and remote cloud commands are disabled by default.
+          Firewall is initialized automatically on first Raspberry Pi boot.
           EOF
           truncate -s 0 /etc/machine-id
           rm -f /var/lib/dbus/machine-id
@@ -184,6 +214,7 @@ jobs:
           Temporary API/application token: test
           BLE device writes: disabled
           Remote cloud commands: disabled
+          Firewall: initialized automatically on first boot
           EOF
 
       - name: Upload workflow artifact
@@ -202,4 +233,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_GrowControl_RPi3B_Test.img.xz 135er_GrowControl_RPi3B_Test.img.xz.sha256 135er_GrowControl_RPi3B_Test-CREDENTIALS.txt --title "135er GrowControl Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. DF100M writes and remote cloud commands disabled by default." --prerelease
+          gh release create "$TAG" 135er_GrowControl_RPi3B_Test.img.xz 135er_GrowControl_RPi3B_Test.img.xz.sha256 135er_GrowControl_RPi3B_Test-CREDENTIALS.txt --title "135er GrowControl Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
