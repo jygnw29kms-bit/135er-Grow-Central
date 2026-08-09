@@ -2,18 +2,23 @@
 
 ## Goal
 
-Starting with v0.6, the public 135er GrowControl project website follows the same visual language as the local control GUI while preserving the trust boundary between both surfaces.
+Starting with v0.6, the public 135er GrowControl project website follows the same structural and visual language as the local control GUI while preserving the trust boundary between both surfaces.
 
 ## Design principles
 
+The public website now mirrors the patterns used by `web/index.html` and `web/app.css`:
+
+- fixed sidebar and mobile bottom navigation
+- technical status cards at the top
 - dark control-plane / HUD surfaces
-- technical lines and grids
-- green status and approval signals
-- cyan integration and bridge signals
+- circular system indicator
+- diagnostics / telemetry panel
+- green, cyan, violet and amber status signals
 - monospace system labels
-- large, clear typography
 - responsive iPhone, iPad and desktop layouts
-- status communication instead of overpromising
+- explicit status communication instead of overpromising
+
+The site is therefore aligned with the target GUI not only by color, but also by navigation, panel hierarchy and dashboard structure.
 
 ## Security boundary
 
@@ -21,8 +26,18 @@ The public website remains fully static. It contains no tokens, passwords, devic
 
 ## GUI preview
 
-The GUI preview uses WebP with a PNG fallback to avoid broken rendering on hosting environments with incomplete MIME or WebP configuration.
+The GUI reference image is loaded directly as PNG:
 
-## Deployment
+`assets/gui-preview-v0.5.png`
 
-The current Plesk web root is `/httpdocs`. The contents of `website/` are copied there.
+PNG is the primary format to avoid WebP/MIME hosting issues.
+
+## Production deployment
+
+The absolute Plesk web root for `dezender.de`, confirmed through SSH, is:
+
+`/var/www/vhosts/dezender.de/httpdocs`
+
+The `dezender` system user sees the same directory as `~/httpdocs`.
+
+The contents of `website/` are copied directly into this web root.
