@@ -1,98 +1,37 @@
-# Release & Raspberry Pi Image Process
+# Release and Raspberry Pi Image Process
 
-## Objective
+## Current image builder
 
-Build a reproducible, flashable Raspberry Pi image without manually modifying SD cards.
-
-## Current image target
+The only active Raspberry Pi image workflow is:
 
 ```text
-Raspberry Pi OS Lite 64-bit
-Debian 13 / Trixie based
-Raspberry Pi 3B/3B+ target
+.github/workflows/build-pi3-image-v2.yml
 ```
 
-The workflow downloads a pinned official Raspberry Pi OS image and verifies its SHA256 before customization.
+The obsolete v1 workflow was removed in v0.6 to prevent expensive image builds from running automatically after unrelated application changes.
 
-## Installed test-image components
+## Trigger policy
 
-- current 135er GrowControl repository snapshot;
-- Python virtual environment and project dependencies;
-- BlueZ/Bluetooth tooling;
-- OpenSSH server;
-- SQLite and utilities;
-- unattended upgrades;
-- UFW;
-- dedicated `growcontrol` service account;
-- systemd GrowControl service;
-- first-boot firewall initialization service.
+The v2 image builder is primarily manual (`workflow_dispatch`). A change to the v2 workflow file itself can also trigger a validation build.
 
-## Temporary image credentials
+Ordinary changes to the website, documentation, app or tests do **not** automatically rebuild a multi-gigabyte Raspberry Pi image.
 
-```text
-hostname: growcontrol-test
-SSH: test / test
-application/API token: test
-```
+## Base image
 
-## Image output
+Raspberry Pi OS Lite 64-bit / Debian 13 is used for the Pi 3B/3B+ test image. The downloaded base image is verified against its configured SHA-256 before customization.
 
-Expected release assets:
+## Historical build lessons
 
-```text
-135er_GrowControl_RPi3B_Test.img.xz
-135er_GrowControl_RPi3B_Test.img.xz.sha256
-135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
-```
+### v1 root filesystem exhaustion
 
-Large images belong in GitHub Releases/Actions artifacts, not normal Git history.
+The first builder copied build artifacts into the mounted target filesystem and filled the root partition. The corrected builder expands the image and excludes base/work image files from rsync.
 
-## Builder incident history
+### v2 UFW in ARM chroot
 
-### Failure 1 – filesystem full
+UFW failed inside the GitHub Actions ARM chroot because it could not determine the iptables environment. The corrected v2 workflow installs a first-boot firewall service so UFW is initialized against the real Raspberry Pi kernel.
 
-Cause: the downloaded `base.img.xz`/working image existed in the checked-out workspace and was copied into `/opt/135er-growcontrol` during `rsync`.
+## Test-image safety
 
-Fix:
+The current hardware-test image intentionally uses temporary test credentials and must not be treated as production-ready. DF100M writes and remote cloud commands remain disabled by default.
 
-- exclude `.img`, `.img.xz`, `base.img*`, `work.img*`;
-- grow image by 2 GiB;
-- expand partition 2 and ext filesystem before customization.
-
-### Failure 2 – UFW in chroot
-
-Cause:
-
-```text
-ERROR: Couldn't determine iptables version
-```
-
-The ARM chroot under GitHub Actions cannot reliably initialize UFW against the runner/kernel environment.
-
-Fix: create `growcontrol-firstboot-firewall.service`, executed on the physical Pi before GrowControl. It applies:
-
-```text
-default deny incoming
-default allow outgoing
-allow 22/tcp
-allow 8080/tcp
-```
-
-and writes a marker so initialization is one-time.
-
-## Release quality gate
-
-A test-image prerelease should only be promoted after:
-
-1. GitHub build success;
-2. checksum generated;
-3. image flash succeeds;
-4. Pi boots at least twice;
-5. SSH, Bluetooth and GrowControl service active;
-6. UI reachable on LAN;
-7. safe defaults confirmed;
-8. test notes added to documentation.
-
-## Versioning principle
-
-Prebuilt hardware images are prereleases during protocol research. Stable semantic release tags should only be used when the documented runtime status matches tested behavior.
+Future production images must replace temporary credentials with a first-boot provisioning flow.

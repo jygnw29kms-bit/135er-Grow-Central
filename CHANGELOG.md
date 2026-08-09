@@ -1,61 +1,47 @@
 # Changelog
 
-All notable changes to 135er GrowControl are documented here. Status labels distinguish runtime-complete features from architecture/design baselines.
+## v0.6 – Secure Smart-Home Platform (2026-08-09)
 
-## Unreleased / Hardware Test Phase – 2026-08
-
-### Added
-- Reproducible Raspberry Pi 3B/3B+ test-image workflow based on Raspberry Pi OS Lite 64-bit / Debian 13.
-- Temporary hardware-test credentials `test/test` and test token `test` for isolated test environments.
-- Dedicated `growcontrol` service account and systemd autostart for local GrowControl.
-- First-boot UFW initialization service because UFW cannot be reliably initialized inside the GitHub ARM chroot.
-- Professional project-record documentation: project history, status matrix, master architecture, DF100M research log, hardware test plan, security/trust model, decision log and image/release process.
-- Versioned Wiki source under `wiki/`.
-- PNG GUI preview for reliable GitHub rendering.
-
-### Changed
-- GUI preview references changed from WebP to PNG.
-- Project naming consolidated to **135er GrowControl**; DF100M is treated only as a device/model identifier.
-- Platform direction consolidated around Raspberry Pi/Debian/Ubuntu; ESP32 excluded from core design.
-- Cloud architecture clarified as optional outbound HTTPS extension, never local master.
-
-### Fixed
-- Image builder no longer copies downloaded `.img/.img.xz` build artifacts into target root filesystem.
-- Image builder expands the image and root partition before package/project installation.
-- UFW setup deferred to first physical Raspberry Pi boot to avoid chroot iptables detection failure.
+### Architecture
+- Reframed GrowControl as a secure local-first automation platform while keeping the Raspberry Pi authoritative.
+- Added normalized smart-home device/capability/command architecture.
+- Selected Home Assistant as optional interoperability bridge for Apple Home/Siri, Tapo and FRITZ!SmartHome.
+- Selected native local Shelly Gen2+ JSON-RPC as the first direct smart-plug adapter.
+- Defined Matter as a future standards-based bridge target.
 
 ### Security
-- DF100M writes remain disabled by default.
-- Remote cloud commands remain disabled by default.
-- Test credentials are explicitly documented as temporary and unsuitable for untrusted networks.
+- Added fail-closed local write-token authentication.
+- Added deny-by-default smart-home policy with global enable, approval and writable gates.
+- Restricted Shelly destinations to configured private/link-local literal IP addresses.
+- Restricted Home Assistant integration to configured `switch.*` entities and on/off services.
+- Added read-only Home Assistant default.
+- Added append-only smart-home command audit log.
+- Protected DF100M speed/raw writes with local authentication in addition to the existing write-disable flag.
 
-## v0.5 Full Platform Baseline
+### Runtime
+- Added smart-home registry, policy and adapter framework.
+- Added Shelly switch adapter baseline.
+- Added Home Assistant switch connector baseline.
+- Added smart-home REST endpoints under `/api/v1/smarthome`.
+- Aligned local HUD endpoints with the v0.6 local API.
+- Added application package marker to make test/import behavior deterministic.
 
-### Added
-- Full-platform architecture baseline.
-- Local SQLite and cloud PostgreSQL schema direction.
-- RBAC roles: Admin, Operator, Viewer, Device/Agent.
-- Domain models for sites, devices, sensors, history, schedules, automations, events, alerts, commands, audit logging, settings, cloud nodes and backups.
-- Installer/hardening baseline for Debian/Ubuntu/Raspberry Pi OS.
-- Responsive GUI design reference and DE/EN documentation.
+### Website
+- Rebuilt the public project site as a domain-neutral professional static website with architecture SVG, smart-home integration presentation, security model and GUI preview.
+- Added GitHub Pages deployment workflow.
+- Removed old domain-specific Nginx configuration.
 
-### Clarification
-- v0.5 defines and scaffolds platform capabilities; it does **not** mean all planned RBAC, PostgreSQL, migrations, WebSockets, sensor automation or backup functions are runtime-complete.
+### CI / release engineering
+- Removed obsolete Raspberry Pi image-builder v1 workflow to prevent unrelated pushes from launching large image builds.
+- Kept corrected v2 builder as the supported image workflow.
+- Fixed Python package import structure for CI.
 
-## v0.4.1 Local/Cloud/BLE Baseline
+### Documentation
+- Added/updated smart-home architecture, integrations, security model, API, source register, decision log, status matrix, release/image process and bilingual DE/EN pages.
+- Updated versioned wiki sources.
 
-### Added
-- FastAPI local runtime.
-- BLE discovery/connect/disconnect using Bleak.
-- GATT inspection and notification capture.
-- Experimental speed/raw write endpoints with write protection.
-- Optional cloud telemetry/history Alpha.
-- Prepared command request/result flow.
-- Pi cloud-link agent with outbound HTTPS model.
+## v0.5
+- Full-platform baseline: database schemas, installer/hardening direction, Local/Cloud separation, GUI baseline and bilingual platform documentation.
 
-## Early prototypes
-
-- Initial Raspberry Pi fan-control exploration.
-- Mars Legacy APK observations and DF100M candidate UUID research.
-- GUI evolution from early test view to futuristic responsive HUD direction.
-- KillerInk/GrowFanController used as inspiration only; ESP32 functionality intentionally not adopted.
+## v0.4.x
+- Early FastAPI/Bleak DF100M research runtime and optional cloud-link alpha.
