@@ -38,41 +38,40 @@
       </div>
 
       <div class="control-grid">
-        <article class="panel fan-panel">
-          <div class="panel-head"><div><div class="eyebrow">DEVICE CONTROL</div><h2>DF100M Fan</h2></div><div class="device-badge">MZ_MZF002</div></div>
-          <div class="fan-control">
-            <div class="ring" id="ring"><div class="ring-inner"><span id="speedValue">0</span><small>%</small></div></div>
-            <div class="slider-wrap"><label for="speedSlider">Fan Speed</label><input type="range" min="0" max="100" value="0" id="speedSlider"><div class="slider-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div><div class="button-row"><button class="primary" id="discoverBtn">DISCOVER</button><button class="secondary" id="servicesBtn">READ GATT</button><button class="danger" id="sendSpeedBtn">TEST SPEED</button></div></div>
-          </div>
-        </article>
+        <article class="panel fan-panel"><div class="panel-head"><div><div class="eyebrow">DEVICE CONTROL</div><h2>DF100M Fan</h2></div><div class="device-badge">MZ_MZF002</div></div><div class="fan-control"><div class="ring" id="ring"><div class="ring-inner"><span id="speedValue">0</span><small>%</small></div></div><div class="slider-wrap"><label for="speedSlider">Fan Speed</label><input type="range" min="0" max="100" value="0" id="speedSlider"><div class="slider-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div><div class="button-row"><button class="primary" id="discoverBtn">DISCOVER</button><button class="secondary" id="servicesBtn">READ GATT</button><button class="danger" id="sendSpeedBtn">TEST SPEED</button></div></div></div></article>
         <article class="panel diag-panel"><div class="panel-head"><div><div class="eyebrow">LIVE DIAGNOSTICS</div><h2>System Telemetry</h2></div><span class="pulse">LIVE</span></div><pre id="diagnostics">System ready.</pre></article>
       </div>
 
-      <article class="panel power-preview">
-        <div class="panel-head"><div><div class="eyebrow">POWER MATRIX</div><h2>Stromsteckdosen</h2></div><button class="ghost" data-open-view="power">DETAILS</button></div>
-        <div id="powerPreviewGrid" class="plug-grid"><div class="empty-state">Steckdosen werden geladen…</div></div>
-      </article>
-
+      <article class="panel power-preview"><div class="panel-head"><div><div class="eyebrow">POWER MATRIX</div><h2>Stromsteckdosen</h2></div><button class="ghost" data-open-view="power">DETAILS</button></div><div id="powerPreviewGrid" class="plug-grid"><div class="empty-state">Steckdosen werden geladen…</div></div></article>
       <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Raspberry Pi</span><strong>CONTROL NODE</strong><small>FastAPI / BLE / Smart Home</small></article><article class="mini-panel"><span class="mini-label">Operating Mode</span><strong>LOCAL-FIRST</strong><small>Power telemetry remains local</small></article><article class="mini-panel"><span class="mini-label">Security</span><strong>DENY BY DEFAULT</strong><small>Writes require token + approval</small></article></div>
     </section>
 
     <section id="power" class="view">
       <article class="panel">
         <div class="panel-head"><div><div class="eyebrow">SMART POWER CONTROL</div><h2>Steckdosen & Verbrauch</h2></div><div class="device-badge" id="powerUpdated">NO DATA</div></div>
-        <div class="power-summary">
-          <div><span>Gesamtleistung</span><strong><b id="powerSummaryW">--</b> W</strong></div>
-          <div><span>Gesamtenergie</span><strong><b id="powerSummaryKwh">--</b> kWh</strong></div>
-          <div><span>Online</span><strong id="powerSummaryOnline">0 / 0</strong></div>
-          <div><span>Eingeschaltet</span><strong id="powerSummaryOn">0</strong></div>
+        <div class="power-summary"><div><span>Gesamtleistung</span><strong><b id="powerSummaryW">--</b> W</strong></div><div><span>Gesamtenergie</span><strong><b id="powerSummaryKwh">--</b> kWh</strong></div><div><span>Online</span><strong id="powerSummaryOnline">0 / 0</strong></div><div><span>Eingeschaltet</span><strong id="powerSummaryOn">0</strong></div></div>
+
+        <div class="tariff-panel">
+          <div><div class="eyebrow">COST MODEL</div><h3>Strompreis & Hochrechnung</h3><p>Die Hochrechnung basiert auf der aktuell gemessenen Gesamtleistung. Echte historische Periodenwerte werden später aus der Zeitreihendatenbank gespeist.</p></div>
+          <label>Strompreis <span>€/kWh</span><input id="energyPrice" type="number" min="0" step="0.001" inputmode="decimal" value="0.35"></label>
         </div>
+
+        <div class="period-grid">
+          <div class="period-card"><span>STUNDE</span><strong><b id="projHourKwh">--</b> kWh</strong><small id="projHourCost">-- €</small></div>
+          <div class="period-card"><span>TAG</span><strong><b id="projDayKwh">--</b> kWh</strong><small id="projDayCost">-- €</small></div>
+          <div class="period-card"><span>WOCHE</span><strong><b id="projWeekKwh">--</b> kWh</strong><small id="projWeekCost">-- €</small></div>
+          <div class="period-card"><span>MONAT</span><strong><b id="projMonthKwh">--</b> kWh</strong><small id="projMonthCost">-- €</small></div>
+          <div class="period-card"><span>JAHR</span><strong><b id="projYearKwh">--</b> kWh</strong><small id="projYearCost">-- €</small></div>
+        </div>
+
         <div id="plugGrid" class="plug-grid"><div class="empty-state">Keine Steckdosendaten geladen.</div></div>
         <div class="security-note">Live-Lesedaten sind lokal verfügbar. Schaltbefehle werden nur für registrierte, freigegebene und beschreibbare Geräte akzeptiert und benötigen das lokale API-Token.</div>
       </article>
     </section>
 
     <section id="devices" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Connected Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>DF100M</strong><span>Mars Hydro • MZ_MZF002</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>Shelly / Home Assistant adapters</span></div><span id="smartPlugState">WAITING</span></div><div class="device-row disabled"><div><strong>FC3000</strong><span>Future adapter</span></div><span>PLANNED</span></div></div></article></section>
-    <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Steckdosenbefehlen. Zukünftige Regeln verwenden dieselbe freigegebene Geräte- und Sicherheitslogik.</div></article></section>
-    <section id="history" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div><div class="empty-state">Schaltbefehle werden bereits auditiert. Persistente Leistungs-Zeitreihen werden in einem späteren Schritt an SQLite angebunden.</div></article></section>
+    <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Steckdosenbefehlen.</div></article></section>
+    <section id="history" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div><div class="empty-state">Schaltbefehle werden bereits auditiert. Persistente Leistungs-Zeitreihen werden als nächster Datenbank-Schritt angebunden.</div></article></section>
     <section id="system" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er GrowControl</h2></div></div><div class="system-grid"><div><span>Platform</span><strong>Raspberry Pi</strong></div><div><span>Frontend</span><strong>Responsive HUD UI</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>Shelly + Home Assistant</strong></div><div><span>Power Telemetry</span><strong>Normalized local API</strong></div><div><span>Security</span><strong>Token + approval + audit</strong></div></div></article></section>
   </main>
 </div>
