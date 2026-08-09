@@ -1,4 +1,4 @@
-name: Build Raspberry Pi 3B Test Image v2
+name: Build 135er-Grow Central Raspberry Pi 3B Test Image v2
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     branches: [ master ]
     paths:
       - '.github/workflows/build-pi3-image-v2.yml'
+      - 'image-builder/brand/**'
 
 permissions:
   contents: write
@@ -17,9 +18,9 @@ jobs:
     env:
       BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
       BASE_SHA256: acff736ca7945e3b305f07cda4abdb870910e12634991da69783611756e381b3
-      IMAGE_NAME: 135er_GrowControl_RPi3B_Test
+      IMAGE_NAME: 135er_Grow_Central_RPi3B_Test
     steps:
-      - name: Checkout GrowControl
+      - name: Checkout 135er-Grow Central
         uses: actions/checkout@v4
 
       - name: Install image build tools
@@ -39,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ROOT=/mnt/growcontrol-root
+          ROOT=/mnt/grow-central-root
           sudo mkdir -p "$ROOT"
           LOOP=$(sudo losetup --find --show --partscan work.img)
           cleanup() {
@@ -62,12 +63,12 @@ jobs:
           sudo mkdir -p "$ROOT/boot/firmware"
           sudo mount "${LOOP}p1" "$ROOT/boot/firmware"
 
-          sudo mkdir -p "$ROOT/opt/135er-growcontrol"
+          sudo mkdir -p "$ROOT/opt/135er-grow-central"
           sudo rsync -a --delete \
             --exclude='.git' --exclude='.github' \
             --exclude='base.img*' --exclude='work.img*' \
             --exclude='*.img' --exclude='*.img.xz' \
-            ./ "$ROOT/opt/135er-growcontrol/"
+            ./ "$ROOT/opt/135er-grow-central/"
 
           sudo cp /usr/bin/qemu-aarch64-static "$ROOT/usr/bin/"
           sudo mount --bind /dev "$ROOT/dev"
@@ -78,25 +79,25 @@ jobs:
 
           sudo chroot "$ROOT" /bin/bash -eux <<'CHROOT'
           export DEBIAN_FRONTEND=noninteractive
-          echo 'growcontrol-test' > /etc/hostname
-          sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrowcontrol-test/' /etc/hosts || true
+          echo 'grow-central-test' > /etc/hostname
+          sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw plymouth plymouth-themes
 
           if ! id test >/dev/null 2>&1; then useradd -m -s /bin/bash test; fi
           echo 'test:test' | chpasswd
           usermod -aG sudo test
           for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" test || true; done
-          echo 'test ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-growcontrol-test
-          chmod 0440 /etc/sudoers.d/010-growcontrol-test
+          echo 'test ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-grow-central-test
+          chmod 0440 /etc/sudoers.d/010-grow-central-test
 
-          if ! id growcontrol >/dev/null 2>&1; then useradd --system --home /var/lib/135er-growcontrol --create-home --shell /usr/sbin/nologin growcontrol; fi
-          getent group bluetooth >/dev/null && usermod -aG bluetooth growcontrol || true
-          install -d -o growcontrol -g growcontrol -m 0750 /var/lib/135er-growcontrol
-          install -d -o root -g growcontrol -m 0750 /etc/135er-growcontrol
+          if ! id growcentral >/dev/null 2>&1; then useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral; fi
+          getent group bluetooth >/dev/null && usermod -aG bluetooth growcentral || true
+          install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
+          install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
 
-          cd /opt/135er-growcontrol
+          cd /opt/135er-grow-central
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip wheel
           .venv/bin/pip install -r requirements.txt
@@ -114,24 +115,24 @@ jobs:
           GC_REMOTE_COMMANDS=false
           GC_CLOUD_ENABLED=false
           EOF
-          chown -R root:growcontrol /opt/135er-growcontrol
-          chmod -R g+rX /opt/135er-growcontrol
-          chmod 0640 /opt/135er-growcontrol/.env
-          mkdir -p /opt/135er-growcontrol/data
-          chown growcontrol:growcontrol /opt/135er-growcontrol/data
+          chown -R root:growcentral /opt/135er-grow-central
+          chmod -R g+rX /opt/135er-grow-central
+          chmod 0640 /opt/135er-grow-central/.env
+          mkdir -p /opt/135er-grow-central/data
+          chown growcentral:growcentral /opt/135er-grow-central/data
 
-          cat >/etc/systemd/system/135er-growcontrol.service <<'EOF'
+          cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
-          Description=135er GrowControl Local
-          After=network-online.target bluetooth.target growcontrol-firstboot-firewall.service
+          Description=135er-Grow Central Local
+          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service
           Wants=network-online.target bluetooth.target
           [Service]
           Type=simple
-          User=growcontrol
-          Group=growcontrol
-          WorkingDirectory=/opt/135er-growcontrol
-          EnvironmentFile=/opt/135er-growcontrol/.env
-          ExecStart=/opt/135er-growcontrol/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
+          User=growcentral
+          Group=growcentral
+          WorkingDirectory=/opt/135er-grow-central
+          EnvironmentFile=/opt/135er-grow-central/.env
+          ExecStart=/opt/135er-grow-central/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
           Restart=always
           RestartSec=3
           NoNewPrivileges=true
@@ -141,15 +142,12 @@ jobs:
           EOF
 
           mkdir -p /etc/ssh/sshd_config.d
-          printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-growcontrol-test.conf
+          printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-grow-central-test.conf
 
-          # UFW cannot be initialized reliably inside the GitHub Actions ARM chroot.
-          # Prepare a first-boot service instead; the real Raspberry Pi kernel then
-          # applies the firewall before GrowControl starts.
-          cat >/usr/local/sbin/growcontrol-firstboot-firewall.sh <<'EOF'
+          cat >/usr/local/sbin/grow-central-firstboot-firewall.sh <<'EOF'
           #!/bin/bash
           set -euo pipefail
-          MARKER=/var/lib/135er-growcontrol/.firewall-initialized
+          MARKER=/var/lib/135er-grow-central/.firewall-initialized
           [ -e "$MARKER" ] && exit 0
           ufw --force reset
           ufw default deny incoming
@@ -157,32 +155,64 @@ jobs:
           ufw allow 22/tcp
           ufw allow 8080/tcp
           ufw --force enable
-          install -o growcontrol -g growcontrol -m 0640 /dev/null "$MARKER"
+          install -o growcentral -g growcentral -m 0640 /dev/null "$MARKER"
           EOF
-          chmod 0755 /usr/local/sbin/growcontrol-firstboot-firewall.sh
+          chmod 0755 /usr/local/sbin/grow-central-firstboot-firewall.sh
 
-          cat >/etc/systemd/system/growcontrol-firstboot-firewall.service <<'EOF'
+          cat >/etc/systemd/system/grow-central-firstboot-firewall.service <<'EOF'
           [Unit]
-          Description=135er GrowControl first-boot firewall initialization
+          Description=135er-Grow Central first-boot firewall initialization
           After=local-fs.target
-          Before=135er-growcontrol.service
-          ConditionPathExists=!/var/lib/135er-growcontrol/.firewall-initialized
-
+          Before=135er-grow-central.service
+          ConditionPathExists=!/var/lib/135er-grow-central/.firewall-initialized
           [Service]
           Type=oneshot
-          ExecStart=/usr/local/sbin/growcontrol-firstboot-firewall.sh
+          ExecStart=/usr/local/sbin/grow-central-firstboot-firewall.sh
           RemainAfterExit=yes
-
           [Install]
           WantedBy=multi-user.target
           EOF
 
-          systemctl enable ssh bluetooth growcontrol-firstboot-firewall.service 135er-growcontrol.service
+          # Branded boot splash. The source PNG is stored as Base64 to keep the
+          # repository transport text-safe and is decoded inside the image.
+          THEME=/usr/share/plymouth/themes/135er-grow-central
+          mkdir -p "$THEME" /etc/135er-grow-central
+          base64 -d /opt/135er-grow-central/image-builder/brand/boot-logo.b64 >"$THEME/logo.png"
+          cp /opt/135er-grow-central/image-builder/brand/console-banner.txt /etc/135er-grow-central/banner.txt
+          cat >"$THEME/135er-grow-central.plymouth" <<'EOF'
+          [Plymouth Theme]
+          Name=135er-Grow Central
+          Description=135er-Grow Central boot splash
+          ModuleName=script
+          [script]
+          ImageDir=/usr/share/plymouth/themes/135er-grow-central
+          ScriptFile=/usr/share/plymouth/themes/135er-grow-central/135er-grow-central.script
+          EOF
+          cat >"$THEME/135er-grow-central.script" <<'EOF'
+          logo = Image("logo.png");
+          sprite = Sprite(logo);
+          sprite.SetX(Window.GetWidth()/2 - logo.GetWidth()/2);
+          sprite.SetY(Window.GetHeight()/2 - logo.GetHeight()/2);
+          EOF
+          plymouth-set-default-theme 135er-grow-central || true
+          update-initramfs -u || true
+          if [ -f /boot/firmware/cmdline.txt ] && ! grep -qw splash /boot/firmware/cmdline.txt; then
+            sed -i '1 s/$/ quiet splash plymouth.ignore-serial-consoles/' /boot/firmware/cmdline.txt
+          fi
+
+          cat >/etc/profile.d/135er-grow-central-banner.sh <<'EOF'
+          case "$-" in
+            *i*) [ -r /etc/135er-grow-central/banner.txt ] && cat /etc/135er-grow-central/banner.txt ;;
+          esac
+          EOF
+          chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
+
+          systemctl enable ssh bluetooth grow-central-firstboot-firewall.service 135er-grow-central.service
           systemctl enable unattended-upgrades.service || true
 
           cat >/etc/motd <<'EOF'
-          135er GrowControl - Raspberry Pi 3B TEST IMAGE
-          Hostname: growcontrol-test
+          135er-Grow Central - Raspberry Pi 3B TEST IMAGE
+          Hostname: grow-central-test
           SSH: test / test
           Web UI: http://<PI-IP>:8080
           Temporary application/API token: test
@@ -207,7 +237,7 @@ jobs:
           xz -T0 -6 -f "${IMAGE_NAME}.img"
           sha256sum "${IMAGE_NAME}.img.xz" > "${IMAGE_NAME}.img.xz.sha256"
           cat > "${IMAGE_NAME}-CREDENTIALS.txt" <<'EOF'
-          Hostname: growcontrol-test
+          Hostname: grow-central-test
           SSH username: test
           SSH password: test
           Web UI: http://<PI-IP>:8080
@@ -220,11 +250,11 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 135er-GrowControl-RPi3B-Test-Image
+          name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_GrowControl_RPi3B_Test.img.xz
-            135er_GrowControl_RPi3B_Test.img.xz.sha256
-            135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test.img.xz
+            135er_Grow_Central_RPi3B_Test.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -233,4 +263,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_GrowControl_RPi3B_Test.img.xz 135er_GrowControl_RPi3B_Test.img.xz.sha256 135er_GrowControl_RPi3B_Test-CREDENTIALS.txt --title "135er GrowControl Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. Branded boot splash and console banner included. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
