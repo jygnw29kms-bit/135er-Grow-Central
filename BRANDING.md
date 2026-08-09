@@ -10,39 +10,35 @@ Technische Schreibweisen:
 - Python/interne Kennung: `135er_growcontrol`
 - UI-Logo: `135ER GROWCONTROL`
 
-## Verbindliches Markenzeichen
+## Verbindliches Logo
 
-Das cyan/grüne Leiterbahn-Emblem mit dem Schriftzug **135er GrowControl** und der
-eingearbeiteten Signatur **J. L. 1976** ist das verbindliche Master-Logo. Es wird
-bei allen öffentlichen und internen Projektoberflächen verwendet und darf nicht
-durch reine Textmarken, fremde Symbole oder ältere Varianten ersetzt werden.
+Für Website, Repository und UI-Oberflächen wird das quadratische cyan/grüne **135er GrowControl Logo** verwendet.
 
-- Verbindliche Projektdatei: `website/assets/brand/135er-growcontrol-logo-jl1976.webp`
-- Lokale GUI: `web/brand-logo.webp`
-- Cloud-GUI: `cloud/web/brand-logo.webp`
-- Schutzraum: Logo nicht beschneiden oder überlagern.
-- Hintergrund: vorzugsweise Near Black; Seitenverhältnis immer beibehalten.
-- Signatur: `J. L. 1976` muss lesbar erhalten bleiben.
-
-## GitHub- und Repository-Artwork
-
-Für Repository-Darstellung, Social Preview und Browser-Icon existieren zusätzlich zwei abgeleitete Präsentationsassets. Sie ergänzen das Master-Logo, ersetzen es aber nicht:
-
-- Repository-Banner: `website/assets/brand/135er-growcontrol-repo-banner.webp`
-- Quadratische Repository-Marke: `website/assets/brand/135er-growcontrol-repo-mark.png`
+- Öffentliche Website / Repo: `website/assets/brand/135er-growcontrol-repo-mark.png`
+- Lokale GUI: `web/brand-logo.png`
+- Cloud-GUI: `cloud/web/brand-logo.png`
+- Dokumentation: `docs/assets/brand/135er-growcontrol-logo.png`
 - Browser-Favicon: `website/assets/brand/favicon.ico`
 
-Verwendung:
+## Grafikformat-Regel
 
-- README / Repository-Startseite: Repository-Banner als visuelle Kopfzeile.
-- GitHub-Avatar oder Social-Preview-Konfiguration: quadratische Repository-Marke bzw. Banner verwenden.
-- Öffentliche Website: quadratische Marke als Favicon/App-Icon; das signierte **J. L. 1976** Master-Logo bleibt sichtbar in der eigentlichen Oberfläche.
-- OpenGraph/Social-Metadaten: Repository-Banner.
+Auf Projektoberflächen werden **keine WebP-Dateien mehr verwendet**. Für Rastergrafiken gilt PNG als Standard; für Browser-Favicons ist ICO zulässig. SVG bleibt für technische Vektorgrafiken wie Architekturdiagramme zulässig.
+
+Grund: Auf dem produktiven Hosting von `dezender.de` wurden WebP-Dateien nicht zuverlässig dargestellt. Die PNG/ICO-Policy vermeidet diese Abhängigkeit.
+
+## Verwendung
+
+- Website Header / Sidebar: PNG-Logo.
+- README / Repository-Startseite: PNG-Logo.
+- OpenGraph / Social Preview: PNG-Logo, bis ein separates PNG-Banner bereitsteht.
+- Lokale und Cloud-GUI: PNG-Logo.
+- Favicon: `favicon.ico` plus PNG-App-Logo als Touch-Icon.
+- Schutzraum: Logo nicht beschneiden oder überlagern.
+- Hintergrund: vorzugsweise Near Black; Seitenverhältnis immer beibehalten.
 
 ## Gerätebezeichnung
 
-`DF100M` ist kein Teil des Produktnamens mehr. Die Bezeichnung bleibt nur dort bestehen,
-wo das reale Mars-Hydro-Gerätemodell gemeint ist, zum Beispiel:
+`DF100M` ist kein Teil des Produktnamens. Die Bezeichnung bleibt nur dort bestehen, wo das reale Mars-Hydro-Gerätemodell gemeint ist, zum Beispiel:
 
 - `DF100M BLE Adapter`
 - `Mars Hydro DF100M`
