@@ -6,7 +6,7 @@ Starting with v0.6, the public 135er GrowControl project website follows the sam
 
 ## Design principles
 
-The public website now mirrors the patterns used by `web/index.html` and `web/app.css`:
+The public website mirrors the patterns used by `web/index.html` and `web/app.css`:
 
 - fixed sidebar and mobile bottom navigation
 - technical status cards at the top
@@ -19,6 +19,16 @@ The public website now mirrors the patterns used by `web/index.html` and `web/ap
 - explicit status communication instead of overpromising
 
 The site is therefore aligned with the target GUI not only by color, but also by navigation, panel hierarchy and dashboard structure.
+
+## Branding and repository artwork
+
+The public site keeps the signed **J. L. 1976** master logo as the visible project trademark. Two additional repository presentation assets are maintained alongside it:
+
+- `website/assets/brand/135er-growcontrol-repo-banner.webp` – GitHub/social banner
+- `website/assets/brand/135er-growcontrol-repo-mark.png` – square repository mark / app icon
+- `website/assets/brand/favicon.ico` – browser favicon generated from the square mark
+
+The banner is used in the repository README and social/OpenGraph metadata. The square mark is used for favicon/app-icon purposes. These assets complement the signed master logo and do not replace it.
 
 ## Security boundary
 
