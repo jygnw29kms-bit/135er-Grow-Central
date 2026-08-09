@@ -1,0 +1,5 @@
+135er-Grow Central
+Website deployment trigger
+
+Current preview release deployment to dezender.de
+Target: /var/www/vhosts/dezender.de/httpdocs/
