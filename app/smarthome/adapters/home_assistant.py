@@ -40,7 +40,19 @@ class HomeAssistantSwitchAdapter(SwitchAdapter):
                 data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             raise AdapterError("Home Assistant state request failed") from exc
-        return {"on": data.get("state") == "on", "native": {"state": data.get("state"), "attributes": data.get("attributes", {})}}
+        attrs = data.get("attributes", {}) if isinstance(data.get("attributes"), dict) else {}
+        return {
+            "on": data.get("state") == "on",
+            "online": data.get("state") not in {"unavailable", "unknown", None},
+            "power_w": _first_number(attrs, "power", "current_power_w", "active_power"),
+            "voltage_v": _first_number(attrs, "voltage", "voltage_v"),
+            "current_a": _first_number(attrs, "current", "current_a"),
+            "frequency_hz": _first_number(attrs, "frequency", "frequency_hz"),
+            "energy_wh": _energy_wh(attrs),
+            "temperature_c": _first_number(attrs, "temperature", "temperature_c"),
+            "source": "home_assistant",
+            "native": {"state": data.get("state"), "attributes": attrs},
+        }
 
     async def set_switch(self, on: bool) -> dict[str, Any]:
         if os.getenv("GC_HA_READ_ONLY", "true").lower() == "true":
@@ -54,3 +66,22 @@ class HomeAssistantSwitchAdapter(SwitchAdapter):
         except httpx.HTTPError as exc:
             raise AdapterError("Home Assistant switch command failed") from exc
         return await self.read_state()
+
+
+def _first_number(attrs: dict[str, Any], *keys: str) -> float | None:
+    for key in keys:
+        value = attrs.get(key)
+        if isinstance(value, (int, float)):
+            return float(value)
+    return None
+
+
+def _energy_wh(attrs: dict[str, Any]) -> float | None:
+    value = _first_number(attrs, "energy_wh", "total_consumption_wh")
+    if value is not None:
+        return value
+    value = _first_number(attrs, "energy", "total_consumption")
+    unit = str(attrs.get("unit_of_measurement", "")).lower()
+    if value is not None and unit == "kwh":
+        return value * 1000.0
+    return value
