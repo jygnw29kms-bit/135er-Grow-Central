@@ -2,7 +2,7 @@
 
 ## Goal
 
-The public 135er GrowControl project site follows the same structural and visual language as the local control GUI while preserving the trust boundary between both surfaces.
+The public 135er-Grow Central project site follows the same structural and visual language as the local control GUI while preserving the trust boundary between both surfaces.
 
 ## Design principles
 
@@ -20,7 +20,7 @@ The public website mirrors the patterns used by `web/index.html` and `web/app.cs
 
 ## Logo and graphics formats
 
-The public website uses the PNG logo at `website/assets/brand/135er-growcontrol-repo-mark.png`.
+The public website uses the PNG logo at `website/assets/brand/135er-grow-central-logo.svg`.
 
 PNG is the standard raster format. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
 

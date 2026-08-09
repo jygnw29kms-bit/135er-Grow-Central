@@ -6,8 +6,8 @@
 sudo apt update
 sudo apt install -y git python3 python3-pip python3-venv bluetooth bluez
 
-git clone https://github.com/jygnw29kms-bit/135er_GrowControl.git
-cd 135er_GrowControl
+git clone https://github.com/jygnw29kms-bit/135er-Grow-Central.git
+cd 135er-Grow-Central
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt

@@ -1,4 +1,4 @@
-# API – 135er GrowControl v0.6
+# API – 135er-Grow Central v0.6
 
 ## Local health/config
 

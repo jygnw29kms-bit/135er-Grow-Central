@@ -1,4 +1,4 @@
-"""135er GrowControl Pi-to-Cloud Agent.
+"""135er-Grow Central Pi-to-Cloud Agent.
 
 DE:
     Sendet Status über ausgehendes HTTPS an den VServer. Remote-Befehle
@@ -76,7 +76,7 @@ async def apply_command(client: httpx.AsyncClient, command: dict) -> tuple[bool,
 async def main():
     """DE: Periodische Sync-Schleife. EN: Periodic synchronization loop."""
     if not CLOUD_ENABLED:
-        print("GrowControl Cloud Link disabled / Cloud-Link deaktiviert")
+        print("Grow Central Cloud Link disabled / Cloud-Link deaktiviert")
         return
 
     headers = {"X-API-Token": TOKEN}

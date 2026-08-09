@@ -1,6 +1,6 @@
 # Raspberry Pi 3B Test Image / Test-Image
 
-This directory documents the reproducible Raspberry Pi 3B image build used for the first 135er GrowControl hardware tests.
+This directory documents the reproducible Raspberry Pi 3B image build used for the first 135er-Grow Central hardware tests.
 
 ## Base system
 
@@ -15,10 +15,10 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 
 **These credentials are intentionally temporary and insecure.**
 
-- Hostname: `growcontrol-test`
+- Hostname: `grow-central-test`
 - SSH user: `test`
 - SSH password: `test`
-- GrowControl/API token: `test`
+- Grow Central/API token: `test`
 - Web UI: `http://<PI-IP>:8080`
 
 Change all test credentials after the initial hardware test.
@@ -34,10 +34,10 @@ Change all test credentials after the initial hardware test.
 
 ## Automatic build
 
-`.github/workflows/build-pi3-image.yml` downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er GrowControl and dependencies, enables SSH/Bluetooth/GrowControl services, compresses the resulting image and publishes it as both a GitHub Actions artifact and a prerelease asset.
+`.github/workflows/build-pi3-image.yml` downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er-Grow Central and dependencies, enables SSH/Bluetooth/Grow Central services, compresses the resulting image and publishes it as both a GitHub Actions artifact and a prerelease asset.
 
 The generated file is named:
 
-`135er_GrowControl_RPi3B_Test.img.xz`
+`135er-Grow-Central_RPi3B_Test.img.xz`
 
 Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. Ethernet is recommended for the first test because no WLAN SSID/password is embedded in the public test image.

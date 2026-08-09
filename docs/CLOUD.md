@@ -1,4 +1,4 @@
-# 135er GrowControl Cloud
+# 135er-Grow Central Cloud
 
 ## Rolle
 
@@ -10,13 +10,13 @@ Internet / Mobilgerät
       HTTPS
         |
      VServer
-  GrowControl Cloud
+  Grow Central Cloud
         ^
         |
  ausgehende HTTPS-Verbindung
         |
  Raspberry Pi
- GrowControl Local
+ Grow Central Local
         |
        BLE
         |
@@ -67,7 +67,7 @@ curl http://127.0.0.1:8090/api/health
 
 Beispiel:
 
-`deploy/nginx/growcontrol-cloud.conf.example`
+`deploy/nginx/grow-central-cloud.conf.example`
 
 Für produktiven Betrieb HTTPS über Let's Encrypt/Certbot aktivieren.
 

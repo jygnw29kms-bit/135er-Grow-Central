@@ -1,6 +1,6 @@
 # Raspberry Pi 3B Test-Image
 
-Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er GrowControl** auf Raspberry Pi 3B / 3B+.
+Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er-Grow Central** auf Raspberry Pi 3B / 3B+.
 
 ## Basis
 
@@ -16,9 +16,9 @@ Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er GrowContr
 
 ## Vorinstalliertes Projekt
 
-Das aktuelle Repository wird nach `/opt/135er-growcontrol` kopiert. Die Python-Abhängigkeiten werden in `/opt/135er-growcontrol/.venv` installiert.
+Das aktuelle Repository wird nach `/opt/135er-grow-central` kopiert. Die Python-Abhängigkeiten werden in `/opt/135er-grow-central/.venv` installiert.
 
-Der lokale Dienst startet automatisch über `135er-growcontrol.service` und stellt die Web/API-Oberfläche auf Port `8080` bereit.
+Der lokale Dienst startet automatisch über `135er-grow-central.service` und stellt die Web/API-Oberfläche auf Port `8080` bereit.
 
 ```text
 http://<PI-IP>:8080
@@ -29,7 +29,7 @@ http://<PI-IP>:8080
 Nur für die ersten Hardwaretests:
 
 ```text
-Hostname: growcontrol-test
+Hostname: grow-central-test
 SSH-Benutzer: test
 SSH-Passwort: test
 API-/App-Token: test
@@ -63,14 +63,14 @@ Die UUIDs und Payload-Modi sind Reverse-Engineering-Kandidaten und noch keine va
 
 ## Image-Build
 
-Der Build läuft reproduzierbar über GitHub Actions. Das offizielle Raspberry-Pi-OS-Image wird heruntergeladen und per fest hinterlegtem SHA256 geprüft. Danach wird das Root-Dateisystem erweitert, GrowControl eingebaut, das Image komprimiert und erneut mit SHA256 versehen.
+Der Build läuft reproduzierbar über GitHub Actions. Das offizielle Raspberry-Pi-OS-Image wird heruntergeladen und per fest hinterlegtem SHA256 geprüft. Danach wird das Root-Dateisystem erweitert, Grow Central eingebaut, das Image komprimiert und erneut mit SHA256 versehen.
 
 Ausgaben:
 
 ```text
-135er_GrowControl_RPi3B_Test.img.xz
-135er_GrowControl_RPi3B_Test.img.xz.sha256
-135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+135er-Grow-Central_RPi3B_Test.img.xz
+135er-Grow-Central_RPi3B_Test.img.xz.sha256
+135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
 ```
 
 Das fertige Image wird als GitHub Actions Artefakt und als GitHub Prerelease vorgesehen. Große Binärimages werden bewusst nicht direkt in die normale Git-Historie eingecheckt.
@@ -94,7 +94,7 @@ Die Korrektur umfasst:
 4. IP im Router/DHCP-Server ermitteln.
 5. SSH testen: `ssh test@<PI-IP>`.
 6. Webinterface öffnen: `http://<PI-IP>:8080`.
-7. Service prüfen: `systemctl status 135er-growcontrol`.
+7. Service prüfen: `systemctl status 135er-grow-central`.
 8. Bluetooth prüfen: `bluetoothctl show`.
 9. Mars Legacy App vollständig schließen, bevor BLE-Tests gestartet werden.
 10. DF100M zunächst nur entdecken, verbinden, Services/GATT prüfen und Notifications mitschneiden. Schreibzugriffe erst nach Protokollvalidierung aktivieren.

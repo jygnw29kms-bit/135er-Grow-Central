@@ -1,6 +1,6 @@
 # Projektgeschichte
 
-135er GrowControl begann als konkrete Raspberry-Pi-Lösung für einen Mars Hydro DF100M, weil im vorhandenen Setup die Mars Legacy App funktionierte, die neuere Mars-Hydro-App jedoch nicht zuverlässig nutzbar war.
+135er-Grow Central begann als konkrete Raspberry-Pi-Lösung für einen Mars Hydro DF100M, weil im vorhandenen Setup die Mars Legacy App funktionierte, die neuere Mars-Hydro-App jedoch nicht zuverlässig nutzbar war.
 
 ## Entwicklungslinie
 

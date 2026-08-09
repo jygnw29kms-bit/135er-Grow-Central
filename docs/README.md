@@ -1,4 +1,4 @@
-# 135er GrowControl – Dokumentationszentrum / Documentation Hub
+# 135er-Grow Central – Dokumentationszentrum / Documentation Hub
 
 Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neuen Entwickler, Tester oder Betreiber ohne Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächsten Schritte zu verstehen.
 

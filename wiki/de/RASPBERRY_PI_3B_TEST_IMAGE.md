@@ -4,13 +4,13 @@ Für die ersten Hardwaretests wird ein reproduzierbares Raspberry-Pi-3B/3B+-Imag
 
 ## Vorinstalliert
 
-- 135er GrowControl unter `/opt/135er-growcontrol`
+- 135er-Grow Central unter `/opt/135er-grow-central`
 - Python-Venv und Projektabhängigkeiten
 - Bluetooth / BlueZ
 - SSH
 - UFW
 - unattended-upgrades
-- systemd-Autostart von `135er-growcontrol.service`
+- systemd-Autostart von `135er-grow-central.service`
 
 Weboberfläche:
 
@@ -21,7 +21,7 @@ http://<PI-IP>:8080
 ## Temporäre Zugangsdaten
 
 ```text
-Hostname: growcontrol-test
+Hostname: grow-central-test
 Benutzer: test
 Passwort: test
 API-/App-Token: test
@@ -36,16 +36,16 @@ Cloud-Token: test
 - Remote Cloud Commands: deaktiviert
 - Cloud: deaktiviert
 - Root-SSH: deaktiviert
-- Firewall: nur SSH (22/TCP) und GrowControl (8080/TCP)
+- Firewall: nur SSH (22/TCP) und Grow Central (8080/TCP)
 
 ## Build und Veröffentlichung
 
-GitHub Actions lädt das offizielle Raspberry-Pi-OS-Image, prüft den fest hinterlegten SHA256, erweitert Root-Partition/Dateisystem, installiert GrowControl und erzeugt:
+GitHub Actions lädt das offizielle Raspberry-Pi-OS-Image, prüft den fest hinterlegten SHA256, erweitert Root-Partition/Dateisystem, installiert Grow Central und erzeugt:
 
 ```text
-135er_GrowControl_RPi3B_Test.img.xz
-135er_GrowControl_RPi3B_Test.img.xz.sha256
-135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+135er-Grow-Central_RPi3B_Test.img.xz
+135er-Grow-Central_RPi3B_Test.img.xz.sha256
+135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
 ```
 
 Das Image wird als Actions-Artefakt bzw. Prerelease veröffentlicht und nicht als große Binärdatei in die normale Git-Historie geschrieben.
@@ -61,7 +61,7 @@ Der erste Builderlauf lief wegen eines versehentlich mitkopierten Basisimages in
 3. IP ermitteln.
 4. `ssh test@<PI-IP>` testen.
 5. `http://<PI-IP>:8080` öffnen.
-6. `systemctl status 135er-growcontrol` prüfen.
+6. `systemctl status 135er-grow-central` prüfen.
 7. `bluetoothctl show` prüfen.
 8. Mars Legacy App schließen.
 9. DF100M entdecken, verbinden, GATT prüfen und Notifications erfassen.

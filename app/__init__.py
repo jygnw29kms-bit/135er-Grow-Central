@@ -1,1 +1,1 @@
-"""135er GrowControl application package."""
+"""135er-Grow Central application package."""

@@ -25,7 +25,7 @@ Shelly documents a local JSON-RPC interface suitable for direct local control.
 Tapo is supported through Home Assistant to reduce credential duplication and protocol churn risk.
 
 ## ADR-009 – FRITZ!SmartHome uses the Home Assistant bridge in v0.6
-This avoids adding another credential/authentication implementation to the GrowControl core while still supporting FRITZ smart plugs and related devices.
+This avoids adding another credential/authentication implementation to the Grow Central core while still supporting FRITZ smart plugs and related devices.
 
 ## ADR-010 – Apple Home uses HomeKit Bridge first
 Practical local Apple Home/Siri interoperability is achieved through Home Assistant. Native Matter bridging remains the standards-based future target.

@@ -1,25 +1,25 @@
-# Smart-Home Architecture – 135er GrowControl v0.6
+# Smart-Home Architecture – 135er-Grow Central v0.6
 
 ## Objective
 
-Smart-home interoperability extends GrowControl without changing the local trust model: the Raspberry Pi remains authoritative for device inventory, command permissions and safety policy.
+Smart-home interoperability extends Grow Central without changing the local trust model: the Raspberry Pi remains authoritative for device inventory, command permissions and safety policy.
 
 ## Best-path design
 
 ### Native local adapters
 
-GrowControl integrates directly only where a stable local protocol is suitable. v0.6 implements a baseline adapter for Shelly Gen2+ JSON-RPC.
+Grow Central integrates directly only where a stable local protocol is suitable. v0.6 implements a baseline adapter for Shelly Gen2+ JSON-RPC.
 
 ### Home Assistant interoperability bridge
 
-Home Assistant is optional and is used as a compatibility layer, not as the GrowControl master. It is the preferred path for:
+Home Assistant is optional and is used as a compatibility layer, not as the Grow Central master. It is the preferred path for:
 
 - Apple Home and Siri through HomeKit Bridge;
 - TP-Link Tapo;
 - FRITZ!SmartHome / FRITZ!DECT;
 - additional ecosystems already maintained by Home Assistant.
 
-GrowControl uses a restricted Home Assistant REST connector with an explicit device inventory. It does not expose an arbitrary Home Assistant service proxy.
+Grow Central uses a restricted Home Assistant REST connector with an explicit device inventory. It does not expose an arbitrary Home Assistant service proxy.
 
 ### Matter
 
@@ -55,7 +55,7 @@ Discovery never grants control. New devices must be explicitly entered/approved 
 
 ## Smart plugs
 
-Smart plugs control real electrical loads. GrowControl therefore separates:
+Smart plugs control real electrical loads. Grow Central therefore separates:
 
 - discovery/read permission;
 - approved inventory;
@@ -69,20 +69,20 @@ Smart plugs control real electrical loads. GrowControl therefore separates:
 Supported v0.6 architecture:
 
 ```text
-GrowControl <-> Home Assistant -> HomeKit Bridge -> Apple Home / Siri
+Grow Central <-> Home Assistant -> HomeKit Bridge -> Apple Home / Siri
 ```
 
-This provides practical local interoperability without claiming that GrowControl itself is a certified HomeKit accessory.
+This provides practical local interoperability without claiming that Grow Central itself is a certified HomeKit accessory.
 
 ## Tapo and FRITZ!
 
 Supported v0.6 architecture:
 
 ```text
-Tapo / FRITZ! -> Home Assistant maintained integration -> GrowControl HA connector
+Tapo / FRITZ! -> Home Assistant maintained integration -> Grow Central HA connector
 ```
 
-This avoids duplicating vendor authentication/protocol complexity inside the GrowControl core.
+This avoids duplicating vendor authentication/protocol complexity inside the Grow Central core.
 
 ## Shelly
 

@@ -1,12 +1,12 @@
-# 135er GrowControl – Project Website
+# 135er-Grow Central – Project Website
 
-Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er GrowControl.
+Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er-Grow Central.
 
 > **Status: WORK IN PROGRESS** – die Projektseite zeigt bewusst den aktiven Entwicklungsstand und darf nicht als Hinweis auf vollständig validierte Produktionsreife verstanden werden.
 
 ## Design
 
-Die Website orientiert sich direkt an der lokalen GrowControl-Ziel-GUI: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen sowie grün-cyanfarbene Zustände. Das Layout ist für Desktop, iPad und Smartphone responsive ausgelegt.
+Die Website orientiert sich direkt an der lokalen Grow Central-Ziel-GUI: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen sowie grün-cyanfarbene Zustände. Das Layout ist für Desktop, iPad und Smartphone responsive ausgelegt.
 
 Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
 
@@ -14,8 +14,8 @@ Die öffentliche Website bleibt technisch und sicherheitlich vollständig von de
 
 Die öffentliche Website verwendet das PNG-Logo:
 
-- `assets/brand/135er-growcontrol-repo-mark.png`
-- `assets/brand/favicon.ico`
+- `assets/brand/135er-grow-central-logo.svg`
+- `assets/brand/135er-grow-central-mark.svg`
 
 WebP wird nicht mehr verwendet. Rastergrafiken werden als PNG eingebunden; ICO ist für das Browser-Favicon zulässig. SVG bleibt für technische Vektorgrafiken und Diagramme erlaubt.
 
@@ -50,10 +50,10 @@ Der per SSH bestätigte absolute Plesk-Webroot ist:
 ```bash
 set -e
 WEBROOT=/var/www/vhosts/dezender.de/httpdocs
-TMP=/tmp/135er_GrowControl
+TMP=/tmp/135er-Grow-Central
 
 rm -rf "$TMP"
-git clone --depth 1 https://github.com/jygnw29kms-bit/135er_GrowControl.git "$TMP"
+git clone --depth 1 https://github.com/jygnw29kms-bit/135er-Grow-Central.git "$TMP"
 mkdir -p "$WEBROOT"
 cp -a "$TMP/website/." "$WEBROOT/"
 ```
@@ -91,8 +91,8 @@ Danach sollten insbesondere folgende Dateien vorhanden sein:
 /var/www/vhosts/dezender.de/httpdocs/styles.css
 /var/www/vhosts/dezender.de/httpdocs/assets/architecture.svg
 /var/www/vhosts/dezender.de/httpdocs/assets/gui-preview-v0.5.png
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-growcontrol-repo-mark.png
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/favicon.ico
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-logo.svg
+/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-mark.svg
 ```
 
 ## GitHub Pages

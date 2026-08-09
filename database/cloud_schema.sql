@@ -1,4 +1,4 @@
--- 135er GrowControl Cloud schema baseline
+-- 135er-Grow Central Cloud schema baseline
 -- DE: PostgreSQL-Zielschema für Benutzer, Rechte, Sites, Sensoren, Historie und Automation.
 -- EN: PostgreSQL target schema for users, permissions, sites, sensors, history and automation.
 

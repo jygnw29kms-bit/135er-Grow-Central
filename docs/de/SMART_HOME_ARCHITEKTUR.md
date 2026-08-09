@@ -1,6 +1,6 @@
 # Smart-Home-Architektur – v0.6
 
-Der Raspberry Pi bleibt Master. Smart-Home-Systeme erweitern GrowControl, übernehmen aber nicht die lokale Sicherheitslogik.
+Der Raspberry Pi bleibt Master. Smart-Home-Systeme erweitern Grow Central, übernehmen aber nicht die lokale Sicherheitslogik.
 
 ## Integrationsweg
 

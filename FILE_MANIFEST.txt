@@ -19,8 +19,8 @@ cloud/app/db.py
 cloud/app/main.py
 cloud/requirements.txt
 cloud/web/index.html
-deploy/nginx/growcontrol-cloud.conf.example
-deploy/systemd/135er-growcontrol-cloud-link.service
+deploy/nginx/grow-central-cloud.conf.example
+deploy/systemd/135er-grow-central-cloud-link.service
 docker-compose.cloud.yml
 docs/API.md
 docs/ARCHITECTURE.md
@@ -53,8 +53,8 @@ local/cloud_link/requirements.txt
 project.json
 requirements.txt
 shared/models.py
-systemd/135er-growcontrol-test.service
-systemd/135er-growcontrol.service
+systemd/135er-grow-central-test.service
+systemd/135er-grow-central.service
 web/app.css
 web/app.js
 web/index.html

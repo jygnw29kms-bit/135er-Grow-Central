@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t">
+<title id="t">J. L. 1976 project mark</title><rect width="240" height="240" rx="30" fill="#020608"/>
+<path d="M120 18 206 68v104l-86 50-86-50V68z" fill="none" stroke="#41e7c3" stroke-width="6"/>
+<path d="M120 47c-32 25-44 53-36 84 20-3 35-13 45-30 10 17 25 27 45 30 7-32-7-61-42-85-4 30-5 61-3 94" fill="none" stroke="#79ff42" stroke-width="6"/>
+<text x="120" y="177" text-anchor="middle" fill="#eef9f7" font-family="monospace" font-size="19" font-weight="700">J. L. 1976</text>
+</svg>

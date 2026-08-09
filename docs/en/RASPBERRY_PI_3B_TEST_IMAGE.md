@@ -1,6 +1,6 @@
 # Raspberry Pi 3B Test Image
 
-This document describes the reproducible **135er GrowControl** test image for Raspberry Pi 3B / 3B+.
+This document describes the reproducible **135er-Grow Central** test image for Raspberry Pi 3B / 3B+.
 
 ## Base
 
@@ -16,9 +16,9 @@ This document describes the reproducible **135er GrowControl** test image for Ra
 
 ## Preinstalled project
 
-The current repository is copied to `/opt/135er-growcontrol`. Python dependencies are installed into `/opt/135er-growcontrol/.venv`.
+The current repository is copied to `/opt/135er-grow-central`. Python dependencies are installed into `/opt/135er-grow-central/.venv`.
 
-The local service starts automatically via `135er-growcontrol.service` and exposes the web/API interface on port `8080`.
+The local service starts automatically via `135er-grow-central.service` and exposes the web/API interface on port `8080`.
 
 ```text
 http://<PI-IP>:8080
@@ -29,7 +29,7 @@ http://<PI-IP>:8080
 For the first hardware tests only:
 
 ```text
-Hostname: growcontrol-test
+Hostname: grow-central-test
 SSH username: test
 SSH password: test
 API/application token: test
@@ -63,14 +63,14 @@ UUIDs and payload modes are reverse-engineering candidates and are not yet valid
 
 ## Image build
 
-The image is built reproducibly with GitHub Actions. The official Raspberry Pi OS image is downloaded and verified against a pinned SHA256. The root filesystem is then expanded, GrowControl is installed, the image is compressed and a final SHA256 is generated.
+The image is built reproducibly with GitHub Actions. The official Raspberry Pi OS image is downloaded and verified against a pinned SHA256. The root filesystem is then expanded, Grow Central is installed, the image is compressed and a final SHA256 is generated.
 
 Outputs:
 
 ```text
-135er_GrowControl_RPi3B_Test.img.xz
-135er_GrowControl_RPi3B_Test.img.xz.sha256
-135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+135er-Grow-Central_RPi3B_Test.img.xz
+135er-Grow-Central_RPi3B_Test.img.xz.sha256
+135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
 ```
 
 The finished image is intended to be published as both a GitHub Actions artifact and GitHub prerelease. Large binary disk images are intentionally not stored directly in normal Git history.
@@ -94,7 +94,7 @@ The fix includes:
 4. Find its IP address in the router/DHCP server.
 5. Test SSH: `ssh test@<PI-IP>`.
 6. Open the web interface: `http://<PI-IP>:8080`.
-7. Check the service: `systemctl status 135er-growcontrol`.
+7. Check the service: `systemctl status 135er-grow-central`.
 8. Check Bluetooth: `bluetoothctl show`.
 9. Fully close the Mars Legacy app before BLE tests.
 10. Initially only discover/connect, inspect GATT/services and capture notifications. Enable writes only after protocol validation.

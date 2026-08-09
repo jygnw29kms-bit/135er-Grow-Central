@@ -4,7 +4,7 @@
 Browser / iPad
       │
       ▼
-GrowControl Local UI
+Grow Central Local UI
       │
       ▼
 FastAPI auf Raspberry Pi

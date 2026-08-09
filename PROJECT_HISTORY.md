@@ -1,4 +1,4 @@
-# 135er GrowControl – Projektgeschichte / Project History
+# 135er-Grow Central – Projektgeschichte / Project History
 
 Dieses Dokument ist die chronologische, technische Projekterzählung von der Ursprungsidee bis zum aktuellen Hardware-Teststand. Es trennt bewusst Idee, Beobachtung, implementierte Funktion und geplante Plattformfunktion.
 
@@ -10,7 +10,7 @@ Ziel war von Anfang an eine Browser-GUI, die dauerhaft auf einem Tablet/iPad lau
 
 ## 2. Referenzrecherche
 
-Als technische Inspiration wurde das Open-Source-Projekt `KillerInk/GrowFanController` betrachtet. Die dort verwendete ESP32-Richtung wurde bewusst **nicht** übernommen. Für 135er GrowControl wurde Raspberry Pi als einzige lokale Masterplattform festgelegt.
+Als technische Inspiration wurde das Open-Source-Projekt `KillerInk/GrowFanController` betrachtet. Die dort verwendete ESP32-Richtung wurde bewusst **nicht** übernommen. Für 135er-Grow Central wurde Raspberry Pi als einzige lokale Masterplattform festgelegt.
 
 Parallel wurden Herstellerseiten, Mars-Hydro-App-/Legacy-Informationen, Google-Play-Angaben und die bereitgestellte Legacy-App analysiert. Quellen werden im Projekt mit Herkunftskategorien geführt:
 
@@ -75,7 +75,7 @@ Die frühe Weboberfläche wurde in Richtung eines futuristischen, dunklen HUDs w
 Die aktuelle grafische Referenz liegt unter:
 
 ```text
-docs/assets/gui/gui-preview-v0.5.png
+docs/assets/gui/local-desktop-v0.8.svg
 ```
 
 Das Design ist responsiv vorgesehen für:
@@ -92,7 +92,7 @@ Aus dem reinen Fancontroller wurde eine allgemeine Plattformarchitektur. Feste G
 ```text
 Browser/iPad
    |
-135er GrowControl Local
+135er-Grow Central Local
 Raspberry Pi
    |
    +-- BLE --> DF100M
@@ -142,18 +142,18 @@ Die v0.5-Baseline enthält Datenbankschemata, Installer-/Hardening-Richtung und 
 
 ## 9. GitHub-Konsolidierung
 
-Das Projekt wurde unter `jygnw29kms-bit/135er_GrowControl` konsolidiert. Frühere Arbeitsstände und ZIP-/Bundle-Artefakte sind historische Zwischenstände und nicht mehr die führende Quelle. `master` ist die maßgebliche Codebasis.
+Das Projekt wurde unter `jygnw29kms-bit/135er-Grow-Central` konsolidiert. Frühere Arbeitsstände und ZIP-/Bundle-Artefakte sind historische Zwischenstände und nicht mehr die führende Quelle. `master` ist die maßgebliche Codebasis.
 
 Die Wiki-Dokumentation wird zusätzlich im Verzeichnis `wiki/` versioniert, damit Wissen nicht von der GitHub-Wiki-Sonderrepository-Struktur abhängt.
 
 ## 10. Raspberry-Pi-3B-Testimage
 
-Für die ersten realen Hardwaretests wurde ein reproduzierbarer GitHub-Actions-Imagebuilder aufgebaut. Ziel ist ein flashbares Raspberry Pi OS Lite 64-bit / Debian 13 Image mit vorinstalliertem GrowControl.
+Für die ersten realen Hardwaretests wurde ein reproduzierbarer GitHub-Actions-Imagebuilder aufgebaut. Ziel ist ein flashbares Raspberry Pi OS Lite 64-bit / Debian 13 Image mit vorinstalliertem Grow Central.
 
 Temporäre Testparameter:
 
 ```text
-Hostname: growcontrol-test
+Hostname: grow-central-test
 SSH user: test
 SSH password: test
 API/application token: test
@@ -181,7 +181,7 @@ Der nächste technische Meilenstein ist der reale Raspberry-Pi-/DF100M-Test:
 1. Image flashen und booten.
 2. Netzwerk, SSH, systemd, Web UI und Bluetooth prüfen.
 3. Mars Legacy App vollständig schließen, damit BLE frei ist.
-4. DF100M per `bluetoothctl` und GrowControl Discovery identifizieren.
+4. DF100M per `bluetoothctl` und Grow Central Discovery identifizieren.
 5. GATT-Services/Characteristics erfassen.
 6. Notifications aufnehmen.
 7. Legacy-Verhalten bei 10/30/50/70/90 % beobachten.
@@ -190,4 +190,4 @@ Der nächste technische Meilenstein ist der reale Raspberry-Pi-/DF100M-Test:
 
 ## English summary
 
-135er GrowControl started as a practical attempt to replace permanent vendor-app dependency for a Mars Hydro DF100M with a local Raspberry Pi controller. It evolved into a local-first platform with BLE adapters, responsive web UI, local persistence and automation, optional outbound-only cloud synchronization, security boundaries, RBAC/data-model planning and a reproducible Raspberry Pi test-image pipeline. The next milestone is real hardware validation; DF100M write protocol support is deliberately still considered experimental.
+135er-Grow Central started as a practical attempt to replace permanent vendor-app dependency for a Mars Hydro DF100M with a local Raspberry Pi controller. It evolved into a local-first platform with BLE adapters, responsive web UI, local persistence and automation, optional outbound-only cloud synchronization, security boundaries, RBAC/data-model planning and a reproducible Raspberry Pi test-image pipeline. The next milestone is real hardware validation; DF100M write protocol support is deliberately still considered experimental.

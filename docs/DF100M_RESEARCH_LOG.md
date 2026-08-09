@@ -92,7 +92,7 @@ All are hypotheses until validated.
 ## Hardware validation procedure
 
 1. Close/kill Mars Legacy so the BLE connection is released.
-2. Scan using `bluetoothctl` and GrowControl discovery.
+2. Scan using `bluetoothctl` and Grow Central discovery.
 3. Identify target device by advertisement/name/address evidence.
 4. Connect and dump GATT services/characteristics.
 5. Start notifications without writes.

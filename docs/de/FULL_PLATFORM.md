@@ -1,4 +1,4 @@
-# 135er GrowControl – Full Platform Baseline v0.5
+# 135er-Grow Central – Full Platform Baseline v0.5
 
 ## Unterstützte Systeme
 
@@ -45,15 +45,15 @@ Der VServer übernimmt optional:
 
 ```text
 Raspberry Pi
-├── growcontrol-local.service
-├── growcontrol-cloud-link.service
+├── grow-central-local.service
+├── grow-central-cloud-link.service
 ├── BlueZ
 ├── SQLite
 └── systemd
 
 VServer
 ├── Nginx
-├── GrowControl Cloud API
+├── Grow Central Cloud API
 ├── PostgreSQL
 ├── Fail2ban
 ├── Firewall
@@ -68,11 +68,11 @@ Der Installer muss:
 1. OS und Version prüfen.
 2. APT aktualisieren.
 3. benötigte Pakete installieren.
-4. dedizierten Systembenutzer `growcontrol` anlegen.
+4. dedizierten Systembenutzer `grow-central` anlegen.
 5. Verzeichnisse und Rechte setzen.
 6. Python-vEnv erzeugen.
-7. Konfiguration in `/etc/135er-growcontrol` anlegen.
-8. Daten nach `/var/lib/135er-growcontrol` schreiben.
+7. Konfiguration in `/etc/135er-grow-central` anlegen.
+8. Daten nach `/var/lib/135er-grow-central` schreiben.
 9. Logs über journald führen.
 10. systemd-Units installieren.
 11. optional Firewall/Fail2ban aktivieren.
@@ -96,9 +96,9 @@ Vorgesehen:
 Empfohlen:
 
 ```text
-/opt/135er-growcontrol       root:growcontrol 0750
-/etc/135er-growcontrol       root:growcontrol 0750
-/var/lib/135er-growcontrol   growcontrol:growcontrol 0750
+/opt/135er-grow-central       root:grow-central 0750
+/etc/135er-grow-central       root:grow-central 0750
+/var/lib/135er-grow-central   grow-central:grow-central 0750
 ```
 
 Secrets erhalten 0640 oder restriktiver.
@@ -115,7 +115,7 @@ TCP 443
   │
 Nginx
   │
-GrowControl Cloud API
+Grow Central Cloud API
   │
 PostgreSQL nur intern
 ```

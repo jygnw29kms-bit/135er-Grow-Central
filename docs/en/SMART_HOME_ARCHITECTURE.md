@@ -1,6 +1,6 @@
 # Smart-Home Architecture – v0.6
 
-The Raspberry Pi remains the master. Smart-home ecosystems extend GrowControl but do not own local safety policy.
+The Raspberry Pi remains the master. Smart-home ecosystems extend Grow Central but do not own local safety policy.
 
 ## Integration path
 

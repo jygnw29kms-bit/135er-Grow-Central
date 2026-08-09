@@ -3,7 +3,7 @@
 ## 2026-08-09 – WIP repository presentation refresh
 
 - marked the repository and public project interface clearly as **Work in Progress**
-- redesigned the repository front page to visually match the dark HUD/control-plane identity of 135er GrowControl
+- redesigned the repository front page to visually match the dark HUD/control-plane identity of 135er-Grow Central
 - added project status, architecture, integration, security and repository-map blocks to the README
 - embedded the PNG GUI reference directly in the repository front page
 - updated public website status indicators to show `WIP · v0.7` instead of implying production completion
@@ -12,7 +12,7 @@
 ## 2026-08-09 – PNG-only branding migration
 
 - removed WebP usage from the public website, local HUD and cloud HUD
-- switched website branding to the PNG 135er GrowControl logo
+- switched website branding to the PNG 135er-Grow Central logo
 - changed OpenGraph/social preview to the PNG logo
 - removed the WebP `<picture>` source from the v0.5 GUI preview
 - added PNG logo aliases for local GUI, cloud GUI and documentation
@@ -22,7 +22,7 @@
 ## v0.6 – Secure Smart-Home Platform (2026-08-09)
 
 ### Architecture
-- Reframed GrowControl as a secure local-first automation platform while keeping the Raspberry Pi authoritative.
+- Reframed Grow Central as a secure local-first automation platform while keeping the Raspberry Pi authoritative.
 - Added normalized smart-home device/capability/command architecture.
 - Selected Home Assistant as optional interoperability bridge for Apple Home/Siri, Tapo and FRITZ!SmartHome.
 - Selected native local Shelly Gen2+ JSON-RPC as the first direct smart-plug adapter.

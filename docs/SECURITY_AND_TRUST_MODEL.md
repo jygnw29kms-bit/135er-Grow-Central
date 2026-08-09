@@ -1,4 +1,4 @@
-# Security and Trust Model – 135er GrowControl v0.6
+# Security and Trust Model – 135er-Grow Central v0.6
 
 ## Objective
 
@@ -6,7 +6,7 @@ Compromise of an IoT device, cloud account, browser session or third-party integ
 
 ## Trust zones
 
-1. GrowControl Core – highest trust.
+1. Grow Central Core – highest trust.
 2. Authenticated admin/operator client.
 3. Home Assistant / MQTT – explicit integration trust.
 4. IoT devices – untrusted network peers by default.
@@ -45,9 +45,9 @@ GC_LOCAL_API_TOKEN=
 Recommended file:
 
 ```text
-/etc/135er-growcontrol/secrets.env
+/etc/135er-grow-central/secrets.env
 owner root
-group growcontrol
+group grow-central
 mode 0640
 ```
 

@@ -2,7 +2,7 @@
 
 Stand: August 2026
 
-135er GrowControl unterscheidet ausdrücklich zwischen:
+135er-Grow Central unterscheidet ausdrücklich zwischen:
 
 1. **offiziellen Herstellerinformationen**
 2. **öffentlichen Open-Source-Referenzen**
@@ -108,11 +108,11 @@ Das Projekt ist ein ESP32-basierter Klima-Controller mit:
 - Web-Dashboard
 - WebSocket-Livedaten
 
-135er GrowControl nutzt diese Ideen **nur als Architektur- und UI-Inspiration**.
+135er-Grow Central nutzt diese Ideen **nur als Architektur- und UI-Inspiration**.
 
 Wesentlicher Unterschied:
 
-> 135er GrowControl verwendet keinen ESP32 als Hauptcontroller.
+> 135er-Grow Central verwendet keinen ESP32 als Hauptcontroller.
 
 Stattdessen übernimmt der Raspberry Pi:
 
@@ -207,4 +207,4 @@ Das ist präziser als zu behaupten:
 
 Mars Hydro, DF100M, Mars Legacy und weitere Produktnamen sind Marken bzw. Produktbezeichnungen der jeweiligen Rechteinhaber.
 
-135er GrowControl ist ein unabhängiges Community-/Reverse-Engineering-Projekt und steht nicht in Verbindung mit Mars Hydro.
+135er-Grow Central ist ein unabhängiges Community-/Reverse-Engineering-Projekt und steht nicht in Verbindung mit Mars Hydro.

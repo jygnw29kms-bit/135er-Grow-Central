@@ -17,8 +17,8 @@ Cloud/VServer ergänzt typischerweise Nginx, PostgreSQL, Fail2ban und Firewall-W
 ## Installer
 
 ```bash
-git clone https://github.com/jygnw29kms-bit/135er_GrowControl.git
-cd 135er_GrowControl
+git clone https://github.com/jygnw29kms-bit/135er-Grow-Central.git
+cd 135er-Grow-Central
 sudo ./install/install.sh
 ```
 

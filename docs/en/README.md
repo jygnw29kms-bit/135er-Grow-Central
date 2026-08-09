@@ -1,6 +1,6 @@
-# 135er GrowControl – English
+# 135er-Grow Central – English
 
-135er GrowControl is a **local-first control and monitoring platform** for Raspberry Pi with an optional cloud layer on a Linux VPS.
+135er-Grow Central is a **local-first control and monitoring platform** for Raspberry Pi with an optional cloud layer on a Linux VPS.
 
 ## Goals
 

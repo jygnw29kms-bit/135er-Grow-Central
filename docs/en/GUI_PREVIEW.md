@@ -1,14 +1,14 @@
 # GUI Target and Responsive Design
 
-This document defines the current preview image as the **authoritative design reference** for the finished 135er GrowControl user interface.
+This document defines the current preview image as the **authoritative design reference** for the finished 135er-Grow Central user interface.
 
 ## Current v0.7 design
 
-![135er GrowControl GUI v0.7 with power and cost projections](../../website/assets/gui-power-preview-v0.7.svg)
+![135er-Grow Central GUI v0.7 with power and cost projections](../../website/assets/gui-power-preview-v0.7.svg)
 
 ## Original v0.5 design
 
-![135er GrowControl GUI base HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central GUI base HUD v0.5](../assets/gui/gui-preview-v0.5.png)
 
 The v0.7 reference adds smart-plug states, power telemetry, a configurable
 electricity tariff and hour/day/week/month/year projections. Both images remain
@@ -91,4 +91,4 @@ As the viewport gets smaller, preserve content in this order:
 
 ## Design boundary
 
-The preview image is a **visual target reference**, not a pixel-perfect mockup for every resolution. The real implementation may move, collapse or group elements into detail views as long as the interaction model, information hierarchy and characteristic 135er GrowControl look remain intact.
+The preview image is a **visual target reference**, not a pixel-perfect mockup for every resolution. The real implementation may move, collapse or group elements into detail views as long as the interaction model, information hierarchy and characteristic 135er-Grow Central look remain intact.

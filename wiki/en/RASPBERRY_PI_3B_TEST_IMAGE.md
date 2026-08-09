@@ -4,13 +4,13 @@ A reproducible Raspberry Pi 3B/3B+ test image based on Raspberry Pi OS Lite 64-b
 
 ## Preinstalled
 
-- 135er GrowControl in `/opt/135er-growcontrol`
+- 135er-Grow Central in `/opt/135er-grow-central`
 - Python venv and project dependencies
 - Bluetooth / BlueZ
 - SSH
 - UFW
 - unattended-upgrades
-- systemd autostart via `135er-growcontrol.service`
+- systemd autostart via `135er-grow-central.service`
 
 Web interface:
 
@@ -21,7 +21,7 @@ http://<PI-IP>:8080
 ## Temporary credentials
 
 ```text
-Hostname: growcontrol-test
+Hostname: grow-central-test
 Username: test
 Password: test
 API/application token: test
@@ -36,16 +36,16 @@ Cloud token: test
 - remote cloud commands: disabled
 - cloud: disabled
 - root SSH: disabled
-- firewall: only SSH (22/TCP) and GrowControl (8080/TCP)
+- firewall: only SSH (22/TCP) and Grow Central (8080/TCP)
 
 ## Build and publication
 
-GitHub Actions downloads the official Raspberry Pi OS image, verifies the pinned SHA256, expands the root partition/filesystem, installs GrowControl and creates:
+GitHub Actions downloads the official Raspberry Pi OS image, verifies the pinned SHA256, expands the root partition/filesystem, installs Grow Central and creates:
 
 ```text
-135er_GrowControl_RPi3B_Test.img.xz
-135er_GrowControl_RPi3B_Test.img.xz.sha256
-135er_GrowControl_RPi3B_Test-CREDENTIALS.txt
+135er-Grow-Central_RPi3B_Test.img.xz
+135er-Grow-Central_RPi3B_Test.img.xz.sha256
+135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
 ```
 
 The image is published as an Actions artifact/prerelease rather than committed as a large binary to normal Git history.
@@ -61,7 +61,7 @@ The first builder run exhausted the target root filesystem because the downloade
 3. Determine its IP address.
 4. Test `ssh test@<PI-IP>`.
 5. Open `http://<PI-IP>:8080`.
-6. Check `systemctl status 135er-growcontrol`.
+6. Check `systemctl status 135er-grow-central`.
 7. Check `bluetoothctl show`.
 8. Close the Mars Legacy app.
 9. Discover/connect to DF100M, inspect GATT and capture notifications.

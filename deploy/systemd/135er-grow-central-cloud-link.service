@@ -1,0 +1,16 @@
+[Unit]
+Description=135er-Grow Central Cloud Link
+After=network-online.target 135er-grow-central.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/135er-grow-central/local/cloud_link
+EnvironmentFile=/opt/135er-grow-central/local/cloud_link/.env
+ExecStart=/opt/135er-grow-central/.venv/bin/python /opt/135er-grow-central/local/cloud_link/agent.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

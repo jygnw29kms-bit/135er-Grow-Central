@@ -1,6 +1,6 @@
 # GUI und Responsive Design
 
-![135er GrowControl GUI Vorschau](../../docs/assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central GUI Vorschau](../../docs/assets/gui/local-desktop-v0.8.svg)
 
 Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 
@@ -8,7 +8,7 @@ Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
 
 Rastergrafiken werden im Projekt als **PNG** eingebunden. WebP wird nicht mehr verwendet, da die Darstellung auf dem produktiven Hosting nicht zuverlässig war. Favicons dürfen als ICO und technische Diagramme als SVG vorliegen.
 
-Website, lokale GUI und Cloud-GUI verwenden das 135er-GrowControl-Logo in PNG-Form.
+Website, lokale GUI und Cloud-GUI verwenden das 135er-Grow Central-Logo in PNG-Form.
 
 ## Desktop ab 1400 px
 

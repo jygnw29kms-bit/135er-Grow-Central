@@ -4,14 +4,14 @@
 Browser / iPad / Smartphone
           |
           v
-135er GrowControl Local
+135er-Grow Central Local
 Raspberry Pi / Debian-basiert
   |       |        |
   |       |        +-- SQLite / lokale Daten
   |       +----------- Automation Engine / Zeitpläne
   +------------------- BLE -> DF100M / weitere Adapter
           |
-          +-- ausgehendes HTTPS --> GrowControl Cloud
+          +-- ausgehendes HTTPS --> Grow Central Cloud
                                    Debian/Ubuntu VServer
                                    PostgreSQL / API / Historie
 ```

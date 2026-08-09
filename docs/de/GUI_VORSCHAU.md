@@ -1,14 +1,14 @@
 # GUI-Zielbild und Responsive Design
 
-Dieses Dokument definiert das aktuelle Vorschaubild als **verbindliche Design-Referenz** für die fertige Benutzeroberfläche von 135er GrowControl.
+Dieses Dokument definiert das aktuelle Vorschaubild als **verbindliche Design-Referenz** für die fertige Benutzeroberfläche von 135er-Grow Central.
 
 ## Aktueller Stand v0.7
 
-![135er GrowControl GUI v0.7 mit Power- und Kostenhochrechnung](../../website/assets/gui-power-preview-v0.7.svg)
+![135er-Grow Central GUI v0.7 mit Power- und Kostenhochrechnung](../../website/assets/gui-power-preview-v0.7.svg)
 
 ## Ursprünglicher Stand v0.5
 
-![135er GrowControl GUI Basis-HUD v0.5](../assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central GUI Basis-HUD v0.5](../assets/gui/gui-preview-v0.5.png)
 
 Die v0.7-Referenz erweitert das Basis-HUD um Steckdosen-Schaltzustände,
 Leistungsdaten, einen frei einstellbaren Strompreis und Hochrechnungen für
@@ -92,4 +92,4 @@ Bei kleiner werdender Auflösung gilt folgende Reihenfolge:
 
 ## Design-Grenze
 
-Das Vorschaubild ist eine **visuelle Zielreferenz**, kein pixelgenaues Mockup für jede Auflösung. Die tatsächliche Implementierung darf Elemente verschieben, zusammenfassen oder in Detailansichten auslagern, solange Bedienlogik, Informationshierarchie und der charakteristische 135er-GrowControl-Look erhalten bleiben.
+Das Vorschaubild ist eine **visuelle Zielreferenz**, kein pixelgenaues Mockup für jede Auflösung. Die tatsächliche Implementierung darf Elemente verschieben, zusammenfassen oder in Detailansichten auslagern, solange Bedienlogik, Informationshierarchie und der charakteristische 135er-Grow Central-Look erhalten bleiben.

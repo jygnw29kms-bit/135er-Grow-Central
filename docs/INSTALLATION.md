@@ -19,7 +19,7 @@ sudo apt install -y git python3 python3-pip python3-venv bluetooth bluez
 
 ```bash
 git clone <REPOSITORY-URL>
-cd 135er-GrowControl
+cd 135er-Grow Central
 ```
 
 ## Python
@@ -53,11 +53,11 @@ bluetoothctl show
 ## systemd
 
 ```bash
-sudo mkdir -p /opt/135er-growcontrol
-sudo cp -r . /opt/135er-growcontrol/
-sudo cp systemd/135er-growcontrol.service /etc/systemd/system/
+sudo mkdir -p /opt/135er-grow-central
+sudo cp -r . /opt/135er-grow-central/
+sudo cp systemd/135er-grow-central.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now 135er-growcontrol
+sudo systemctl enable --now 135er-grow-central
 ```
 
 ## Quellen

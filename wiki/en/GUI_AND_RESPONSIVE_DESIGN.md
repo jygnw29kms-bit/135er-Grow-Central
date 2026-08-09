@@ -1,6 +1,6 @@
 # GUI and Responsive Design
 
-![135er GrowControl GUI Preview](../../docs/assets/gui/gui-preview-v0.5.png)
+![135er-Grow Central GUI Preview](../../docs/assets/gui/local-desktop-v0.8.svg)
 
 The image is the authoritative visual target for the finished GUI.
 
@@ -8,7 +8,7 @@ The image is the authoritative visual target for the finished GUI.
 
 Raster graphics are embedded as **PNG**. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
 
-The public website, local GUI and cloud GUI use the 135er GrowControl logo in PNG form.
+The public website, local GUI and cloud GUI use the 135er-Grow Central logo in PNG form.
 
 - >=1400 px: fixed sidebar, 3–4 columns, full diagnostics
 - 1024–1399 px: 2–3 columns, compact navigation

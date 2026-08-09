@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 135er GrowControl installer baseline
+# 135er-Grow Central installer baseline
 # DE: Debian/Ubuntu/Raspberry-Pi-OS Installer mit sicheren Defaults.
 # EN: Debian/Ubuntu/Raspberry Pi OS installer with safe defaults.
 
@@ -71,13 +71,13 @@ else
   fi
 fi
 
-if ! id growcontrol >/dev/null 2>&1; then
-  useradd --system --home /var/lib/135er-growcontrol --create-home --shell /usr/sbin/nologin growcontrol
+if ! id grow-central >/dev/null 2>&1; then
+  useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin grow-central
 fi
 
-install -d -o root -g growcontrol -m 0750 /opt/135er-growcontrol
-install -d -o root -g growcontrol -m 0750 /etc/135er-growcontrol
-install -d -o growcontrol -g growcontrol -m 0750 /var/lib/135er-growcontrol
+install -d -o root -g grow-central -m 0750 /opt/135er-grow-central
+install -d -o root -g grow-central -m 0750 /etc/135er-grow-central
+install -d -o grow-central -g grow-central -m 0750 /var/lib/135er-grow-central
 
 # DE: unattended-upgrades aktivieren. EN: enable unattended upgrades.
 dpkg-reconfigure -f noninteractive unattended-upgrades || true
@@ -91,7 +91,7 @@ if [[ "$MODE" == "cloud" && "$ENABLE_FIREWALL" == "true" ]]; then
 fi
 
 if [[ "$MODE" == "cloud" && -n "$DOMAIN" && -n "$EMAIL" ]]; then
-  cat >/etc/nginx/sites-available/135er-growcontrol <<EOF
+  cat >/etc/nginx/sites-available/135er-grow-central <<EOF
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -104,14 +104,14 @@ server {
     }
 }
 EOF
-  ln -sf /etc/nginx/sites-available/135er-growcontrol /etc/nginx/sites-enabled/135er-growcontrol
+  ln -sf /etc/nginx/sites-available/135er-grow-central /etc/nginx/sites-enabled/135er-grow-central
   nginx -t
   systemctl reload nginx
   certbot --nginx --non-interactive --agree-tos -m "$EMAIL" -d "$DOMAIN" --redirect
 fi
 
 cat <<EOF
-135er GrowControl installer baseline completed.
+135er-Grow Central installer baseline completed.
 Mode: $MODE
 OS: ${PRETTY_NAME:-$ID}
 

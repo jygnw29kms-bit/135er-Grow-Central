@@ -1,4 +1,4 @@
-# 135er GrowControl
+# 135er-Grow Central
 
 - [Home](Home)
 - [Projektgeschichte](de/PROJEKTGESCHICHTE)

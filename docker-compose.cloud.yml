@@ -1,11 +1,11 @@
 # DE: Minimaler VServer-Cloud-Stack.
 # EN: Minimal VPS cloud stack.
 services:
-  growcontrol-cloud:
+  grow-central-cloud:
     build:
       context: .
       dockerfile: cloud/Dockerfile
-    container_name: 135er-growcontrol-cloud
+    container_name: 135er-grow-central-cloud
     restart: unless-stopped
     env_file:
       - ./cloud/.env

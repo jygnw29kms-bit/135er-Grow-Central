@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 260" role="img" aria-labelledby="t d">
+<title id="t">135er-Grow Central</title><desc id="d">Official 135er-Grow Central project logo</desc>
+<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#eef9f7"/><stop offset=".54" stop-color="#eef9f7"/><stop offset=".55" stop-color="#79ff42"/><stop offset="1" stop-color="#41e7c3"/></linearGradient></defs>
+<rect width="980" height="260" rx="28" fill="#020608"/>
+<g transform="translate(28 34)" fill="none" stroke="#79ff42" stroke-width="6"><path d="M92 2 172 48v92l-80 46-80-46V48z"/><path d="M92 35c-30 22-42 48-36 77 21-3 36-13 45-29 9 17 23 27 43 30 7-31-6-58-40-80-4 28-5 58-3 91"/><circle cx="92" cy="145" r="14"/><path d="M92 131v-16"/></g>
+<text x="230" y="116" fill="url(#g)" font-family="Arial,Helvetica,sans-serif" font-size="82" font-weight="900">135er-Grow</text>
+<text x="234" y="181" fill="#eef9f7" font-family="Arial,Helvetica,sans-serif" font-size="52" font-weight="800" letter-spacing="15">CENTRAL</text>
+<text x="238" y="219" fill="#78979d" font-family="monospace" font-size="17" letter-spacing="6">LOCAL-FIRST • RASPBERRY PI • WIP</text>
+</svg>

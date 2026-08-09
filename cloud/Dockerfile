@@ -1,5 +1,5 @@
-# DE: Schlankes Python-Image für GrowControl Cloud.
-# EN: Slim Python image for GrowControl Cloud.
+# DE: Schlankes Python-Image für Grow Central Cloud.
+# EN: Slim Python image for Grow Central Cloud.
 FROM python:3.12-slim
 
 # DE/EN: Arbeitsverzeichnis / Working directory.

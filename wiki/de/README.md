@@ -1,4 +1,4 @@
-# 135er GrowControl – Wiki Übersicht
+# 135er-Grow Central – Wiki Übersicht
 
 ## Plattform
 

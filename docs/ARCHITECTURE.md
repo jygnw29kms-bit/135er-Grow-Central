@@ -2,7 +2,7 @@
 
 ## Leitprinzip
 
-135er GrowControl ist **local-first**.
+135er-Grow Central ist **local-first**.
 
 ```text
 Browser / iPad
@@ -26,7 +26,7 @@ FastAPI + Web UI
 
 ## Warum Raspberry Pi statt ESP32?
 
-Die Referenz `KillerInk/GrowFanController` nutzt einen ESP32 als Controller. 135er GrowControl übernimmt dagegen die komplette Softwarelogik auf dem Raspberry Pi.
+Die Referenz `KillerInk/GrowFanController` nutzt einen ESP32 als Controller. 135er-Grow Central übernimmt dagegen die komplette Softwarelogik auf dem Raspberry Pi.
 
 Vorteile:
 

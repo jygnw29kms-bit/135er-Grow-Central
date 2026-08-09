@@ -1,4 +1,4 @@
-# Project Status – 135er GrowControl
+# Project Status – 135er-Grow Central
 
 **Stand:** 2026-08-09  
 **Architecture:** v0.7 Power Telemetry Integration  

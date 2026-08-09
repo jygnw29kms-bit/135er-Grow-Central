@@ -1,6 +1,6 @@
 # Security
 
-135er GrowControl v0.3 ist eine frühe Testversion.
+135er-Grow Central v0.3 ist eine frühe Testversion.
 
 ## Netzwerk
 

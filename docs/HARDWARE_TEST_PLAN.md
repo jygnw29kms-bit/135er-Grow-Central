@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide a repeatable, low-risk procedure for the first physical validation of 135er GrowControl.
+Provide a repeatable, low-risk procedure for the first physical validation of 135er-Grow Central.
 
 ## Preconditions
 
@@ -16,11 +16,11 @@ Provide a repeatable, low-risk procedure for the first physical validation of 13
 
 ## Phase A – Image validation
 
-1. Download `135er_GrowControl_RPi3B_Test.img.xz` from GitHub prerelease.
+1. Download `135er-Grow-Central_RPi3B_Test.img.xz` from GitHub prerelease.
 2. Verify SHA256 against accompanying checksum.
 3. Flash using Raspberry Pi Imager or balenaEtcher.
 4. Boot with Ethernet connected.
-5. Confirm hostname `growcontrol-test`.
+5. Confirm hostname `grow-central-test`.
 6. SSH with `test/test`.
 7. Immediately record IP address and boot timestamp.
 
@@ -29,8 +29,8 @@ Provide a repeatable, low-risk procedure for the first physical validation of 13
 ```bash
 systemctl is-active ssh
 systemctl is-active bluetooth
-systemctl is-active 135er-growcontrol.service
-systemctl status growcontrol-firstboot-firewall.service
+systemctl is-active 135er-grow-central.service
+systemctl status grow-central-firstboot-firewall.service
 ```
 
 Expected local UI:
@@ -47,7 +47,7 @@ Check:
 sudo ufw status verbose
 ```
 
-Expected incoming allowances: SSH/22 and GrowControl/8080 only for current test baseline.
+Expected incoming allowances: SSH/22 and Grow Central/8080 only for current test baseline.
 
 Confirm:
 
@@ -67,9 +67,9 @@ power on
 scan on
 ```
 
-Record all DF100M-related advertisement names/addresses. Stop Mars Legacy completely before GrowControl connection testing.
+Record all DF100M-related advertisement names/addresses. Stop Mars Legacy completely before Grow Central connection testing.
 
-Use GrowControl:
+Use Grow Central:
 
 ```text
 GET  /api/discover

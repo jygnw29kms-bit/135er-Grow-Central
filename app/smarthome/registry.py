@@ -16,7 +16,7 @@ class DeviceRegistry:
 
     @classmethod
     def from_env(cls) -> "DeviceRegistry":
-        path = Path(os.getenv("GC_SMARTHOME_DEVICE_CONFIG", "/etc/135er-growcontrol/devices.json"))
+        path = Path(os.getenv("GC_SMARTHOME_DEVICE_CONFIG", "/etc/135er-grow-central/devices.json"))
         if not path.exists():
             return cls([])
         raw = json.loads(path.read_text(encoding="utf-8"))

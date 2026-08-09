@@ -1,8 +1,8 @@
-# 135er GrowControl Wiki
+# 135er-Grow Central Wiki
 
 ## v0.6 Secure Smart-Home Platform
 
-135er GrowControl is a local-first Raspberry-Pi automation platform. It started with DF100M BLE research and now includes a secured smart-home architecture for plugs, devices and ecosystem bridges.
+135er-Grow Central is a local-first Raspberry-Pi automation platform. It started with DF100M BLE research and now includes a secured smart-home architecture for plugs, devices and ecosystem bridges.
 
 ```text
 Apple Home / Siri      Tapo / FRITZ! / other ecosystems
@@ -10,7 +10,7 @@ Apple Home / Siri      Tapo / FRITZ! / other ecosystems
          +---- Home Assistant ---+   optional
                     |
                     v
-            135er GrowControl
+            135er-Grow Central
               Raspberry Pi
              /            \
         BLE DF100M       Shelly RPC

@@ -1,4 +1,4 @@
-# GrowControl Cloud
+# Grow Central Cloud
 
 The cloud optionally runs on a Linux VPS.
 

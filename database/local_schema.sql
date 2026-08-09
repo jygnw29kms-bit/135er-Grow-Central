@@ -1,4 +1,4 @@
--- 135er GrowControl Local SQLite schema baseline
+-- 135er-Grow Central Local SQLite schema baseline
 -- DE: Lokale Daten für Offline-Betrieb und Synchronisation.
 -- EN: Local data for offline operation and synchronization.
 

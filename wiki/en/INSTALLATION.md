@@ -7,8 +7,8 @@ sudo apt update
 sudo apt full-upgrade -y
 sudo apt install -y git curl ca-certificates python3 python3-pip python3-venv bluetooth bluez unattended-upgrades apt-listchanges
 
-git clone https://github.com/jygnw29kms-bit/135er_GrowControl.git
-cd 135er_GrowControl
+git clone https://github.com/jygnw29kms-bit/135er-Grow-Central.git
+cd 135er-Grow-Central
 sudo ./install/install.sh
 ```
 

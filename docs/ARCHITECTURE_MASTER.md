@@ -1,4 +1,4 @@
-# Architecture Master – 135er GrowControl
+# Architecture Master – 135er-Grow Central
 
 ## 1. Architectural goal
 
@@ -12,7 +12,7 @@ A local-first control platform in which loss of internet, cloud or vendor servic
 └───────────────────────────────┬─────────────────────────────────┘
                                 │ LAN HTTP/HTTPS
                                 ▼
-┌──────────────────── 135er GrowControl Local ────────────────────┐
+┌──────────────────── 135er-Grow Central Local ────────────────────┐
 │ Raspberry Pi                                                   │
 │                                                               │
 │ FastAPI / Web UI                                              │

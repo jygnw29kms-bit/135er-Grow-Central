@@ -1,6 +1,6 @@
 # Project History
 
-135er GrowControl started as a practical Raspberry Pi solution for a Mars Hydro DF100M because the existing setup worked with the Mars Legacy app while the newer Mars Hydro app was not usable reliably.
+135er-Grow Central started as a practical Raspberry Pi solution for a Mars Hydro DF100M because the existing setup worked with the Mars Legacy app while the newer Mars Hydro app was not usable reliably.
 
 The project evolved from a fan-control prototype into a local-first platform: BLE discovery and protocol research, FastAPI/Bleak runtime, responsive dark HUD design, optional outbound-only VPS cloud, local SQLite and cloud PostgreSQL direction, RBAC/data-domain modeling, schedules/automation concepts, audit/backup targets and finally a reproducible Raspberry Pi 3B test-image pipeline.
 

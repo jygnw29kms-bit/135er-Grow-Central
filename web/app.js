@@ -1,4 +1,4 @@
-/* 135er GrowControl Future HUD v0.7 */
+/* 135er-Grow Central Future HUD v0.7 */
 const $=id=>document.getElementById(id);
 const diag=x=>$("diagnostics").textContent=typeof x==="string"?x:JSON.stringify(x,null,2);
 function clock(){$("clock").textContent=new Date().toLocaleTimeString("de-DE")}setInterval(clock,1000);clock();
@@ -7,7 +7,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
 document.querySelectorAll("[data-open-view]").forEach(btn=>btn.addEventListener("click",()=>openView(btn.dataset.openView)));
 const slider=$("speedSlider");function updateRing(){const v=Number(slider.value);$("speedValue").textContent=v;const deg=v*3.6;$("ring").style.background=`conic-gradient(var(--green) ${deg}deg, rgba(53,240,167,.08) ${deg}deg)`}slider.addEventListener("input",updateRing);updateRing();
 async function api(url,options={}){const r=await fetch(url,{cache:"no-store",...options});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.detail||`${r.status} ${r.statusText}`);return data}
-function writeToken(){let token=sessionStorage.getItem("gcLocalWriteToken")||"";if(!token){token=prompt("Lokales GrowControl Write-Token eingeben. Es wird nur für diese Browser-Sitzung gespeichert.")||"";if(token)sessionStorage.setItem("gcLocalWriteToken",token)}return token}
+function writeToken(){let token=sessionStorage.getItem("gcLocalWriteToken")||"";if(!token){token=prompt("Lokales Grow Central Write-Token eingeben. Es wird nur für diese Browser-Sitzung gespeichert.")||"";if(token)sessionStorage.setItem("gcLocalWriteToken",token)}return token}
 async function writeApi(url,options={}){const token=writeToken();if(!token)throw new Error("Kein Write-Token angegeben");const headers=new Headers(options.headers||{});headers.set("X-API-Token",token);headers.set("Content-Type","application/json");return api(url,{...options,headers})}
 const fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):"--";
 const kwh=v=>Number.isFinite(Number(v))?(Number(v)/1000).toFixed(3):"--";

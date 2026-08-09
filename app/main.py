@@ -1,4 +1,4 @@
-"""135er GrowControl Local API v0.6.
+"""135er-Grow Central Local API v0.6.
 
 DE: Lokaler Raspberry-Pi-Dienst für DF100M BLE-Forschung, sichere
 Smart-Home-Adapter und die lokale Weboberfläche.
@@ -30,7 +30,7 @@ ALLOW_WRITES = os.getenv("DF100M_ALLOW_WRITES", "false").lower() == "true"
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
 
-app = FastAPI(title="135er GrowControl Local", version="0.6.0")
+app = FastAPI(title="135er-Grow Central Local", version="0.6.0")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 app.include_router(smarthome_router)
 
@@ -85,7 +85,7 @@ async def index():
 
 @app.get("/api/health")
 async def health():
-    return {"ok": True, "service": "135er GrowControl Local", "version": "0.6.0"}
+    return {"ok": True, "service": "135er-Grow Central Local", "version": "0.6.0"}
 
 
 @app.get("/api/config")
