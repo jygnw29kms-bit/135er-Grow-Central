@@ -32,7 +32,12 @@
         <h1>Lokale Kontrolle.<br><span>Intelligent orchestriert.</span></h1>
         <p>Eine souveräne Steuerzentrale für Klima, Geräte, Energie und Automationen. Der Raspberry Pi bleibt Master – schnell, privat und unabhängig.</p>
         <div class="hero-actions"><a class="button primary" href="#interfaces">Interfaces entdecken</a><a class="button" href="#system">System ansehen</a></div>
-        <dl class="hero-metrics"><div><dt>CONTROL</dt><dd>LOCAL</dd></div><div><dt>REMOTE</dt><dd>OPTIONAL</dd></div><div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div></dl>
+        <dl class="hero-metrics">
+          <div><dt>CONTROL</dt><dd>LOCAL</dd></div>
+          <div><dt>REMOTE</dt><dd>OPTIONAL</dd></div>
+          <div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div>
+          <div class="project-runtime-metric"><dt>PROJEKTLAUFZEIT</dt><dd id="project-runtime" aria-live="off">WIRD GELADEN …</dd><small>seit Repository-Start · 08.08.2026</small></div>
+        </dl>
       </div>
       <div class="core-visual" aria-label="Raspberry Pi Local Core">
         <div class="core-rings"><span></span><span></span><span></span><div><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"></div></div>
@@ -73,5 +78,27 @@
   </main>
 
   <footer><div class="brand brand-lockup footer-brand"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L."></div><p>Konzeptwerte · keine validierte Live-Telemetrie</p><a href="#home">TOP ↑</a></footer>
+
+  <script>
+    (() => {
+      const projectStart = new Date('2026-08-08T15:34:10Z').getTime();
+      const runtime = document.getElementById('project-runtime');
+      if (!runtime) return;
+
+      const pad = (value) => String(value).padStart(2, '0');
+      const updateRuntime = () => {
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - projectStart) / 1000));
+        const days = Math.floor(elapsedSeconds / 86400);
+        const hours = Math.floor((elapsedSeconds % 86400) / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
+        runtime.textContent = `${days}T ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        runtime.setAttribute('aria-label', `${days} Tage, ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden Projektlaufzeit`);
+      };
+
+      updateRuntime();
+      window.setInterval(updateRuntime, 1000);
+    })();
+  </script>
 </body>
 </html>
