@@ -17,3 +17,5 @@ Beenden: Strg+A, danach X
 
 Automatisch geprüft: ARM64-Boot, virtuelle Festplatte, Netzwerk und /api/health.
 Nur mit Hardware prüfbar: Bluetooth, GPIO und echte DF100M-Funkkommunikation.
+
+Hinweis: Der Direkt-Kernel-Start verwendet keine EFI-Partition. Das ist für dieses QEMU-Paket beabsichtigt.

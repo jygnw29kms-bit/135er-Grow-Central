@@ -85,7 +85,7 @@ jobs:
           echo 'grow-central-qemu' >/etc/hostname
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-qemu/' /etc/hosts || true
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates python3 python3-pip python3-venv openssh-server sudo curl systemd-resolved
+          apt-get install -y --no-install-recommends ca-certificates python3 python3-pip python3-venv openssh-server sudo curl systemd-resolved e2fsprogs
 
           if ! id test >/dev/null 2>&1; then useradd -m -s /bin/bash test; fi
           echo 'test:test' | chpasswd
@@ -142,8 +142,10 @@ jobs:
           DHCP=yes
           EOF
           printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-grow-central-test.conf
+          sed -i '\|[[:space:]]/boot/efi[[:space:]]| s|^|# QEMU direct kernel: |' /etc/fstab
           touch /etc/cloud/cloud-init.disabled
           systemctl enable systemd-networkd systemd-resolved ssh 135er-grow-central.service
+          systemctl set-default multi-user.target
           truncate -s 0 /etc/machine-id
           rm -f /var/lib/dbus/machine-id /etc/ssh/ssh_host_*
           apt-get clean
@@ -163,15 +165,17 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          qemu-img create -f qcow2 -F qcow2 -b "$(pwd)/${IMAGE_NAME}.qcow2" qemu-smoke-overlay.qcow2
           qemu-system-aarch64 \
-            -M virt -cpu cortex-a72 -smp 4 -m 2048 \
+            -M virt -accel tcg,thread=multi -cpu max -smp 4 -m 2048 \
             -nographic -no-reboot \
             -kernel vmlinuz-qemu-arm64 -initrd initrd-qemu-arm64.img \
             -append 'root=/dev/vda1 rw rootwait console=ttyAMA0,115200 fsck.repair=yes net.ifnames=0' \
-            -drive file="${IMAGE_NAME}.qcow2",format=qcow2,if=none,id=system \
+            -drive file=qemu-smoke-overlay.qcow2,format=qcow2,if=none,id=system \
             -device virtio-blk-pci,drive=system \
             -netdev user,id=network,hostfwd=tcp::18080-:8080,hostfwd=tcp::12222-:22 \
-            -device virtio-net-pci,netdev=network >qemu-boot.log 2>&1 &
+            -device virtio-net-pci,netdev=network \
+            -device virtio-rng-pci >qemu-boot.log 2>&1 &
           QEMU_PID=$!
           trap 'kill "$QEMU_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 180); do

@@ -25,11 +25,12 @@ Write-Host 'SSH: ssh -p 2222 test@localhost  (Passwort: test)'
 Write-Host 'Beenden: Strg+A, danach X'
 
 & $qemuPath `
-    -M virt -cpu cortex-a72 -smp 4 -m 2048 `
+    -M virt -accel 'tcg,thread=multi' -cpu max -smp 4 -m 2048 `
     -nographic -no-reboot `
     -kernel $kernel -initrd $initrd `
     -append 'root=/dev/vda1 rw rootwait console=ttyAMA0,115200 fsck.repair=yes net.ifnames=0' `
     -drive "file=$image,format=qcow2,if=none,id=system" `
     -device 'virtio-blk-pci,drive=system' `
     -netdev 'user,id=network,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:2222-:22' `
-    -device 'virtio-net-pci,netdev=network'
+    -device 'virtio-net-pci,netdev=network' `
+    -device 'virtio-rng-pci'
