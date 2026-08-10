@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from app.audit import append_audit
 from app.security import require_write_auth
@@ -47,6 +47,14 @@ class RegisterRequest(BaseModel):
     channel: int = Field(default=0, ge=0, le=16)
 
 
+class AccountDiscoveryRequest(BaseModel):
+    """Credentials are used for one discovery request and are never persisted."""
+    provider: Literal["tapo"]
+    username: str = Field(min_length=3, max_length=254)
+    password: SecretStr
+    timeout: float = Field(default=5.0, ge=1.0, le=10.0)
+
+
 def _lan_host(value: str) -> str:
     try:
         address = ipaddress.ip_address(value)
@@ -77,6 +85,28 @@ async def _kasa_candidates(timeout: float) -> list[Candidate]:
     for host, device in devices.items():
         alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
         rows.append(Candidate(provider="tapo", host=host, name=str(alias), source="tp-link-discovery", metadata={"model": getattr(device, "model", None)}))
+    return rows
+
+
+async def _kasa_account_candidates(request: AccountDiscoveryRequest) -> list[Candidate]:
+    """Discover Tapo/Kasa devices using credentials without retaining them."""
+    try:
+        from kasa import Discover
+    except ImportError as exc:
+        raise HTTPException(503, "TP-Link discovery support is not installed") from exc
+    try:
+        devices = await Discover.discover(
+            username=request.username,
+            password=request.password.get_secret_value(),
+            discovery_timeout=int(request.timeout),
+            timeout=int(request.timeout),
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"TP-Link authentication/discovery failed ({type(exc).__name__})") from None
+    rows: list[Candidate] = []
+    for host, device in devices.items():
+        alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
+        rows.append(Candidate(provider="tapo", host=host, name=str(alias), source="tp-link-account-assisted", native_id=str(getattr(device, "device_id", "") or "") or None, metadata={"model": getattr(device, "model", None), "device_type": str(getattr(device, "device_type", "unknown")), "authentication": "verified-for-this-request"}))
     return rows
 
 
@@ -154,7 +184,7 @@ async def providers():
         "providers": [
             {"id": "shelly", "discovery": True, "probe": True, "control": True},
             {"id": "fritz", "discovery": True, "probe": True, "control": False, "note": "AHA credentials required next"},
-            {"id": "tapo", "discovery": True, "probe": True, "control": False, "note": "TP-Link credentials required next"},
+            {"id": "tapo", "discovery": True, "probe": True, "account_assisted": True, "control": False, "note": "TP-Link account-assisted local discovery"},
             {"id": "matter", "discovery": True, "probe": True, "control": False, "note": "commissioning code and Matter fabric required"},
         ]
     }
@@ -167,6 +197,13 @@ async def discover_devices(timeout: float = 4.0):
     rows = _deduplicate([*ssdp, *mdns, *kasa])
     append_audit("smarthome.discovery.completed", found=len(rows), providers=sorted({row.provider for row in rows}))
     return {"devices": [row.model_dump(mode="json") for row in rows], "count": len(rows)}
+
+
+@router.post("/discover/account", dependencies=[Depends(require_write_auth)])
+async def discover_devices_with_account(request: AccountDiscoveryRequest):
+    rows = await _kasa_account_candidates(request)
+    append_audit("smarthome.account_discovery.completed", provider=request.provider, found=len(rows))
+    return {"devices": [row.model_dump(mode="json") for row in rows], "count": len(rows), "credentials_stored": False}
 
 
 @router.post("/probe", dependencies=[Depends(require_write_auth)])

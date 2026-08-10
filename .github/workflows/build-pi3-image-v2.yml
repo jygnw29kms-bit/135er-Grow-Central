@@ -324,10 +324,11 @@ jobs:
 
       - name: Compress and checksum image
         run: |
-          mv work.img "${IMAGE_NAME}.img"
-          xz -T0 -6 -f "${IMAGE_NAME}.img"
-          sha256sum "${IMAGE_NAME}.img.xz" > "${IMAGE_NAME}.img.xz.sha256"
-          cat > "${IMAGE_NAME}-CREDENTIALS.txt" <<'EOF'
+          VERSIONED_NAME="${IMAGE_NAME}_v2-${GITHUB_RUN_NUMBER}"
+          mv work.img "${VERSIONED_NAME}.img"
+          xz -T0 -6 -f "${VERSIONED_NAME}.img"
+          sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
+          cat > "${VERSIONED_NAME}-CREDENTIALS.txt" <<'EOF'
           Hostname: grow-central-test
           SSH username: GrowCentral
           SSH password: test
@@ -343,9 +344,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test.img.xz
-            135er_Grow_Central_RPi3B_Test.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_v2-*.img.xz
+            135er_Grow_Central_RPi3B_Test_v2-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_v2-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -354,4 +355,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Temporary credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured; no interactive first-boot user setup is required. Branded boot splash and console banner included. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image v2-${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Unified v0.9.2 device lab for Bluetooth, LAN and ephemeral TP-Link/Tapo account-assisted discovery. Credentials are never embedded in the image or repository. Temporary appliance credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease
