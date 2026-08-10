@@ -95,6 +95,8 @@ jobs:
             if [ -n "$FIRST_GROUP" ]; then groupmod --new-name GrowCentral "$FIRST_GROUP"; fi
           fi
           echo 'GrowCentral:test' | chpasswd
+          usermod --shell /bin/bash GrowCentral
+          chage --lastday "$(date +%Y-%m-%d)" --expiredate -1 --inactive -1 --mindays 0 --maxdays 99999 GrowCentral
           usermod -aG sudo GrowCentral
           for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" GrowCentral || true; done
           echo 'GrowCentral ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-grow-central-test
@@ -103,6 +105,8 @@ jobs:
           # The stock image enables userconfig to rename UID 1000 interactively.
           # A preconfigured appliance must never start that wizard on first boot.
           rm -f /etc/ssh/sshd_config.d/rename_user.conf /etc/xdg/autostart/piwiz.desktop
+          rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+          rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
           systemctl disable userconfig.service || true
           systemctl mask userconfig.service
           systemctl enable getty@tty1.service
@@ -176,6 +180,35 @@ jobs:
           mkdir -p /etc/ssh/sshd_config.d
           printf 'PasswordAuthentication yes\nPermitRootLogin no\n' >/etc/ssh/sshd_config.d/99-grow-central-test.conf
 
+          cat >/usr/local/sbin/grow-central-headless-firstboot.sh <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+          usermod --shell /bin/bash GrowCentral
+          passwd --unlock GrowCentral || true
+          chage --expiredate -1 --inactive -1 GrowCentral
+          rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+          rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
+          ssh-keygen -A
+          mkdir -p /run/sshd
+          /usr/sbin/sshd -t
+          touch /var/lib/135er-grow-central/.headless-firstboot-ready
+          EOF
+          chmod 0755 /usr/local/sbin/grow-central-headless-firstboot.sh
+
+          cat >/etc/systemd/system/grow-central-headless-firstboot.service <<'EOF'
+          [Unit]
+          Description=Prepare Grow Central console and SSH access
+          After=local-fs.target
+          Before=ssh.service getty@tty1.service 135er-grow-central.service
+          ConditionPathExists=!/var/lib/135er-grow-central/.headless-firstboot-ready
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-headless-firstboot.sh
+          RemainAfterExit=yes
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
           cat >/usr/local/sbin/grow-central-firstboot-firewall.sh <<'EOF'
           #!/bin/bash
           set -euo pipefail
@@ -240,14 +273,19 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable ssh bluetooth grow-central-firstboot-firewall.service 135er-grow-central.service
+          systemctl enable grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service 135er-grow-central.service
           systemctl enable unattended-upgrades.service || true
 
           # Fail the image build if headless provisioning regresses.
           id GrowCentral
           test "$(getent passwd 1000 | cut -d: -f1)" = GrowCentral
+          test "$(getent passwd GrowCentral | cut -d: -f7)" = /bin/bash
+          test "$(passwd --status GrowCentral | awk '{print $2}')" = P
           test "$(systemctl is-enabled userconfig.service)" = masked
+          test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
+          mkdir -p /run/sshd
+          /usr/sbin/sshd -t
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
           grep -qx 'Europe/Berlin' /etc/timezone
