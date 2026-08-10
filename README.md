@@ -73,8 +73,6 @@ Der reproduzierbare Image-Workflow installiert Anwendung und Abhängigkeiten, ri
 - UFW: nur TCP 22 und 8080
 - BLE- und Remote-Writes standardmäßig deaktiviert
 
-Für Tests ohne Raspberry Pi gibt es ein getrenntes Debian-ARM64-QEMU-Image. Es verwendet einen für virtuelle Hardware geeigneten Kernel und wird vor der Veröffentlichung automatisch über `/api/health` geprüft. Weboberfläche und SSH sind unter Windows über `localhost:8080` und Port `2222` erreichbar. Bluetooth, GPIO und DF100M-Funk bleiben Hardwaretests.
-
 Details: [Raspberry-Pi-Image](docs/de/RASPBERRY_PI_3B_TEST_IMAGE.md) · [Image Builder](image-builder/README.md)
 
 ## Projektstruktur

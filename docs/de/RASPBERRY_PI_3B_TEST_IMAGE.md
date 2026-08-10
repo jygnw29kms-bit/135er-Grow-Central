@@ -77,18 +77,6 @@ Ausgaben:
 
 Das fertige Image wird als GitHub Actions Artefakt und als GitHub Prerelease vorgesehen. Große Binärimages werden bewusst nicht direkt in die normale Git-Historie eingecheckt.
 
-## Test ohne Raspberry Pi unter Windows
-
-Für QEMU wird bewusst ein getrenntes Debian-13-ARM64-Image gebaut. Der Raspberry-Pi-Kernel bleibt auf reale Pi-Hardware optimiert, während das virtuelle Image einen VirtIO-fähigen Kernel für Festplatte und Netzwerk verwendet. Der QEMU-Workflow startet das fertige System und prüft `/api/health`, bevor `135er_Grow_Central_QEMU_ARM64-Windows.zip` veröffentlicht wird. Nach dem Entpacken startet `start-qemu-arm64-windows.cmd` die virtuelle Maschine.
-
-```text
-Weboberfläche: http://localhost:8080
-SSH: ssh -p 2222 test@localhost
-Benutzer / Passwort: test / test
-```
-
-Damit werden ARM64-Boot, Linux, systemd, Netzwerk, SSH und die Grow-Central-Anwendung geprüft. Bluetooth, GPIO, Raspberry-Pi-Firmware und DF100M-Funkkommunikation können ohne echte Hardware nicht verifiziert werden.
-
 ## Bekannter Build-Verlauf
 
 Der erste Builderlauf scheiterte beim Kopieren, weil die lokal heruntergeladene Basis-Image-Datei versehentlich mit in das Ziel-Dateisystem kopiert wurde und dessen freien Platz aufbrauchte.
