@@ -54,12 +54,3 @@ The generated file is named:
 
 Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. Ethernet is recommended for the first test because no WLAN SSID/password is embedded in the public test image.
 
-## QEMU test on Windows
-
-QEMU uses a separate Debian 13 ARM64 image because the Raspberry Pi kernel is designed for Pi hardware and does not provide the complete virtual device path required for a reliable Windows test. `.github/workflows/build-qemu-arm64-image.yml` installs the same Grow Central application into a VirtIO-capable image, boots it in QEMU and verifies `/api/health` before publishing `135er_Grow_Central_QEMU_ARM64-Windows.zip`.
-
-- Web UI: `http://localhost:8080`
-- SSH: `ssh -p 2222 test@localhost`
-- Login: `test / test`
-
-Run `start-qemu-arm64-windows.cmd` from the extracted package. This validates ARM64 boot, systemd, networking, SSH and the web application without a Raspberry Pi. Bluetooth, GPIO, Raspberry Pi firmware and physical DF100M communication still require real hardware.
