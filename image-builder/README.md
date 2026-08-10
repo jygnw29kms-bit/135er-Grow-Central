@@ -18,8 +18,11 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 **These credentials are intentionally temporary and insecure.**
 
 - Hostname: `grow-central-test`
-- SSH user: `test`
+- SSH user: `GrowCentral`
 - SSH password: `test`
+- Locale/timezone: `de_DE.UTF-8`, `Europe/Berlin`
+- Keyboard: German (`de`), variant `nodeadkeys`
+- Interactive first-boot user setup: disabled
 - Grow Central/API token: `test`
 - Web UI: `http://<PI-IP>:8080`
 
