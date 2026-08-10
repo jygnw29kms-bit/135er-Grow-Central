@@ -30,7 +30,7 @@ Nur für die ersten Hardwaretests:
 
 ```text
 Hostname: grow-central-test
-SSH-Benutzer: test
+SSH-Benutzer: GrowCentral
 SSH-Passwort: test
 API-/App-Token: test
 Cloud-Token: test
@@ -41,7 +41,9 @@ Diese Daten sind absichtlich unsicher und müssen nach den Tests ersetzt werden.
 ## Sicherheitsstatus im Test-Image
 
 - Root-SSH-Login deaktiviert
-- Passwort-SSH für den temporären Benutzer `test` aktiviert
+- Passwort-SSH für den festen Headless-Benutzer `GrowCentral` aktiviert
+- Locale `de_DE.UTF-8`, Zeitzone `Europe/Berlin` und Tastaturbelegung `de(nodeadkeys)` vorkonfiguriert
+- interaktive First-Boot-Abfragen für Benutzer und Tastatur deaktiviert
 - UFW aktiviert
 - eingehend erlaubt: TCP 22 und TCP 8080
 - automatische Sicherheitsupdates aktiviert
@@ -104,7 +106,7 @@ Die Korrektur umfasst:
 2. Raspberry Pi 3B per Ethernet ins lokale Netz hängen.
 3. Pi booten lassen.
 4. IP im Router/DHCP-Server ermitteln.
-5. SSH testen: `ssh test@<PI-IP>`.
+5. SSH testen: `ssh GrowCentral@<PI-IP>`.
 6. Webinterface öffnen: `http://<PI-IP>:8080`.
 7. Service prüfen: `systemctl status 135er-grow-central`.
 8. Bluetooth prüfen: `bluetoothctl show`.

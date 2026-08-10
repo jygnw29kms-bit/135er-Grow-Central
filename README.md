@@ -67,7 +67,9 @@ Der reproduzierbare Image-Workflow installiert Anwendung und Abhängigkeiten, ri
 
 - Raspberry Pi OS Lite 64-bit / Debian 13
 - Raspberry Pi 3B / 3B+
-- temporäre Test-Zugangsdaten: `test / test`
+- fester Headless-Benutzer: `GrowCentral` (temporäres Passwort: `test`)
+- Deutsch (`de_DE.UTF-8`), Zeitzone `Europe/Berlin`, Tastatur `de(nodeadkeys)`
+- keine interaktive Benutzer- oder Tastaturabfrage beim ersten Start
 - UFW: nur TCP 22 und 8080
 - BLE- und Remote-Writes standardmäßig deaktiviert
 
