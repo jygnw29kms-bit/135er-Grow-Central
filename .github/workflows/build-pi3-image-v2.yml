@@ -289,8 +289,12 @@ jobs:
           test "$(systemctl is-enabled userconfig.service)" = masked
           test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
+          # Validate sshd with temporary build-time host keys. Remove them
+          # immediately so every flashed Raspberry Pi creates unique keys.
           mkdir -p /run/sshd
+          ssh-keygen -A
           /usr/sbin/sshd -t
+          rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
           grep -qx 'Europe/Berlin' /etc/timezone
