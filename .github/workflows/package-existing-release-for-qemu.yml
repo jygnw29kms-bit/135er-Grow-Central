@@ -1,0 +1,188 @@
+name: Package existing Raspberry Pi release for Windows QEMU
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to package
+        required: true
+        default: pi3-test-v2-7
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IMAGE_NAME: 135er_Grow_Central_RPi3B_Test
+      PACKAGE_NAME: 135er_Grow_Central_QEMU_Windows
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xz-utils util-linux zip
+
+      - name: Download existing release image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "${IMAGE_NAME}.img.xz" \
+            --pattern "${IMAGE_NAME}.img.xz.sha256"
+          sha256sum -c "${IMAGE_NAME}.img.xz.sha256"
+          xz -dk "${IMAGE_NAME}.img.xz"
+
+      - name: Extract Raspberry Pi boot files
+        shell: bash
+        run: |
+          set -euxo pipefail
+          IMAGE="${IMAGE_NAME}.img"
+          LOOP=$(sudo losetup --find --show --partscan "$IMAGE")
+          cleanup() {
+            set +e
+            sudo umount /mnt/pi-boot 2>/dev/null || true
+            sudo losetup -d "$LOOP" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          sudo mkdir -p /mnt/pi-boot
+          sudo mount "${LOOP}p1" /mnt/pi-boot
+          test -f /mnt/pi-boot/kernel8.img
+          test -f /mnt/pi-boot/bcm2710-rpi-3-b.dtb
+          sudo cp /mnt/pi-boot/kernel8.img ./kernel8.img
+          sudo cp /mnt/pi-boot/bcm2710-rpi-3-b.dtb ./bcm2710-rpi-3-b.dtb
+          sudo chown "$USER:$USER" kernel8.img bcm2710-rpi-3-b.dtb
+          cleanup
+          trap - EXIT
+
+      - name: Create Windows QEMU starter
+        shell: bash
+        run: |
+          cat > start-135er-qemu.cmd <<'CMD'
+          @echo off
+          setlocal EnableExtensions
+          title 135er Grow Central - QEMU Raspberry Pi 3B
+          cd /d "%~dp0"
+
+          set "QEMU=C:\Program Files\qemu\qemu-system-aarch64.exe"
+          set "QEMUIMG=C:\Program Files\qemu\qemu-img.exe"
+          set "IMAGE=135er_Grow_Central_RPi3B_Test.img"
+          set "KERNEL=kernel8.img"
+          set "DTB=bcm2710-rpi-3-b.dtb"
+
+          echo ============================================================
+          echo     135er Grow Central - QEMU Raspberry Pi 3B
+          echo ============================================================
+          echo.
+
+          if not exist "%QEMU%" (
+            echo [FEHLER] QEMU wurde nicht gefunden:
+            echo %QEMU%
+            pause
+            exit /b 1
+          )
+          if not exist "%IMAGE%" (
+            echo [FEHLER] Image fehlt: %IMAGE%
+            pause
+            exit /b 1
+          )
+          if not exist "%KERNEL%" (
+            echo [FEHLER] Kernel fehlt: %KERNEL%
+            pause
+            exit /b 1
+          )
+          if not exist "%DTB%" (
+            echo [FEHLER] Device Tree fehlt: %DTB%
+            pause
+            exit /b 1
+          )
+
+          echo [OK] Alle Dateien vorhanden.
+          echo Web-GUI nach dem Boot: http://127.0.0.1:8080
+          echo SSH: ssh -p 2222 test@127.0.0.1
+          echo Benutzer: test  Passwort: test
+          echo QEMU beenden: Strg+A, danach X
+          echo.
+
+          "%QEMU%" ^
+            -M raspi3b ^
+            -kernel "%KERNEL%" ^
+            -dtb "%DTB%" ^
+            -drive file="%IMAGE%",format=raw,if=sd ^
+            -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 console=tty1" ^
+            -serial mon:stdio ^
+            -display none ^
+            -netdev user,id=net0,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:2222-:22 ^
+            -device usb-net,netdev=net0
+
+          set "RC=%ERRORLEVEL%"
+          echo.
+          echo QEMU wurde beendet. Fehlercode: %RC%
+          pause
+          exit /b %RC%
+          CMD
+
+          cat > README-QEMU-WINDOWS.txt <<'TXT'
+          135er Grow Central - Windows QEMU Paket
+          ========================================
+
+          Voraussetzung:
+          QEMU fuer Windows ist installiert unter:
+          C:\Program Files\qemu\
+
+          Start:
+          1. Dieses ZIP komplett in einen Ordner entpacken.
+          2. start-135er-qemu.cmd doppelklicken oder in CMD ausfuehren.
+          3. Nach dem Linux-Boot die Web-GUI unter http://127.0.0.1:8080 oeffnen.
+
+          SSH:
+          ssh -p 2222 test@127.0.0.1
+          Benutzer: test
+          Passwort: test
+
+          Enthalten:
+          - 135er_Grow_Central_RPi3B_Test.img
+          - kernel8.img
+          - bcm2710-rpi-3-b.dtb
+          - start-135er-qemu.cmd
+          - README-QEMU-WINDOWS.txt
+
+          Hinweis:
+          QEMU emuliert nicht die gesamte reale Raspberry-Pi-Hardware. Bluetooth,
+          GPIO und ein realer DF100M koennen daher nicht vollstaendig in der VM
+          getestet werden.
+          TXT
+
+      - name: Build single downloadable QEMU package
+        run: |
+          zip -6 "$PACKAGE_NAME.zip" \
+            "$IMAGE_NAME.img" \
+            kernel8.img \
+            bcm2710-rpi-3-b.dtb \
+            start-135er-qemu.cmd \
+            README-QEMU-WINDOWS.txt
+          sha256sum "$PACKAGE_NAME.zip" > "$PACKAGE_NAME.zip.sha256"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 135er-Grow-Central-QEMU-Windows
+          path: |
+            135er_Grow_Central_QEMU_Windows.zip
+            135er_Grow_Central_QEMU_Windows.zip.sha256
+          compression-level: 0
+          retention-days: 14
+
+      - name: Attach package to existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release upload "$TAG" \
+            "$PACKAGE_NAME.zip" \
+            "$PACKAGE_NAME.zip.sha256" \
+            --repo "${{ github.repository }}" \
+            --clobber
