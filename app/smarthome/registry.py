@@ -15,8 +15,12 @@ class DeviceRegistry:
             raise ValueError("duplicate smart-home device id")
 
     @classmethod
+    def config_path(cls) -> Path:
+        return Path(os.getenv("GC_SMARTHOME_DEVICE_CONFIG", "/var/lib/135er-grow-central/devices.json"))
+
+    @classmethod
     def from_env(cls) -> "DeviceRegistry":
-        path = Path(os.getenv("GC_SMARTHOME_DEVICE_CONFIG", "/etc/135er-grow-central/devices.json"))
+        path = cls.config_path()
         if not path.exists():
             return cls([])
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -33,3 +37,13 @@ class DeviceRegistry:
             return self._devices[device_id]
         except KeyError as exc:
             raise KeyError(f"unknown device: {device_id}") from exc
+
+    def upsert(self, device: DeviceConfig) -> None:
+        self._devices[device.id] = device
+        path = self.config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        payload = {"devices": [item.model_dump(mode="json") for item in self.list()]}
+        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary.chmod(0o600)
+        temporary.replace(path)
