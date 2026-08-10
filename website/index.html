@@ -37,7 +37,7 @@
           <div><dt>REMOTE</dt><dd>OPTIONAL</dd></div>
           <div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div>
           <div class="project-runtime-metric"><dt>PROJEKTLAUFZEIT</dt><dd id="project-runtime" aria-live="off">WIRD GELADEN …</dd><small>seit Repository-Start · 08.08.2026</small></div>
-          <div class="project-effort-metric"><dt>ENTWICKLUNGSAUFWAND</dt><dd id="project-effort">00:00 h</dd><small>aktive Arbeitszeit · Erfassung ab 10.08.2026 20:35</small></div>
+          <div class="project-effort-metric"><dt>ENTWICKLUNGSAUFWAND</dt><dd id="project-effort">14:00 h</dd><small>rekonstruierte Baseline bis 10.08.2026 20:40 · danach dokumentiert</small></div>
         </dl>
       </div>
       <div class="core-visual" aria-label="Raspberry Pi Local Core">
@@ -86,9 +86,9 @@
       const runtime = document.getElementById('project-runtime');
       const effort = document.getElementById('project-effort');
 
-      // Ab 10.08.2026 20:35 MESZ wird nur dokumentierte aktive Arbeitszeit addiert.
-      // Keine Hochrechnung aus der reinen Kalenderlaufzeit.
-      const documentedEffortMinutes = 0;
+      // Rückwirkend rekonstruierte Baseline bis 10.08.2026 20:40 MESZ.
+      // Ab diesem Zeitpunkt wird nur noch konkret dokumentierte aktive Arbeitszeit ergänzt.
+      const documentedEffortMinutes = 14 * 60;
 
       const pad = (value) => String(value).padStart(2, '0');
       const formatEffort = (minutes) => {
