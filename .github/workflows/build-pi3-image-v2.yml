@@ -6,6 +6,10 @@ on:
     branches: [ master ]
     paths:
       - '.github/workflows/build-pi3-image-v2.yml'
+      - 'app/**'
+      - 'shared/**'
+      - 'web/**'
+      - 'requirements.txt'
       - 'image-builder/brand/**'
 
 permissions:
