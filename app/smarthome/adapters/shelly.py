@@ -19,8 +19,8 @@ class ShellySwitchAdapter(SwitchAdapter):
             ip = ipaddress.ip_address(device.host)
         except ValueError as exc:
             raise AdapterError("Shelly host must be a literal LAN IP address") from exc
-        if not (ip.is_private or ip.is_link_local):
-            raise AdapterError("Shelly host must be a private/link-local IP address")
+        if ip.version != 4 or not (ip.is_private or ip.is_link_local) or ip.is_loopback or ip.is_unspecified or ip.is_multicast or ip.is_reserved:
+            raise AdapterError("Shelly host must be a usable private/link-local IPv4 address")
         self.device = device
         self.base_url = f"http://{ip}/rpc"
 

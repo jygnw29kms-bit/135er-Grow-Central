@@ -1,4 +1,4 @@
-# Smart-Home Architecture – 135er-Grow Central v0.6
+# Smart-Home Architecture – 135er-Grow Central alpha-0.7.1
 
 ## Objective
 
@@ -8,7 +8,7 @@ Smart-home interoperability extends Grow Central without changing the local trus
 
 ### Native local adapters
 
-Grow Central integrates directly only where a stable local protocol is suitable. v0.6 implements a baseline adapter for Shelly Gen2+ JSON-RPC.
+Grow Central integrates directly only where a stable local protocol is suitable. The current baseline implements an adapter for Shelly Gen2+ JSON-RPC.
 
 ### Home Assistant interoperability bridge
 
@@ -66,7 +66,7 @@ Smart plugs control real electrical loads. Grow Central therefore separates:
 
 ## Apple Home / Siri
 
-Supported v0.6 architecture:
+Supported current architecture:
 
 ```text
 Grow Central <-> Home Assistant -> HomeKit Bridge -> Apple Home / Siri
@@ -76,7 +76,7 @@ This provides practical local interoperability without claiming that Grow Centra
 
 ## Tapo and FRITZ!
 
-Supported v0.6 architecture:
+Supported current architecture:
 
 ```text
 Tapo / FRITZ! -> Home Assistant maintained integration -> Grow Central HA connector

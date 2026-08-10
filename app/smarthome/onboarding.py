@@ -60,8 +60,10 @@ def _lan_host(value: str) -> str:
         address = ipaddress.ip_address(value)
     except ValueError as exc:
         raise HTTPException(400, "host must be a literal LAN IP address") from exc
-    if not (address.is_private or address.is_link_local):
-        raise HTTPException(400, "host must be private or link-local")
+    if address.version != 4 or not (address.is_private or address.is_link_local):
+        raise HTTPException(400, "host must be a private or link-local IPv4 address")
+    if address.is_loopback or address.is_unspecified or address.is_multicast or address.is_reserved:
+        raise HTTPException(400, "host must be a usable LAN address")
     return str(address)
 
 

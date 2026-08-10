@@ -1,4 +1,4 @@
-# Smart-Home-Architektur – v0.6
+# Smart-Home-Architektur – alpha-0.7.1
 
 Der Raspberry Pi bleibt Master. Smart-Home-Systeme erweitern Grow Central, übernehmen aber nicht die lokale Sicherheitslogik.
 

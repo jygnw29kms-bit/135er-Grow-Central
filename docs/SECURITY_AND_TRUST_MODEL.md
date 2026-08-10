@@ -1,4 +1,4 @@
-# Security and Trust Model – 135er-Grow Central v0.6
+# Security and Trust Model – 135er-Grow Central alpha-0.7.1
 
 ## Objective
 
@@ -13,15 +13,17 @@ Compromise of an IoT device, cloud account, browser session or third-party integ
 5. Optional cloud – never authoritative for local safety.
 6. Internet – untrusted.
 
-## v0.6 controls
+## Current controls
 
 - smart-home writes disabled globally by default;
 - DF100M writes disabled by default;
+- raw DF100M writes require a separate explicit opt-in;
+- active BLE scans, connection changes and GATT diagnostics require local authentication;
 - missing local write token causes protected commands to fail closed;
 - explicit device inventory;
 - explicit `approved` and `writable` flags;
 - restricted adapter factory;
-- Shelly targets restricted to private/link-local literal IP addresses;
+- Shelly and onboarding targets restricted to usable private/link-local literal IPv4 addresses;
 - Home Assistant connector limited to registered `switch.*` entities;
 - Home Assistant read-only mode enabled by default;
 - no arbitrary URL proxy;
@@ -33,6 +35,7 @@ Compromise of an IoT device, cloud account, browser session or third-party integ
 
 ```text
 DF100M_ALLOW_WRITES=false
+DF100M_ALLOW_RAW_WRITES=false
 GC_REMOTE_COMMANDS=false
 GC_CLOUD_ENABLED=false
 GC_SMARTHOME_ENABLED=false
@@ -47,7 +50,7 @@ Recommended file:
 ```text
 /etc/135er-grow-central/secrets.env
 owner root
-group grow-central
+group growcentral
 mode 0640
 ```
 

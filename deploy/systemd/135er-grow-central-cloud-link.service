@@ -5,12 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
+User=growcentral
+Group=growcentral
 WorkingDirectory=/opt/135er-grow-central/local/cloud_link
 EnvironmentFile=/opt/135er-grow-central/local/cloud_link/.env
 ExecStart=/opt/135er-grow-central/.venv/bin/python /opt/135er-grow-central/local/cloud_link/agent.py
 Restart=always
 RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/135er-grow-central
 
 [Install]
 WantedBy=multi-user.target

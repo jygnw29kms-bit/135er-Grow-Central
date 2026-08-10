@@ -1,6 +1,6 @@
 # Security
 
-135er-Grow Central v0.3 ist eine frühe Testversion.
+135er-Grow Central `alpha-0.7.1` befindet sich in der Hardware-Validierung.
 
 ## Netzwerk
 

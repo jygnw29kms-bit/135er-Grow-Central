@@ -37,9 +37,14 @@ async def _command(*args: str, timeout: float = 8.0) -> tuple[int, str]:
             stderr=asyncio.subprocess.STDOUT,
             env={"PATH": os.environ.get("PATH", "/usr/sbin:/usr/bin:/sbin:/bin"), "LANG": "C.UTF-8"},
         )
-        output, _ = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        try:
+            output, _ = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.communicate()
+            return 124, "TimeoutError"
         return process.returncode or 0, redact(output.decode("utf-8", "replace").strip())
-    except (FileNotFoundError, asyncio.TimeoutError) as exc:
+    except FileNotFoundError as exc:
         return 127, type(exc).__name__
 
 

@@ -86,7 +86,7 @@ Die Korrektur umfasst:
 - Ausschluss von `base.img.xz`, `work.img` und Build-Ausgaben aus `rsync`
 - Vergrößerung des Images vor der Installation
 - Vergrößerung der Root-Partition und des ext4-Dateisystems
-- separater v2-Workflow für den korrigierten Testbuild
+- nativer ARM64-Workflow für den reproduzierbaren Testbuild
 
 ## Erster Hardwaretest
 

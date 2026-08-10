@@ -1,4 +1,0 @@
-135er-Grow Central
-Automated SFTP Deployment Test
-Target: /var/www/vhosts/dezender.de/httpdocs/
-Status: Trigger deployment workflow

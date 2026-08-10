@@ -68,7 +68,7 @@ The installer must:
 1. validate OS and version,
 2. update APT metadata,
 3. install required packages,
-4. create the dedicated `grow-central` system user,
+4. create the dedicated `growcentral` system user,
 5. create directories and permissions,
 6. create a Python venv,
 7. place config in `/etc/135er-grow-central`,
@@ -96,9 +96,9 @@ Planned:
 Recommended:
 
 ```text
-/opt/135er-grow-central       root:grow-central 0750
-/etc/135er-grow-central       root:grow-central 0750
-/var/lib/135er-grow-central   grow-central:grow-central 0750
+/opt/135er-grow-central       root:growcentral 0750
+/etc/135er-grow-central       root:growcentral 0750
+/var/lib/135er-grow-central   growcentral:growcentral 0750
 ```
 
 Secrets use 0640 or stricter.

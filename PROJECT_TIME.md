@@ -11,7 +11,7 @@ Die Website unterscheidet bewusst zwischen **Projektlaufzeit** und **aktiv dokum
 
 | Datum | Dauer | Bereich | Notiz |
 |---|---:|---|---|
-| 07.–10.08.2026 | 14:00 h | Projektbaseline | Rückwirkend rekonstruierter Aufwand für Grundkonzept, DF100M-Analyse, Raspberry-Pi-Architektur, GUI/Webinterface, Cloud-/Smart-Home-Struktur, Dokumentation, Branding, Website, Imagebuilder, Build-/Fehlerkorrekturen, QEMU-Tests und anschließende Bereinigung. |
+| 07.–10.08.2026 | 14:00 h | Projektbaseline | Rückwirkend rekonstruierter Aufwand für Grundkonzept, DF100M-Analyse, Raspberry-Pi-Architektur, GUI/Webinterface, Cloud-/Smart-Home-Struktur, Dokumentation, Branding, Website, Imagebuilder sowie Build- und Fehlerkorrekturen. |
 
 ## Regel
 

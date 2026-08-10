@@ -1,4 +1,4 @@
-# Smart-Home Architecture – v0.6
+# Smart-Home Architecture – alpha-0.7.1
 
 The Raspberry Pi remains the master. Smart-home ecosystems extend Grow Central but do not own local safety policy.
 
