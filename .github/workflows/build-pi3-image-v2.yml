@@ -151,6 +151,7 @@ jobs:
           GC_TEST_USERNAME=test
           GC_TEST_PASSWORD=test
           GC_API_TOKEN=test
+          GC_LOCAL_API_TOKEN=test
           GC_CLOUD_TOKEN=test
           GC_REMOTE_COMMANDS=false
           GC_CLOUD_ENABLED=false

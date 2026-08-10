@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.security import require_write_auth
+from app.diagnostics import router as diagnostics_router
 from app.smarthome.router import router as smarthome_router
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
@@ -33,6 +34,7 @@ WEB_DIR = BASE_DIR / "web"
 app = FastAPI(title="135er-Grow Central Local", version="0.6.0")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 app.include_router(smarthome_router)
+app.include_router(diagnostics_router)
 
 client: BleakClient | None = None
 current_address: str | None = None
