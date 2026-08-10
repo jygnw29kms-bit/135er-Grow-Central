@@ -37,6 +37,7 @@
           <div><dt>REMOTE</dt><dd>OPTIONAL</dd></div>
           <div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div>
           <div class="project-runtime-metric"><dt>PROJEKTLAUFZEIT</dt><dd id="project-runtime" aria-live="off">WIRD GELADEN …</dd><small>seit Repository-Start · 08.08.2026</small></div>
+          <div class="project-effort-metric"><dt>ENTWICKLUNGSAUFWAND</dt><dd id="project-effort">00:00 h</dd><small>aktive Arbeitszeit · Erfassung ab 10.08.2026 20:35</small></div>
         </dl>
       </div>
       <div class="core-visual" aria-label="Raspberry Pi Local Core">
@@ -83,9 +84,26 @@
     (() => {
       const projectStart = new Date('2026-08-08T15:34:10Z').getTime();
       const runtime = document.getElementById('project-runtime');
-      if (!runtime) return;
+      const effort = document.getElementById('project-effort');
+
+      // Ab 10.08.2026 20:35 MESZ wird nur dokumentierte aktive Arbeitszeit addiert.
+      // Keine Hochrechnung aus der reinen Kalenderlaufzeit.
+      const documentedEffortMinutes = 0;
 
       const pad = (value) => String(value).padStart(2, '0');
+      const formatEffort = (minutes) => {
+        const total = Math.max(0, Math.floor(minutes));
+        const hours = Math.floor(total / 60);
+        const mins = total % 60;
+        return `${pad(hours)}:${pad(mins)} h`;
+      };
+
+      if (effort) {
+        effort.textContent = formatEffort(documentedEffortMinutes);
+        effort.setAttribute('aria-label', `${Math.floor(documentedEffortMinutes / 60)} Stunden und ${documentedEffortMinutes % 60} Minuten dokumentierte Entwicklungszeit`);
+      }
+
+      if (!runtime) return;
       const updateRuntime = () => {
         const elapsedSeconds = Math.max(0, Math.floor((Date.now() - projectStart) / 1000));
         const days = Math.floor(elapsedSeconds / 86400);
