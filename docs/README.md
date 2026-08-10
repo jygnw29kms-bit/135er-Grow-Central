@@ -1,8 +1,12 @@
-# 135er-Grow Central – Dokumentationszentrum / Documentation Hub
+# 135er-Grow Central · Documentation Hub
 
 <p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
 
-Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neuen Entwickler, Tester oder Betreiber ohne Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächsten Schritte zu verstehen.
+<p align="center"><a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a></p>
+
+## Deutsch
+
+Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll neue Entwickler, Tester und Betreiber ohne vorherigen Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächste Schritte zu verstehen.
 
 ## Zuerst lesen
 
@@ -37,7 +41,7 @@ Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neue
 - [GUI-Vorschau](de/GUI_VORSCHAU.md)
 - [Raspberry Pi 3B Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
-## English
+### Englische Fachdokumentation
 
 - [Overview](en/README.md)
 - [Full Platform](en/FULL_PLATFORM.md)
@@ -53,3 +57,41 @@ Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll einen neue
 - `planned`: noch nicht implementiert.
 - Reverse-Engineering-Angaben müssen als Beobachtung/Hypothese gekennzeichnet werden.
 - Herstellerangaben, Open-Source-Referenzen, APK-Beobachtungen und Experimente werden getrennt geführt.
+
+---
+
+## English
+
+This directory is the project's technical knowledge base. It enables new developers, testers, and operators to understand the architecture, verified status, risks, and next actions without relying on previous chat history.
+
+### Read first
+
+1. [Project history](../PROJECT_HISTORY.md)
+2. [Current project status](PROJECT_STATUS.md)
+3. [Architecture master](ARCHITECTURE_MASTER.md)
+4. [Hardware test plan](HARDWARE_TEST_PLAN.md)
+5. [DF100M research log](DF100M_RESEARCH_LOG.md)
+6. [Security and trust model](SECURITY_AND_TRUST_MODEL.md)
+7. [Image and release process](RELEASE_AND_IMAGE_PROCESS.md)
+8. [Decision log](DECISION_LOG.md)
+9. [Known limitations](KNOWN_LIMITATIONS.md)
+10. [Roadmap](ROADMAP.md)
+
+### English documentation
+
+- [Overview](en/README.md)
+- [Full platform](en/FULL_PLATFORM.md)
+- [Architecture](en/ARCHITECTURE.md)
+- [API](en/API.md)
+- [Database and RBAC](en/DATABASE_AND_RBAC.md)
+- [GUI preview](en/GUI_PREVIEW.md)
+- [Raspberry Pi 3B test image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
+
+### Documentation rules
+
+- `implemented`: code or runtime behavior is demonstrably present.
+- `experimental`: present, but not sufficiently validated on target hardware.
+- `baseline/design`: schema, architecture, or interface is defined but may not be fully wired.
+- `planned`: not implemented yet.
+- Reverse-engineering statements must be labeled as observations or hypotheses.
+- Vendor statements, open-source references, APK observations, and experiments remain clearly separated.

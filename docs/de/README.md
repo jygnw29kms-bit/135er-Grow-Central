@@ -1,4 +1,6 @@
-# 135er-Grow Central – Deutsch
+# 135er-Grow Central · Dokumentation (Deutsch)
+
+[English](../en/README.md) · [Dokumentationszentrum](../README.md) · [Repository](../../README.md)
 
 135er-Grow Central ist eine **Local-First Steuer- und Überwachungsplattform** für einen Raspberry Pi mit optionaler Cloud auf einem Linux-VServer.
 
@@ -22,7 +24,7 @@
 6. Quellen und Annahmen werden klar gekennzeichnet.
 7. Große Systemimages werden als Release-/Actions-Artefakte statt in der normalen Git-Historie veröffentlicht.
 
-## Stand v0.5 Full Platform Baseline
+## Stand alpha-0.7.1 · Hardware-Validierung
 
 - BLE Discovery: vorhanden
 - Connect / Disconnect: vorhanden
