@@ -85,9 +85,15 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
-          # Provision the fixed headless administrator account. Uppercase letters
-          # are intentional and require --badname with Debian's useradd policy.
-          if ! id GrowCentral >/dev/null 2>&1; then useradd --badname -m -s /bin/bash GrowCentral; fi
+          # Keep the stock image's UID 1000, but give it the fixed appliance
+          # identity. Renaming also prevents userconfig from targeting "pi".
+          if ! id GrowCentral >/dev/null 2>&1; then
+            FIRST_USER="$(getent passwd 1000 | cut -d: -f1)"
+            test -n "$FIRST_USER"
+            usermod --login GrowCentral --home /home/GrowCentral --move-home "$FIRST_USER"
+            FIRST_GROUP="$(getent group 1000 | cut -d: -f1)"
+            if [ -n "$FIRST_GROUP" ]; then groupmod --new-name GrowCentral "$FIRST_GROUP"; fi
+          fi
           echo 'GrowCentral:test' | chpasswd
           usermod -aG sudo GrowCentral
           for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" GrowCentral || true; done
