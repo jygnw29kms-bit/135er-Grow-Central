@@ -68,7 +68,7 @@ Der Installer muss:
 1. OS und Version prüfen.
 2. APT aktualisieren.
 3. benötigte Pakete installieren.
-4. dedizierten Systembenutzer `grow-central` anlegen.
+4. dedizierten Systembenutzer `growcentral` anlegen.
 5. Verzeichnisse und Rechte setzen.
 6. Python-vEnv erzeugen.
 7. Konfiguration in `/etc/135er-grow-central` anlegen.
@@ -96,9 +96,9 @@ Vorgesehen:
 Empfohlen:
 
 ```text
-/opt/135er-grow-central       root:grow-central 0750
-/etc/135er-grow-central       root:grow-central 0750
-/var/lib/135er-grow-central   grow-central:grow-central 0750
+/opt/135er-grow-central       root:growcentral 0750
+/etc/135er-grow-central       root:growcentral 0750
+/var/lib/135er-grow-central   growcentral:growcentral 0750
 ```
 
 Secrets erhalten 0640 oder restriktiver.

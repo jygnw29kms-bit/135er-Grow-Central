@@ -5,15 +5,25 @@ services:
     build:
       context: .
       dockerfile: cloud/Dockerfile
-    container_name: 135er-grow-central-cloud
     restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - ./cloud/.env
     volumes:
       # DE: SQLite persistent auf dem Host.
       # EN: Persist SQLite on the host.
-      - ./cloud/data:/app/cloud/data
+      - grow-central-cloud-data:/app/cloud/data
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16m
     ports:
       # DE: Nur localhost; öffentlich über Reverse Proxy.
       # EN: Localhost only; expose publicly through a reverse proxy.
       - "127.0.0.1:8090:8090"
+
+volumes:
+  grow-central-cloud-data:

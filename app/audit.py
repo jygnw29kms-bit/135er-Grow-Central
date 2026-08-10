@@ -17,7 +17,10 @@ def append_audit(event: str, **fields: Any) -> None:
         "event": event,
         **fields,
     }
-    fd = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o640)
+    flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(path, flags, 0o640)
     try:
         os.write(fd, (json.dumps(record, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8"))
     finally:

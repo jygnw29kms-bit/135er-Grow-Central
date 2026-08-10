@@ -1,4 +1,4 @@
-# Integrations – v0.6
+# Integrations – alpha-0.7.1
 
 ## Support levels
 
@@ -20,7 +20,7 @@
 
 ## Home Assistant connector restrictions
 
-The v0.6 connector intentionally supports only registered `switch.*` entities and only `turn_on` / `turn_off`. It cannot proxy arbitrary service names, URLs or payloads.
+The current connector intentionally supports only registered `switch.*` entities and only `turn_on` / `turn_off`. It cannot proxy arbitrary service names, URLs or payloads.
 
 ## Shelly restrictions
 

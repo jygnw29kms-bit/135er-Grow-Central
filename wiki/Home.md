@@ -1,6 +1,6 @@
 # 135er-Grow Central Wiki
 
-## v0.6 Secure Smart-Home Platform
+## alpha-0.7.1 Secure Smart-Home Platform
 
 135er-Grow Central is a local-first Raspberry-Pi automation platform. It started with DF100M BLE research and now includes a secured smart-home architecture for plugs, devices and ecosystem bridges.
 

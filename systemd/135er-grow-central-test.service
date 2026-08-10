@@ -5,12 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
+User=growcentral
+Group=growcentral
 WorkingDirectory=/opt/135er-grow-central-test
 EnvironmentFile=/opt/135er-grow-central-test/.env
 ExecStart=/opt/135er-grow-central-test/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
 Restart=always
 RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/135er-grow-central-test/data /var/lib/135er-grow-central
 
 [Install]
 WantedBy=multi-user.target

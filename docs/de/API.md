@@ -5,18 +5,22 @@
 - `GET /api/health` – Dienststatus
 - `GET /api/config` – Testkonfiguration
 - `GET /api/status` – BLE-Zustand
-- `GET /api/discover` – BLE Discovery
-- `POST /api/connect` – verbinden
-- `POST /api/disconnect` – trennen
-- `GET /api/services` – GATT auslesen
+- `GET /api/discover` – authentifizierte BLE-Suche
+- `POST /api/connect` – authentifiziert verbinden
+- `POST /api/disconnect` – authentifiziert trennen
+- `GET /api/services` – authentifiziert GATT auslesen
 - `POST /api/notify/start` – Notifications starten
 - `POST /api/notify/stop` – Notifications stoppen
 - `POST /api/speed` – experimenteller Speed-Test
 - `POST /api/raw` – Roh-Payload-Test
 
+Aktive Suche, Verbindungsverwaltung, GATT-Diagnose und Schreibzugriffe benötigen `GC_LOCAL_API_TOKEN`. Roh-Payloads bleiben zusätzlich mit `DF100M_ALLOW_RAW_WRITES=false` gesperrt.
+
 ## Cloud `:8090`
 
 Header: `X-API-Token`
+
+Der Cloud-Token muss mindestens 32 Zeichen lang sein; Platzhalter werden abgewiesen.
 
 - `GET /api/health`
 - `POST /api/v1/telemetry`

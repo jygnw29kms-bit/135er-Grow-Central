@@ -11,7 +11,10 @@ EN:
 import asyncio
 from datetime import datetime, timezone
 import json
+import logging
 import os
+import re
+from urllib.parse import urlparse
 
 import httpx
 
@@ -19,9 +22,26 @@ CLOUD_ENABLED = os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true"
 CLOUD_URL = os.getenv("GC_CLOUD_URL", "").rstrip("/")
 TOKEN = os.getenv("GC_CLOUD_TOKEN", "")
 SITE = os.getenv("GC_SITE_ID", "garage")
-SYNC = int(os.getenv("GC_SYNC_SECONDS", "30"))
+SYNC = min(max(int(os.getenv("GC_SYNC_SECONDS", "30")), 10), 3600)
 REMOTE = os.getenv("GC_REMOTE_COMMANDS", "false").lower() == "true"
 LOCAL_API = os.getenv("GC_LOCAL_API", "http://127.0.0.1:8080").rstrip("/")
+LOCAL_TOKEN = os.getenv("GC_LOCAL_API_TOKEN", "").strip()
+logger = logging.getLogger(__name__)
+
+
+def validate_configuration() -> None:
+    cloud = urlparse(CLOUD_URL)
+    local = urlparse(LOCAL_API)
+    if cloud.scheme != "https" or not cloud.netloc or cloud.path not in {"", "/"}:
+        raise RuntimeError("GC_CLOUD_URL must be a plain HTTPS origin")
+    if local.scheme != "http" or local.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        raise RuntimeError("GC_LOCAL_API must use loopback HTTP")
+    if len(TOKEN) < 32 or TOKEN.startswith("CHANGE_ME"):
+        raise RuntimeError("GC_CLOUD_TOKEN must contain at least 32 non-placeholder characters")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", SITE):
+        raise RuntimeError("GC_SITE_ID contains unsupported characters")
+    if REMOTE and not LOCAL_TOKEN:
+        raise RuntimeError("GC_LOCAL_API_TOKEN is required when remote commands are enabled")
 
 
 async def local_status(client: httpx.AsyncClient) -> dict:
@@ -31,10 +51,10 @@ async def local_status(client: httpx.AsyncClient) -> dict:
         response = await client.get(f"{LOCAL_API}/api/status", timeout=5)
         if response.is_success:
             local = response.json()
-    except Exception:
+    except Exception as exc:
         # DE: Cloud-Probleme dürfen den lokalen Betrieb nie stoppen.
         # EN: Cloud issues must never stop local operation.
-        pass
+        logger.warning("Local status unavailable: %s", type(exc).__name__)
 
     return {
         "site_id": SITE,
@@ -66,6 +86,7 @@ async def apply_command(client: httpx.AsyncClient, command: dict) -> tuple[bool,
         response = await client.post(
             f"{LOCAL_API}/api/speed",
             json={"percent": value},
+            headers={"X-API-Token": LOCAL_TOKEN},
             timeout=8,
         )
         return response.is_success, response.text[:500]
@@ -79,18 +100,21 @@ async def main():
         print("Grow Central Cloud Link disabled / Cloud-Link deaktiviert")
         return
 
+    validate_configuration()
+
     headers = {"X-API-Token": TOKEN}
 
     async with httpx.AsyncClient() as client:
         while True:
             try:
                 payload = await local_status(client)
-                await client.post(
+                telemetry_response = await client.post(
                     f"{CLOUD_URL}/api/v1/telemetry",
                     json=payload,
                     headers=headers,
                     timeout=10,
                 )
+                telemetry_response.raise_for_status()
 
                 if REMOTE:
                     response = await client.get(

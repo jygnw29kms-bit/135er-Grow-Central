@@ -71,13 +71,13 @@ else
   fi
 fi
 
-if ! id grow-central >/dev/null 2>&1; then
-  useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin grow-central
+if ! id growcentral >/dev/null 2>&1; then
+  useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral
 fi
 
-install -d -o root -g grow-central -m 0750 /opt/135er-grow-central
-install -d -o root -g grow-central -m 0750 /etc/135er-grow-central
-install -d -o grow-central -g grow-central -m 0750 /var/lib/135er-grow-central
+install -d -o root -g growcentral -m 0750 /opt/135er-grow-central
+install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
+install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
 
 # DE: unattended-upgrades aktivieren. EN: enable unattended upgrades.
 dpkg-reconfigure -f noninteractive unattended-upgrades || true
@@ -95,12 +95,20 @@ if [[ "$MODE" == "cloud" && -n "$DOMAIN" && -n "$EMAIL" ]]; then
 server {
     listen 80;
     server_name ${DOMAIN};
+    server_tokens off;
+    client_max_body_size 64k;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
     location / {
         proxy_pass http://127.0.0.1:8090;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
     }
 }
 EOF
