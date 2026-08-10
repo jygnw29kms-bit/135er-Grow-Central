@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 class DeviceConfig(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{1,63}$")
     name: str = Field(min_length=1, max_length=120)
-    adapter: Literal["shelly", "home_assistant"]
+    adapter: Literal["shelly", "home_assistant", "fritz", "tapo", "matter"]
     native_id: str = Field(min_length=1, max_length=160)
     capability: Literal["switch"] = "switch"
     approved: bool = False
