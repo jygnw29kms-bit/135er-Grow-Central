@@ -71,14 +71,13 @@ Ausgaben:
 135er-Grow-Central_RPi3B_Test.img.xz
 135er-Grow-Central_RPi3B_Test.img.xz.sha256
 135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
-135er_Grow_Central_RPi3B_Test-QEMU-Windows-Kit.zip
 ```
 
 Das fertige Image wird als GitHub Actions Artefakt und als GitHub Prerelease vorgesehen. Große Binärimages werden bewusst nicht direkt in die normale Git-Historie eingecheckt.
 
 ## Test ohne Raspberry Pi unter Windows
 
-Der Build erzeugt zusätzlich ein QEMU-Windows-Kit und prüft das ARM64-Image bereits automatisiert bis zum Mehrbenutzermodus. Für den lokalen Test werden das Image und das QEMU-Kit aus demselben Release heruntergeladen. Nach dem Entpacken liegen `.img.xz`, Kernel, Initramfs und Startskripte gemeinsam in einem Ordner. `start-qemu-windows.cmd` entpackt das Image und startet QEMU.
+Für QEMU wird bewusst ein getrenntes Debian-13-ARM64-Image gebaut. Der Raspberry-Pi-Kernel bleibt auf reale Pi-Hardware optimiert, während das virtuelle Image einen VirtIO-fähigen Kernel für Festplatte und Netzwerk verwendet. Der QEMU-Workflow startet das fertige System und prüft `/api/health`, bevor `135er_Grow_Central_QEMU_ARM64-Windows.zip` veröffentlicht wird. Nach dem Entpacken startet `start-qemu-arm64-windows.cmd` die virtuelle Maschine.
 
 ```text
 Weboberfläche: http://localhost:8080

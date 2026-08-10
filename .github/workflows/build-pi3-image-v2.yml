@@ -7,7 +7,6 @@ on:
     paths:
       - '.github/workflows/build-pi3-image-v2.yml'
       - 'image-builder/brand/**'
-      - 'image-builder/qemu/**'
 
 permissions:
   contents: write
@@ -27,7 +26,7 @@ jobs:
       - name: Install image build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-user-static qemu-system-arm binfmt-support xz-utils zip rsync dosfstools e2fsprogs util-linux cloud-guest-utils
+          sudo apt-get install -y qemu-user-static binfmt-support xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils
 
       - name: Download and verify Raspberry Pi OS Lite 64-bit
         run: |
@@ -197,24 +196,7 @@ jobs:
           EOF
           plymouth-set-default-theme 135er-grow-central || true
 
-          # QEMU's virt machine exposes disk and network devices through VirtIO.
-          # Force these modules into the early boot image so /dev/vda2 is
-          # available before the real root filesystem is mounted.
-          cat >>/etc/initramfs-tools/modules <<'EOF'
-          virtio
-          virtio_ring
-          virtio_mmio
-          virtio_pci
-          virtio_blk
-          virtio_net
-          EOF
-          for module in virtio_mmio virtio_blk virtio_net; do
-            find /lib/modules -type f -name "${module}.ko*" -print -quit | grep -q . || {
-              echo "Required QEMU module is missing: ${module}" >&2
-              exit 1
-            }
-          done
-          update-initramfs -u -k all
+          update-initramfs -u || true
           if [ -f /boot/firmware/cmdline.txt ] && ! grep -qw splash /boot/firmware/cmdline.txt; then
             sed -i '1 s/$/ quiet splash plymouth.ignore-serial-consoles/' /boot/firmware/cmdline.txt
           fi
@@ -250,54 +232,6 @@ jobs:
           cleanup
           trap - EXIT
 
-      - name: Prepare and smoke-test QEMU boot kit
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p qemu-kit
-          LOOP=$(sudo losetup --find --show --partscan work.img)
-          cleanup() {
-            set +e
-            sudo umount /mnt/grow-central-boot 2>/dev/null
-            sudo umount /mnt/grow-central-qemu-root 2>/dev/null
-            sudo losetup -d "$LOOP" 2>/dev/null
-          }
-          trap cleanup EXIT
-          sudo mkdir -p /mnt/grow-central-boot
-          sudo mkdir -p /mnt/grow-central-qemu-root
-          sudo mount -o ro "${LOOP}p1" /mnt/grow-central-boot
-          sudo mount -o ro "${LOOP}p2" /mnt/grow-central-qemu-root
-          sudo cp /mnt/grow-central-boot/kernel8.img qemu-kit/kernel8.img
-          INITRAMFS=$(find /mnt/grow-central-boot /mnt/grow-central-qemu-root/boot -maxdepth 1 -type f \( -name 'initramfs8*' -o -name 'initrd.img*' \) | sort | tail -n 1)
-          test -n "$INITRAMFS"
-          sudo cp "$INITRAMFS" qemu-kit/initramfs8
-          sudo chown -R "$USER:$USER" qemu-kit
-          cleanup
-          trap - EXIT
-
-          cp image-builder/qemu/start-qemu-windows.ps1 qemu-kit/
-          cp image-builder/qemu/start-qemu-windows.cmd qemu-kit/
-          cp image-builder/qemu/README-DE.txt qemu-kit/
-
-          set +e
-          timeout 240 qemu-system-aarch64 \
-            -M virt -cpu cortex-a72 -smp 4 -m 1536 \
-            -nographic -no-reboot \
-            -kernel qemu-kit/kernel8.img \
-            -initrd qemu-kit/initramfs8 \
-            -append 'root=/dev/vda2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 fsck.repair=yes net.ifnames=0' \
-            -drive file=work.img,format=raw,if=none,id=system \
-            -device virtio-blk-device,drive=system \
-            -netdev user,id=network,hostfwd=tcp::8080-:8080,hostfwd=tcp::2222-:22 \
-            -device virtio-net-device,netdev=network >qemu-boot.log 2>&1
-          QEMU_EXIT=$?
-          set -e
-          cat qemu-boot.log
-          grep -Eq 'Reached target .*Multi-User System|grow-central-test login:' qemu-boot.log || {
-            echo "QEMU smoke test did not reach multi-user mode (exit $QEMU_EXIT)." >&2
-            exit 1
-          }
-
       - name: Compress and checksum image
         run: |
           mv work.img "${IMAGE_NAME}.img"
@@ -313,8 +247,6 @@ jobs:
           Remote cloud commands: disabled
           Firewall: initialized automatically on first boot
           EOF
-          cp "${IMAGE_NAME}.img.xz.sha256" qemu-kit/
-          zip -9 -j "${IMAGE_NAME}-QEMU-Windows-Kit.zip" qemu-kit/*
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -324,7 +256,6 @@ jobs:
             135er_Grow_Central_RPi3B_Test.img.xz
             135er_Grow_Central_RPi3B_Test.img.xz.sha256
             135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt
-            135er_Grow_Central_RPi3B_Test-QEMU-Windows-Kit.zip
           compression-level: 0
           retention-days: 14
 
@@ -333,4 +264,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt 135er_Grow_Central_RPi3B_Test-QEMU-Windows-Kit.zip --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image with Windows QEMU test kit. Temporary credentials: test / test. QEMU forwards localhost:8080 to the web UI and localhost:2222 to SSH. Branded boot splash and console banner included. DF100M writes and remote cloud commands disabled by default." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. Branded boot splash and console banner included. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
