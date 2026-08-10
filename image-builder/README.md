@@ -39,7 +39,7 @@ Change all test credentials after the initial hardware test.
 
 ## Automatic build
 
-`.github/workflows/build-pi3-image-v2.yml` downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er-Grow Central and dependencies, enables SSH/Bluetooth/Grow Central services, installs the current full-screen Plymouth splash and console identity, compresses the resulting image and publishes it as both a GitHub Actions artifact and a prerelease asset.
+`.github/workflows/build-pi3-image.yml` runs natively on a GitHub-hosted ARM64 runner. It downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er-Grow Central and dependencies, enables SSH/Bluetooth/Grow Central services, installs the current full-screen Plymouth splash and console identity, compresses the resulting image and publishes it as both a GitHub Actions artifact and a prerelease asset.
 
 ## Current image branding
 
@@ -53,4 +53,3 @@ The generated file is named:
 `135er-Grow-Central_RPi3B_Test.img.xz`
 
 Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. Ethernet is recommended for the first test because no WLAN SSID/password is embedded in the public test image.
-

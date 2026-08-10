@@ -5,7 +5,7 @@
 The only active Raspberry Pi image workflow is:
 
 ```text
-.github/workflows/build-pi3-image-v2.yml
+.github/workflows/build-pi3-image.yml
 ```
 
 The obsolete v1 workflow was removed in v0.6 to prevent expensive image builds from running automatically after unrelated application changes.

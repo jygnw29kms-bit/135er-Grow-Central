@@ -1,11 +1,11 @@
-name: Build 135er-Grow Central Raspberry Pi 3B Test Image v2
+name: Build 135er-Grow Central Raspberry Pi 3B Test Image
 
 on:
   workflow_dispatch:
   push:
     branches: [ master ]
     paths:
-      - '.github/workflows/build-pi3-image-v2.yml'
+      - '.github/workflows/build-pi3-image.yml'
       - 'app/**'
       - 'shared/**'
       - 'web/**'
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 110
     env:
       BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
@@ -30,7 +30,7 @@ jobs:
       - name: Install image build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-user-static binfmt-support xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils
+          sudo apt-get install -y xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils
 
       - name: Download and verify Raspberry Pi OS Lite 64-bit
         run: |
@@ -74,7 +74,6 @@ jobs:
             --exclude='*.img' --exclude='*.img.xz' \
             ./ "$ROOT/opt/135er-grow-central/"
 
-          sudo cp /usr/bin/qemu-aarch64-static "$ROOT/usr/bin/"
           sudo mount --bind /dev "$ROOT/dev"
           sudo mount --bind /dev/pts "$ROOT/dev/pts"
           sudo mount -t proc proc "$ROOT/proc"
@@ -317,14 +316,13 @@ jobs:
           rm -rf /var/lib/apt/lists/*
           CHROOT
 
-          sudo rm -f "$ROOT/usr/bin/qemu-aarch64-static"
           sync
           cleanup
           trap - EXIT
 
       - name: Compress and checksum image
         run: |
-          VERSIONED_NAME="${IMAGE_NAME}_v2-${GITHUB_RUN_NUMBER}"
+          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
@@ -344,9 +342,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_v2-*.img.xz
-            135er_Grow_Central_RPi3B_Test_v2-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_v2-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*.img.xz
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -354,5 +352,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_v2-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image v2-${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Unified v0.9.2 device lab for Bluetooth, LAN and ephemeral TP-Link/Tapo account-assisted discovery. Credentials are never embedded in the image or repository. Temporary appliance credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease
+          TAG="pi3-test-alpha-0.7.1-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.1 build ${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Unified v0.9.2 device lab for Bluetooth, LAN and ephemeral TP-Link/Tapo account-assisted discovery. Credentials are never embedded in the image or repository. Temporary appliance credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease

@@ -1,7 +1,9 @@
 # Project Status – 135er-Grow Central
 
-**Stand:** 2026-08-09  
-**Architecture:** v0.7 Power Telemetry Integration  
+**Stand:** 2026-08-10
+
+**Architecture:** alpha-0.7.1 Power Telemetry Integration
+
 **Phase:** platform consolidation + Raspberry Pi / DF100M hardware validation
 
 A documented capability is not considered hardware-validated until it has been tested against the target device. Software integration can nevertheless be complete and CI-tested independently.

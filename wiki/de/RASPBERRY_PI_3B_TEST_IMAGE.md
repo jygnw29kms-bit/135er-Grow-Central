@@ -52,7 +52,7 @@ Das Image wird als Actions-Artefakt bzw. Prerelease veröffentlicht und nicht al
 
 ## Build-Korrektur
 
-Der erste Builderlauf lief wegen eines versehentlich mitkopierten Basisimages in ein volles Root-Dateisystem. Der korrigierte v2-Builder schließt Build-Dateien aus und vergrößert Image, Root-Partition und ext4-Dateisystem vor der Installation.
+Der aktuelle Builder schließt Build-Dateien aus und vergrößert Image, Root-Partition und ext4-Dateisystem vor der Installation. Der Build läuft nativ auf ARM64.
 
 ## Testablauf
 

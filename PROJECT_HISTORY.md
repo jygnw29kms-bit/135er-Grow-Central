@@ -75,7 +75,7 @@ Die frühe Weboberfläche wurde in Richtung eines futuristischen, dunklen HUDs w
 Die aktuelle grafische Referenz liegt unter:
 
 ```text
-docs/assets/gui/local-desktop-v0.8.svg
+docs/assets/gui/local-desktop-v0.9.png
 ```
 
 Das Design ist responsiv vorgesehen für:
