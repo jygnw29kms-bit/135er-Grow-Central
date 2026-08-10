@@ -7,6 +7,10 @@ on:
         description: Existing release tag to package
         required: true
         default: pi3-test-v2-7
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/package-existing-release-for-qemu.yml'
 
 permissions:
   contents: write
@@ -27,7 +31,7 @@ jobs:
       - name: Download existing release image
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag }}
+          TAG: ${{ inputs.release_tag || 'pi3-test-v2-7' }}
         run: |
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
@@ -66,21 +70,16 @@ jobs:
           setlocal EnableExtensions
           title 135er Grow Central - QEMU Raspberry Pi 3B
           cd /d "%~dp0"
-
           set "QEMU=C:\Program Files\qemu\qemu-system-aarch64.exe"
-          set "QEMUIMG=C:\Program Files\qemu\qemu-img.exe"
           set "IMAGE=135er_Grow_Central_RPi3B_Test.img"
           set "KERNEL=kernel8.img"
           set "DTB=bcm2710-rpi-3-b.dtb"
-
           echo ============================================================
           echo     135er Grow Central - QEMU Raspberry Pi 3B
           echo ============================================================
           echo.
-
           if not exist "%QEMU%" (
-            echo [FEHLER] QEMU wurde nicht gefunden:
-            echo %QEMU%
+            echo [FEHLER] QEMU wurde nicht gefunden: %QEMU%
             pause
             exit /b 1
           )
@@ -99,14 +98,12 @@ jobs:
             pause
             exit /b 1
           )
-
           echo [OK] Alle Dateien vorhanden.
-          echo Web-GUI nach dem Boot: http://127.0.0.1:8080
+          echo Web-GUI: http://127.0.0.1:8080
           echo SSH: ssh -p 2222 test@127.0.0.1
           echo Benutzer: test  Passwort: test
           echo QEMU beenden: Strg+A, danach X
           echo.
-
           "%QEMU%" ^
             -M raspi3b ^
             -kernel "%KERNEL%" ^
@@ -117,7 +114,6 @@ jobs:
             -display none ^
             -netdev user,id=net0,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:2222-:22 ^
             -device usb-net,netdev=net0
-
           set "RC=%ERRORLEVEL%"
           echo.
           echo QEMU wurde beendet. Fehlercode: %RC%
@@ -129,14 +125,10 @@ jobs:
           135er Grow Central - Windows QEMU Paket
           ========================================
 
-          Voraussetzung:
-          QEMU fuer Windows ist installiert unter:
-          C:\Program Files\qemu\
-
           Start:
-          1. Dieses ZIP komplett in einen Ordner entpacken.
+          1. ZIP komplett in einen Ordner entpacken.
           2. start-135er-qemu.cmd doppelklicken oder in CMD ausfuehren.
-          3. Nach dem Linux-Boot die Web-GUI unter http://127.0.0.1:8080 oeffnen.
+          3. Nach dem Linux-Boot http://127.0.0.1:8080 aufrufen.
 
           SSH:
           ssh -p 2222 test@127.0.0.1
@@ -149,11 +141,6 @@ jobs:
           - bcm2710-rpi-3-b.dtb
           - start-135er-qemu.cmd
           - README-QEMU-WINDOWS.txt
-
-          Hinweis:
-          QEMU emuliert nicht die gesamte reale Raspberry-Pi-Hardware. Bluetooth,
-          GPIO und ein realer DF100M koennen daher nicht vollstaendig in der VM
-          getestet werden.
           TXT
 
       - name: Build single downloadable QEMU package
@@ -179,7 +166,7 @@ jobs:
       - name: Attach package to existing release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag }}
+          TAG: ${{ inputs.release_tag || 'pi3-test-v2-7' }}
         run: |
           gh release upload "$TAG" \
             "$PACKAGE_NAME.zip" \
