@@ -14,8 +14,10 @@ from .adapters.factory import build_switch_adapter
 from .models import PublicDevice, SwitchCommand
 from .policy import PolicyDenied, assert_switch_write_allowed, smart_home_enabled
 from .registry import DeviceRegistry
+from .onboarding import router as onboarding_router
 
 router = APIRouter(prefix="/api/v1/smarthome", tags=["smart-home"])
+router.include_router(onboarding_router)
 
 
 def _registry() -> DeviceRegistry:
