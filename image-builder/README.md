@@ -36,7 +36,7 @@ Change all test credentials after the initial hardware test.
 
 ## Automatic build
 
-`.github/workflows/build-pi3-image-v2.yml` downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er-Grow Central and dependencies, enables SSH/Bluetooth/Grow Central services, installs the current full-screen Plymouth splash and console identity, compresses the resulting image and publishes it as both a GitHub Actions artifact and a prerelease asset.
+`.github/workflows/build-pi3-image-v2.yml` downloads the official Raspberry Pi OS Lite image, verifies its SHA256 checksum, installs 135er-Grow Central and dependencies, enables SSH/Bluetooth/Grow Central services, installs the current full-screen Plymouth splash and console identity, and performs an automated ARM64 QEMU boot smoke test. The image and a Windows QEMU boot kit are published as GitHub Actions artifacts and prerelease assets.
 
 ## Current image branding
 
@@ -50,3 +50,13 @@ The generated file is named:
 `135er-Grow-Central_RPi3B_Test.img.xz`
 
 Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. Ethernet is recommended for the first test because no WLAN SSID/password is embedded in the public test image.
+
+## QEMU test on Windows
+
+Download both the image and `135er_Grow_Central_RPi3B_Test-QEMU-Windows-Kit.zip` from the same release. Extract the kit, place the `.img.xz` beside its scripts and run `start-qemu-windows.cmd`. The script extracts the image and starts the included kernel/initramfs with QEMU ARM64.
+
+- Web UI: `http://localhost:8080`
+- SSH: `ssh -p 2222 test@localhost`
+- Login: `test / test`
+
+This validates ARM64 boot, systemd, networking, SSH and the web application without a Raspberry Pi. Bluetooth, GPIO, Raspberry Pi firmware and physical DF100M communication still require real hardware.

@@ -71,6 +71,8 @@ Der reproduzierbare Image-Workflow installiert Anwendung und Abhängigkeiten, ri
 - UFW: nur TCP 22 und 8080
 - BLE- und Remote-Writes standardmäßig deaktiviert
 
+Das Release enthält zusätzlich ein Windows-QEMU-Kit. Damit lassen sich ARM64-Boot, Dienste, SSH und Weboberfläche ohne Raspberry Pi über `localhost:8080` prüfen. Bluetooth, GPIO und DF100M-Funk bleiben Hardwaretests.
+
 Details: [Raspberry-Pi-Image](docs/de/RASPBERRY_PI_3B_TEST_IMAGE.md) · [Image Builder](image-builder/README.md)
 
 ## Projektstruktur

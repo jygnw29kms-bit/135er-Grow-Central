@@ -71,9 +71,22 @@ Ausgaben:
 135er-Grow-Central_RPi3B_Test.img.xz
 135er-Grow-Central_RPi3B_Test.img.xz.sha256
 135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
+135er_Grow_Central_RPi3B_Test-QEMU-Windows-Kit.zip
 ```
 
 Das fertige Image wird als GitHub Actions Artefakt und als GitHub Prerelease vorgesehen. Große Binärimages werden bewusst nicht direkt in die normale Git-Historie eingecheckt.
+
+## Test ohne Raspberry Pi unter Windows
+
+Der Build erzeugt zusätzlich ein QEMU-Windows-Kit und prüft das ARM64-Image bereits automatisiert bis zum Mehrbenutzermodus. Für den lokalen Test werden das Image und das QEMU-Kit aus demselben Release heruntergeladen. Nach dem Entpacken liegen `.img.xz`, Kernel, Initramfs und Startskripte gemeinsam in einem Ordner. `start-qemu-windows.cmd` entpackt das Image und startet QEMU.
+
+```text
+Weboberfläche: http://localhost:8080
+SSH: ssh -p 2222 test@localhost
+Benutzer / Passwort: test / test
+```
+
+Damit werden ARM64-Boot, Linux, systemd, Netzwerk, SSH und die Grow-Central-Anwendung geprüft. Bluetooth, GPIO, Raspberry-Pi-Firmware und DF100M-Funkkommunikation können ohne echte Hardware nicht verifiziert werden.
 
 ## Bekannter Build-Verlauf
 
