@@ -1,12 +1,14 @@
 $ErrorActionPreference = 'Stop'
 $baseDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
-$qemu = Get-Command qemu-system-aarch64.exe -ErrorAction SilentlyContinue
-if (-not $qemu) {
+$qemuCommand = Get-Command qemu-system-aarch64.exe -ErrorAction SilentlyContinue
+if ($qemuCommand) {
+    $qemuPath = $qemuCommand.Path
+} else {
     $standardPath = 'C:\Program Files\qemu\qemu-system-aarch64.exe'
     if (Test-Path -LiteralPath $standardPath) {
-        $qemu = Get-Item -LiteralPath $standardPath
+        $qemuPath = $standardPath
     } else {
-        throw 'QEMU wurde nicht gefunden. Installiere QEMU für Windows unter C:\Program Files\qemu oder ergänze QEMU im PATH.'
+        throw 'QEMU wurde nicht gefunden. Installiere QEMU fuer Windows unter C:\Program Files\qemu oder ergaenze QEMU im PATH.'
     }
 }
 
@@ -18,11 +20,11 @@ foreach ($requiredFile in @($image, $kernel, $initrd)) {
 }
 
 Write-Host '135er-Grow Central QEMU ARM64 startet.' -ForegroundColor Green
-Write-Host 'Weboberfläche nach dem Boot: http://localhost:8080'
+Write-Host 'Weboberflaeche nach dem Boot: http://localhost:8080'
 Write-Host 'SSH: ssh -p 2222 test@localhost  (Passwort: test)'
 Write-Host 'Beenden: Strg+A, danach X'
 
-& $qemu.Source `
+& $qemuPath `
     -M virt -cpu cortex-a72 -smp 4 -m 2048 `
     -nographic -no-reboot `
     -kernel $kernel -initrd $initrd `
