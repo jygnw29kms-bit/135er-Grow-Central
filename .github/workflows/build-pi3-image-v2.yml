@@ -196,7 +196,25 @@ jobs:
           sprite.SetY(0);
           EOF
           plymouth-set-default-theme 135er-grow-central || true
-          update-initramfs -u || true
+
+          # QEMU's virt machine exposes disk and network devices through VirtIO.
+          # Force these modules into the early boot image so /dev/vda2 is
+          # available before the real root filesystem is mounted.
+          cat >>/etc/initramfs-tools/modules <<'EOF'
+          virtio
+          virtio_ring
+          virtio_mmio
+          virtio_pci
+          virtio_blk
+          virtio_net
+          EOF
+          for module in virtio_mmio virtio_blk virtio_net; do
+            find /lib/modules -type f -name "${module}.ko*" -print -quit | grep -q . || {
+              echo "Required QEMU module is missing: ${module}" >&2
+              exit 1
+            }
+          done
+          update-initramfs -u -k all
           if [ -f /boot/firmware/cmdline.txt ] && ! grep -qw splash /boot/firmware/cmdline.txt; then
             sed -i '1 s/$/ quiet splash plymouth.ignore-serial-consoles/' /boot/firmware/cmdline.txt
           fi
