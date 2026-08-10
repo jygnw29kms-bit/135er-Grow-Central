@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#05090e">
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/app.css?v=0.9.2">
 </head>
 <body>
 <div class="scanline"></div>
@@ -71,7 +71,18 @@
     </section>
 
     <section id="devices" class="view">
-      <article class="panel onboarding-panel"><div class="panel-head"><div><div class="eyebrow">DEVICE ONBOARDING</div><h2>Geräte suchen & verbinden</h2><p class="panel-copy">Lokale Suche nach Shelly, FRITZ!, Tapo und Matter. Gefundene Geräte bleiben bis zur Freigabe schreibgeschützt.</p></div><button class="primary" id="smartScanBtn">LAN SCANNEN</button></div><div class="provider-grid" id="providerGrid"></div><div class="scan-status" id="scanStatus">Bereit für lokale Gerätesuche.</div><div class="candidate-grid" id="candidateGrid"><div class="empty-state">Noch keine LAN-Geräte gesucht.</div></div></article>
+      <article class="panel onboarding-panel">
+        <div class="panel-head"><div><div class="eyebrow">UNIFIED DEVICE LAB · v0.9.2</div><h2>Geräte suchen, anmelden & analysieren</h2><p class="panel-copy">Gemeinsame Diagnose für Bluetooth, lokales Netzwerk und zugangsgestützte Erkennung. Zugangsdaten bleiben nur für den laufenden Test im Arbeitsspeicher.</p></div></div>
+        <div class="discovery-actions"><button class="primary" id="bleScanBtn">BLUETOOTH SCANNEN</button><button class="primary" id="smartScanBtn">NETZWERK SCANNEN</button></div>
+        <div class="provider-grid" id="providerGrid"></div>
+        <form class="account-discovery" id="tapoAccountForm" autocomplete="off">
+          <div><div class="eyebrow">TP-LINK / TAPO LOGIN</div><h3>Zugangsgestützte lokale Suche</h3><p>Die Zugangsdaten werden nur an das lokale Backend dieses Raspberry Pi gesendet, nicht gespeichert und nicht protokolliert.</p></div>
+          <label>Benutzername<input id="tapoUsername" type="email" autocomplete="username" required></label>
+          <label>Passwort<input id="tapoPassword" type="password" autocomplete="current-password" required></label>
+          <button class="secondary" type="submit">TAPO SUCHEN</button>
+        </form>
+        <div class="scan-status" id="scanStatus">Bereit für Bluetooth-, Netzwerk- oder Login-Suche.</div><div class="candidate-grid" id="candidateGrid"><div class="empty-state">Noch keine Geräte gesucht.</div></div>
+      </article>
       <article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Registrierte Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>DF100M</strong><span>Mars Hydro • MZ_MZF002</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>Shelly / FRITZ! / Tapo / Matter</span></div><span id="smartPlugState">WAITING</span></div></div></article>
     </section>
     <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Steckdosenbefehlen.</div></article></section>
@@ -79,6 +90,6 @@
     <section id="system" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Platform</span><strong>Raspberry Pi</strong></div><div><span>Frontend</span><strong>Responsive HUD UI</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>Shelly + FRITZ! + Tapo + Matter</strong></div><div><span>Diagnostics</span><strong>Token protected</strong></div><div><span>Security</span><strong>Token + approval + audit</strong></div></div></article><article class="panel diagnostics-console"><div class="panel-head"><div><div class="eyebrow">DEVELOPMENT DIAGNOSTICS</div><h2>Raspberry-Pi-Dienstprotokolle</h2><p class="panel-copy">Nur freigegebene Dienste, automatisch bereinigt. Zugriff benötigt das lokale API-Token.</p></div><button class="primary" id="loadDiagnosticsBtn">DIAGNOSE LADEN</button></div><pre id="systemDiagnostics">Noch keine Diagnose geladen.</pre></article></section>
   </main>
 </div>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=0.9.2"></script>
 </body>
 </html>
