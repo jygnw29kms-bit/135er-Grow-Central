@@ -83,14 +83,40 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw plymouth plymouth-themes
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
-          if ! id test >/dev/null 2>&1; then useradd -m -s /bin/bash test; fi
-          echo 'test:test' | chpasswd
-          usermod -aG sudo test
-          for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" test || true; done
-          echo 'test ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-grow-central-test
+          # Provision the fixed headless administrator account. Uppercase letters
+          # are intentional and require --badname with Debian's useradd policy.
+          if ! id GrowCentral >/dev/null 2>&1; then useradd --badname -m -s /bin/bash GrowCentral; fi
+          echo 'GrowCentral:test' | chpasswd
+          usermod -aG sudo GrowCentral
+          for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" GrowCentral || true; done
+          echo 'GrowCentral ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/010-grow-central-test
           chmod 0440 /etc/sudoers.d/010-grow-central-test
+
+          # The stock image enables userconfig to rename UID 1000 interactively.
+          # A preconfigured appliance must never start that wizard on first boot.
+          rm -f /etc/ssh/sshd_config.d/rename_user.conf /etc/xdg/autostart/piwiz.desktop
+          systemctl disable userconfig.service || true
+          systemctl mask userconfig.service
+          systemctl enable getty@tty1.service
+
+          # Germany defaults: German UTF-8, Europe/Berlin and German keyboard
+          # without dead keys for both the virtual console and XKB consumers.
+          sed -i 's/^# *de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen de_DE.UTF-8
+          update-locale LANG=de_DE.UTF-8 LANGUAGE=de_DE:de
+          ln -snf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+          echo 'Europe/Berlin' >/etc/timezone
+          dpkg-reconfigure -f noninteractive tzdata
+          cat >/etc/default/keyboard <<'EOF'
+          XKBMODEL="pc105"
+          XKBLAYOUT="de"
+          XKBVARIANT="nodeadkeys"
+          XKBOPTIONS=""
+          BACKSPACE="guess"
+          EOF
+          dpkg-reconfigure -f noninteractive keyboard-configuration
 
           if ! id growcentral >/dev/null 2>&1; then useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral; fi
           getent group bluetooth >/dev/null && usermod -aG bluetooth growcentral || true
@@ -211,10 +237,21 @@ jobs:
           systemctl enable ssh bluetooth grow-central-firstboot-firewall.service 135er-grow-central.service
           systemctl enable unattended-upgrades.service || true
 
+          # Fail the image build if headless provisioning regresses.
+          id GrowCentral
+          test "$(getent passwd 1000 | cut -d: -f1)" = GrowCentral
+          test "$(systemctl is-enabled userconfig.service)" = masked
+          test "$(systemctl is-enabled ssh.service)" = enabled
+          test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
+          grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
+          grep -qx 'Europe/Berlin' /etc/timezone
+          grep -qx 'XKBLAYOUT="de"' /etc/default/keyboard
+          grep -qx 'XKBVARIANT="nodeadkeys"' /etc/default/keyboard
+
           cat >/etc/motd <<'EOF'
           135er-Grow Central - Raspberry Pi 3B TEST IMAGE
           Hostname: grow-central-test
-          SSH: test / test
+          SSH: GrowCentral / test
           Web UI: http://<PI-IP>:8080
           Temporary application/API token: test
           WARNING: change all test credentials after testing.
@@ -239,7 +276,7 @@ jobs:
           sha256sum "${IMAGE_NAME}.img.xz" > "${IMAGE_NAME}.img.xz.sha256"
           cat > "${IMAGE_NAME}-CREDENTIALS.txt" <<'EOF'
           Hostname: grow-central-test
-          SSH username: test
+          SSH username: GrowCentral
           SSH password: test
           Web UI: http://<PI-IP>:8080
           Temporary API/application token: test
@@ -264,4 +301,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-v2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 image. Temporary credentials: test / test. Branded boot splash and console banner included. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test.img.xz 135er_Grow_Central_RPi3B_Test.img.xz.sha256 135er_Grow_Central_RPi3B_Test-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image" --notes "Preinstalled Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Temporary credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured; no interactive first-boot user setup is required. Branded boot splash and console banner included. Firewall initializes automatically on first Raspberry Pi boot. DF100M writes and remote cloud commands disabled by default." --prerelease
