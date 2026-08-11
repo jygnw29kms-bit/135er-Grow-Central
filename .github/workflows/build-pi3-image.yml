@@ -178,6 +178,7 @@ jobs:
           RestartSec=3
           NoNewPrivileges=true
           PrivateTmp=true
+          SupplementaryGroups=systemd-journal
           ProtectSystem=strict
           ProtectHome=true
           ReadWritePaths=/opt/135er-grow-central/data /var/lib/135er-grow-central
@@ -194,6 +195,8 @@ jobs:
           usermod --shell /bin/bash GrowCentral
           passwd --unlock GrowCentral || true
           chage --expiredate -1 --inactive -1 GrowCentral
+          rfkill unblock bluetooth || true
+          bluetoothctl power on || true
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
           ssh-keygen -A
@@ -206,7 +209,8 @@ jobs:
           cat >/etc/systemd/system/grow-central-headless-firstboot.service <<'EOF'
           [Unit]
           Description=Prepare Grow Central console and SSH access
-          After=local-fs.target
+          After=local-fs.target bluetooth.service
+          Wants=bluetooth.service
           Before=ssh.service getty@tty1.service 135er-grow-central.service
           ConditionPathExists=!/var/lib/135er-grow-central/.headless-firstboot-ready
           [Service]
@@ -231,6 +235,11 @@ jobs:
           # only from clients attached to the temporary setup WLAN.
           ufw allow in on wlan0 to any port 80 proto tcp
           ufw allow in on wlan0 to any port 443 proto tcp
+          # NetworkManager shared mode provides DHCP and DNS. Keep these
+          # services isolated to the temporary provisioning interface.
+          ufw allow in on wlan0 to any port 67 proto udp
+          ufw allow in on wlan0 to any port 53 proto udp
+          ufw allow in on wlan0 to any port 53 proto tcp
           ufw --force enable
           install -o growcentral -g growcentral -m 0640 /dev/null "$MARKER"
           EOF
@@ -334,6 +343,8 @@ jobs:
           rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
           grep -q '^ConditionPathExists=/var/lib/135er-grow-central/.provisioned$' /etc/systemd/system/135er-grow-central.service
+          grep -q '^SupplementaryGroups=systemd-journal$' /etc/systemd/system/135er-grow-central.service
+          grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
           /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
@@ -369,7 +380,7 @@ jobs:
 
       - name: Compress and checksum image
         run: |
-          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}"
+          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
@@ -394,9 +405,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*.img.xz
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*.img.xz
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -404,5 +415,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-alpha-0.7.2-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.2 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 headless image with repaired native PAM login, selectable WLAN scan, hostname synchronization, multi-interface Tapo discovery and branded boot status. On first boot, connect to 135er-GrowCentral-Setup-XXXX and open https://10.42.0.1." --prerelease
+          TAG="pi3-test-alpha-0.7.3-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.3 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 image with repaired setup DHCP/DNS firewall rules, explicit 10.42.0.10-250 leases, redesigned Grow Central provisioning HUD, durable diagnostics journal access, first-boot Bluetooth activation and clearer BLE device classification." --prerelease

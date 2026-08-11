@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.7.3 – Provisioning network and live-test fixes (2026-08-11)
+
+- allow DHCP and DNS only on the temporary `wlan0` setup interface
+- verify the `10.42.0.10–250` DHCP service before exposing the setup portal
+- redesign first-boot provisioning in the Grow Central show-and-test HUD style
+- grant the diagnostics service durable read access to the system journal
+- unblock and power Bluetooth during the first boot sequence
+- distinguish generic BLE devices from DF100M candidates and improve errors
+- report completed one-shot initialization services as healthy
+
 ## alpha-0.7.2 – First-boot and device onboarding reliability (2026-08-11)
 
 - use Debian's native `python3-pam` binding for first-boot portal authentication

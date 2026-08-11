@@ -1,6 +1,6 @@
 {
   "name": "135er-Grow Central",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "status": "early-test",
   "platform": "Raspberry Pi + optional Linux VPS",
   "primary_device": "Mars Hydro DF100M / MZ_MZF002",

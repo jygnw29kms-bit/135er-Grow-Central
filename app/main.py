@@ -1,4 +1,4 @@
-"""135er-Grow Central Local API alpha-0.7.2.
+"""135er-Grow Central Local API alpha-0.7.3.
 
 DE: Lokaler Raspberry-Pi-Dienst für DF100M BLE-Forschung, sichere
 Smart-Home-Adapter und die lokale Weboberfläche.
@@ -33,7 +33,7 @@ ALLOW_RAW_WRITES = os.getenv("DF100M_ALLOW_RAW_WRITES", "false").lower() == "tru
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
 
-app = FastAPI(title="135er-Grow Central Local", version="0.7.2")
+app = FastAPI(title="135er-Grow Central Local", version="0.7.3")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 app.include_router(smarthome_router)
 app.include_router(diagnostics_router)
@@ -90,7 +90,7 @@ async def index():
 
 @app.get("/api/health")
 async def health():
-    return {"ok": True, "service": "135er-Grow Central Local", "version": "0.7.2"}
+    return {"ok": True, "service": "135er-Grow Central Local", "version": "0.7.3"}
 
 
 @app.get("/api/config")
@@ -113,6 +113,13 @@ async def status():
     return _status_payload()
 
 
+def _classify_ble_name(name: str) -> str:
+    lowered = name.lower()
+    if NAME_HINT.lower() in lowered or "mzf" in lowered or "mars" in lowered or "df100m" in lowered:
+        return "df100m_candidate"
+    return "generic_ble"
+
+
 @app.get("/api/discover", dependencies=[Depends(require_write_auth)])
 async def discover(timeout: float = 7.0):
     timeout = min(max(timeout, 1.0), 15.0)
@@ -121,11 +128,13 @@ async def discover(timeout: float = 7.0):
     for address, pair in found.items():
         dev, adv = pair
         name = dev.name or adv.local_name or ""
+        classification = _classify_ble_name(name)
         rows.append({
             "name": name,
             "address": address,
             "rssi": adv.rssi,
-            "preferred": NAME_HINT.lower() in name.lower() or "mzf" in name.lower() or "mars" in name.lower(),
+            "classification": classification,
+            "preferred": classification == "df100m_candidate",
         })
     rows.sort(key=lambda item: (not item["preferred"], -(item["rssi"] or -999)))
     return {"devices": rows}
@@ -141,7 +150,7 @@ async def _connect(address: str):
         current_address = address
         return {"ok": True, "connected": client.is_connected, "address": current_address}
     except Exception as exc:
-        raise HTTPException(502, "BLE connection failed") from exc
+        raise HTTPException(502, f"BLE-Verbindung fehlgeschlagen ({type(exc).__name__}). Gerät einschalten, näher heranbringen und eine bestehende App-Verbindung trennen.") from exc
 
 
 @app.post("/api/connect", dependencies=[Depends(require_write_auth)])
