@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.2 – First-boot and device onboarding reliability (2026-08-11)
+
+- use Debian's native `python3-pam` binding for first-boot portal authentication
+- present scanned WLANs as a selectable, refreshable list with signal and security details
+- keep `/etc/hosts` synchronized with the configured hostname
+- discover Tapo devices across every active IPv4 interface without storing credentials
+- show boot status messages with the Grow Central brand mark until login
+
 ## Unreleased
 
 - fixed first-boot access-point DHCP by installing the explicit NetworkManager shared-mode DHCP dependency

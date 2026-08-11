@@ -267,7 +267,7 @@ jobs:
             /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service \
             /etc/systemd/system/grow-central-firstboot-portal.service
 
-          # Branded boot splash shared with the current repository identity.
+          # Boot console: live Plymouth/systemd status with a persistent brand mark.
           THEME=/usr/share/plymouth/themes/135er-grow-central
           mkdir -p "$THEME" /etc/135er-grow-central
           cp /opt/135er-grow-central/image-builder/brand/boot-splash-v0.9.png "$THEME/logo.png"
@@ -275,18 +275,30 @@ jobs:
           cat >"$THEME/135er-grow-central.plymouth" <<'EOF'
           [Plymouth Theme]
           Name=135er-Grow Central
-          Description=135er-Grow Central boot splash
+          Description=135er-Grow Central boot console with status and logo
           ModuleName=script
           [script]
           ImageDir=/usr/share/plymouth/themes/135er-grow-central
           ScriptFile=/usr/share/plymouth/themes/135er-grow-central/135er-grow-central.script
           EOF
           cat >"$THEME/135er-grow-central.script" <<'EOF'
+          Window.SetBackgroundTopColor(0.01, 0.025, 0.03);
+          Window.SetBackgroundBottomColor(0.005, 0.012, 0.015);
           logo = Image("logo.png");
-          scaled = logo.Scale(Window.GetWidth(), Window.GetHeight());
+          logo_width = Window.GetWidth() * 0.34;
+          scaled = logo.Scale(logo_width, logo_width * 0.5628);
           sprite = Sprite(scaled);
-          sprite.SetX(0);
-          sprite.SetY(0);
+          sprite.SetX(Window.GetWidth() - scaled.GetWidth() - 24);
+          sprite.SetY(18);
+          status_sprite = Sprite();
+          fun show_status(text) {
+            status_image = Image.Text(text, 0.65, 0.78, 0.80);
+            status_sprite.SetImage(status_image);
+            status_sprite.SetX(32);
+            status_sprite.SetY(Window.GetHeight() - status_image.GetHeight() - 30);
+          }
+          Plymouth.SetUpdateStatusFunction(show_status);
+          Plymouth.SetMessageFunction(show_status);
           EOF
           plymouth-set-default-theme 135er-grow-central || true
 
@@ -323,6 +335,7 @@ jobs:
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
           grep -q '^ConditionPathExists=/var/lib/135er-grow-central/.provisioned$' /etc/systemd/system/135er-grow-central.service
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
+          /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
           grep -qx 'Europe/Berlin' /etc/timezone
@@ -356,7 +369,7 @@ jobs:
 
       - name: Compress and checksum image
         run: |
-          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}"
+          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
@@ -381,9 +394,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*.img.xz
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*.img.xz
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -391,5 +404,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-alpha-0.7.1-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.1 build ${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. On first boot, connect to 135er-GrowCentral-Setup-XXXX with the temporary GrowCentral credentials and open https://10.42.0.1. The portal requires a new device password before the main service starts. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease
+          TAG="pi3-test-alpha-0.7.2-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.2-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.2 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 headless image with repaired native PAM login, selectable WLAN scan, hostname synchronization, multi-interface Tapo discovery and branded boot status. On first boot, connect to 135er-GrowCentral-Setup-XXXX and open https://10.42.0.1." --prerelease

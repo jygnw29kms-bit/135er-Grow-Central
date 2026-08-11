@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import json
 import socket
+import subprocess
 import time
 from collections.abc import Iterable
 from typing import Any, Literal
@@ -74,6 +76,25 @@ def _deduplicate(rows: Iterable[Candidate]) -> list[Candidate]:
     return sorted(result.values(), key=lambda item: (item.provider, item.host))
 
 
+def _ipv4_discovery_targets() -> list[tuple[str | None, str]]:
+    """Return every usable interface/broadcast pair on a multi-homed Pi."""
+    try:
+        result = subprocess.run(["ip", "-j", "-4", "address", "show", "up"], capture_output=True, text=True, timeout=3, check=False)
+        rows = json.loads(result.stdout) if result.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        rows = []
+    targets: list[tuple[str | None, str]] = []
+    for row in rows:
+        ifname = row.get("ifname")
+        if ifname == "lo":
+            continue
+        for address in row.get("addr_info", []):
+            broadcast = address.get("broadcast")
+            if address.get("family") == "inet" and broadcast:
+                targets.append((ifname, broadcast))
+    return list(dict.fromkeys(targets)) or [(None, "255.255.255.255")]
+
+
 async def _kasa_candidates(timeout: float) -> list[Candidate]:
     try:
         from kasa import Discover
@@ -93,18 +114,32 @@ async def _kasa_candidates(timeout: float) -> list[Candidate]:
 async def _kasa_account_candidates(request: AccountDiscoveryRequest) -> list[Candidate]:
     """Discover Tapo/Kasa devices using credentials without retaining them."""
     try:
-        from kasa import Discover
+        from kasa import Credentials, Discover
     except ImportError as exc:
         raise HTTPException(503, "TP-Link discovery support is not installed") from exc
     try:
-        devices = await Discover.discover(
-            username=request.username,
-            password=request.password.get_secret_value(),
-            discovery_timeout=int(request.timeout),
-            timeout=int(request.timeout),
-        )
+        credentials = Credentials(request.username.strip(), request.password.get_secret_value())
+        results = await asyncio.gather(*(
+            Discover.discover(
+                target=target,
+                interface=interface,
+                credentials=credentials,
+                discovery_timeout=int(request.timeout),
+                timeout=int(request.timeout),
+            )
+            for interface, target in _ipv4_discovery_targets()
+        ), return_exceptions=True)
     except Exception as exc:
-        raise HTTPException(502, f"TP-Link authentication/discovery failed ({type(exc).__name__})") from None
+        raise HTTPException(502, f"TP-Link/Tapo-Suche konnte nicht gestartet werden ({type(exc).__name__})") from None
+    devices = {}
+    errors = []
+    for result in results:
+        if isinstance(result, Exception):
+            errors.append(type(result).__name__)
+        else:
+            devices.update(result)
+    if not devices and errors:
+        raise HTTPException(401, "Tapo-Anmeldung oder lokale Erkennung fehlgeschlagen. Tapo-Konto, Passwort und Geräte-WLAN prüfen.")
     rows: list[Candidate] = []
     for host, device in devices.items():
         alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
@@ -205,7 +240,7 @@ async def discover_devices(timeout: float = 4.0):
 async def discover_devices_with_account(request: AccountDiscoveryRequest):
     rows = await _kasa_account_candidates(request)
     append_audit("smarthome.account_discovery.completed", provider=request.provider, found=len(rows))
-    return {"devices": [row.model_dump(mode="json") for row in rows], "count": len(rows), "credentials_stored": False}
+    return {"devices": [row.model_dump(mode="json") for row in rows], "count": len(rows), "credentials_stored": False, "networks_scanned": len(_ipv4_discovery_targets())}
 
 
 @router.post("/probe", dependencies=[Depends(require_write_auth)])

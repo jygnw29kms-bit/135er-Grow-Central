@@ -19,9 +19,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    import pam
+    import PAM
 except ImportError:  # allows validation tests outside the Raspberry Pi image
-    pam = None
+    PAM = None
 
 
 SETUP_IP = "10.42.0.1"
@@ -70,7 +70,7 @@ def validate_setup(form: dict[str, str]) -> tuple[dict[str, str] | None, str | N
     timezone = form.get("timezone", "Europe/Berlin")
     password = form.get("new_password", "")
     confirmation = form.get("new_password_confirm", "")
-    ssid = form.get("ssid", "").strip()
+    ssid = (form.get("manual_ssid", "").strip() or form.get("ssid", "").strip())
     wifi_password = form.get("wifi_password", "")
 
     if mode not in {"wifi", "ethernet"}:
@@ -117,6 +117,33 @@ def scan_networks() -> list[tuple[str, str, str]]:
     return sorted(networks.values(), key=lambda item: int(item[1]), reverse=True)
 
 
+def authenticate_user(username: str, password: str) -> bool:
+    """Authenticate with Debian's python3-pam module without exposing secrets."""
+    if PAM is None or not secrets.compare_digest(username, USERNAME):
+        return False
+
+    def conversation(_auth: object, queries: list[tuple[str, int]], _data: object) -> list[tuple[str, int]]:
+        answers = []
+        for _prompt, kind in queries:
+            if kind == PAM.PAM_PROMPT_ECHO_ON:
+                answers.append((USERNAME, 0))
+            elif kind == PAM.PAM_PROMPT_ECHO_OFF:
+                answers.append((password, 0))
+            else:
+                answers.append(("", 0))
+        return answers
+
+    try:
+        client = PAM.pam()
+        client.start("login")
+        client.set_item(PAM.PAM_USER, USERNAME)
+        client.set_item(PAM.PAM_CONV, conversation)
+        client.authenticate()
+        return True
+    except Exception:
+        return False
+
+
 def page(title: str, content: str) -> bytes:
     document = f"""<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
@@ -127,7 +154,8 @@ main{{width:min(760px,100%);margin:auto;border:1px solid var(--line);background:
 .brand{{font-size:clamp(1.6rem,5vw,2.7rem);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:28px}}.brand span{{color:var(--green)}}
 .kicker,label,small{{font-family:Consolas,monospace}}.kicker{{color:var(--cyan);letter-spacing:.1em;font-size:.78rem}}h1{{font-size:clamp(2rem,7vw,4rem);line-height:1;margin:12px 0 18px}}p{{color:#a6b8bb;line-height:1.6}}
 form{{display:grid;gap:16px;margin-top:25px}}label{{display:grid;gap:7px;color:var(--cyan);font-size:.8rem}}input,select{{width:100%;padding:13px;border:1px solid var(--line);background:#02090c;color:var(--text);font:1rem Consolas,monospace}}input:focus,select:focus{{outline:2px solid var(--green);outline-offset:2px}}
-.choice{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}.choice label{{display:flex;align-items:center;padding:13px;border:1px solid var(--line)}}.choice input{{width:auto}}button{{padding:14px;border:1px solid #4abf2a;background:var(--green);color:#041006;font-weight:700;cursor:pointer}}.notice{{padding:13px;border-left:3px solid var(--cyan);background:#041116;color:#9fb5b9}}.error{{border-color:var(--red);color:#ff8991}}.status{{color:var(--green)}}
+.choice{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}.choice label{{display:flex;align-items:center;padding:13px;border:1px solid var(--line)}}.choice input{{width:auto}}button,.refresh{{padding:14px;border:1px solid #4abf2a;background:var(--green);color:#041006;font-weight:700;cursor:pointer}}.refresh{{display:inline-block;text-decoration:none;margin:4px 0 10px}}.notice{{padding:13px;border-left:3px solid var(--cyan);background:#041116;color:#9fb5b9}}.error{{border-color:var(--red);color:#ff8991}}.status{{color:var(--green)}}
+.network-list{{display:grid;gap:8px;border:0;padding:0;margin:0}}.network{{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);color:var(--text);font-size:.9rem}}.network input{{width:auto}}.network small{{color:var(--muted)}}.signal{{height:5px;background:#10252b;margin-top:6px}}.signal span{{display:block;height:100%;background:var(--green)}}details{{border:1px solid var(--line);padding:12px}}summary{{color:var(--cyan);cursor:pointer}}
 @media(max-width:540px){{body{{padding:10px}}main{{padding:22px 16px}}.choice{{grid-template-columns:1fr}}}}
 </style></head><body><main><div class="brand">135er-<span>Grow</span> Central · J.L.</div>{content}</main></body></html>"""
     return document.encode("utf-8")
@@ -178,7 +206,8 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
         return session_id, current
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path not in {"/", "/setup"}:
+        path = urllib.parse.urlsplit(self.path).path
+        if path not in {"/", "/setup"}:
             self.send_error(404)
             return
         _, session = self.session()
@@ -190,15 +219,19 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             self.send_page(200, page("Grow Central Setup", content))
             return
 
+        networks = scan_networks()
         options = "".join(
-            f'<option value="{html.escape(ssid, quote=True)}">{html.escape(ssid)} · {html.escape(signal)}% · {html.escape(security)}</option>'
-            for ssid, signal, security in scan_networks()
-        )
+            f'<label class="network"><input type="radio" name="ssid" value="{html.escape(ssid, quote=True)}">'
+            f'<span><strong>{html.escape(ssid)}</strong><div class="signal"><span style="width:{max(0, min(100, int(signal)))}%"></span></div></span>'
+            f'<small>{html.escape(signal)}% · {html.escape(security)}</small></label>'
+            for ssid, signal, security in networks
+        ) or '<p class="notice">Keine WLANs gefunden. Bitte aktualisieren oder die SSID manuell eingeben.</p>'
         content = f"""<span class="kicker">LOCAL-FIRST PROVISIONING</span><h1>System einrichten.</h1>
 <p class="notice">Nach erfolgreicher Prüfung wird der Setup-Zugangspunkt abgeschaltet und das Hauptsystem gestartet. Schlägt die WLAN-Verbindung fehl, erscheint der Zugangspunkt erneut.</p>
 <form method="post" action="/apply"><input type="hidden" name="csrf" value="{session.csrf}">
 <div class="choice"><label><input type="radio" name="mode" value="wifi" checked> WLAN verwenden</label><label><input type="radio" name="mode" value="ethernet"> Nur LAN verwenden</label></div>
-<label>WLAN-NAME (SSID)<input name="ssid" list="networks" maxlength="32"><datalist id="networks">{options}</datalist></label>
+<div><label>VERFÜGBARE WLAN-NETZE</label><a class="refresh" href="/setup?refresh=1">NETZLISTE AKTUALISIEREN</a><fieldset class="network-list">{options}</fieldset></div>
+<details><summary>Verstecktes oder nicht gefundenes WLAN</summary><label>SSID MANUELL EINGEBEN<input name="manual_ssid" maxlength="32"></label></details>
 <label>WLAN-PASSWORT<input type="password" name="wifi_password" autocomplete="new-password" maxlength="63"></label>
 <label>HOSTNAME<input name="hostname" value="grow-central" maxlength="63" required></label>
 <label>ZEITZONE<select name="timezone">{''.join(f'<option value="{zone}">{zone}</option>' for zone in TIMEZONES)}</select></label>
@@ -220,9 +253,7 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             if not GUARD.allowed(address):
                 self.send_page(429, page("Anmeldung gesperrt", '<p class="error">Zu viele Versuche. Bitte 60 Sekunden warten.</p>'))
                 return
-            authenticated = pam is not None and secrets.compare_digest(form.get("username", ""), USERNAME) and pam.pam().authenticate(
-                USERNAME, form.get("password", ""), service="login"
-            )
+            authenticated = authenticate_user(form.get("username", ""), form.get("password", ""))
             if not authenticated:
                 GUARD.failed(address)
                 self.send_page(401, page("Anmeldung fehlgeschlagen", '<p class="error">Benutzername oder Passwort ist falsch.</p><p><a href="/">Erneut versuchen</a></p>'))
