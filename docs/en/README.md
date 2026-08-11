@@ -49,4 +49,4 @@
 - [Cloud](CLOUD.md)
 - [Installation](INSTALLATION.md)
 
-The test image temporarily uses `test` / `test` and token `test`. These credentials are intended only for the first local hardware tests and must be replaced afterwards.
+On first boot, the test image starts the protected `135er-GrowCentral-Setup-XXXX` access point. The temporary `GrowCentral` / `grow-central-test` credentials apply to WLAN, portal and SSH; the portal requires a new device password before the main system starts. Application tokens remain `test` during hardware validation and must be replaced before production use.

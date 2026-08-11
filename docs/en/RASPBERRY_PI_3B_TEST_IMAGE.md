@@ -18,7 +18,7 @@ This document describes the reproducible **135er-Grow Central** test image for R
 
 The current repository is copied to `/opt/135er-grow-central`. Python dependencies are installed into `/opt/135er-grow-central/.venv`.
 
-The local service starts automatically via `135er-grow-central.service` and exposes the web/API interface on port `8080`.
+After web provisioning is complete, the local service starts automatically via `135er-grow-central.service` and exposes the web/API interface on port `8080`.
 
 ```text
 http://<PI-IP>:8080
@@ -30,20 +30,31 @@ For the first hardware tests only:
 
 ```text
 Hostname: grow-central-test
-SSH username: test
-SSH password: test
+SSH username: GrowCentral
+SSH password: grow-central-test
 API/application token: test
 Cloud token: test
 ```
 
-These credentials are intentionally insecure and must be replaced after testing.
+The setup portal requires a new `GrowCentral` password of at least twelve characters before the main system can start.
+
+## First-boot web provisioning
+
+1. After the first boot, join `135er-GrowCentral-Setup-XXXX`. The four-character suffix comes from the Pi WLAN MAC address.
+2. Use the temporary WLAN key `grow-central-test`.
+3. Open `https://10.42.0.1` and accept the locally generated device certificate once.
+4. Sign in with `GrowCentral` / `grow-central-test`. PAM verifies these credentials against the real system user.
+5. Select target WLAN or LAN, hostname, timezone and a new `GrowCentral` password.
+6. After a successful connection check, the setup access point stops and the main service starts.
+
+If the target WLAN connection fails, the setup access point is restored automatically. Target WLAN passwords are stored only in NetworkManager's root-protected configuration and are never logged.
 
 ## Security state in the test image
 
 - root SSH login disabled
-- password SSH enabled for temporary user `test`
+- password SSH enabled for the fixed headless user `GrowCentral`
 - UFW enabled
-- incoming TCP 22 and TCP 8080 allowed
+- incoming TCP 22 and TCP 8080 allowed; TCP 80/443 is additionally allowed from `10.42.0.0/24` only during setup
 - automatic security updates enabled
 - DF100M writes disabled by default
 - remote cloud commands disabled by default
@@ -89,11 +100,10 @@ The fix includes:
 ## First hardware test
 
 1. Flash the `.img.xz` to an SD card with Raspberry Pi Imager or a compatible tool.
-2. Connect the Raspberry Pi 3B to the local network over Ethernet.
-3. Boot the Pi.
-4. Find its IP address in the router/DHCP server.
-5. Test SSH: `ssh test@<PI-IP>`.
-6. Open the web interface: `http://<PI-IP>:8080`.
+2. Boot the Pi and complete the web provisioning process described above.
+3. Find the new IP address in the portal/router.
+4. Test SSH: `ssh GrowCentral@<PI-IP>`.
+5. Open the web interface: `http://<PI-IP>:8080`.
 7. Check the service: `systemctl status 135er-grow-central`.
 8. Check Bluetooth: `bluetoothctl show`.
 9. Fully close the Mars Legacy app before BLE tests.
