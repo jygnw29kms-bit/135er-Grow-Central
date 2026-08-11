@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from app.main import app
+from app.main import _classify_ble_name, app
 from app.smarthome.onboarding import _lan_host
 from cloud.app.config import settings
 from cloud.app.main import CommandPayload, TelemetryPayload, check_token
@@ -46,3 +46,8 @@ def test_cloud_payloads_are_bounded():
 def test_loopback_is_not_a_discoverable_lan_device():
     with pytest.raises(HTTPException):
         _lan_host("127.0.0.1")
+
+
+def test_ble_devices_are_not_mislabeled_as_df100m():
+    assert _classify_ble_name("Random Headphones") == "generic_ble"
+    assert _classify_ble_name("MZ_MZF002") == "df100m_candidate"

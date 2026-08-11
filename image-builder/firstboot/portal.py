@@ -148,21 +148,23 @@ def page(title: str, content: str) -> bytes:
     document = f"""<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
 <style>
-:root{{--bg:#020608;--panel:#07171c;--line:#12313a;--cyan:#35e8da;--green:#71ff3b;--text:#edf8f6;--muted:#789096;--red:#ff4352}}
-*{{box-sizing:border-box}}body{{margin:0;min-height:100vh;padding:24px;background:radial-gradient(circle at 70% 0,rgba(53,232,218,.1),transparent 35%),var(--bg);color:var(--text);font-family:Arial,sans-serif}}
-main{{width:min(760px,100%);margin:auto;border:1px solid var(--line);background:linear-gradient(145deg,rgba(7,23,28,.98),rgba(2,10,13,.98));box-shadow:0 28px 80px #000;padding:clamp(22px,5vw,48px)}}
-.brand{{font-size:clamp(1.6rem,5vw,2.7rem);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:28px}}.brand span{{color:var(--green)}}
-.kicker,label,small{{font-family:Consolas,monospace}}.kicker{{color:var(--cyan);letter-spacing:.1em;font-size:.78rem}}h1{{font-size:clamp(2rem,7vw,4rem);line-height:1;margin:12px 0 18px}}p{{color:#a6b8bb;line-height:1.6}}
-form{{display:grid;gap:16px;margin-top:25px}}label{{display:grid;gap:7px;color:var(--cyan);font-size:.8rem}}input,select{{width:100%;padding:13px;border:1px solid var(--line);background:#02090c;color:var(--text);font:1rem Consolas,monospace}}input:focus,select:focus{{outline:2px solid var(--green);outline-offset:2px}}
-.choice{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}.choice label{{display:flex;align-items:center;padding:13px;border:1px solid var(--line)}}.choice input{{width:auto}}button,.refresh{{padding:14px;border:1px solid #4abf2a;background:var(--green);color:#041006;font-weight:700;cursor:pointer}}.refresh{{display:inline-block;text-decoration:none;margin:4px 0 10px}}.notice{{padding:13px;border-left:3px solid var(--cyan);background:#041116;color:#9fb5b9}}.error{{border-color:var(--red);color:#ff8991}}.status{{color:var(--green)}}
-.network-list{{display:grid;gap:8px;border:0;padding:0;margin:0}}.network{{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);color:var(--text);font-size:.9rem}}.network input{{width:auto}}.network small{{color:var(--muted)}}.signal{{height:5px;background:#10252b;margin-top:6px}}.signal span{{display:block;height:100%;background:var(--green)}}details{{border:1px solid var(--line);padding:12px}}summary{{color:var(--cyan);cursor:pointer}}
-@media(max-width:540px){{body{{padding:10px}}main{{padding:22px 16px}}.choice{{grid-template-columns:1fr}}}}
-</style></head><body><main><div class="brand">135er-<span>Grow</span> Central · J.L.</div>{content}</main></body></html>"""
+:root{{--bg:#02070a;--panel:#061319;--panel2:#081c23;--line:#17414a;--cyan:#2ae5ff;--green:#71ff3b;--text:#edfdf9;--muted:#7e9aa1;--red:#ff5161}}
+*{{box-sizing:border-box}}html{{background:var(--bg)}}body{{margin:0;min-height:100vh;padding:clamp(10px,3vw,34px);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 78% 4%,rgba(42,229,255,.15),transparent 28%),radial-gradient(circle at 12% 78%,rgba(113,255,59,.07),transparent 25%),linear-gradient(rgba(42,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(42,229,255,.025) 1px,transparent 1px),#02070a;background-size:auto,auto,34px 34px,34px 34px}}
+.shell{{width:min(980px,100%);margin:auto;border:1px solid rgba(42,229,255,.28);background:linear-gradient(145deg,rgba(6,19,25,.98),rgba(2,9,12,.98));box-shadow:0 32px 100px #000,0 0 40px rgba(42,229,255,.06);clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px))}}
+header{{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px clamp(18px,4vw,38px);border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(42,229,255,.06),transparent 55%)}}.identity{{display:flex;align-items:center;gap:15px}}.emblem{{width:50px;height:56px;display:grid;place-items:center;color:var(--green);font:800 13px Consolas,monospace;border:2px solid var(--green);clip-path:polygon(50% 0,100% 24%,100% 76%,50% 100%,0 76%,0 24%);box-shadow:inset 0 0 18px rgba(113,255,59,.15)}}.brand{{font-size:clamp(1.15rem,3.5vw,1.85rem);font-weight:800;letter-spacing:-.035em}}.brand span{{color:var(--green)}}.brand small{{display:block;color:var(--muted);font:10px Consolas,monospace;letter-spacing:.2em;margin-top:4px}}.live{{display:flex;align-items:center;gap:9px;color:var(--cyan);font:11px Consolas,monospace;letter-spacing:.12em}}.live i{{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}}
+.rail{{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}}.rail span{{padding:11px 16px;color:#52747c;font:10px Consolas,monospace;letter-spacing:.14em;border-right:1px solid var(--line)}}.rail span:last-child{{border:0}}.rail b{{color:var(--cyan);margin-right:7px}}
+main{{padding:clamp(24px,5vw,52px)}}.content{{position:relative}}.content:before{{content:"";position:absolute;right:0;top:0;width:100px;height:1px;background:var(--green);box-shadow:0 0 15px var(--green)}}
+.kicker,label,small,.eyebrow{{font-family:Consolas,monospace}}.kicker{{display:inline-flex;align-items:center;gap:9px;color:var(--cyan);letter-spacing:.16em;font-size:.72rem}}.kicker:before{{content:"";width:24px;height:1px;background:var(--cyan)}}h1{{font-size:clamp(2.25rem,7vw,4.8rem);line-height:.94;letter-spacing:-.055em;margin:16px 0 20px;max-width:800px}}h1 em{{font-style:normal;color:var(--green)}}h2{{font-size:1rem;letter-spacing:.08em;margin:0 0 13px}}p{{color:#a8bdc1;line-height:1.65;max-width:760px}}
+.hud-card{{border:1px solid var(--line);background:linear-gradient(135deg,rgba(8,28,35,.92),rgba(3,12,16,.96));padding:clamp(16px,3vw,26px);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}}form{{display:grid;gap:18px;margin-top:26px}}.field-grid{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}label{{display:grid;gap:8px;color:var(--cyan);font-size:.72rem;letter-spacing:.1em}}input,select{{width:100%;padding:14px 15px;border:1px solid #17414a;background:#020a0e;color:var(--text);font:1rem Consolas,monospace;transition:.2s}}input:focus,select:focus{{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(113,255,59,.08),0 0 22px rgba(113,255,59,.08)}}
+.choice{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}.choice label{{display:flex;align-items:center;gap:10px;padding:15px;border:1px solid var(--line);background:#041116;cursor:pointer}}.choice input{{width:auto;accent-color:var(--green)}}button,.refresh{{padding:15px 18px;border:1px solid var(--green);background:linear-gradient(90deg,var(--green),#9cff72);color:#041006;font-weight:850;letter-spacing:.06em;cursor:pointer;box-shadow:0 0 24px rgba(113,255,59,.12)}}.refresh{{display:inline-block;text-decoration:none;margin:5px 0 12px;font:700 11px Consolas,monospace;padding:10px 13px;background:transparent;color:var(--green)}}
+.notice{{padding:15px 17px;border-left:3px solid var(--cyan);background:rgba(4,17,22,.9);color:#a8bdc1}}.error{{border-color:var(--red);color:#ff929c}}.status{{color:var(--green)}}.network-list{{display:grid;gap:9px;border:0;padding:0;margin:0;max-height:330px;overflow:auto}}.network{{display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:13px 14px;border:1px solid var(--line);background:rgba(2,10,14,.8);color:var(--text);font-size:.86rem;cursor:pointer}}.network:hover{{border-color:var(--cyan);background:rgba(42,229,255,.045)}}.network input{{width:auto;accent-color:var(--green)}}.network small{{color:var(--muted);text-align:right}}.signal{{height:4px;background:#10252b;margin-top:7px}}.signal span{{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));box-shadow:0 0 8px var(--green)}}details{{border:1px solid var(--line);padding:14px;background:#031014}}summary{{color:var(--cyan);cursor:pointer;font:12px Consolas,monospace}}details label{{margin-top:14px}}footer{{display:flex;justify-content:space-between;gap:15px;padding:14px clamp(18px,4vw,38px);border-top:1px solid var(--line);color:#52747c;font:9px Consolas,monospace;letter-spacing:.12em}}
+@media(max-width:640px){{body{{padding:7px}}header{{align-items:flex-start}}.live{{display:none}}.rail{{grid-template-columns:1fr}}.rail span{{border-right:0;border-bottom:1px solid var(--line)}}.field-grid,.choice{{grid-template-columns:1fr}}main{{padding:24px 16px}}.network{{grid-template-columns:auto 1fr}}.network small{{grid-column:2;text-align:left}}footer{{flex-direction:column}}}}
+</style></head><body><div class="shell"><header><div class="identity"><div class="emblem">J.L.</div><div class="brand">135er-<span>Grow</span> Central<small>LOCAL CORE · SECURE PROVISIONING</small></div></div><div class="live"><i></i> SETUP NODE ONLINE</div></header><div class="rail"><span><b>01</b>SECURE LINK</span><span><b>02</b>NETWORK UPLINK</span><span><b>03</b>LOCAL CORE</span></div><main><div class="content">{content}</div></main><footer><span>RASPBERRY PI · LOCAL-FIRST · SECURE</span><span>SETUP GATEWAY {SETUP_IP}</span></footer></div></body></html>"""
     return document.encode("utf-8")
 
 
 class PortalHandler(http.server.BaseHTTPRequestHandler):
-    server_version = "GrowCentralSetup/1.0"
+    server_version = "GrowCentralSetup/1.1"
 
     def log_message(self, format_string: str, *args: object) -> None:
         print(f"portal {self.client_address[0]} {format_string % args}")
@@ -212,10 +214,10 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             return
         _, session = self.session()
         if not session:
-            content = """<span class="kicker">FIRST BOOT / SECURE SETUP</span><h1>Pi konfigurieren.</h1>
-<p>Mit dem lokalen Benutzer <strong>GrowCentral</strong> anmelden. Die Zugangsdaten werden über die geräteeigene HTTPS-Verbindung übertragen.</p>
-<form method="post" action="/login"><label>BENUTZER<input name="username" value="GrowCentral" autocomplete="username" required></label>
-<label>PASSWORT<input type="password" name="password" autocomplete="current-password" required></label><button type="submit">ANMELDEN</button></form>"""
+            content = """<span class="kicker">FIRST BOOT / AUTHENTICATION GATE</span><h1>Lokalen Core<br><em>aktivieren.</em></h1>
+<p>Der Setup-Knoten läuft vollständig lokal auf diesem Raspberry Pi. Melde dich mit dem Gerätebenutzer <strong>GrowCentral</strong> an, um Netzwerk und Systemidentität sicher einzurichten.</p>
+<div class="hud-card"><h2>SECURE DEVICE LOGIN</h2><form method="post" action="/login"><div class="field-grid"><label>BENUTZER<input name="username" value="GrowCentral" autocomplete="username" required></label>
+<label>GERÄTEPASSWORT<input type="password" name="password" autocomplete="current-password" required></label></div><button type="submit">SETUP-SITZUNG ÖFFNEN</button></form></div>"""
             self.send_page(200, page("Grow Central Setup", content))
             return
 
@@ -226,19 +228,19 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             f'<small>{html.escape(signal)}% · {html.escape(security)}</small></label>'
             for ssid, signal, security in networks
         ) or '<p class="notice">Keine WLANs gefunden. Bitte aktualisieren oder die SSID manuell eingeben.</p>'
-        content = f"""<span class="kicker">LOCAL-FIRST PROVISIONING</span><h1>System einrichten.</h1>
+        content = f"""<span class="kicker">LOCAL-FIRST / CONFIGURATION MATRIX</span><h1>System <em>einrichten.</em></h1>
 <p class="notice">Nach erfolgreicher Prüfung wird der Setup-Zugangspunkt abgeschaltet und das Hauptsystem gestartet. Schlägt die WLAN-Verbindung fehl, erscheint der Zugangspunkt erneut.</p>
-<form method="post" action="/apply"><input type="hidden" name="csrf" value="{session.csrf}">
+<div class="hud-card"><h2>01 · NETZWERK-UPLINK</h2><form method="post" action="/apply"><input type="hidden" name="csrf" value="{session.csrf}">
 <div class="choice"><label><input type="radio" name="mode" value="wifi" checked> WLAN verwenden</label><label><input type="radio" name="mode" value="ethernet"> Nur LAN verwenden</label></div>
 <div><label>VERFÜGBARE WLAN-NETZE</label><a class="refresh" href="/setup?refresh=1">NETZLISTE AKTUALISIEREN</a><fieldset class="network-list">{options}</fieldset></div>
 <details><summary>Verstecktes oder nicht gefundenes WLAN</summary><label>SSID MANUELL EINGEBEN<input name="manual_ssid" maxlength="32"></label></details>
 <label>WLAN-PASSWORT<input type="password" name="wifi_password" autocomplete="new-password" maxlength="63"></label>
-<label>HOSTNAME<input name="hostname" value="grow-central" maxlength="63" required></label>
-<label>ZEITZONE<select name="timezone">{''.join(f'<option value="{zone}">{zone}</option>' for zone in TIMEZONES)}</select></label>
-<label>NEUES GROWCENTRAL-PASSWORT<input type="password" name="new_password" autocomplete="new-password" minlength="12" required></label>
-<label>PASSWORT WIEDERHOLEN<input type="password" name="new_password_confirm" autocomplete="new-password" minlength="12" required></label>
+<h2>02 · SYSTEMIDENTITÄT</h2><div class="field-grid"><label>HOSTNAME<input name="hostname" value="grow-central" maxlength="63" required></label>
+<label>ZEITZONE<select name="timezone">{''.join(f'<option value="{zone}">{zone}</option>' for zone in TIMEZONES)}</select></label></div>
+<h2>03 · ZUGANG ABSICHERN</h2><div class="field-grid"><label>NEUES GROWCENTRAL-PASSWORT<input type="password" name="new_password" autocomplete="new-password" minlength="12" required></label>
+<label>PASSWORT WIEDERHOLEN<input type="password" name="new_password_confirm" autocomplete="new-password" minlength="12" required></label></div>
 <small>Mindestens 12 Zeichen. Dieses Passwort gilt danach für Benutzer, SSH und das Setup-Portal.</small>
-<button type="submit">KONFIGURATION PRÜFEN UND ÜBERNEHMEN</button></form>"""
+<button type="submit">KONFIGURATION PRÜFEN UND CORE STARTEN</button></form></div>"""
         self.send_page(200, page("Grow Central einrichten", content))
 
     def do_POST(self) -> None:  # noqa: N802

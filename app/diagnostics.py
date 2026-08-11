@@ -7,6 +7,7 @@ import platform
 import re
 import socket
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 
@@ -22,6 +23,10 @@ UNITS = (
     "ssh.service",
     "bluetooth.service",
 )
+COMPLETION_MARKERS = {
+    "grow-central-headless-firstboot.service": Path("/var/lib/135er-grow-central/.headless-firstboot-ready"),
+    "grow-central-firstboot-firewall.service": Path("/var/lib/135er-grow-central/.firewall-initialized"),
+}
 SECRET_PATTERN = re.compile(r"(?i)(authorization|password|passwd|secret|token)(\s*[:=]\s*)([^\s,;]+)")
 
 
@@ -56,9 +61,14 @@ async def diagnostic_snapshot(lines: int = Query(default=80, ge=10, le=300)):
         journal_code, journal = await _command(
             "journalctl", "--no-pager", "--output=short-iso", f"--lines={lines}", "--unit", unit
         )
+        marker = COMPLETION_MARKERS.get(unit)
+        completed = marker.exists() if marker else False
+        active = status == "active"
         services[unit] = {
-            "active": status == "active",
-            "status": status or "unknown",
+            "active": active,
+            "healthy": active or completed,
+            "completed": completed,
+            "status": "completed" if completed and not active else status or "unknown",
             "status_exit_code": status_code,
             "journal_exit_code": journal_code,
             "journal": journal,

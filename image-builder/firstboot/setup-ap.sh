@@ -38,6 +38,8 @@ nmcli connection modify "$CONNECTION" \
   wifi-sec.psk grow-central-test \
   ipv4.method shared \
   ipv4.addresses "$ADDRESS" \
+  ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250 \
+  ipv4.shared-dhcp-lease-time 3600 \
   ipv4.never-default yes \
   ipv4.ignore-auto-dns yes \
   ipv6.method shared \
@@ -46,14 +48,15 @@ nmcli connection modify "$CONNECTION" \
 nmcli connection down "$CONNECTION" >/dev/null 2>&1 || true
 nmcli --wait 30 connection up "$CONNECTION"
 
-# Do not start the portal until the AP really owns its documented IPv4
-# address. NetworkManager's shared mode then serves DHCP to setup clients.
+# Do not start the portal until the AP owns its documented IPv4 address and
+# NetworkManager's shared-mode DHCP server is actually listening.
 for _ in {1..20}; do
-  if ip -4 address show dev wlan0 | grep -Fq "10.42.0.1/24"; then
+  if ip -4 address show dev wlan0 | grep -Fq "10.42.0.1/24" \
+    && ss -H -lun | awk '$4 ~ /:67$/ { found=1 } END { exit !found }'; then
     exit 0
   fi
   sleep 1
 done
 
-echo "Setup access point did not acquire ${ADDRESS}" >&2
+echo "Setup access point did not acquire ${ADDRESS} with an active DHCP listener" >&2
 exit 1

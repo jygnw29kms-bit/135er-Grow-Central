@@ -9,6 +9,7 @@ from unittest.mock import patch
 PORTAL_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "portal.py"
 APPLY_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "apply_setup.py"
 SETUP_AP_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "setup-ap.sh"
+IMAGE_WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "build-pi3-image.yml"
 SPEC = importlib.util.spec_from_file_location("firstboot_portal", PORTAL_PATH)
 portal = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
@@ -129,12 +130,21 @@ def test_wifi_password_is_not_exposed_in_process_arguments():
 
 def test_setup_networks_are_dual_stack_and_ap_profile_is_repaired():
     script = SETUP_AP_PATH.read_text(encoding="utf-8")
+    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert 'ADDRESS="10.42.0.1/24"' in script
     assert "ipv4.method shared" in script
+    assert "ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250" in script
+    assert "ipv4.shared-dhcp-lease-time 3600" in script
+    assert "ss -H -lun" in script and "/:67$/" in script
     assert "ipv4.never-default yes" in script
     assert "ipv6.method shared" in script
     assert "ipv6.never-default yes" in script
     assert script.index('fi\n\n# Apply the complete profile') < script.index('nmcli connection modify "$CONNECTION"')
+    assert "ufw allow in on wlan0 to any port 67 proto udp" in workflow
+    assert "ufw allow in on wlan0 to any port 53 proto udp" in workflow
+    assert "ufw allow in on wlan0 to any port 53 proto tcp" in workflow
+    assert "SupplementaryGroups=systemd-journal" in workflow
+    assert "rfkill unblock bluetooth" in workflow
 
     calls = []
 
