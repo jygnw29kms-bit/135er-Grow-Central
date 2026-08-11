@@ -57,6 +57,15 @@ def test_hosts_entry_follows_configured_hostname(tmp_path):
     assert hosts.read_text(encoding="utf-8") == "127.0.0.1\tlocalhost\n127.0.1.1\tgrow-central\n"
 
 
+def test_provisioning_marker_is_committed_atomically(tmp_path, monkeypatch):
+    marker = tmp_path / ".provisioned"
+    monkeypatch.setattr(apply_setup, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(apply_setup, "MARKER", marker)
+    apply_setup.mark_provisioned()
+    assert marker.read_text(encoding="utf-8").startswith("provisioned_at=")
+    assert not marker.with_suffix(".tmp").exists()
+
+
 def test_native_debian_pam_binding_is_used(monkeypatch):
     class Client:
         def start(self, service): assert service == "login"

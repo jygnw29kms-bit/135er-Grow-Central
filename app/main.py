@@ -120,6 +120,65 @@ def _classify_ble_name(name: str) -> str:
     return "generic_ble"
 
 
+BLE_SERVICE_TYPES = {
+    "1809": "Thermometer",
+    "180d": "Pulssensor",
+    "1810": "Blutdruckmessgerät",
+    "1812": "Eingabegerät",
+    "1816": "Fahrradsensor",
+    "181a": "Umweltsensor",
+}
+BLE_MANUFACTURERS = {
+    0x0006: "Microsoft",
+    0x004C: "Apple",
+    0x0075: "Samsung",
+    0x00E0: "Google",
+}
+
+
+def _short_service_uuid(value: str) -> str:
+    normalized = value.lower()
+    if normalized.endswith("-0000-1000-8000-00805f9b34fb"):
+        return normalized.split("-", 1)[0].lstrip("0") or "0"
+    return normalized
+
+
+def _ble_identity(name: str, service_uuids: list[str], manufacturer_ids: list[int]) -> tuple[str, str, str | None]:
+    """Return a useful display name and conservative device-type hint."""
+    clean_name = name.strip()
+    lowered = clean_name.lower()
+    classification = _classify_ble_name(clean_name)
+    device_type = "Bluetooth-Gerät"
+    type_patterns = (
+        (("headphone", "earbud", "buds", "airpods", "kopfhörer"), "Kopfhörer/Headset"),
+        (("speaker", "sound", "lautsprecher"), "Lautsprecher"),
+        (("watch", "band", "fitbit", "uhr"), "Smartwatch/Fitnessband"),
+        (("sensor", "meter", "thermo", "hygro"), "Sensor"),
+        (("keyboard", "mouse", "maus", "tastatur"), "Eingabegerät"),
+    )
+    if classification == "df100m_candidate":
+        device_type = "DF100M-Kandidat"
+    else:
+        for patterns, label in type_patterns:
+            if any(pattern in lowered for pattern in patterns):
+                device_type = label
+                break
+        else:
+            for uuid in service_uuids:
+                hint = BLE_SERVICE_TYPES.get(_short_service_uuid(uuid))
+                if hint:
+                    device_type = hint
+                    break
+    manufacturer = next((BLE_MANUFACTURERS[value] for value in manufacturer_ids if value in BLE_MANUFACTURERS), None)
+    if clean_name:
+        display_name = clean_name
+    elif manufacturer:
+        display_name = f"{manufacturer} {device_type}"
+    else:
+        display_name = f"Unbekanntes Gerät ({device_type})"
+    return display_name, device_type, manufacturer
+
+
 @app.get("/api/discover", dependencies=[Depends(require_write_auth)])
 async def discover(timeout: float = 7.0):
     timeout = min(max(timeout, 1.0), 15.0)
@@ -127,12 +186,19 @@ async def discover(timeout: float = 7.0):
     rows = []
     for address, pair in found.items():
         dev, adv = pair
-        name = dev.name or adv.local_name or ""
+        name = adv.local_name or dev.name or ""
         classification = _classify_ble_name(name)
+        service_uuids = list(adv.service_uuids or [])
+        manufacturer_ids = sorted((adv.manufacturer_data or {}).keys())
+        display_name, device_type, manufacturer = _ble_identity(name, service_uuids, manufacturer_ids)
         rows.append({
             "name": name,
+            "display_name": display_name,
+            "device_type": device_type,
+            "manufacturer": manufacturer,
             "address": address,
             "rssi": adv.rssi,
+            "service_uuids": service_uuids,
             "classification": classification,
             "preferred": classification == "df100m_candidate",
         })

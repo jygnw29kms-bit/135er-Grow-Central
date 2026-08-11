@@ -9,6 +9,9 @@
 - unblock and power Bluetooth during the first boot sequence
 - distinguish generic BLE devices from DF100M candidates and improve errors
 - report completed one-shot initialization services as healthy
+- commit the provisioning marker atomically and reject failed setup jobs instead of showing a false success page
+- keep the setup AP as a DHCP-enabled rescue network after successful Ethernet provisioning
+- show advertised Bluetooth names first and add conservative device-type/manufacturer hints when names are missing
 
 ## alpha-0.7.2 – First-boot and device onboarding reliability (2026-08-11)
 

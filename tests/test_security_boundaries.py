@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from app.main import _classify_ble_name, app
+from app.main import _ble_identity, _classify_ble_name, app
 from app.smarthome.onboarding import _lan_host
 from cloud.app.config import settings
 from cloud.app.main import CommandPayload, TelemetryPayload, check_token
@@ -51,3 +51,9 @@ def test_loopback_is_not_a_discoverable_lan_device():
 def test_ble_devices_are_not_mislabeled_as_df100m():
     assert _classify_ble_name("Random Headphones") == "generic_ble"
     assert _classify_ble_name("MZ_MZF002") == "df100m_candidate"
+
+
+def test_ble_identity_prefers_advertised_name_and_infers_common_types():
+    assert _ble_identity("Living Room Speaker", [], [])[0:2] == ("Living Room Speaker", "Lautsprecher")
+    assert _ble_identity("", ["0000181a-0000-1000-8000-00805f9b34fb"], [])[0:2] == ("Unbekanntes Gerät (Umweltsensor)", "Umweltsensor")
+    assert _ble_identity("", [], [0x004C]) == ("Apple Bluetooth-Gerät", "Bluetooth-Gerät", "Apple")

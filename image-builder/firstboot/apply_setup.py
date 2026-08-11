@@ -64,11 +64,24 @@ def validate(config: dict[str, str]) -> None:
 
 
 def restore_access_point(message: str) -> None:
+    MARKER.unlink(missing_ok=True)
     ERROR_FILE.write_text(message[:500] + "\n", encoding="utf-8")
     os.chmod(ERROR_FILE, 0o640)
     run("nmcli", "connection", "down", TARGET_CONNECTION, check=False)
     run("nmcli", "connection", "up", AP_CONNECTION, check=False)
     run("systemctl", "restart", "grow-central-firstboot-portal.service", check=False)
+
+
+def mark_provisioned() -> None:
+    """Commit provisioning atomically before asking systemd to start the UI."""
+    STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
+    temporary = MARKER.with_suffix(".tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write(f"provisioned_at={time.time_ns()}\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, MARKER)
 
 
 def configure_wifi(config: dict[str, str]) -> None:
@@ -115,18 +128,26 @@ def main() -> int:
         update_hosts(config["hostname"])
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
+        network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
-        MARKER.touch(mode=0o640, exist_ok=True)
-        run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "no", check=False)
-        run("nmcli", "connection", "down", AP_CONNECTION, check=False)
+        mark_provisioned()
+        # A wired installation keeps the AP as a local rescue/direct network.
+        # With a single Wi-Fi adapter, client mode and AP mode cannot be kept
+        # reliably at the same time, so Wi-Fi installations switch to uplink.
+        keep_access_point = network_mode == "ethernet"
+        run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes" if keep_access_point else "no", check=False)
+        if not keep_access_point:
+            run("nmcli", "connection", "down", AP_CONNECTION, check=False)
         run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "80", "proto", "tcp", check=False)
         run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "443", "proto", "tcp", check=False)
-        run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "67", "proto", "udp", check=False)
-        run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "udp", check=False)
-        run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "tcp", check=False)
+        if not keep_access_point:
+            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "67", "proto", "udp", check=False)
+            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "udp", check=False)
+            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "tcp", check=False)
         time.sleep(2)
         run("systemctl", "stop", "grow-central-firstboot-portal.service", check=False)
+        run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "start", "135er-grow-central.service")
         return 0
     except Exception as error:  # setup must recover its own access path

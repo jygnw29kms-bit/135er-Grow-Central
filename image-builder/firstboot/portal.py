@@ -291,10 +291,17 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             os.fsync(handle.fileno())
         os.replace(temporary, PENDING_FILE)
         SESSIONS.pop(session_id or "", None)
-        subprocess.run(
-            ["systemd-run", "--unit=grow-central-apply-setup", "--collect", "/usr/local/sbin/grow-central-apply-setup.py"],
+        apply_unit = f"grow-central-apply-setup-{secrets.token_hex(6)}"
+        started = subprocess.run(
+            ["systemd-run", f"--unit={apply_unit}", "--collect", "/usr/local/sbin/grow-central-apply-setup.py"],
             check=False,
+            capture_output=True,
+            text=True,
         )
+        if started.returncode != 0:
+            PENDING_FILE.unlink(missing_ok=True)
+            self.send_page(503, page("Setup konnte nicht gestartet werden", '<p class="error">Die Konfiguration wurde nicht gestartet. Bitte erneut versuchen.</p><p><a href="/setup">Zurück zur Konfiguration</a></p>'))
+            return
         content = """<span class="kicker status">CONFIGURATION ACCEPTED</span><h1>Wird übernommen.</h1>
 <p>Der Pi prüft jetzt die Verbindung. Bei Erfolg wird dieser Zugangspunkt geschlossen und 135er-Grow Central gestartet.</p>
 <p class="notice">Falls das Ziel-WLAN nicht erreichbar ist, erscheint <strong>135er-GrowCentral-Setup-XXXX</strong> automatisch wieder.</p>"""
