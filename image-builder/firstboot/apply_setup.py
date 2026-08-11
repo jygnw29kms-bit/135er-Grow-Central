@@ -20,10 +20,29 @@ AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
 HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
+HOSTS_FILE = Path("/etc/hosts")
 
 
 def run(*arguments: str, check: bool = True, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(arguments, check=check, text=True, input=input_text, capture_output=True)
+
+
+def update_hosts(hostname: str, hosts_file: Path = HOSTS_FILE) -> None:
+    """Keep the local hostname resolvable after hostnamectl changes it."""
+    lines = hosts_file.read_text(encoding="utf-8").splitlines()
+    replacement = f"127.0.1.1\t{hostname}"
+    updated = False
+    for index, line in enumerate(lines):
+        if line.split("#", 1)[0].split()[:1] == ["127.0.1.1"]:
+            lines[index] = replacement
+            updated = True
+            break
+    if not updated:
+        lines.append(replacement)
+    temporary = hosts_file.with_name(f".{hosts_file.name}.grow-central.tmp")
+    temporary.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, hosts_file)
 
 
 def validate(config: dict[str, str]) -> None:
@@ -93,6 +112,7 @@ def main() -> int:
         if config["mode"] == "wifi":
             configure_wifi(config)
         run("hostnamectl", "set-hostname", config["hostname"])
+        update_hosts(config["hostname"])
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
         config.clear()

@@ -40,6 +40,34 @@ def test_valid_setup_is_normalized():
     assert "new_password_confirm" not in config
 
 
+def test_manual_ssid_overrides_network_selection():
+    form = valid_form()
+    form["ssid"] = "Gefundenes WLAN"
+    form["manual_ssid"] = "Verstecktes WLAN"
+    config, error = portal.validate_setup(form)
+    assert error is None
+    assert config["ssid"] == "Verstecktes WLAN"
+
+
+def test_hosts_entry_follows_configured_hostname(tmp_path):
+    hosts = tmp_path / "hosts"
+    hosts.write_text("127.0.0.1\tlocalhost\n127.0.1.1\tgrow-central-test\n", encoding="utf-8")
+    apply_setup.update_hosts("grow-central", hosts)
+    assert hosts.read_text(encoding="utf-8") == "127.0.0.1\tlocalhost\n127.0.1.1\tgrow-central\n"
+
+
+def test_native_debian_pam_binding_is_used(monkeypatch):
+    class Client:
+        def start(self, service): assert service == "login"
+        def set_item(self, *_args): pass
+        def authenticate(self): pass
+
+    fake = SimpleNamespace(pam=Client, PAM_USER=1, PAM_CONV=2, PAM_PROMPT_ECHO_ON=3, PAM_PROMPT_ECHO_OFF=4)
+    monkeypatch.setattr(portal, "PAM", fake)
+    assert portal.authenticate_user("GrowCentral", "secret") is True
+    assert portal.authenticate_user("root", "secret") is False
+
+
 def test_invalid_hostname_is_rejected():
     form = valid_form()
     form["hostname"] = "grow central; reboot"
