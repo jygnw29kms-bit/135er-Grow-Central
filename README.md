@@ -67,6 +67,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 
 Weiterlesen: [Deutsche Dokumentation](docs/de/README.md) · [Installation](docs/de/INSTALLATION.md) · [Architektur](docs/de/ARCHITEKTUR.md) · [GUI-Zielbild](docs/de/GUI_VORSCHAU.md)
 
+Das Raspberry-Pi-Testimage öffnet beim ersten Start den geschützten Zugangspunkt `135er-GrowCentral-Setup-XXXX`. Unter `https://10.42.0.1` werden WLAN/LAN, Hostname, Zeitzone und ein neues Gerätepasswort eingerichtet; erst danach startet der lokale Hauptdienst. [Anleitung zur Web-Ersteinrichtung](docs/de/RASPBERRY_PI_3B_TEST_IMAGE.md)
+
 ---
 
 ## English
@@ -110,6 +112,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 Continue with: [English documentation](docs/en/README.md) · [Installation](docs/en/INSTALLATION.md) · [Architecture](docs/en/ARCHITECTURE.md) · [GUI target](docs/en/GUI_PREVIEW.md)
+
+On first boot, the Raspberry Pi test image exposes the protected `135er-GrowCentral-Setup-XXXX` access point. WLAN/LAN, hostname, timezone, and a new device password are configured at `https://10.42.0.1`; only then does the local main service start. [First-boot web provisioning guide](docs/en/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
 ## Interface family / Interface-Familie
 

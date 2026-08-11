@@ -10,7 +10,8 @@ Für die ersten Hardwaretests wird ein reproduzierbares Raspberry-Pi-3B/3B+-Imag
 - SSH
 - UFW
 - unattended-upgrades
-- systemd-Autostart von `135er-grow-central.service`
+- Web-Ersteinrichtung per temporärem WLAN-Zugangspunkt
+- systemd-Start von `135er-grow-central.service` nach erfolgreicher Ersteinrichtung
 
 Weboberfläche:
 
@@ -22,13 +23,23 @@ http://<PI-IP>:8080
 
 ```text
 Hostname: grow-central-test
-Benutzer: test
-Passwort: test
+Benutzer: GrowCentral
+Passwort: grow-central-test
 API-/App-Token: test
 Cloud-Token: test
 ```
 
-**Nur für Tests.** Nach Abschluss der Hardwaretests müssen diese Zugangsdaten ersetzt werden.
+**Nur für den Erststart.** Das Portal verlangt vor dem Start des Hauptsystems ein neues Passwort mit mindestens zwölf Zeichen.
+
+## Erster Start
+
+1. Mit `135er-GrowCentral-Setup-XXXX` verbinden; WLAN-Schlüssel: `grow-central-test`.
+2. `https://10.42.0.1` öffnen und das lokale Zertifikat bestätigen.
+3. Als `GrowCentral` mit `grow-central-test` anmelden.
+4. Ziel-WLAN oder LAN, Hostname, Zeitzone und neues Passwort festlegen.
+5. Nach erfolgreicher Prüfung beendet sich der Setup-Modus und Grow Central startet.
+
+Schlägt die WLAN-Verbindung fehl, wird der Setup-Zugangspunkt automatisch wieder aktiviert.
 
 ## Sichere Test-Defaults
 
@@ -36,7 +47,7 @@ Cloud-Token: test
 - Remote Cloud Commands: deaktiviert
 - Cloud: deaktiviert
 - Root-SSH: deaktiviert
-- Firewall: nur SSH (22/TCP) und Grow Central (8080/TCP)
+- Firewall: SSH (22/TCP), Grow Central (8080/TCP) sowie nur im Setup-Netz temporär HTTP/HTTPS (80/443)
 
 ## Build und Veröffentlichung
 
@@ -57,9 +68,9 @@ Der aktuelle Builder schließt Build-Dateien aus und vergrößert Image, Root-Pa
 ## Testablauf
 
 1. Image auf SD-Karte flashen.
-2. Pi per Ethernet verbinden und booten.
+2. Web-Ersteinrichtung abschließen.
 3. IP ermitteln.
-4. `ssh test@<PI-IP>` testen.
+4. `ssh GrowCentral@<PI-IP>` testen.
 5. `http://<PI-IP>:8080` öffnen.
 6. `systemctl status 135er-grow-central` prüfen.
 7. `bluetoothctl show` prüfen.

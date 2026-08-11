@@ -19,14 +19,25 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 
 - Hostname: `grow-central-test`
 - SSH user: `GrowCentral`
-- SSH password: `test`
+- SSH password: `grow-central-test`
 - Locale/timezone: `de_DE.UTF-8`, `Europe/Berlin`
 - Keyboard: German (`de`), variant `nodeadkeys`
 - Interactive first-boot user setup: disabled
 - Grow Central/API token: `test`
 - Web UI: `http://<PI-IP>:8080`
 
-Change all test credentials after the initial hardware test.
+The same temporary credentials protect the setup WLAN and authenticate the web portal. The portal requires a new password with at least 12 characters before completing setup.
+
+## First-boot web setup / Web-Ersteinrichtung
+
+1. Flash the image and start the Raspberry Pi.
+2. Join `135er-GrowCentral-Setup-XXXX` with WLAN key `grow-central-test`.
+3. Open `https://10.42.0.1` and accept the local device certificate once.
+4. Sign in as `GrowCentral` with password `grow-central-test`.
+5. Select WLAN or LAN, set hostname/timezone and choose a new GrowCentral password.
+6. After a successful connection test, the setup AP stops and the main service starts.
+
+DE: Schlägt die Verbindung zum gewählten WLAN fehl, wird der Setup-Zugangspunkt automatisch wieder aktiviert. EN: If the selected WLAN cannot be reached, the setup access point is restored automatically.
 
 ## Safe defaults
 
@@ -34,7 +45,7 @@ Change all test credentials after the initial hardware test.
 - `GC_REMOTE_COMMANDS=false`
 - `GC_CLOUD_ENABLED=false`
 - root SSH login disabled
-- UFW enabled; only TCP 22 and 8080 allowed inbound
+- UFW enabled; TCP 80/443 is temporarily limited to the setup subnet, while TCP 22 and 8080 remain available for the appliance
 - unattended security updates enabled
 
 ## Automatic build
@@ -52,4 +63,4 @@ The generated file is named:
 
 `135er-Grow-Central_RPi3B_Test.img.xz`
 
-Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. Ethernet is recommended for the first test because no WLAN SSID/password is embedded in the public test image.
+Flash it with Raspberry Pi Imager, balenaEtcher or another raw image writer. No private target WLAN credentials are embedded in the public test image.

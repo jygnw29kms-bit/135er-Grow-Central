@@ -28,6 +28,6 @@ jobs:
       - name: Install audit tools
         run: python -m pip install --disable-pip-version-check bandit pip-audit
       - name: Static security analysis
-        run: bandit -q -r app cloud local shared -ll
+        run: bandit -q -r app cloud local shared image-builder/firstboot -ll
       - name: Dependency vulnerability audit
         run: pip-audit -r requirements.txt

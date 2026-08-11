@@ -49,4 +49,4 @@
 - [Cloud](CLOUD.md)
 - [Installation](INSTALLATION.md)
 
-Für das Test-Image werden temporär `test` / `test` sowie Token `test` verwendet. Diese Zugangsdaten sind ausschließlich für die ersten lokalen Hardwaretests vorgesehen und müssen danach ersetzt werden.
+Das Test-Image startet beim ersten Boot den geschützten Zugangspunkt `135er-GrowCentral-Setup-XXXX`. Die temporären Zugangsdaten `GrowCentral` / `grow-central-test` gelten für WLAN, Portal und SSH; das Portal erzwingt vor dem Hauptsystemstart ein neues Gerätepasswort. Die Anwendungstoken bleiben während der Hardwaretests auf `test` und müssen vor einem produktiven Einsatz ersetzt werden.

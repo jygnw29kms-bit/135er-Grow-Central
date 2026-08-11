@@ -11,6 +11,7 @@ on:
       - 'web/**'
       - 'requirements.txt'
       - 'image-builder/brand/**'
+      - 'image-builder/firstboot/**'
 
 permissions:
   contents: write
@@ -86,7 +87,7 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           # Keep the stock image's UID 1000, but give it the fixed appliance
           # identity. Renaming also prevents userconfig from targeting "pi".
@@ -97,7 +98,7 @@ jobs:
             FIRST_GROUP="$(getent group 1000 | cut -d: -f1)"
             if [ -n "$FIRST_GROUP" ]; then groupmod --new-name GrowCentral "$FIRST_GROUP"; fi
           fi
-          echo 'GrowCentral:test' | chpasswd
+          echo 'GrowCentral:grow-central-test' | chpasswd
           usermod --shell /bin/bash GrowCentral
           chage --lastday "$(date +%Y-%m-%d)" --expiredate -1 --inactive -1 --mindays 0 --maxdays 99999 GrowCentral
           usermod -aG sudo GrowCentral
@@ -163,8 +164,9 @@ jobs:
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
           Description=135er-Grow Central Local
-          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service
+          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-firstboot-portal.service
           Wants=network-online.target bluetooth.target
+          ConditionPathExists=/var/lib/135er-grow-central/.provisioned
           [Service]
           Type=simple
           User=growcentral
@@ -225,6 +227,8 @@ jobs:
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 8080/tcp
+          ufw allow from 10.42.0.0/24 to any port 80 proto tcp
+          ufw allow from 10.42.0.0/24 to any port 443 proto tcp
           ufw --force enable
           install -o growcentral -g growcentral -m 0640 /dev/null "$MARKER"
           EOF
@@ -243,6 +247,23 @@ jobs:
           [Install]
           WantedBy=multi-user.target
           EOF
+
+          # First boot is an isolated provisioning phase. The public setup AP
+          # exposes only an HTTPS portal; login is verified against PAM for the
+          # real GrowCentral system user. The main service remains gated until
+          # a working LAN/WLAN configuration has been committed.
+          install -o root -g root -m 0755 \
+            /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh \
+            /usr/local/sbin/grow-central-setup-ap.sh
+          install -o root -g root -m 0755 \
+            /opt/135er-grow-central/image-builder/firstboot/portal.py \
+            /usr/local/sbin/grow-central-firstboot-portal.py
+          install -o root -g root -m 0755 \
+            /opt/135er-grow-central/image-builder/firstboot/apply_setup.py \
+            /usr/local/sbin/grow-central-apply-setup.py
+          install -o root -g root -m 0644 \
+            /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service \
+            /etc/systemd/system/grow-central-firstboot-portal.service
 
           # Branded boot splash shared with the current repository identity.
           THEME=/usr/share/plymouth/themes/135er-grow-central
@@ -279,7 +300,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service 135er-grow-central.service
+          systemctl enable NetworkManager.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service
           systemctl enable unattended-upgrades.service || true
 
           # Fail the image build if headless provisioning regresses.
@@ -289,6 +310,7 @@ jobs:
           test "$(passwd --status GrowCentral | awk '{print $2}')" = P
           test "$(systemctl is-enabled userconfig.service)" = masked
           test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
+          test "$(systemctl is-enabled grow-central-firstboot-portal.service)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
           # Validate sshd with temporary build-time host keys. Remove them
           # immediately so every flashed Raspberry Pi creates unique keys.
@@ -297,6 +319,9 @@ jobs:
           /usr/sbin/sshd -t
           rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
+          grep -q '^ConditionPathExists=/var/lib/135er-grow-central/.provisioned$' /etc/systemd/system/135er-grow-central.service
+          /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
+          /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
           grep -qx 'Europe/Berlin' /etc/timezone
           grep -qx 'XKBLAYOUT="de"' /etc/default/keyboard
@@ -305,12 +330,17 @@ jobs:
           cat >/etc/motd <<'EOF'
           135er-Grow Central - Raspberry Pi 3B TEST IMAGE
           Hostname: grow-central-test
-          SSH: GrowCentral / test
-          Web UI: http://<PI-IP>:8080
+          SSH: GrowCentral / grow-central-test
+          First boot AP: 135er-GrowCentral-Setup-XXXX
+          Setup AP key: grow-central-test
+          Setup portal: https://10.42.0.1
+          Setup login: GrowCentral / grow-central-test
+          Web UI after setup: http://<PI-IP>:8080
           Temporary application/API token: test
           WARNING: change all test credentials after testing.
           DF100M BLE writes and remote cloud commands are disabled by default.
           Firewall is initialized automatically on first Raspberry Pi boot.
+          The main service starts only after successful first-boot provisioning.
           EOF
           truncate -s 0 /etc/machine-id
           rm -f /var/lib/dbus/machine-id
@@ -331,12 +361,17 @@ jobs:
           cat > "${VERSIONED_NAME}-CREDENTIALS.txt" <<'EOF'
           Hostname: grow-central-test
           SSH username: GrowCentral
-          SSH password: test
-          Web UI: http://<PI-IP>:8080
+          SSH password: grow-central-test
+          First boot AP: 135er-GrowCentral-Setup-XXXX
+          Setup AP key: grow-central-test
+          Setup portal: https://10.42.0.1
+          Setup login: GrowCentral / grow-central-test
+          Web UI after setup: http://<PI-IP>:8080
           Temporary API/application token: test
           BLE device writes: disabled
           Remote cloud commands: disabled
           Firewall: initialized automatically on first boot
+          Required: choose a new GrowCentral password in the setup portal
           EOF
 
       - name: Upload workflow artifact
@@ -355,4 +390,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-alpha-0.7.1-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.1 build ${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. Unified v0.9.2 device lab for Bluetooth, LAN and ephemeral TP-Link/Tapo account-assisted discovery. Credentials are never embedded in the image or repository. Temporary appliance credentials: GrowCentral / test. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.1-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.1 build ${GITHUB_RUN_NUMBER}" --notes "Versioned Raspberry Pi OS Lite 64-bit / Debian 13 headless image. On first boot, connect to 135er-GrowCentral-Setup-XXXX with the temporary GrowCentral credentials and open https://10.42.0.1. The portal requires a new device password before the main service starts. German locale, Europe/Berlin timezone and German nodeadkeys keyboard layout are preconfigured." --prerelease

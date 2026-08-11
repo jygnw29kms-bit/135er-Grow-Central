@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased – First-boot configuration portal
+
+- added a temporary Raspberry Pi setup access point with a device-specific SSID suffix
+- added a GUI-aligned HTTPS portal authenticated against the real `GrowCentral` system user through PAM
+- added WLAN/LAN, hostname, timezone and mandatory device-password provisioning
+- gated the main service until setup succeeds and restored the access point automatically after WLAN failures
+- restricted setup ports to the provisioning subnet and kept WLAN secrets out of process arguments and logs
+- updated German and English image documentation and CI coverage
+
 ## alpha-0.7.1 – Repository and Raspberry Pi identity synchronization (2026-08-09)
 
 - redesigned the GitHub README around a dedicated technical repository banner and structured project overview

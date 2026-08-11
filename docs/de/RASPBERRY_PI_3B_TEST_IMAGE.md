@@ -18,7 +18,7 @@ Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er-Grow Cent
 
 Das aktuelle Repository wird nach `/opt/135er-grow-central` kopiert. Die Python-Abhängigkeiten werden in `/opt/135er-grow-central/.venv` installiert.
 
-Der lokale Dienst startet automatisch über `135er-grow-central.service` und stellt die Web/API-Oberfläche auf Port `8080` bereit.
+Der lokale Dienst startet nach abgeschlossener Web-Ersteinrichtung automatisch über `135er-grow-central.service` und stellt die Web/API-Oberfläche auf Port `8080` bereit.
 
 ```text
 http://<PI-IP>:8080
@@ -31,12 +31,23 @@ Nur für die ersten Hardwaretests:
 ```text
 Hostname: grow-central-test
 SSH-Benutzer: GrowCentral
-SSH-Passwort: test
+SSH-Passwort: grow-central-test
 API-/App-Token: test
 Cloud-Token: test
 ```
 
-Diese Daten sind absichtlich unsicher und müssen nach den Tests ersetzt werden.
+Das Setup-Portal verlangt vor dem Start des Hauptsystems ein neues `GrowCentral`-Passwort mit mindestens zwölf Zeichen.
+
+## Web-Ersteinrichtung
+
+1. Nach dem ersten Start das WLAN `135er-GrowCentral-Setup-XXXX` auswählen. Die vier Schlusszeichen stammen aus der WLAN-MAC-Adresse des Pi.
+2. Mit dem temporären WLAN-Schlüssel `grow-central-test` verbinden.
+3. `https://10.42.0.1` öffnen und das lokal erzeugte Gerätezertifikat einmalig bestätigen.
+4. Mit `GrowCentral` / `grow-central-test` anmelden. Das Portal prüft diese Daten direkt über PAM gegen den Systembenutzer.
+5. Ziel-WLAN oder LAN, Hostname, Zeitzone und ein neues `GrowCentral`-Passwort eintragen.
+6. Nach erfolgreicher Verbindungsprüfung wird der Setup-Zugangspunkt deaktiviert und das Hauptsystem gestartet.
+
+Bei einer fehlgeschlagenen WLAN-Verbindung wird der Setup-Zugangspunkt automatisch wiederhergestellt. Ziel-WLAN-Passwörter werden nur in der rootgeschützten NetworkManager-Konfiguration gespeichert und nicht protokolliert.
 
 ## Sicherheitsstatus im Test-Image
 
@@ -45,7 +56,7 @@ Diese Daten sind absichtlich unsicher und müssen nach den Tests ersetzt werden.
 - Locale `de_DE.UTF-8`, Zeitzone `Europe/Berlin` und Tastaturbelegung `de(nodeadkeys)` vorkonfiguriert
 - interaktive First-Boot-Abfragen für Benutzer und Tastatur deaktiviert
 - UFW aktiviert
-- eingehend erlaubt: TCP 22 und TCP 8080
+- eingehend erlaubt: TCP 22 und TCP 8080; während der Ersteinrichtung zusätzlich TCP 80/443 ausschließlich aus `10.42.0.0/24`
 - automatische Sicherheitsupdates aktiviert
 - DF100M-Schreibzugriffe standardmäßig deaktiviert
 - Remote-Cloud-Befehle standardmäßig deaktiviert
@@ -91,11 +102,10 @@ Die Korrektur umfasst:
 ## Erster Hardwaretest
 
 1. `.img.xz` mit Raspberry Pi Imager oder einem kompatiblen Tool auf SD-Karte schreiben.
-2. Raspberry Pi 3B per Ethernet ins lokale Netz hängen.
-3. Pi booten lassen.
-4. IP im Router/DHCP-Server ermitteln.
-5. SSH testen: `ssh GrowCentral@<PI-IP>`.
-6. Webinterface öffnen: `http://<PI-IP>:8080`.
+2. Pi booten und die oben beschriebene Web-Ersteinrichtung abschließen.
+3. Die neue IP im Portal/Router ermitteln.
+4. SSH testen: `ssh GrowCentral@<PI-IP>`.
+5. Webinterface öffnen: `http://<PI-IP>:8080`.
 7. Service prüfen: `systemctl status 135er-grow-central`.
 8. Bluetooth prüfen: `bluetoothctl show`.
 9. Mars Legacy App vollständig schließen, bevor BLE-Tests gestartet werden.

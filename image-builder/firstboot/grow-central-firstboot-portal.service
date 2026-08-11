@@ -1,0 +1,38 @@
+[Unit]
+Description=135er-Grow Central first-boot configuration portal
+After=NetworkManager.service grow-central-firstboot-firewall.service
+Wants=NetworkManager.service
+Before=135er-grow-central.service
+ConditionPathExists=!/var/lib/135er-grow-central/.provisioned
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/sbin/grow-central-setup-ap.sh
+ExecStart=/usr/local/sbin/grow-central-firstboot-portal.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=false
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_DAC_OVERRIDE
+UMask=0077
+ReadWritePaths=/etc/135er-grow-central /var/lib/135er-grow-central
+
+[Install]
+WantedBy=multi-user.target
