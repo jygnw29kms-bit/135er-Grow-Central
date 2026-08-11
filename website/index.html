@@ -2,120 +2,115 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#020608">
-  <meta name="description" content="135er-Grow Central – lokale Raspberry-Pi-Automation für Klima, Energie und Smart Home.">
-  <meta property="og:title" content="135er-Grow Central · Local intelligence">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#02070a">
+  <meta name="description" content="135er-Grow Central – local-first Raspberry-Pi-Steuerung für Klima, Energie und Smart Home.">
+  <meta property="og:title" content="135er-Grow Central · Local Tablet">
   <meta property="og:description" content="Local-first automation. Raspberry Pi authority. Optional cloud.">
-  <meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
-  <title>135er-Grow Central · Local intelligence</title>
+  <meta property="og:image" content="assets/gui/local-tablet-v0.9.png">
+  <title>135er-Grow Central · Local Tablet</title>
   <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
 </head>
 <body>
-  <a class="skip-link" href="#main">Zum Inhalt</a>
-  <div class="grid-field" aria-hidden="true"></div>
-  <header class="topbar">
-    <a class="brand brand-lockup" href="#home" aria-label="135er-Grow Central Startseite">
-      <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L.">
-    </a>
-    <nav aria-label="Hauptnavigation / Main navigation">
-      <a href="#system">System</a><a href="#interfaces">Interfaces</a><a href="#security">Security</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/README.md" title="Dokumentation auf Deutsch">DE</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/en/README.md" title="Documentation in English">EN</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a>
-    </nav>
-    <div class="release"><i></i> ALPHA 0.7.1</div>
-  </header>
+  <a class="skip-link" href="#workspace">Zum Inhalt</a>
+  <main class="tablet" id="workspace">
+    <header class="command-bar">
+      <a class="lockup" href="#overview" data-tab="overview" aria-label="135er-Grow Central Übersicht">
+        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L.">
+        <span>LOCAL TABLET <i></i></span>
+      </a>
+      <nav aria-label="Bereiche">
+        <button class="active" data-tab="overview">Overview</button>
+        <button data-tab="system">System</button>
+        <button data-tab="interfaces">Interfaces</button>
+        <button data-tab="security">Security</button>
+        <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a>
+      </nav>
+      <div class="system-time"><strong id="clock">--:--</strong><span id="date">--.--.----</span></div>
+      <div class="heartbeat" aria-label="System online"><span></span><i></i><b></b><i></i><span></span></div>
+    </header>
 
-  <main id="main">
-    <section class="hero" id="home">
-      <div class="hero-copy">
-        <div class="eyebrow"><span>GC://LOCAL/CORE</span><b>ONLINE</b></div>
-        <h1>Lokale Kontrolle.<br><span>Intelligent orchestriert.</span></h1>
-        <p>Eine souveräne Steuerzentrale für Klima, Geräte, Energie und Automationen. Der Raspberry Pi bleibt Master – schnell, privat und unabhängig.</p>
-        <div class="hero-actions"><a class="button primary" href="#interfaces">Interfaces entdecken</a><a class="button" href="#system">System ansehen</a></div>
-        <dl class="hero-metrics">
-          <div><dt>CONTROL</dt><dd>LOCAL</dd></div>
-          <div><dt>REMOTE</dt><dd>OPTIONAL</dd></div>
-          <div><dt>WRITES</dt><dd>DENY DEFAULT</dd></div>
-          <div class="project-runtime-metric"><dt>PROJEKTLAUFZEIT</dt><dd id="project-runtime" aria-live="off">WIRD GELADEN …</dd><small>seit Repository-Start · 08.08.2026</small></div>
-          <div class="project-effort-metric"><dt>ENTWICKLUNGSAUFWAND</dt><dd id="project-effort">14:00 h</dd><small>rekonstruierte Baseline bis 10.08.2026 20:40 · danach dokumentiert</small></div>
-        </dl>
+    <section class="view active" id="overview" data-view="overview">
+      <div class="metric-row">
+        <article class="metric"><div class="metric-icon">♨</div><div><span>Temperatur</span><strong>24.7<small>°C</small></strong><em>Ideal: 22–26 °C</em></div></article>
+        <article class="metric"><div class="metric-icon">◉</div><div><span>Relative Humidity</span><strong>55.2<small>%</small></strong><em>Ideal: 45–65 %</em></div></article>
+        <article class="metric"><div class="metric-icon">⌁</div><div><span>VPD</span><strong>1.21<small>kPa</small></strong><em>Ideal: 0.8–1.3 kPa</em></div></article>
+        <article class="metric power"><div class="metric-icon">ϟ</div><div><span>Power Draw</span><strong>243<small>W</small></strong><em>Concept telemetry</em></div><div class="power-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
       </div>
-      <div class="core-visual" aria-label="Raspberry Pi Local Core">
-        <div class="core-rings"><span></span><span></span><span></span><div><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"></div></div>
-        <div class="core-caption"><strong>LOCAL CORE</strong><small>RASPBERRY PI · ACTIVE</small></div>
+
+      <div class="dashboard-grid">
+        <div class="left-stack">
+          <article class="panel environment">
+            <h2>Environment Status</h2>
+            <dl><div><dt>♨ TEMP</dt><dd>24.7 °C</dd></div><div><dt>◉ RH</dt><dd>55.2 %</dd></div><div><dt>⌁ VPD</dt><dd>1.21 kPa</dd></div><div><dt>▱ CO₂</dt><dd>742 ppm</dd></div><div><dt>⌘ AIRFLOW</dt><dd>Normal</dd></div></dl>
+            <p>All conditions optimal <b>✓</b></p>
+          </article>
+          <article class="panel health"><h2>System Health</h2><div class="health-body"><div class="health-ring"><strong>100%</strong><span>Health score</span></div><ul><li>Sensors <b>OK</b></li><li>Controllers <b>OK</b></li><li>Devices <b>READY</b></li><li>Network <b>LOCAL</b></li></ul></div><small>Last check: <span id="last-check">--:--:--</span></small></article>
+        </div>
+
+        <div class="center-stack">
+          <article class="panel fan-control">
+            <h2><b>DF100M Fan</b> Control</h2>
+            <div class="dial-area"><button aria-label="Wert senken">−</button><div class="dial"><div class="dial-ticks"></div><div class="dial-core"><span>⌘</span><strong>40%</strong><em>Speed</em></div></div><button aria-label="Wert erhöhen">+</button></div>
+            <div class="mode-switch"><button class="active">Manual</button><button>Auto</button><button>Smart</button></div>
+          </article>
+          <article class="panel trend"><header><h2>Energy Trend</h2><span>Live</span><em>Avg: 236 W</em></header><div class="chart"><div class="chart-grid"></div><svg viewBox="0 0 700 120" preserveAspectRatio="none" aria-label="Konzeptkurve Energie"><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45" fill="none" stroke="#16eff1" stroke-width="3"/><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45 L700 120 L0 120Z" fill="url(#fade)"/><defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16eff1" stop-opacity=".25"/><stop offset="1" stop-color="#16eff1" stop-opacity="0"/></linearGradient></defs></svg><strong>243<small>W</small></strong></div>
+          </article>
+        </div>
+
+        <div class="right-stack">
+          <article class="panel schedule"><h2>◷ Automation Schedule</h2><ul><li><span>Light Board 120 W<small>06:00–22:00</small></span><b>ON</b></li><li><span>Heizung 300 W<small>05:30–09:00</small></span><b>ON</b></li><li><span>DF100M Fan<small>Auto: VPD & Temp</small></span><b>40%</b></li></ul><p>Next: Lights ON in 7h 35m</p></article>
+          <article class="panel devices"><h2>Devices</h2><ul><li>Light Board 120 W <span>ON <i></i></span></li><li>Heizung 300 W <span>ON <i></i></span></li><li>DF100M Fan <span>ON <i></i></span></li><li>Circulation Fan <span>ON <i></i></span></li></ul></article>
+          <article class="panel cost"><div><h2>Kosten / Monat</h2><strong>49.39 €</strong><span>Aktuell</span></div><div class="wallet">▱</div></article>
+        </div>
+      </div>
+
+      <div class="assistant-row"><div><b>◎ AI Assistant</b><span>Environment optimal. VPD in ideal range.<br>No actions required.</span></div><button>⌘ <span>Boost<small>10 min</small></span></button><button>☾ <span>Quiet<small>10 min</small></span></button><button>⟳ <span>Sync<small>Sensors</small></span></button><button>◎ <span>Calibrate<small>Sensors</small></span></button><div class="data-status"><b>◇ Data Status</b><span>All systems synchronized</span><small>Local · Secure · Encrypted</small></div></div>
+    </section>
+
+    <section class="view info-view" id="system" data-view="system">
+      <header class="view-heading"><span>GC://LOCAL/CORE</span><h1>System Architecture</h1><p>Die öffentliche Projektseite läuft vollständig in derselben visuellen Sprache wie die lokale Steueroberfläche.</p></header>
+      <div class="info-grid">
+        <article class="panel big-card"><span>Local Core</span><h2>Raspberry Pi bleibt Master.</h2><p>Sensorik, Geräte, Regeln, Audit und lokale API bleiben vor Ort. Die optionale Cloud erweitert die Übersicht, ersetzt aber niemals die lokale Autorität.</p><div class="core-orbit"><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><i></i><i></i></div></article>
+        <article class="panel stat-card"><span>Control</span><strong>LOCAL</strong><small>Authoritative</small></article><article class="panel stat-card"><span>Remote</span><strong>OPTIONAL</strong><small>Outbound only</small></article><article class="panel stat-card"><span>Writes</span><strong>DENY</strong><small>By default</small></article>
+        <article class="panel runtime-card"><span>Projektlaufzeit</span><strong id="project-runtime">WIRD GELADEN …</strong><small>seit Repository-Start · 08.08.2026</small></article>
+        <article class="panel runtime-card"><span>Entwicklungsaufwand</span><strong>14:00 h</strong><small>rekonstruierte Baseline bis 10.08.2026</small></article>
       </div>
     </section>
 
-    <section class="system-overview" id="system">
-      <div class="section-intro"><div><span class="kicker">SYSTEM OVERVIEW</span><h2>Alles Wesentliche. Ohne visuelles Rauschen.</h2></div><p>Sensorik, Leistung und Regeln laufen in einer konsistenten lokalen Architektur zusammen.</p></div>
-      <div class="telemetry">
-        <article><span>TEMPERATUR</span><strong>24.7<small> °C</small></strong><div class="spark a"></div><em>NOMINAL</em></article>
-        <article><span>LUFTFEUCHTE</span><strong>55.2<small> %</small></strong><div class="spark b"></div><em>NOMINAL</em></article>
-        <article><span>VPD</span><strong>1.21<small> kPa</small></strong><div class="spark c"></div><em>OPTIMAL</em></article>
-        <article><span>LEISTUNG</span><strong>243<small> W</small></strong><div class="spark d"></div><em>LIVE</em></article>
-      </div>
+    <section class="view info-view" id="interfaces" data-view="interfaces">
+      <header class="view-heading"><span>UNIFIED INTERFACE FAMILY</span><h1>Ein System. Vier Perspektiven.</h1><p>Desktop, Tablet, Mobile und Cloud folgen derselben Datenlogik und denselben Sicherheitsgrenzen.</p></header>
+      <div class="interface-wall"><figure class="panel featured"><img src="assets/gui/local-tablet-v0.9.png" alt="Local Tablet GUI"><figcaption><b>Local Tablet</b><span>Touch-first control surface</span></figcaption></figure><figure class="panel"><img src="assets/gui/local-desktop-v0.9.png" alt="Local Desktop GUI"><figcaption><b>Local Desktop</b><span>Full command center</span></figcaption></figure><figure class="panel mobile-shot"><img src="assets/gui/local-mobile-v0.9.png" alt="Local Mobile GUI"><figcaption><b>Local Mobile</b><span>Control in your hand</span></figcaption></figure><figure class="panel"><img src="assets/gui/cloud-desktop-v0.9.png" alt="Cloud Desktop GUI"><figcaption><b>Cloud Desktop</b><span>Optional remote overview</span></figcaption></figure></div>
     </section>
 
-    <section class="showcase" id="interfaces">
-      <div class="section-intro"><div><span class="kicker">UNIFIED INTERFACE FAMILY</span><h2>Ein System. Vier präzise Perspektiven.</h2></div><p>Jede Oberfläche folgt derselben Wort-Bild-Marke, derselben Datenlogik und denselben Sicherheitsprinzipien.</p></div>
-      <article class="featured-interface">
-        <div class="interface-copy"><span>01 / LOCAL DESKTOP</span><h3>Die vollständige Kommandozentrale.</h3><p>Dichte Telemetrie, Klima-Regelung, Energie, Geräte, Alarmierung und Automations-Timeline in einer professionellen Arbeitsoberfläche.</p><ul><li>Raspberry Pi Master</li><li>24h Environmental Trends</li><li>Deny-by-default Security</li></ul></div>
-        <figure><img src="assets/gui/local-desktop-v0.9.png" alt="Detailreiche Local Desktop GUI von 135er-Grow Central"><figcaption>LOCAL DESKTOP · CONCEPT TELEMETRY</figcaption></figure>
-      </article>
-      <div class="interface-grid">
-        <figure><img src="assets/gui/local-tablet-v0.9.png" alt="Detailreiche Local Tablet GUI"><figcaption><strong>Local Tablet</strong><span>Touch-first control surface</span></figcaption></figure>
-        <figure class="mobile"><img src="assets/gui/local-mobile-v0.9.png" alt="Detailreiche Local Mobile GUI"><figcaption><strong>Local Mobile</strong><span>Control in your hand</span></figcaption></figure>
-        <figure><img src="assets/gui/cloud-desktop-v0.9.png" alt="Detailreiche Cloud Desktop GUI"><figcaption><strong>Cloud Desktop</strong><span>Optional remote overview</span></figcaption></figure>
-      </div>
+    <section class="view info-view" id="security" data-view="security">
+      <header class="view-heading"><span>TRUST ARCHITECTURE</span><h1>Cloud erweitert. Local entscheidet.</h1><p>Jeder Schreibzugriff durchläuft explizite Sicherheitsstufen. Die öffentliche Website besitzt keine Steuerendpunkte.</p></header>
+      <div class="security-grid"><article class="panel gate"><b>01</b><span>Inventory</span><small>Gerät ist bekannt</small></article><article class="panel gate"><b>02</b><span>Approval</span><small>Explizit freigegeben</small></article><article class="panel gate"><b>03</b><span>Writable</span><small>Write-Recht aktiv</small></article><article class="panel gate"><b>04</b><span>Authenticated</span><small>Token und Audit</small></article><article class="panel security-core"><img src="assets/brand/135er-grow-central-mark.png" alt=""><span>Security Policy</span><strong>Deny by Default</strong><small>LOCAL · SECURE · AUDITED</small></article></div>
     </section>
 
-    <section class="security" id="security">
-      <div class="security-copy"><span class="kicker">TRUST ARCHITECTURE</span><h2>Cloud erweitert.<br>Local entscheidet.</h2><p>Jeder Schreibzugriff durchläuft vier explizite Hürden. Öffentliche Website, optionale Cloud und lokale Steuerung bleiben klar getrennte Vertrauensbereiche.</p></div>
-      <ol><li><b>01</b><span><strong>Inventory</strong><small>Gerät ist bekannt</small></span></li><li><b>02</b><span><strong>Approval</strong><small>Explizit freigegeben</small></span></li><li><b>03</b><span><strong>Writable</strong><small>Write-Recht aktiv</small></span></li><li><b>04</b><span><strong>Authenticated</strong><small>Token und Audit</small></span></li></ol>
-      <div class="security-seal"><img src="assets/brand/135er-grow-central-mark.png" alt=""><span>POLICY</span><strong>DENY<br>BY DEFAULT</strong></div>
-    </section>
-
-    <section class="final-cta"><div><span class="kicker">OPEN DEVELOPMENT · ALPHA 0.7.1</span><h2>Gebaut für lokale Souveränität.</h2></div><a class="button primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Repository öffnen</a></section>
+    <footer class="status-bar"><div><i></i><span>LOCAL-FIRST</span><b>PROJECT ONLINE</b></div><div><span>PLATFORM</span><b>RASPBERRY PI</b></div><div><span>INTERFACE</span><b>TABLET HUD</b></div><div><span>STATUS</span><b>ALPHA 0.7.1</b></div><div class="footer-links"><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/README.md">DE DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/en/README.md">EN DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">REPOSITORY ↗</a></div></footer>
   </main>
-
-  <footer><div class="brand brand-lockup footer-brand"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L."></div><p>Konzeptwerte · keine validierte Live-Telemetrie<br>Concept values · no validated live telemetry</p><a href="#home">TOP ↑</a></footer>
 
   <script>
     (() => {
-      const projectStart = new Date('2026-08-08T15:34:10Z').getTime();
-      const runtime = document.getElementById('project-runtime');
-      const effort = document.getElementById('project-effort');
-
-      // Rückwirkend rekonstruierte Baseline bis 10.08.2026 20:40 MESZ.
-      // Ab diesem Zeitpunkt wird nur noch konkret dokumentierte aktive Arbeitszeit ergänzt.
-      const documentedEffortMinutes = 14 * 60;
-
-      const pad = (value) => String(value).padStart(2, '0');
-      const formatEffort = (minutes) => {
-        const total = Math.max(0, Math.floor(minutes));
-        const hours = Math.floor(total / 60);
-        const mins = total % 60;
-        return `${pad(hours)}:${pad(mins)} h`;
+      const views = [...document.querySelectorAll('[data-view]')];
+      const tabs = [...document.querySelectorAll('[data-tab]')];
+      const activate = (id) => {
+        views.forEach((view) => view.classList.toggle('active', view.dataset.view === id));
+        tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === id));
+        history.replaceState(null, '', `#${id}`);
       };
+      tabs.forEach((tab) => tab.addEventListener('click', (event) => { if (tab.tagName === 'A') event.preventDefault(); activate(tab.dataset.tab); }));
+      const initial = location.hash.slice(1); if (views.some((view) => view.dataset.view === initial)) activate(initial);
 
-      if (effort) {
-        effort.textContent = formatEffort(documentedEffortMinutes);
-        effort.setAttribute('aria-label', `${Math.floor(documentedEffortMinutes / 60)} Stunden und ${documentedEffortMinutes % 60} Minuten dokumentierte Entwicklungszeit`);
-      }
+      const clock = document.getElementById('clock'); const date = document.getElementById('date'); const check = document.getElementById('last-check');
+      const updateTime = () => { const now = new Date(); clock.textContent = now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); date.textContent = now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'}); check.textContent = now.toLocaleTimeString('de-DE'); };
+      updateTime(); setInterval(updateTime, 1000);
 
-      if (!runtime) return;
-      const updateRuntime = () => {
-        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - projectStart) / 1000));
-        const days = Math.floor(elapsedSeconds / 86400);
-        const hours = Math.floor((elapsedSeconds % 86400) / 3600);
-        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-        const seconds = elapsedSeconds % 60;
-        runtime.textContent = `${days}T ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-        runtime.setAttribute('aria-label', `${days} Tage, ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden Projektlaufzeit`);
-      };
-
-      updateRuntime();
-      window.setInterval(updateRuntime, 1000);
+      const runtime = document.getElementById('project-runtime'); const start = new Date('2026-08-08T15:34:10Z').getTime(); const pad = (value) => String(value).padStart(2,'0');
+      const updateRuntime = () => { if (!runtime) return; const seconds = Math.max(0,Math.floor((Date.now()-start)/1000)); runtime.textContent = `${Math.floor(seconds/86400)}T ${pad(Math.floor(seconds%86400/3600))}:${pad(Math.floor(seconds%3600/60))}:${pad(seconds%60)}`; };
+      updateRuntime(); setInterval(updateRuntime,1000);
     })();
   </script>
 </body>
