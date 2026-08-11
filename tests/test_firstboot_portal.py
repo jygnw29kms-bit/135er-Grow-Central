@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 PORTAL_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "portal.py"
 APPLY_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "apply_setup.py"
+SETUP_AP_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "setup-ap.sh"
 SPEC = importlib.util.spec_from_file_location("firstboot_portal", PORTAL_PATH)
 portal = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
@@ -96,3 +97,33 @@ def test_wifi_password_is_not_exposed_in_process_arguments():
     flattened = [str(argument) for call in calls for argument in call]
     assert config["wifi_password"] not in flattened
     assert "--passwd-file" in flattened
+
+
+def test_setup_networks_are_dual_stack_and_ap_profile_is_repaired():
+    script = SETUP_AP_PATH.read_text(encoding="utf-8")
+    assert 'ADDRESS="10.42.0.1/24"' in script
+    assert "ipv4.method shared" in script
+    assert "ipv4.never-default yes" in script
+    assert "ipv6.method shared" in script
+    assert "ipv6.never-default yes" in script
+    assert script.index('fi\n\n# Apply the complete profile') < script.index('nmcli connection modify "$CONNECTION"')
+
+    calls = []
+
+    def fake_run(*arguments, **_kwargs):
+        calls.append(arguments)
+        return SimpleNamespace(returncode=0)
+
+    real_mkstemp = tempfile.mkstemp
+
+    def temporary_runtime_file(*_args, **_kwargs):
+        return real_mkstemp(prefix="grow-central-ipv4-test-", dir="/tmp", text=True)
+
+    config, error = portal.validate_setup(valid_form())
+    assert error is None
+    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
+        apply_setup.configure_wifi(config)
+
+    flattened = [str(argument) for call in calls for argument in call]
+    ipv6_index = flattened.index("ipv6.method")
+    assert flattened[ipv6_index + 1] == "auto"

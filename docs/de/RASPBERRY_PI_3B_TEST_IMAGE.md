@@ -49,6 +49,14 @@ Das Setup-Portal verlangt vor dem Start des Hauptsystems ein neues `GrowCentral`
 
 Bei einer fehlgeschlagenen WLAN-Verbindung wird der Setup-Zugangspunkt automatisch wiederhergestellt. Ziel-WLAN-Passwörter werden nur in der rootgeschützten NetworkManager-Konfiguration gespeichert und nicht protokolliert.
 
+Das Setup-Netz arbeitet im Dual-Stack-Betrieb. Der zuverlässige IPv4-Hauptweg
+verwendet auf dem Raspberry Pi fest `10.42.0.1/24`; NetworkManager vergibt die
+Client-Adressen per DHCP. IPv6 wird parallel im Shared Mode bereitgestellt. Das
+AP-Profil wird bei jedem Start vollständig erneut angewendet, damit auch ein
+zuvor unterbrochener erster Boot automatisch repariert wird. Die anschließend
+konfigurierte WLAN-Verbindung verwendet IPv4 und IPv6 automatisch, sofern das
+Zielnetz beide Protokolle anbietet.
+
 ## Sicherheitsstatus im Test-Image
 
 - Root-SSH-Login deaktiviert
@@ -56,7 +64,7 @@ Bei einer fehlgeschlagenen WLAN-Verbindung wird der Setup-Zugangspunkt automatis
 - Locale `de_DE.UTF-8`, Zeitzone `Europe/Berlin` und Tastaturbelegung `de(nodeadkeys)` vorkonfiguriert
 - interaktive First-Boot-Abfragen für Benutzer und Tastatur deaktiviert
 - UFW aktiviert
-- eingehend erlaubt: TCP 22 und TCP 8080; während der Ersteinrichtung zusätzlich TCP 80/443 ausschließlich aus `10.42.0.0/24`
+- eingehend erlaubt: TCP 22 und TCP 8080; während der Ersteinrichtung zusätzlich TCP 80/443 über IPv4 und IPv6 ausschließlich auf dem Setup-WLAN `wlan0`
 - automatische Sicherheitsupdates aktiviert
 - DF100M-Schreibzugriffe standardmäßig deaktiviert
 - Remote-Cloud-Befehle standardmäßig deaktiviert

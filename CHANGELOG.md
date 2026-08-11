@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fixed first-boot access-point DHCP by installing the explicit NetworkManager shared-mode DHCP dependency
+- made the setup AP self-repair its complete static `10.42.0.1/24` IPv4 profile on every start
+- enabled dual-stack setup and uplink networking while retaining static IPv4 and DHCP as the reliable provisioning path
+
 ## Unreleased – First-boot configuration portal
 
 - added a temporary Raspberry Pi setup access point with a device-specific SSID suffix

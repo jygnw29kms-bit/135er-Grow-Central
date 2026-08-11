@@ -281,7 +281,7 @@ class RedirectHandler(http.server.BaseHTTPRequestHandler):
 
 def main() -> None:
     # The setup portal must listen on the temporary AP. UFW restricts both
-    # ports to 10.42.0.0/24 and the service stops after provisioning.
+    # ports on the setup WLAN interface and the service stops after provisioning.
     redirect = http.server.ThreadingHTTPServer(("0.0.0.0", 80), RedirectHandler)  # nosec B104
     threading.Thread(target=redirect.serve_forever, daemon=True).start()
     server = http.server.ThreadingHTTPServer(("0.0.0.0", 443), PortalHandler)  # nosec B104

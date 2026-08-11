@@ -87,7 +87,7 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           # Keep the stock image's UID 1000, but give it the fixed appliance
           # identity. Renaming also prevents userconfig from targeting "pi".
@@ -227,8 +227,10 @@ jobs:
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 8080/tcp
-          ufw allow from 10.42.0.0/24 to any port 80 proto tcp
-          ufw allow from 10.42.0.0/24 to any port 443 proto tcp
+          # The provisioning portal is reachable through IPv4 and IPv6, but
+          # only from clients attached to the temporary setup WLAN.
+          ufw allow in on wlan0 to any port 80 proto tcp
+          ufw allow in on wlan0 to any port 443 proto tcp
           ufw --force enable
           install -o growcentral -g growcentral -m 0640 /dev/null "$MARKER"
           EOF
