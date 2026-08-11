@@ -49,12 +49,19 @@ The setup portal requires a new `GrowCentral` password of at least twelve charac
 
 If the target WLAN connection fails, the setup access point is restored automatically. Target WLAN passwords are stored only in NetworkManager's root-protected configuration and are never logged.
 
+The setup network uses dual stack. Its reliable primary IPv4 path always uses
+`10.42.0.1/24` on the Raspberry Pi, and NetworkManager assigns client addresses
+through DHCP. IPv6 is provided in parallel through shared mode. The complete AP
+profile is reapplied on every start so an interrupted first boot repairs itself
+automatically. The subsequently configured WLAN connection automatically uses
+IPv4 and IPv6 whenever the target network provides both protocols.
+
 ## Security state in the test image
 
 - root SSH login disabled
 - password SSH enabled for the fixed headless user `GrowCentral`
 - UFW enabled
-- incoming TCP 22 and TCP 8080 allowed; TCP 80/443 is additionally allowed from `10.42.0.0/24` only during setup
+- incoming TCP 22 and TCP 8080 allowed; during setup TCP 80/443 is additionally allowed over IPv4 and IPv6 only on the `wlan0` setup network
 - automatic security updates enabled
 - DF100M writes disabled by default
 - remote cloud commands disabled by default
