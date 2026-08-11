@@ -6,18 +6,24 @@ Die statische Projektseite unter `website/` ist die öffentliche Präsentationsf
 
 > **Status: WORK IN PROGRESS** – die Projektseite zeigt bewusst den aktiven Entwicklungsstand und darf nicht als Hinweis auf vollständig validierte Produktionsreife verstanden werden.
 
-## Design
+## Design / Design
 
-Die Website orientiert sich direkt an der lokalen Grow Central-Ziel-GUI: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen sowie grün-cyanfarbene Zustände. Das Layout ist für Desktop, iPad und Smartphone responsive ausgelegt.
+Die Website orientiert sich direkt an der lokalen Grow-Central-Ziel-GUI: feste Desktop-Sidebar, Command-Bar, technische Statuskarten, HUD-Panels sowie grün-cyanfarbene Zustände. Die vier GUI-Vorschauen sind als Systemansichten in die Website eingebettet. Auf Tablets und Smartphones wird die Sidebar zu einer kompakten Navigation; Karten und Ansichten wechseln in ein einspaltiges Raster.
+
+The website directly follows the target local Grow Central GUI: a fixed desktop sidebar, command bar, technical status cards, HUD panels, and green/cyan system states. All four GUI previews are embedded as system views. On tablets and phones, the sidebar becomes compact navigation while cards and views switch to a single-column grid.
 
 Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
 
+The public website remains technically and securely separated from the local control interface. It contains no credentials, control endpoints, or direct Raspberry Pi connection. All displayed telemetry is explicitly marked as concept data.
+
 ## Branding und Grafikformate
 
-Die öffentliche Website verwendet das PNG-Logo:
+Die öffentliche Website verwendet die PNG-Wort-Bild-Marke und das kompakte Markenzeichen:
 
-- `assets/brand/135er-grow-central-logo.png`
+- `assets/brand/135er-grow-central-lockup-v0.9.png`
 - `assets/brand/135er-grow-central-mark.png`
+
+The public website uses the PNG brand lockup and compact brand mark listed above.
 
 WebP wird nicht mehr verwendet. Rastergrafiken werden als PNG eingebunden; ICO ist für das Browser-Favicon zulässig. SVG bleibt für technische Vektorgrafiken und Diagramme erlaubt.
 
