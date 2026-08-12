@@ -31,7 +31,7 @@ jobs:
       - name: Install image build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils
+          sudo apt-get install -y xz-utils rsync dosfstools e2fsprogs util-linux cloud-guest-utils systemd-container
 
       - name: Download and verify Raspberry Pi OS Lite 64-bit
         run: |
@@ -87,7 +87,7 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           # Keep the stock image's UID 1000, but give it the fixed appliance
           # identity. Renaming also prevents userconfig from targeting "pi".
@@ -154,6 +154,8 @@ jobs:
           GC_CLOUD_TOKEN=test
           GC_REMOTE_COMMANDS=false
           GC_CLOUD_ENABLED=false
+          GC_CAMERA_ENABLED=true
+          GC_CAMERA_DEVICE=
           EOF
           chown -R root:growcentral /opt/135er-grow-central
           chmod -R g+rX /opt/135er-grow-central
@@ -164,9 +166,8 @@ jobs:
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
           Description=135er-Grow Central Local
-          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-firstboot-portal.service
+          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service
           Wants=network-online.target bluetooth.target
-          ConditionPathExists=/var/lib/135er-grow-central/.provisioned
           [Service]
           Type=simple
           User=growcentral
@@ -178,12 +179,47 @@ jobs:
           RestartSec=3
           NoNewPrivileges=true
           PrivateTmp=true
-          SupplementaryGroups=systemd-journal
+          SupplementaryGroups=systemd-journal video
           ProtectSystem=strict
           ProtectHome=true
           ReadWritePaths=/opt/135er-grow-central/data /var/lib/135er-grow-central
           [Install]
           WantedBy=multi-user.target
+          EOF
+
+          cat >/usr/local/sbin/grow-central-healthcheck.sh <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+          if curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health \
+            | jq -e '.ok == true' >/dev/null; then
+            exit 0
+          fi
+          systemctl reset-failed 135er-grow-central.service || true
+          systemctl restart 135er-grow-central.service
+          sleep 5
+          curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health \
+            | jq -e '.ok == true' >/dev/null
+          EOF
+          chmod 0755 /usr/local/sbin/grow-central-healthcheck.sh
+
+          cat >/etc/systemd/system/grow-central-healthcheck.service <<'EOF'
+          [Unit]
+          Description=Verify and recover the Grow Central web interface
+          After=135er-grow-central.service
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-healthcheck.sh
+          EOF
+
+          cat >/etc/systemd/system/grow-central-healthcheck.timer <<'EOF'
+          [Unit]
+          Description=Periodic Grow Central web-interface health check
+          [Timer]
+          OnBootSec=45s
+          OnUnitActiveSec=2min
+          Unit=grow-central-healthcheck.service
+          [Install]
+          WantedBy=timers.target
           EOF
 
           mkdir -p /etc/ssh/sshd_config.d
@@ -323,7 +359,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service
+          systemctl enable NetworkManager.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           # Fail the image build if headless provisioning regresses.
@@ -342,8 +378,11 @@ jobs:
           /usr/sbin/sshd -t
           rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
-          grep -q '^ConditionPathExists=/var/lib/135er-grow-central/.provisioned$' /etc/systemd/system/135er-grow-central.service
-          grep -q '^SupplementaryGroups=systemd-journal$' /etc/systemd/system/135er-grow-central.service
+          ! grep -q '^ConditionPathExists=.*\.provisioned$' /etc/systemd/system/135er-grow-central.service
+          grep -q '^SupplementaryGroups=systemd-journal video$' /etc/systemd/system/135er-grow-central.service
+          test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
+          /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
+          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
           /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'
@@ -352,6 +391,25 @@ jobs:
           grep -qx 'Europe/Berlin' /etc/timezone
           grep -qx 'XKBLAYOUT="de"' /etc/default/keyboard
           grep -qx 'XKBVARIANT="nodeadkeys"' /etc/default/keyboard
+
+          # Start the exact application installed in the image as its service
+          # user and fail the build unless the real HTTP health endpoint works.
+          runuser -u growcentral -- /opt/135er-grow-central/.venv/bin/uvicorn app.main:app --app-dir /opt/135er-grow-central --host 127.0.0.1 --port 8080 >/tmp/grow-central-image-smoke.log 2>&1 &
+          SMOKE_PID=$!
+          SMOKE_OK=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8080/api/health | jq -e '.ok == true and .version == "0.7.4"' >/dev/null; then
+              SMOKE_OK=1
+              break
+            fi
+            sleep 1
+          done
+          kill "$SMOKE_PID" || true
+          wait "$SMOKE_PID" || true
+          if [ "$SMOKE_OK" -ne 1 ]; then
+            cat /tmp/grow-central-image-smoke.log
+            exit 1
+          fi
 
           cat >/etc/motd <<'EOF'
           135er-Grow Central - Raspberry Pi 3B TEST IMAGE
@@ -378,9 +436,72 @@ jobs:
           cleanup
           trap - EXIT
 
+      - name: Boot and reboot the completed image userspace
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ROOT=/mnt/grow-central-boot-smoke
+          MACHINE=grow-central-image-smoke
+          LOOP=$(sudo losetup --find --show --partscan work.img)
+          sudo mkdir -p "$ROOT"
+          sudo mount "${LOOP}p2" "$ROOT"
+          cleanup_boot() {
+            set +e
+            sudo machinectl poweroff "$MACHINE" 2>/dev/null
+            sleep 2
+            sudo umount "$ROOT" 2>/dev/null
+            sudo losetup -d "$LOOP" 2>/dev/null
+          }
+          trap cleanup_boot EXIT
+
+          check_boot() {
+            local phase="$1"
+            sudo systemd-nspawn --quiet --boot --register=yes --machine="$MACHINE" --directory="$ROOT" --private-network &
+            local nspawn_pid=$!
+            local ready=0
+            for attempt in $(seq 1 90); do
+              if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
+                /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health \
+                | jq -e '.ok == true and .version == "0.7.4"' >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
+                /usr/bin/systemctl status 135er-grow-central.service --no-pager -l || true
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
+                /usr/bin/journalctl -u 135er-grow-central.service -b --no-pager -n 200 || true
+              echo "Image ${phase} boot did not expose a healthy UI on port 8080" >&2
+              exit 1
+            fi
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
+              /usr/bin/systemctl is-active 135er-grow-central.service
+            sudo machinectl poweroff "$MACHINE"
+            wait "$nspawn_pid" || true
+          }
+
+          # First boot: no provisioning marker. The diagnostic/main UI must
+          # still be reachable so a failed setup can never strand the device.
+          sudo rm -f "$ROOT/var/lib/135er-grow-central/.provisioned"
+          check_boot pre-setup
+
+          # Second boot: represent a completed setup and verify persistence.
+          SERVICE_UID=$(sudo chroot "$ROOT" id -u growcentral)
+          SERVICE_GID=$(sudo chroot "$ROOT" id -g growcentral)
+          sudo install -o "$SERVICE_UID" -g "$SERVICE_GID" -m 0640 /dev/null "$ROOT/var/lib/135er-grow-central/.provisioned"
+          check_boot post-setup
+
+          # The published image must remain a genuine first-boot image.
+          sudo rm -f "$ROOT/var/lib/135er-grow-central/.provisioned"
+          sync
+          cleanup_boot
+          trap - EXIT
+
       - name: Compress and checksum image
         run: |
-          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}"
+          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
@@ -405,9 +526,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*.img.xz
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*.img.xz
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -415,5 +536,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-alpha-0.7.3-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.3-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.3 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 image with repaired setup DHCP/DNS firewall rules, explicit 10.42.0.10-250 leases, redesigned Grow Central provisioning HUD, durable diagnostics journal access, first-boot Bluetooth activation and clearer BLE device classification." --prerelease
+          TAG="pi3-test-alpha-0.7.4-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.4 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 recovery build. The main UI starts independently of the provisioning marker, setup verifies the restarted UI, a watchdog checks port 8080 after boot, and camera runtime packages are preinstalled." --prerelease

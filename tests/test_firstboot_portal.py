@@ -66,6 +66,52 @@ def test_provisioning_marker_is_committed_atomically(tmp_path, monkeypatch):
     assert not marker.with_suffix(".tmp").exists()
 
 
+def test_image_ui_is_not_blocked_by_provisioning_marker():
+    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    service_start = workflow.index("cat >/etc/systemd/system/135er-grow-central.service")
+    service_end = workflow.index("\n          EOF", service_start)
+    service = workflow[service_start:service_end]
+    assert "ConditionPathExists" not in service
+    assert "Restart=always" in service
+    assert "grow-central-healthcheck.timer" in workflow
+    assert "http://127.0.0.1:8080/api/health" in workflow
+    assert "Boot and reboot the completed image userspace" in workflow
+    assert "check_boot pre-setup" in workflow
+    assert "check_boot post-setup" in workflow
+    assert "systemd-nspawn" in workflow
+
+
+def test_setup_restarts_and_verifies_main_ui(tmp_path, monkeypatch):
+    pending = tmp_path / "setup-pending.json"
+    marker = tmp_path / ".provisioned"
+    error_file = tmp_path / "setup-last-error"
+    hosts = tmp_path / "hosts"
+    hosts.write_text("127.0.0.1 localhost\n127.0.1.1 grow-central-test\n", encoding="utf-8")
+    pending.write_text(
+        '{"mode":"ethernet","hostname":"grow-central","timezone":"Europe/Berlin",'
+        '"new_password":"ein-neues-passwort"}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(apply_setup, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(apply_setup, "PENDING_FILE", pending)
+    monkeypatch.setattr(apply_setup, "MARKER", marker)
+    monkeypatch.setattr(apply_setup, "ERROR_FILE", error_file)
+    monkeypatch.setattr(apply_setup, "HOSTS_FILE", hosts)
+    monkeypatch.setattr(apply_setup, "update_hosts", lambda _hostname: None)
+    monkeypatch.setattr(apply_setup.time, "sleep", lambda _seconds: None)
+    calls = []
+
+    def fake_run(*arguments, **_kwargs):
+        calls.append(arguments)
+        return SimpleNamespace(returncode=0, stdout="active\n", stderr="")
+
+    monkeypatch.setattr(apply_setup, "run", fake_run)
+    assert apply_setup.main() == 0
+    assert marker.exists()
+    assert ("systemctl", "restart", "135er-grow-central.service") in calls
+    assert ("systemctl", "is-active", "135er-grow-central.service") in calls
+
+
 def test_native_debian_pam_binding_is_used(monkeypatch):
     class Client:
         def start(self, service): assert service == "login"

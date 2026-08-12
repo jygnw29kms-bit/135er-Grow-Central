@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.4 – Boot and UI recovery (2026-08-12)
+
+- start the main web UI independently of the provisioning marker so setup failures cannot leave port 8080 permanently closed
+- restart and verify the main service after setup instead of accepting an unverified transition
+- add a boot-time and periodic local health watchdog with one automatic recovery attempt
+- verify systemd units and the installed image application's real HTTP health endpoint during the image build
+- include Logitech C920 runtime tools (`ffmpeg`, `v4l-utils`) and grant the service access to the `video` group
+
 ## alpha-0.7.3 – Provisioning network and live-test fixes (2026-08-11)
 
 - allow DHCP and DNS only on the temporary `wlan0` setup interface

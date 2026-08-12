@@ -148,7 +148,13 @@ def main() -> int:
         time.sleep(2)
         run("systemctl", "stop", "grow-central-firstboot-portal.service", check=False)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
-        run("systemctl", "start", "135er-grow-central.service")
+        # The UI also runs during provisioning, so setup can never strand the
+        # appliance without a diagnostic surface. Restart it here to commit a
+        # clean post-setup state and verify that it is really active.
+        run("systemctl", "restart", "135er-grow-central.service")
+        active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
+        if active.returncode != 0:
+            raise RuntimeError("Die Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
         return 0
     except Exception as error:  # setup must recover its own access path
         config.clear()
