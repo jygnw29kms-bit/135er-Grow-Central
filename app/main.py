@@ -1,10 +1,12 @@
 """135er-Grow Central Local API alpha-0.7.4.
 
-DE: Lokaler Raspberry-Pi-Dienst für DF100M BLE-Forschung, sichere
-Smart-Home-Adapter und die lokale Weboberfläche.
+DE: Lokaler Raspberry-Pi-Dienst für die Mars-Hydro/iConnect-Zielhardware,
+experimentelle DF100M-BLE-Diagnose, sichere Smart-Home-Adapter und die lokale
+Weboberfläche.
 
-EN: Local Raspberry Pi service for DF100M BLE research, secured smart-home
-adapters and the local web UI.
+EN: Local Raspberry Pi service for the Mars Hydro/iConnect target hardware,
+experimental DF100M BLE diagnostics, secured smart-home adapters and the local
+web UI.
 """
 from __future__ import annotations
 
@@ -22,6 +24,7 @@ from pydantic import BaseModel, Field
 from app.security import require_write_auth
 from app.diagnostics import router as diagnostics_router
 from app.smarthome.router import router as smarthome_router
+from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
 WRITE_UUID = os.getenv("DF100M_WRITE_UUID", "f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d")
@@ -59,7 +62,7 @@ class RawBody(BaseModel):
 
 
 def speed_payload(percent: int) -> bytes:
-    """Build an experimental payload; protocol is not validated yet."""
+    """Build an experimental BLE diagnostics payload; protocol is not validated."""
     if not 0 <= percent <= 100:
         raise ValueError("percent must be 0..100")
     if SPEED_MODE == "byte":
@@ -80,6 +83,8 @@ def _status_payload() -> dict[str, Any]:
         "notifications": notifications[-20:],
         "protocol_validated": False,
         "write_enabled": ALLOW_WRITES,
+        "integration_role": "experimental_ble_diagnostics_fallback",
+        "vendor_family": "mars_hydro_iconnect",
     }
 
 
@@ -105,6 +110,7 @@ async def config():
         "allow_raw_writes": ALLOW_RAW_WRITES,
         "smarthome_enabled": os.getenv("GC_SMARTHOME_ENABLED", "false").lower() == "true",
         "cloud_enabled": os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true",
+        "mars_hydro": public_hardware_profile(),
     }
 
 
@@ -114,8 +120,10 @@ async def status():
 
 
 def _classify_ble_name(name: str) -> str:
-    lowered = name.lower()
-    if NAME_HINT.lower() in lowered or "mzf" in lowered or "mars" in lowered or "df100m" in lowered:
+    # Compatibility name retained for the existing HUD/API. Architecturally this
+    # class means a Mars Hydro BLE diagnostics candidate, not the primary
+    # iConnect integration path.
+    if is_mars_hydro_ble_candidate(name, NAME_HINT):
         return "df100m_candidate"
     return "generic_ble"
 
@@ -157,7 +165,7 @@ def _ble_identity(name: str, service_uuids: list[str], manufacturer_ids: list[in
         (("keyboard", "mouse", "maus", "tastatur"), "Eingabegerät"),
     )
     if classification == "df100m_candidate":
-        device_type = "DF100M-Kandidat"
+        device_type = "Mars Hydro iFresh/DF100 BLE-Diagnosekandidat"
     else:
         for patterns, label in type_patterns:
             if any(pattern in lowered for pattern in patterns):
@@ -201,6 +209,8 @@ async def discover(timeout: float = 7.0):
             "service_uuids": service_uuids,
             "classification": classification,
             "preferred": classification == "df100m_candidate",
+            "vendor_family": "mars_hydro_iconnect" if classification == "df100m_candidate" else None,
+            "integration_role": "experimental_ble_diagnostics_fallback" if classification == "df100m_candidate" else "generic_ble",
         })
     rows.sort(key=lambda item: (not item["preferred"], -(item["rssi"] or -999)))
     return {"devices": rows}
@@ -279,7 +289,7 @@ async def notify_stop(uuid: str = NOTIFY_UUID):
 @app.post("/api/speed", dependencies=[Depends(require_write_auth)])
 async def speed(body: SpeedBody):
     if not ALLOW_WRITES:
-        raise HTTPException(403, "DF100M writes are disabled")
+        raise HTTPException(403, "DF100M BLE diagnostic writes are disabled")
     if not client or not client.is_connected:
         raise HTTPException(409, "not connected")
     try:
@@ -289,15 +299,15 @@ async def speed(body: SpeedBody):
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(409, "DF100M write failed") from exc
+        raise HTTPException(409, "DF100M BLE diagnostic write failed") from exc
 
 
 @app.post("/api/raw", dependencies=[Depends(require_write_auth)])
 async def raw(body: RawBody):
     if not ALLOW_WRITES:
-        raise HTTPException(403, "DF100M writes are disabled")
+        raise HTTPException(403, "DF100M BLE diagnostic writes are disabled")
     if not ALLOW_RAW_WRITES:
-        raise HTTPException(403, "raw DF100M writes are disabled")
+        raise HTTPException(403, "raw DF100M BLE diagnostic writes are disabled")
     if not client or not client.is_connected:
         raise HTTPException(409, "not connected")
     try:
@@ -314,8 +324,9 @@ async def raw(body: RawBody):
         raise HTTPException(409, "raw BLE write failed") from exc
 
 
-# Compatibility API for the current local HUD. New integrations should prefer
-# the stable /api/v1/* namespaces where available.
+# Compatibility API for the current local HUD. These endpoint names are kept
+# for existing clients. They represent the experimental DF100M BLE diagnostics
+# path, not the future primary Mars Hydro/iConnect adapter.
 @app.get("/api/df100m/status")
 async def df100m_status_alias():
     return _status_payload()
