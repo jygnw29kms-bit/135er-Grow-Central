@@ -247,7 +247,9 @@ jobs:
           Description=Prepare Grow Central console and SSH access
           After=local-fs.target bluetooth.service
           Wants=bluetooth.service
-          Before=ssh.service getty@tty1.service 135er-grow-central.service
+          # Console/SSH/Bluetooth preparation must never hold the web UI in a
+          # pending start job when hardware initialization is slow.
+          Before=ssh.service getty@tty1.service
           ConditionPathExists=!/var/lib/135er-grow-central/.headless-firstboot-ready
           [Service]
           Type=oneshot

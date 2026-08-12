@@ -2,7 +2,6 @@
 Description=135er-Grow Central first-boot configuration portal
 After=NetworkManager.service grow-central-firstboot-firewall.service
 Wants=NetworkManager.service
-Before=135er-grow-central.service
 ConditionPathExists=!/var/lib/135er-grow-central/.provisioned
 
 [Service]

@@ -79,6 +79,9 @@ def test_image_ui_is_not_blocked_by_provisioning_marker():
     assert "check_boot pre-setup" in workflow
     assert "check_boot post-setup" in workflow
     assert "systemd-nspawn" in workflow
+    portal_unit = (Path(__file__).parents[1] / "image-builder" / "firstboot" / "grow-central-firstboot-portal.service").read_text(encoding="utf-8")
+    assert "Before=135er-grow-central.service" not in portal_unit
+    assert "Before=ssh.service getty@tty1.service 135er-grow-central.service" not in workflow
 
 
 def test_setup_restarts_and_verifies_main_ui(tmp_path, monkeypatch):

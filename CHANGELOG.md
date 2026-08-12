@@ -7,6 +7,7 @@
 - add a boot-time and periodic local health watchdog with one automatic recovery attempt
 - verify systemd units and the installed image application's real HTTP health endpoint during the image build
 - include Logitech C920 runtime tools (`ffmpeg`, `v4l-utils`) and grant the service access to the `video` group
+- prevent setup-AP and Bluetooth/SSH initialization from holding the main UI in an indefinite systemd ordering job
 
 ## alpha-0.7.3 – Provisioning network and live-test fixes (2026-08-11)
 
