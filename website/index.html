@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#02070a">
-  <meta name="description" content="135er-Grow Central – local-first Raspberry-Pi-Steuerung für Klima, Energie und Smart Home.">
+  <meta name="description" content="135er-Grow Central – local-first Raspberry-Pi-Steuerung für Klima, Mars Hydro iConnect, Energie und Smart Home.">
   <meta property="og:title" content="135er-Grow Central · Local Tablet">
-  <meta property="og:description" content="Local-first automation. Raspberry Pi authority. Optional cloud.">
+  <meta property="og:description" content="Local-first automation. Raspberry Pi authority. Mars Hydro iConnect target. Optional cloud.">
   <meta property="og:image" content="assets/gui/local-tablet-v0.9.png">
   <title>135er-Grow Central · Local Tablet</title>
   <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
@@ -33,9 +33,9 @@
 
     <section class="view active" id="overview" data-view="overview">
       <div class="metric-row">
-        <article class="metric"><div class="metric-icon">♨</div><div><span>Temperatur</span><strong>24.7<small>°C</small></strong><em>Ideal: 22–26 °C</em></div></article>
-        <article class="metric"><div class="metric-icon">◉</div><div><span>Relative Humidity</span><strong>55.2<small>%</small></strong><em>Ideal: 45–65 %</em></div></article>
-        <article class="metric"><div class="metric-icon">⌁</div><div><span>VPD</span><strong>1.21<small>kPa</small></strong><em>Ideal: 0.8–1.3 kPa</em></div></article>
+        <article class="metric"><div class="metric-icon">♨</div><div><span>Temperatur</span><strong>24.7<small>°C</small></strong><em>Concept telemetry</em></div></article>
+        <article class="metric"><div class="metric-icon">◉</div><div><span>Relative Humidity</span><strong>55.2<small>%</small></strong><em>Concept telemetry</em></div></article>
+        <article class="metric"><div class="metric-icon">⌁</div><div><span>VPD</span><strong>1.21<small>kPa</small></strong><em>Concept telemetry</em></div></article>
         <article class="metric power"><div class="metric-icon">ϟ</div><div><span>Power Draw</span><strong>243<small>W</small></strong><em>Concept telemetry</em></div><div class="power-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
       </div>
 
@@ -44,38 +44,38 @@
           <article class="panel environment">
             <h2>Environment Status</h2>
             <dl><div><dt>♨ TEMP</dt><dd>24.7 °C</dd></div><div><dt>◉ RH</dt><dd>55.2 %</dd></div><div><dt>⌁ VPD</dt><dd>1.21 kPa</dd></div><div><dt>▱ CO₂</dt><dd>742 ppm</dd></div><div><dt>⌘ AIRFLOW</dt><dd>Normal</dd></div></dl>
-            <p>All conditions optimal <b>✓</b></p>
+            <p>Demo interface <b>✓</b></p>
           </article>
-          <article class="panel health"><h2>System Health</h2><div class="health-body"><div class="health-ring"><strong>100%</strong><span>Health score</span></div><ul><li>Sensors <b>OK</b></li><li>Controllers <b>OK</b></li><li>Devices <b>READY</b></li><li>Network <b>LOCAL</b></li></ul></div><small>Last check: <span id="last-check">--:--:--</span></small></article>
+          <article class="panel health"><h2>System Health</h2><div class="health-body"><div class="health-ring"><strong>ALPHA</strong><span>0.7.4</span></div><ul><li>Pi First Boot <b>SMOKE OK</b></li><li>iConnect <b>VALIDATION</b></li><li>BLE Diagnostics <b>EXPERIMENTAL</b></li><li>Network <b>LOCAL</b></li></ul></div><small>Last UI check: <span id="last-check">--:--:--</span></small></article>
         </div>
 
         <div class="center-stack">
           <article class="panel fan-control">
-            <h2><b>DF100M Fan</b> Control</h2>
-            <div class="dial-area"><button aria-label="Wert senken">−</button><div class="dial"><div class="dial-ticks"></div><div class="dial-core"><span>⌘</span><strong>40%</strong><em>Speed</em></div></div><button aria-label="Wert erhöhen">+</button></div>
-            <div class="mode-switch"><button class="active">Manual</button><button>Auto</button><button>Smart</button></div>
+            <h2><b>Mars Hydro iFresh / DF100</b> Control Target</h2>
+            <div class="dial-area"><button aria-label="Wert senken">−</button><div class="dial"><div class="dial-ticks"></div><div class="dial-core"><span>⌘</span><strong>40%</strong><em>Demo</em></div></div><button aria-label="Wert erhöhen">+</button></div>
+            <div class="mode-switch"><button class="active">iConnect</button><button>BLE Diag</button><button>Safe</button></div>
           </article>
-          <article class="panel trend"><header><h2>Energy Trend</h2><span>Live</span><em>Avg: 236 W</em></header><div class="chart"><div class="chart-grid"></div><svg viewBox="0 0 700 120" preserveAspectRatio="none" aria-label="Konzeptkurve Energie"><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45" fill="none" stroke="#16eff1" stroke-width="3"/><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45 L700 120 L0 120Z" fill="url(#fade)"/><defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16eff1" stop-opacity=".25"/><stop offset="1" stop-color="#16eff1" stop-opacity="0"/></linearGradient></defs></svg><strong>243<small>W</small></strong></div>
+          <article class="panel trend"><header><h2>Energy Trend</h2><span>Demo</span><em>Concept values</em></header><div class="chart"><div class="chart-grid"></div><svg viewBox="0 0 700 120" preserveAspectRatio="none" aria-label="Konzeptkurve Energie"><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45" fill="none" stroke="#16eff1" stroke-width="3"/><path d="M0 83 C45 76 65 43 106 63 S176 104 215 65 S275 36 315 75 S372 96 418 62 S480 52 520 76 S575 28 614 61 S665 69 700 45 L700 120 L0 120Z" fill="url(#fade)"/><defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16eff1" stop-opacity=".25"/><stop offset="1" stop-color="#16eff1" stop-opacity="0"/></linearGradient></defs></svg><strong>243<small>W</small></strong></div>
           </article>
         </div>
 
         <div class="right-stack">
-          <article class="panel schedule"><h2>◷ Automation Schedule</h2><ul><li><span>Light Board 120 W<small>06:00–22:00</small></span><b>ON</b></li><li><span>Heizung 300 W<small>05:30–09:00</small></span><b>ON</b></li><li><span>DF100M Fan<small>Auto: VPD & Temp</small></span><b>40%</b></li></ul><p>Next: Lights ON in 7h 35m</p></article>
-          <article class="panel devices"><h2>Devices</h2><ul><li>Light Board 120 W <span>ON <i></i></span></li><li>Heizung 300 W <span>ON <i></i></span></li><li>DF100M Fan <span>ON <i></i></span></li><li>Circulation Fan <span>ON <i></i></span></li></ul></article>
-          <article class="panel cost"><div><h2>Kosten / Monat</h2><strong>49.39 €</strong><span>Aktuell</span></div><div class="wallet">▱</div></article>
+          <article class="panel schedule"><h2>◷ Automation Schedule</h2><ul><li><span>FC3000 2024<small>USB · iConnect target</small></span><b>DEMO</b></li><li><span>Heizung 300 W<small>Smart plug path</small></span><b>DEMO</b></li><li><span>iFresh / DF100<small>iConnect · BLE fallback diagnostics</small></span><b>DEMO</b></li></ul><p>Automationslogik in Alpha-Validierung</p></article>
+          <article class="panel devices"><h2>Devices</h2><ul><li>FC3000 2024 <span>iConnect <i></i></span></li><li>iFresh / DF100 <span>iConnect <i></i></span></li><li>Smart Plugs <span>LOCAL <i></i></span></li><li>Logitech C920 <span>IMAGE READY <i></i></span></li></ul></article>
+          <article class="panel cost"><div><h2>Kostenmodell</h2><strong>€/kWh</strong><span>frei einstellbar</span></div><div class="wallet">▱</div></article>
         </div>
       </div>
 
-      <div class="assistant-row"><div><b>◎ AI Assistant</b><span>Environment optimal. VPD in ideal range.<br>No actions required.</span></div><button>⌘ <span>Boost<small>10 min</small></span></button><button>☾ <span>Quiet<small>10 min</small></span></button><button>⟳ <span>Sync<small>Sensors</small></span></button><button>◎ <span>Calibrate<small>Sensors</small></span></button><div class="data-status"><b>◇ Data Status</b><span>All systems synchronized</span><small>Local · Secure · Encrypted</small></div></div>
+      <div class="assistant-row"><div><b>◎ Project Assistant</b><span>Local-first. Raspberry Pi authority.<br>Hardware writes remain deny-by-default.</span></div><button>⌘ <span>FC3000<small>2024</small></span></button><button>☾ <span>iFresh<small>DF100</small></span></button><button>⟳ <span>Sync<small>Devices</small></span></button><button>◎ <span>Diagnose<small>BLE</small></span></button><div class="data-status"><b>◇ Data Status</b><span>Concept UI</span><small>Local · Secure · Alpha</small></div></div>
     </section>
 
     <section class="view info-view" id="system" data-view="system">
-      <header class="view-heading"><span>GC://LOCAL/CORE</span><h1>System Architecture</h1><p>Die öffentliche Projektseite läuft vollständig in derselben visuellen Sprache wie die lokale Steueroberfläche.</p></header>
+      <header class="view-heading"><span>GC://LOCAL/CORE</span><h1>System Architecture</h1><p>Die öffentliche Projektseite folgt derselben visuellen Sprache wie die lokale Steueroberfläche.</p></header>
       <div class="info-grid">
-        <article class="panel big-card"><span>Local Core</span><h2>Raspberry Pi bleibt Master.</h2><p>Sensorik, Geräte, Regeln, Audit und lokale API bleiben vor Ort. Die optionale Cloud erweitert die Übersicht, ersetzt aber niemals die lokale Autorität.</p><div class="core-orbit"><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><i></i><i></i></div></article>
+        <article class="panel big-card"><span>Local Core</span><h2>Raspberry Pi 3B bleibt Master.</h2><p>FC3000 2024 und iFresh/DF100 werden als gemeinsame Mars-Hydro/iConnect-Familie modelliert. Bestehendes DF100M-BLE dient nur Diagnose und Fallback. ESP32 ist nicht Bestandteil der Zielarchitektur.</p><div class="core-orbit"><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><i></i><i></i></div></article>
         <article class="panel stat-card"><span>Control</span><strong>LOCAL</strong><small>Authoritative</small></article><article class="panel stat-card"><span>Remote</span><strong>OPTIONAL</strong><small>Outbound only</small></article><article class="panel stat-card"><span>Writes</span><strong>DENY</strong><small>By default</small></article>
         <article class="panel runtime-card"><span>Projektlaufzeit</span><strong id="project-runtime">WIRD GELADEN …</strong><small>seit Repository-Start · 08.08.2026</small></article>
-        <article class="panel runtime-card"><span>Entwicklungsaufwand</span><strong>14:00 h</strong><small>rekonstruierte Baseline bis 10.08.2026</small></article>
+        <article class="panel runtime-card"><span>Entwicklungsphase</span><strong>ALPHA-0.7.4</strong><small>Hardware- und First-Boot-Validierung</small></article>
       </div>
     </section>
 
@@ -89,7 +89,7 @@
       <div class="security-grid"><article class="panel gate"><b>01</b><span>Inventory</span><small>Gerät ist bekannt</small></article><article class="panel gate"><b>02</b><span>Approval</span><small>Explizit freigegeben</small></article><article class="panel gate"><b>03</b><span>Writable</span><small>Write-Recht aktiv</small></article><article class="panel gate"><b>04</b><span>Authenticated</span><small>Token und Audit</small></article><article class="panel security-core"><img src="assets/brand/135er-grow-central-mark.png" alt=""><span>Security Policy</span><strong>Deny by Default</strong><small>LOCAL · SECURE · AUDITED</small></article></div>
     </section>
 
-    <footer class="status-bar"><div><i></i><span>LOCAL-FIRST</span><b>PROJECT ONLINE</b></div><div><span>PLATFORM</span><b>RASPBERRY PI</b></div><div><span>INTERFACE</span><b>TABLET HUD</b></div><div><span>STATUS</span><b>ALPHA 0.7.1</b></div><div class="footer-links"><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/README.md">DE DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/en/README.md">EN DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">REPOSITORY ↗</a></div></footer>
+    <footer class="status-bar"><div><i></i><span>LOCAL-FIRST</span><b>PROJECT ONLINE</b></div><div><span>PLATFORM</span><b>RASPBERRY PI 3B</b></div><div><span>MARS HYDRO</span><b>iCONNECT TARGET</b></div><div><span>STATUS</span><b>ALPHA 0.7.4</b></div><div class="footer-links"><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/README.md">DE DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/en/README.md">EN DOCS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">REPOSITORY ↗</a></div></footer>
   </main>
 
   <script>
