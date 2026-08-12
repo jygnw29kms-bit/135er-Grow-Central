@@ -28,7 +28,8 @@ The current image has been reported to behave well in its **first basic function
 6. Open the setup portal and verify authentication.
 7. Verify WLAN list, hostname, timezone and password setup.
 8. Complete provisioning and confirm the main GUI becomes reachable.
-9. Reboot and confirm the main GUI returns without manual repair.
+9. Confirm hostname `135er-grow-central` and mDNS URL `http://135er-grow-central.local:8080` on LAN.
+10. Reboot and confirm the main GUI returns without manual repair.
 
 ### Acceptance criteria
 

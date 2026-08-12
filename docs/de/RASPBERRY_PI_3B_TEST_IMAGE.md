@@ -29,7 +29,8 @@ http://<PI-IP>:8080
 Nur für die ersten Hardwaretests:
 
 ```text
-Hostname: grow-central-test
+Hostname: 135er-grow-central
+LAN-Adresse: http://135er-grow-central.local:8080
 SSH-Benutzer: GrowCentral
 SSH-Passwort: grow-central-test
 API-/App-Token: test

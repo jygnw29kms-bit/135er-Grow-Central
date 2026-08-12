@@ -66,7 +66,7 @@ GUARD = LoginGuard()
 
 def validate_setup(form: dict[str, str]) -> tuple[dict[str, str] | None, str | None]:
     mode = form.get("mode", "wifi")
-    hostname = form.get("hostname", "grow-central").strip().lower()
+    hostname = form.get("hostname", "135er-grow-central").strip().lower()
     timezone = form.get("timezone", "Europe/Berlin")
     password = form.get("new_password", "")
     confirmation = form.get("new_password_confirm", "")
@@ -97,20 +97,43 @@ def validate_setup(form: dict[str, str]) -> tuple[dict[str, str] | None, str | N
     }, None
 
 
+def _nmcli_fields(line: str) -> list[str]:
+    """Split nmcli's escaped terse output without breaking SSIDs containing ':'."""
+    fields, current, escaped = [], [], False
+    for character in line:
+        if escaped:
+            current.append(character)
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif character == ":":
+            fields.append("".join(current))
+            current = []
+        else:
+            current.append(character)
+    if escaped:
+        current.append("\\")
+    fields.append("".join(current))
+    return fields
+
+
 def scan_networks() -> list[tuple[str, str, str]]:
+    subprocess.run(
+        ["nmcli", "device", "wifi", "rescan", "ifname", "wlan0"],
+        capture_output=True, text=True, timeout=20, check=False,
+    )
     result = subprocess.run(
-        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "yes"],
-        capture_output=True,
-        text=True,
-        timeout=20,
-        check=False,
+        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", "wlan0", "--rescan", "auto"],
+        capture_output=True, text=True, timeout=20, check=False,
     )
     networks: dict[str, tuple[str, str, str]] = {}
     for raw_line in result.stdout.splitlines():
-        parts = raw_line.rsplit(":", 2)
+        parts = _nmcli_fields(raw_line)
         if len(parts) != 3 or not parts[0].strip():
             continue
-        ssid, signal, security = (part.replace(r"\:", ":").strip() for part in parts)
+        ssid, signal, security = (part.strip() for part in parts)
+        if not signal.isdecimal():
+            continue
         previous = networks.get(ssid)
         if previous is None or int(signal or "0") > int(previous[1] or "0"):
             networks[ssid] = (ssid, signal or "0", security or "OFFEN")
@@ -235,7 +258,7 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
 <div><label>VERFÜGBARE WLAN-NETZE</label><a class="refresh" href="/setup?refresh=1">NETZLISTE AKTUALISIEREN</a><fieldset class="network-list">{options}</fieldset></div>
 <details><summary>Verstecktes oder nicht gefundenes WLAN</summary><label>SSID MANUELL EINGEBEN<input name="manual_ssid" maxlength="32"></label></details>
 <label>WLAN-PASSWORT<input type="password" name="wifi_password" autocomplete="new-password" maxlength="63"></label>
-<h2>02 · SYSTEMIDENTITÄT</h2><div class="field-grid"><label>HOSTNAME<input name="hostname" value="grow-central" maxlength="63" required></label>
+<h2>02 · SYSTEMIDENTITÄT</h2><div class="field-grid"><label>HOSTNAME<input name="hostname" value="135er-grow-central" maxlength="63" required></label>
 <label>ZEITZONE<select name="timezone">{''.join(f'<option value="{zone}">{zone}</option>' for zone in TIMEZONES)}</select></label></div>
 <h2>03 · ZUGANG ABSICHERN</h2><div class="field-grid"><label>NEUES GROWCENTRAL-PASSWORT<input type="password" name="new_password" autocomplete="new-password" minlength="12" required></label>
 <label>PASSWORT WIEDERHOLEN<input type="password" name="new_password_confirm" autocomplete="new-password" minlength="12" required></label></div>

@@ -126,6 +126,9 @@ def main() -> int:
             configure_wifi(config)
         run("hostnamectl", "set-hostname", config["hostname"])
         update_hosts(config["hostname"])
+        # Avahi publishes the configured appliance name as <hostname>.local.
+        # Restarting it avoids retaining the factory hostname until reboot.
+        run("systemctl", "restart", "avahi-daemon.service", check=False)
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
         network_mode = config["mode"]

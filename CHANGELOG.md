@@ -14,6 +14,14 @@
 - retained deny-by-default write behavior until real target-hardware communication is reproduced and validated
 - recorded the current Raspberry Pi image as positive in its **first basic functions from first boot**, while keeping repeatability, networking, Bluetooth, camera and device communication in Alpha validation
 
+## Unreleased – Build 13 hardware follow-up
+
+- correct the duplicated smart-home onboarding API prefix that blocked LAN discovery and Tapo account search from the GUI
+- scan TP-Link/Tapo discovery broadcasts on every active IPv4 interface and verify account credentials with a real device update
+- make first-boot WLAN scanning interface-specific and parse escaped SSIDs safely
+- publish the appliance over mDNS as `http://135er-grow-central.local:8080` and use `135er-grow-central` as its default hostname
+- retain the hardware-confirmed setup AP/DHCP and named Bluetooth discovery behavior from build 13
+
 ## alpha-0.7.4 build 13
 
 - Run the two-stage systemd-nspawn boot test on a sparse copy instead of the release image.

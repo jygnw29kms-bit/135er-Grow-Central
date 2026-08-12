@@ -20,7 +20,11 @@ from app.security import require_write_auth
 from .models import DeviceConfig
 from .registry import DeviceRegistry
 
-router = APIRouter(prefix="/api/v1/smarthome/onboarding", tags=["smart-home-onboarding"])
+# This router is included below the /api/v1/smarthome parent router.  Keeping
+# the complete prefix here used to register every endpoint twice (for example
+# /api/v1/smarthome/api/v1/smarthome/onboarding/discover), while the GUI calls
+# the documented path below.
+router = APIRouter(prefix="/onboarding", tags=["smart-home-onboarding"])
 Provider = Literal["shelly", "fritz", "tapo", "matter", "unknown"]
 
 
@@ -100,10 +104,19 @@ async def _kasa_candidates(timeout: float) -> list[Candidate]:
         from kasa import Discover
     except ImportError:
         return []
-    try:
-        devices = await Discover.discover(timeout=timeout)
-    except Exception:
-        return []
+    results = await asyncio.gather(*(
+        Discover.discover(
+            target=target,
+            interface=interface,
+            discovery_timeout=int(timeout),
+            timeout=int(timeout),
+        )
+        for interface, target in _ipv4_discovery_targets()
+    ), return_exceptions=True)
+    devices = {}
+    for result in results:
+        if not isinstance(result, Exception):
+            devices.update(result)
     rows = []
     for host, device in devices.items():
         alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
@@ -140,8 +153,18 @@ async def _kasa_account_candidates(request: AccountDiscoveryRequest) -> list[Can
             devices.update(result)
     if not devices and errors:
         raise HTTPException(401, "Tapo-Anmeldung oder lokale Erkennung fehlgeschlagen. Tapo-Konto, Passwort und Geräte-WLAN prüfen.")
+    # Discovery alone can return an encrypted device shell even when account
+    # credentials are wrong.  Read one authenticated update before presenting
+    # the login as successful.
+    device_items = list(devices.items())
+    updates = await asyncio.gather(*(
+        device.update() for _host, device in device_items
+    ), return_exceptions=True)
+    authenticated = [item for item, update in zip(device_items, updates) if not isinstance(update, Exception)]
+    if devices and not authenticated:
+        raise HTTPException(401, "Tapo-Anmeldung fehlgeschlagen. E-Mail-Adresse, Passwort und Tapo-Kontoregion prüfen.")
     rows: list[Candidate] = []
-    for host, device in devices.items():
+    for host, device in authenticated:
         alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
         rows.append(Candidate(provider="tapo", host=host, name=str(alias), source="tp-link-account-assisted", native_id=str(getattr(device, "device_id", "") or "") or None, metadata={"model": getattr(device, "model", None), "device_type": str(getattr(device, "device_type", "unknown")), "authentication": "verified-for-this-request"}))
     return rows

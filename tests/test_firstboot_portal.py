@@ -34,6 +34,23 @@ def valid_form():
     }
 
 
+def test_default_hostname_uses_lan_discovery_name():
+    form = valid_form()
+    form.pop("hostname")
+    config, error = portal.validate_setup(form)
+    assert error is None
+    assert config["hostname"] == "135er-grow-central"
+
+
+def test_wifi_scan_parses_escaped_ssids_and_keeps_best_signal(monkeypatch):
+    outputs = iter([
+        SimpleNamespace(returncode=0, stdout="", stderr=""),
+        SimpleNamespace(returncode=0, stdout="Grow\\:Lab:61:WPA2\nGrow\\:Lab:88:WPA2\nOffen:40:--\n", stderr=""),
+    ])
+    monkeypatch.setattr(portal.subprocess, "run", lambda *_args, **_kwargs: next(outputs))
+    assert portal.scan_networks() == [("Grow:Lab", "88", "WPA2"), ("Offen", "40", "--")]
+
+
 def test_valid_setup_is_normalized():
     config, error = portal.validate_setup(valid_form())
     assert error is None

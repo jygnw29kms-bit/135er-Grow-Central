@@ -83,11 +83,11 @@ jobs:
 
           sudo chroot "$ROOT" /bin/bash -eux <<'CHROOT'
           export DEBIAN_FRONTEND=noninteractive
-          echo 'grow-central-test' > /etc/hostname
-          sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tgrow-central-test/' /etc/hosts || true
+          echo '135er-grow-central' > /etc/hostname
+          sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           # Keep the stock image's UID 1000, but give it the fixed appliance
           # identity. Renaming also prevents userconfig from targeting "pi".
@@ -269,6 +269,8 @@ jobs:
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 8080/tcp
+          # mDNS advertises http://135er-grow-central.local:8080 on LAN/WLAN.
+          ufw allow 5353/udp
           # The provisioning portal is reachable through IPv4 and IPv6, but
           # only from clients attached to the temporary setup WLAN.
           ufw allow in on wlan0 to any port 80 proto tcp
@@ -361,7 +363,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           # Fail the image build if headless provisioning regresses.
@@ -373,6 +375,7 @@ jobs:
           test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
           test "$(systemctl is-enabled grow-central-firstboot-portal.service)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
+          test "$(systemctl is-enabled avahi-daemon.service)" = enabled
           # Validate sshd with temporary build-time host keys. Remove them
           # immediately so every flashed Raspberry Pi creates unique keys.
           mkdir -p /run/sshd
@@ -415,7 +418,8 @@ jobs:
 
           cat >/etc/motd <<'EOF'
           135er-Grow Central - Raspberry Pi 3B TEST IMAGE
-          Hostname: grow-central-test
+          Hostname: 135er-grow-central
+          LAN URL: http://135er-grow-central.local:8080
           SSH: GrowCentral / grow-central-test
           First boot AP: 135er-GrowCentral-Setup-XXXX
           Setup AP key: grow-central-test
@@ -532,7 +536,8 @@ jobs:
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
           cat > "${VERSIONED_NAME}-CREDENTIALS.txt" <<'EOF'
-          Hostname: grow-central-test
+          Hostname: 135er-grow-central
+          LAN URL: http://135er-grow-central.local:8080
           SSH username: GrowCentral
           SSH password: grow-central-test
           First boot AP: 135er-GrowCentral-Setup-XXXX
