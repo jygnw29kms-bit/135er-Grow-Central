@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.7.4 – Mars Hydro/iConnect architecture alignment (2026-08-12)
+
+- defined the authoritative lighting target as **Mars Hydro FC3000 model year 2024 with USB port and iConnect support**
+- defined **DF100** as the **Mars Hydro iFresh series using iConnect**
+- moved FC3000 2024 and iFresh/DF100 into one shared Mars-Hydro/iConnect device-family model
+- reclassified the existing DF100M / `MZ_MZF002` BLE implementation as experimental diagnostics, reverse engineering and fallback instead of the primary Mars-Hydro integration
+- added `app/mars_hydro.py` as a non-secret hardware-profile and abstraction baseline without inventing an unverified iConnect write protocol
+- exposed the Mars-Hydro hardware profile through the local `/api/config` response
+- kept `/api/df100m/*` compatibility endpoints while explicitly labeling them as BLE diagnostics/fallback
+- updated the local HUD, public website, README, architecture, integrations, protocol notes and wiki terminology
+- explicitly documented that **ESP32 is not part of the target architecture**
+- retained deny-by-default write behavior until real target-hardware communication is reproduced and validated
+- recorded the current Raspberry Pi image as positive in its **first basic functions from first boot**, while keeping repeatability, networking, Bluetooth, camera and device communication in Alpha validation
+
 ## alpha-0.7.4 build 13
 
 - Run the two-stage systemd-nspawn boot test on a sparse copy instead of the release image.
