@@ -1,5 +1,11 @@
 # Changelog
 
+## alpha-0.7.4 build 13
+
+- Run the two-stage systemd-nspawn boot test on a sparse copy instead of the release image.
+- Reject release images containing generated machine IDs, SSH host keys or completed first-boot markers.
+- Preserve the published image as a genuine first-boot appliance while retaining real boot/reboot health checks.
+
 ## alpha-0.7.4 – Boot and UI recovery (2026-08-12)
 
 - start the main web UI independently of the provisioning marker so setup failures cannot leave port 8080 permanently closed

@@ -444,7 +444,11 @@ jobs:
           set -euxo pipefail
           ROOT=/mnt/grow-central-boot-smoke
           MACHINE=grow-central-image-smoke
-          LOOP=$(sudo losetup --find --show --partscan work.img)
+          # Never boot the image that will be published: systemd, the firewall
+          # and SSH legitimately create machine-specific first-boot state.
+          # Exercise a sparse copy and keep work.img pristine for release.
+          cp --reflink=auto --sparse=always work.img boot-smoke.img
+          LOOP=$(sudo losetup --find --show --partscan boot-smoke.img)
           sudo mkdir -p "$ROOT"
           sudo mount "${LOOP}p2" "$ROOT"
           cleanup_boot() {
@@ -453,6 +457,7 @@ jobs:
             sleep 2
             sudo umount "$ROOT" 2>/dev/null
             sudo losetup -d "$LOOP" 2>/dev/null
+            rm -f boot-smoke.img
           }
           trap cleanup_boot EXIT
 
@@ -495,10 +500,29 @@ jobs:
           sudo install -o "$SERVICE_UID" -g "$SERVICE_GID" -m 0640 /dev/null "$ROOT/var/lib/135er-grow-central/.provisioned"
           check_boot post-setup
 
-          # The published image must remain a genuine first-boot image.
-          sudo rm -f "$ROOT/var/lib/135er-grow-central/.provisioned"
-          sync
           cleanup_boot
+          trap - EXIT
+
+      - name: Verify published image is still pristine
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ROOT=/mnt/grow-central-pristine-check
+          LOOP=$(sudo losetup --find --show --partscan work.img)
+          sudo mkdir -p "$ROOT"
+          sudo mount -o ro "${LOOP}p2" "$ROOT"
+          cleanup_pristine() {
+            set +e
+            sudo umount "$ROOT" 2>/dev/null
+            sudo losetup -d "$LOOP" 2>/dev/null
+          }
+          trap cleanup_pristine EXIT
+          test ! -e "$ROOT/var/lib/135er-grow-central/.provisioned"
+          test ! -e "$ROOT/var/lib/135er-grow-central/.firewall-initialized"
+          test ! -e "$ROOT/var/lib/135er-grow-central/.headless-firstboot-ready"
+          test ! -s "$ROOT/etc/machine-id"
+          test -z "$(sudo find "$ROOT/etc/ssh" -maxdepth 1 -type f -name 'ssh_host_*' -print -quit)"
+          cleanup_pristine
           trap - EXIT
 
       - name: Compress and checksum image

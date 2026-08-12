@@ -79,6 +79,13 @@ def test_image_ui_is_not_blocked_by_provisioning_marker():
     assert "check_boot pre-setup" in workflow
     assert "check_boot post-setup" in workflow
     assert "systemd-nspawn" in workflow
+    assert "cp --reflink=auto --sparse=always work.img boot-smoke.img" in workflow
+    assert "losetup --find --show --partscan boot-smoke.img" in workflow
+    assert "losetup --find --show --partscan work.img" in workflow
+    assert '.firewall-initialized"' in workflow
+    assert '.headless-firstboot-ready"' in workflow
+    assert 'test ! -s "$ROOT/etc/machine-id"' in workflow
+    assert "-name 'ssh_host_*'" in workflow
     portal_unit = (Path(__file__).parents[1] / "image-builder" / "firstboot" / "grow-central-firstboot-portal.service").read_text(encoding="utf-8")
     assert "Before=135er-grow-central.service" not in portal_unit
     assert "Before=ssh.service getty@tty1.service 135er-grow-central.service" not in workflow
