@@ -3,6 +3,27 @@
   const byId = (id) => document.getElementById(id);
   const html = (value) => String(value ?? "").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 
+  // Normal browser writes are authorized by the authenticated Grow Central GUI
+  // session. A local API token remains optional for external/test clients and
+  // can still be supplied explicitly, but the GUI must never prompt for the
+  // factory test token after the mandatory first-boot login is configured.
+  writeApi = async function(url, options = {}, providedToken = "") {
+    const token = providedToken || sessionStorage.getItem("gcLocalWriteToken") || "";
+    if (providedToken) sessionStorage.setItem("gcLocalWriteToken", providedToken);
+    const headers = new Headers(options.headers || {});
+    if (token) headers.set("X-API-Token", token);
+    headers.set("Content-Type", "application/json");
+    return api(url, {...options, headers});
+  };
+
+  const legacyTapoToken = byId("tapoApiToken");
+  if (legacyTapoToken) {
+    legacyTapoToken.required = false;
+    legacyTapoToken.value = "";
+    const label = legacyTapoToken.closest("label");
+    if (label) label.style.display = "none";
+  }
+
   async function loadNetworkStatus() {
     const target = byId("networkStatus");
     if (!target) return;
@@ -102,7 +123,7 @@
   }
 
   async function setCameraControl(element) {
-    let value = element.type === "checkbox" ? (element.checked ? 1 : 0) : Number(element.value);
+    const value = element.type === "checkbox" ? (element.checked ? 1 : 0) : Number(element.value);
     try {
       const data = await writeApi("/api/v1/camera/controls", {method:"POST", body:JSON.stringify({camera_id:element.dataset.cameraId, control:element.dataset.cameraControl, value})});
       const parent = element.closest(".camera-control"); const label = parent?.querySelector("span b"); if (label) label.textContent = data.control?.value ?? value;
@@ -115,8 +136,7 @@
 
   function bindCameraControls() {
     document.querySelectorAll("[data-camera-control]").forEach((element) => {
-      const eventName = element.type === "range" ? "change" : "change";
-      element.addEventListener(eventName, () => setCameraControl(element));
+      element.addEventListener("change", () => setCameraControl(element));
       if (element.type === "range") element.addEventListener("input", () => { const b=element.closest(".camera-control")?.querySelector("span b"); if(b)b.textContent=element.value; });
     });
   }
