@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Apply a validated first-boot configuration without logging secrets."""
-
 from __future__ import annotations
 
 import json
@@ -11,11 +10,11 @@ import tempfile
 import time
 from pathlib import Path
 
-
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
 MARKER = STATE_DIR / ".provisioned"
 ERROR_FILE = STATE_DIR / "setup-last-error"
+APP_ENV = Path("/opt/135er-grow-central/.env")
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
 HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
@@ -28,7 +27,6 @@ def run(*arguments: str, check: bool = True, input_text: str | None = None) -> s
 
 
 def update_hosts(hostname: str, hosts_file: Path = HOSTS_FILE) -> None:
-    """Keep the local hostname resolvable after hostnamectl changes it."""
     lines = hosts_file.read_text(encoding="utf-8").splitlines()
     replacement = f"127.0.1.1\t{hostname}"
     updated = False
@@ -61,6 +59,44 @@ def validate(config: dict[str, str]) -> None:
             raise ValueError("invalid ssid")
         if wifi_password and not 8 <= len(wifi_password) <= 63:
             raise ValueError("invalid wifi password")
+    fritz_host = config.get("fritz_host", "").strip()
+    fritz_user = config.get("fritz_username", "").strip()
+    fritz_password = config.get("fritz_password", "")
+    if any((fritz_user, fritz_password)) and not all((fritz_host, fritz_user, fritz_password)):
+        raise ValueError("incomplete FRITZ credentials")
+    tapo_user = config.get("tapo_username", "").strip()
+    tapo_password = config.get("tapo_password", "")
+    if bool(tapo_user) != bool(tapo_password):
+        raise ValueError("incomplete Tapo credentials")
+
+
+def _quote_env(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "") + '"'
+
+
+def persist_integration_credentials(config: dict[str, str]) -> None:
+    """Store optional integration credentials in the root-owned application env file."""
+    existing = APP_ENV.read_text(encoding="utf-8").splitlines() if APP_ENV.exists() else []
+    values = {
+        "GC_FRITZ_HOST": config.get("fritz_host", "").strip(),
+        "GC_FRITZ_USERNAME": config.get("fritz_username", "").strip(),
+        "GC_FRITZ_PASSWORD": config.get("fritz_password", ""),
+        "GC_TAPO_USERNAME": config.get("tapo_username", "").strip(),
+        "GC_TAPO_PASSWORD": config.get("tapo_password", ""),
+        "GC_TAPO_WAN_ENABLED": "true" if config.get("tapo_wan_enabled") == "1" else "false",
+    }
+    keys = set(values)
+    filtered = [line for line in existing if line.split("=", 1)[0] not in keys]
+    for key, value in values.items():
+        if value or key == "GC_TAPO_WAN_ENABLED":
+            filtered.append(f"{key}={_quote_env(value)}")
+    temporary = APP_ENV.with_suffix(".env.tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(filtered).rstrip() + "\n")
+        handle.flush(); os.fsync(handle.fileno())
+    os.chown(temporary, 0, 0)
+    os.replace(temporary, APP_ENV)
 
 
 def restore_access_point(message: str) -> None:
@@ -73,26 +109,19 @@ def restore_access_point(message: str) -> None:
 
 
 def mark_provisioned() -> None:
-    """Commit provisioning atomically before asking systemd to start the UI."""
     STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
     temporary = MARKER.with_suffix(".tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         handle.write(f"provisioned_at={time.time_ns()}\n")
-        handle.flush()
-        os.fsync(handle.fileno())
+        handle.flush(); os.fsync(handle.fileno())
     os.replace(temporary, MARKER)
 
 
 def configure_wifi(config: dict[str, str]) -> None:
     run("nmcli", "connection", "delete", TARGET_CONNECTION, check=False)
     run("nmcli", "connection", "add", "type", "wifi", "ifname", "wlan0", "con-name", TARGET_CONNECTION, "ssid", config["ssid"])
-    settings = [
-        "nmcli", "connection", "modify", TARGET_CONNECTION,
-        "connection.autoconnect", "yes", "connection.autoconnect-priority", "50",
-        "ipv4.method", "auto", "ipv6.method", "auto",
-    ]
-    run(*settings)
+    run("nmcli", "connection", "modify", TARGET_CONNECTION, "connection.autoconnect", "yes", "connection.autoconnect-priority", "50", "ipv4.method", "auto", "ipv6.method", "auto")
     if config.get("wifi_password"):
         run("nmcli", "connection", "modify", TARGET_CONNECTION, "wifi-sec.key-mgmt", "wpa-psk")
     run("nmcli", "connection", "down", AP_CONNECTION, check=False)
@@ -126,18 +155,14 @@ def main() -> int:
             configure_wifi(config)
         run("hostnamectl", "set-hostname", config["hostname"])
         update_hosts(config["hostname"])
-        # Avahi publishes the configured appliance name as <hostname>.local.
-        # Restarting it avoids retaining the factory hostname until reboot.
         run("systemctl", "restart", "avahi-daemon.service", check=False)
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
+        persist_integration_credentials(config)
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
         mark_provisioned()
-        # A wired installation keeps the AP as a local rescue/direct network.
-        # With a single Wi-Fi adapter, client mode and AP mode cannot be kept
-        # reliably at the same time, so Wi-Fi installations switch to uplink.
         keep_access_point = network_mode == "ethernet"
         run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes" if keep_access_point else "no", check=False)
         if not keep_access_point:
@@ -151,15 +176,12 @@ def main() -> int:
         time.sleep(2)
         run("systemctl", "stop", "grow-central-firstboot-portal.service", check=False)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
-        # The UI also runs during provisioning, so setup can never strand the
-        # appliance without a diagnostic surface. Restart it here to commit a
-        # clean post-setup state and verify that it is really active.
         run("systemctl", "restart", "135er-grow-central.service")
         active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
         if active.returncode != 0:
             raise RuntimeError("Die Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
         return 0
-    except Exception as error:  # setup must recover its own access path
+    except Exception as error:
         config.clear()
         restore_access_point(str(error))
         return 1
