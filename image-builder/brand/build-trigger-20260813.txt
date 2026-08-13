@@ -1,0 +1,1 @@
+Build trigger for Raspberry Pi 3B test image after first-boot/LAN/WLAN verification on 2026-08-13.
