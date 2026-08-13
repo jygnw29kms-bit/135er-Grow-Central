@@ -1,1 +1,1 @@
-Build trigger for Raspberry Pi 3B test image after first-boot/LAN/WLAN verification on 2026-08-13.
+Consolidated Raspberry Pi 3B test image trigger for alpha-0.7.5 after merging the successful build-52 baseline with the current 2026-08-13 knowledge state: secure first boot, LAN/WLAN onboarding, FRITZ! Smart Home login/import, Tapo hybrid local/WAN architecture, authenticated GUI/API, Bluetooth diagnostics, and Logitech C920/UVC controls.
