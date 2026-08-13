@@ -86,6 +86,9 @@ def _status_payload() -> dict[str, Any]:
 
 @app.get("/")
 async def index():
+    setup = WEB_DIR / "setup.html"
+    if setup.is_file():
+        return FileResponse(setup)
     return FileResponse(WEB_DIR / "index.html")
 
 

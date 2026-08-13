@@ -161,8 +161,8 @@ jobs:
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
           Description=135er-Grow Central Local
-          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service
-          Wants=network-online.target bluetooth.target
+          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-setup-ap.service
+          Wants=network-online.target bluetooth.target grow-central-setup-ap.service
           [Service]
           Type=simple
           User=growcentral
@@ -261,8 +261,6 @@ jobs:
           ufw allow 22/tcp
           ufw allow 8080/tcp
           ufw allow 5353/udp
-          ufw allow in on wlan0 to any port 80 proto tcp
-          ufw allow in on wlan0 to any port 443 proto tcp
           ufw allow in on wlan0 to any port 67 proto udp
           ufw allow in on wlan0 to any port 53 proto udp
           ufw allow in on wlan0 to any port 53 proto tcp
@@ -289,6 +287,40 @@ jobs:
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/portal.py /usr/local/sbin/grow-central-firstboot-portal.py
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/apply_setup.py /usr/local/sbin/grow-central-apply-setup.py
           install -o root -g root -m 0644 /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service /etc/systemd/system/grow-central-firstboot-portal.service
+
+          cat >/etc/systemd/system/grow-central-setup-ap.service <<'EOF'
+          [Unit]
+          Description=Prepare the first-boot access point
+          After=NetworkManager.service grow-central-firstboot-firewall.service
+          Wants=NetworkManager.service
+          ConditionPathExists=/opt/135er-grow-central/web/setup.html
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-setup-ap.sh
+          RemainAfterExit=yes
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          cat >/etc/systemd/system/grow-central-apply-setup.path <<'EOF'
+          [Unit]
+          Description=Watch for submitted Grow Central first-boot configuration
+          ConditionPathExists=/opt/135er-grow-central/web/setup.html
+          [Path]
+          PathExists=/var/lib/135er-grow-central/setup-pending.json
+          Unit=grow-central-apply-setup.service
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          cat >/etc/systemd/system/grow-central-apply-setup.service <<'EOF'
+          [Unit]
+          Description=Validate and apply Grow Central first-boot configuration
+          After=NetworkManager.service
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-apply-setup.py
+          EOF
 
           THEME=/usr/share/plymouth/themes/135er-grow-central
           mkdir -p "$THEME" /etc/135er-grow-central
@@ -336,7 +368,8 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service grow-central-healthcheck.timer
+          systemctl disable grow-central-firstboot-portal.service || true
+          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           id GrowCentral
@@ -345,7 +378,8 @@ jobs:
           test "$(passwd --status GrowCentral | awk '{print $2}')" = P
           test "$(systemctl is-enabled userconfig.service)" = masked
           test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
-          test "$(systemctl is-enabled grow-central-firstboot-portal.service)" = enabled
+          test "$(systemctl is-enabled grow-central-setup-ap.service)" = enabled
+          test "$(systemctl is-enabled grow-central-apply-setup.path)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
           test "$(systemctl is-enabled avahi-daemon.service)" = enabled
           mkdir -p /run/sshd
@@ -357,7 +391,7 @@ jobs:
           grep -q '^SupplementaryGroups=systemd-journal video netdev$' /etc/systemd/system/135er-grow-central.service
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
-          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer
+          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
           /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'

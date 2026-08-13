@@ -107,10 +107,9 @@ def test_wifi_scan_parses_escaped_ssids_and_keeps_best_signal(monkeypatch):
     assert networks == [("Grow:Lab", "88", "WPA2"), ("Offen", "40", "--")]
 
 
-def test_setup_ap_blocks_normal_gui_for_setup_subnet():
+def test_setup_ap_exposes_always_on_gui_for_firstboot():
     script = SETUP_AP_PATH.read_text(encoding="utf-8")
-    assert 'SETUP_SUBNET="10.42.0.0/24"' in script
-    assert 'deny from "$SETUP_SUBNET" to any port 8080 proto tcp' in script
+    assert 'deny from "$SETUP_SUBNET" to any port 8080 proto tcp' not in script
     assert "ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250" in script
     assert "ipv4.method shared" in script
 
@@ -160,10 +159,18 @@ def test_image_workflow_is_synchronized_to_alpha_075():
     assert "alpha-0.7.5-build-" in workflow
     assert '.version == "0.7.5"' in workflow
     assert "app.entrypoint:app" in workflow
-    assert "policykit-1" in workflow
+    assert "polkitd" in workflow
     assert "v4l2-ctl" in workflow
     assert "ffmpeg" in workflow
     assert "SupplementaryGroups=systemd-journal video netdev" in workflow
+    assert "grow-central-apply-setup.path" in workflow
+    assert "grow-central-setup-ap.service" in workflow
+
+
+def test_setup_file_is_deleted_only_after_runtime_health_check():
+    source = APPLY_PATH.read_text(encoding="utf-8")
+    assert source.index('http://127.0.0.1:8080/api/health') < source.index("SETUP_FILE.unlink()")
+    assert source.index("mark_provisioned()") < source.index("SETUP_FILE.unlink()")
 
 
 def test_first_boot_portal_uses_real_pam_user(monkeypatch):

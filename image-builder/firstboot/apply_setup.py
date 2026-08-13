@@ -19,6 +19,7 @@ PENDING_FILE = STATE_DIR / "setup-pending.json"
 MARKER = STATE_DIR / ".provisioned"
 ERROR_FILE = STATE_DIR / "setup-last-error"
 APP_ENV = Path("/opt/135er-grow-central/.env")
+SETUP_FILE = Path("/opt/135er-grow-central/web/setup.html")
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
 HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
@@ -153,7 +154,6 @@ def restore_access_point(message: str) -> None:
     os.chmod(ERROR_FILE, 0o640)
     run("nmcli", "connection", "down", TARGET_CONNECTION, check=False)
     run("nmcli", "connection", "up", AP_CONNECTION, check=False)
-    run("systemctl", "restart", "grow-central-firstboot-portal.service", check=False)
 
 
 def mark_provisioned() -> None:
@@ -212,7 +212,6 @@ def main() -> int:
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
-        mark_provisioned()
         keep_access_point = network_mode == "ethernet"
         run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes" if keep_access_point else "no", check=False)
         if not keep_access_point:
@@ -224,12 +223,16 @@ def main() -> int:
             run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "udp", check=False)
             run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "tcp", check=False)
         time.sleep(2)
-        run("systemctl", "stop", "grow-central-firstboot-portal.service", check=False)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
         active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
         if active.returncode != 0:
             raise RuntimeError("Die geschützte Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
+        health = run("curl", "--fail", "--silent", "--max-time", "10", "http://127.0.0.1:8080/api/health", check=False)
+        if health.returncode != 0:
+            raise RuntimeError("Die Grow-Central-Oberfläche antwortet nach dem Setup nicht.")
+        mark_provisioned()
+        SETUP_FILE.unlink()
         return 0
     except Exception as error:
         config.clear()

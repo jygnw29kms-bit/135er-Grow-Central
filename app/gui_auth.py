@@ -11,6 +11,7 @@ import hashlib
 import os
 import secrets
 import time
+from pathlib import Path
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -83,11 +84,13 @@ class GuiAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+        setup_active = (Path(__file__).resolve().parent.parent / "web" / "setup.html").is_file()
         public = (
             path == "/api/health"
             or path == "/login"
             or path.startswith("/api/auth/")
             or path.startswith("/static/")
+            or (setup_active and (path == "/" or path.startswith("/api/setup")))
         )
         if public:
             return await call_next(request)
