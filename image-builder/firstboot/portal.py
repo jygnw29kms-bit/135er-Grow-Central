@@ -25,11 +25,14 @@ except ImportError:  # allows validation tests outside the Raspberry Pi image
 
 
 SETUP_IP = "10.42.0.1"
+SETUP_SSID_PREFIX = "135er-GrowCentral-Setup-"
+DEFAULT_USERNAME = "GrowCentral"
+DEFAULT_PASSWORD = "grow-central-test"
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
 CERT_FILE = Path("/etc/135er-grow-central/setup-portal.crt")
 KEY_FILE = Path("/etc/135er-grow-central/setup-portal.key")
-USERNAME = "GrowCentral"
+USERNAME = DEFAULT_USERNAME
 MAX_BODY = 16_384
 SESSION_TTL = 15 * 60
 TIMEZONES = ("Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich")
@@ -98,7 +101,6 @@ def validate_setup(form: dict[str, str]) -> tuple[dict[str, str] | None, str | N
 
 
 def _nmcli_fields(line: str) -> list[str]:
-    """Split nmcli's escaped terse output without breaking SSIDs containing ':'."""
     fields, current, escaped = [], [], False
     for character in line:
         if escaped:
@@ -118,14 +120,8 @@ def _nmcli_fields(line: str) -> list[str]:
 
 
 def scan_networks() -> list[tuple[str, str, str]]:
-    subprocess.run(
-        ["nmcli", "device", "wifi", "rescan", "ifname", "wlan0"],
-        capture_output=True, text=True, timeout=20, check=False,
-    )
-    result = subprocess.run(
-        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", "wlan0", "--rescan", "auto"],
-        capture_output=True, text=True, timeout=20, check=False,
-    )
+    subprocess.run(["nmcli", "device", "wifi", "rescan", "ifname", "wlan0"], capture_output=True, text=True, timeout=20, check=False)
+    result = subprocess.run(["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", "wlan0", "--rescan", "auto"], capture_output=True, text=True, timeout=20, check=False)
     networks: dict[str, tuple[str, str, str]] = {}
     for raw_line in result.stdout.splitlines():
         parts = _nmcli_fields(raw_line)
@@ -141,7 +137,6 @@ def scan_networks() -> list[tuple[str, str, str]]:
 
 
 def authenticate_user(username: str, password: str) -> bool:
-    """Authenticate with Debian's python3-pam module without exposing secrets."""
     if PAM is None or not secrets.compare_digest(username, USERNAME):
         return False
 
@@ -178,16 +173,16 @@ header{{display:flex;align-items:center;justify-content:space-between;gap:18px;p
 .rail{{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}}.rail span{{padding:11px 16px;color:#52747c;font:10px Consolas,monospace;letter-spacing:.14em;border-right:1px solid var(--line)}}.rail span:last-child{{border:0}}.rail b{{color:var(--cyan);margin-right:7px}}
 main{{padding:clamp(24px,5vw,52px)}}.content{{position:relative}}.content:before{{content:"";position:absolute;right:0;top:0;width:100px;height:1px;background:var(--green);box-shadow:0 0 15px var(--green)}}
 .kicker,label,small,.eyebrow{{font-family:Consolas,monospace}}.kicker{{display:inline-flex;align-items:center;gap:9px;color:var(--cyan);letter-spacing:.16em;font-size:.72rem}}.kicker:before{{content:"";width:24px;height:1px;background:var(--cyan)}}h1{{font-size:clamp(2.25rem,7vw,4.8rem);line-height:.94;letter-spacing:-.055em;margin:16px 0 20px;max-width:800px}}h1 em{{font-style:normal;color:var(--green)}}h2{{font-size:1rem;letter-spacing:.08em;margin:0 0 13px}}p{{color:#a8bdc1;line-height:1.65;max-width:760px}}
-.hud-card{{border:1px solid var(--line);background:linear-gradient(135deg,rgba(8,28,35,.92),rgba(3,12,16,.96));padding:clamp(16px,3vw,26px);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}}form{{display:grid;gap:18px;margin-top:26px}}.field-grid{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}label{{display:grid;gap:8px;color:var(--cyan);font-size:.72rem;letter-spacing:.1em}}input,select{{width:100%;padding:14px 15px;border:1px solid #17414a;background:#020a0e;color:var(--text);font:1rem Consolas,monospace;transition:.2s}}input:focus,select:focus{{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(113,255,59,.08),0 0 22px rgba(113,255,59,.08)}}
+.hud-card{{border:1px solid var(--line);background:linear-gradient(135deg,rgba(8,28,35,.92),rgba(3,12,16,.96));padding:clamp(16px,3vw,26px);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}}.default-access{{margin:18px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}.default-access div{{border:1px solid var(--line);background:#031014;padding:13px}}.default-access span{{display:block;color:var(--muted);font:10px Consolas,monospace;letter-spacing:.08em}}.default-access strong{{display:block;color:var(--green);font:700 14px Consolas,monospace;margin-top:4px;word-break:break-word}}form{{display:grid;gap:18px;margin-top:26px}}.field-grid{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}label{{display:grid;gap:8px;color:var(--cyan);font-size:.72rem;letter-spacing:.1em}}input,select{{width:100%;padding:14px 15px;border:1px solid #17414a;background:#020a0e;color:var(--text);font:1rem Consolas,monospace;transition:.2s}}input:focus,select:focus{{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(113,255,59,.08),0 0 22px rgba(113,255,59,.08)}}
 .choice{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}.choice label{{display:flex;align-items:center;gap:10px;padding:15px;border:1px solid var(--line);background:#041116;cursor:pointer}}.choice input{{width:auto;accent-color:var(--green)}}button,.refresh{{padding:15px 18px;border:1px solid var(--green);background:linear-gradient(90deg,var(--green),#9cff72);color:#041006;font-weight:850;letter-spacing:.06em;cursor:pointer;box-shadow:0 0 24px rgba(113,255,59,.12)}}.refresh{{display:inline-block;text-decoration:none;margin:5px 0 12px;font:700 11px Consolas,monospace;padding:10px 13px;background:transparent;color:var(--green)}}
 .notice{{padding:15px 17px;border-left:3px solid var(--cyan);background:rgba(4,17,22,.9);color:#a8bdc1}}.error{{border-color:var(--red);color:#ff929c}}.status{{color:var(--green)}}.network-list{{display:grid;gap:9px;border:0;padding:0;margin:0;max-height:330px;overflow:auto}}.network{{display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:13px 14px;border:1px solid var(--line);background:rgba(2,10,14,.8);color:var(--text);font-size:.86rem;cursor:pointer}}.network:hover{{border-color:var(--cyan);background:rgba(42,229,255,.045)}}.network input{{width:auto;accent-color:var(--green)}}.network small{{color:var(--muted);text-align:right}}.signal{{height:4px;background:#10252b;margin-top:7px}}.signal span{{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));box-shadow:0 0 8px var(--green)}}details{{border:1px solid var(--line);padding:14px;background:#031014}}summary{{color:var(--cyan);cursor:pointer;font:12px Consolas,monospace}}details label{{margin-top:14px}}footer{{display:flex;justify-content:space-between;gap:15px;padding:14px clamp(18px,4vw,38px);border-top:1px solid var(--line);color:#52747c;font:9px Consolas,monospace;letter-spacing:.12em}}
-@media(max-width:640px){{body{{padding:7px}}header{{align-items:flex-start}}.live{{display:none}}.rail{{grid-template-columns:1fr}}.rail span{{border-right:0;border-bottom:1px solid var(--line)}}.field-grid,.choice{{grid-template-columns:1fr}}main{{padding:24px 16px}}.network{{grid-template-columns:auto 1fr}}.network small{{grid-column:2;text-align:left}}footer{{flex-direction:column}}}}
+@media(max-width:640px){{body{{padding:7px}}header{{align-items:flex-start}}.live{{display:none}}.rail{{grid-template-columns:1fr}}.rail span{{border-right:0;border-bottom:1px solid var(--line)}}.field-grid,.choice,.default-access{{grid-template-columns:1fr}}main{{padding:24px 16px}}.network{{grid-template-columns:auto 1fr}}.network small{{grid-column:2;text-align:left}}footer{{flex-direction:column}}}}
 </style></head><body><div class="shell"><header><div class="identity"><div class="emblem">J.L.</div><div class="brand">135er-<span>Grow</span> Central<small>LOCAL CORE · SECURE PROVISIONING</small></div></div><div class="live"><i></i> SETUP NODE ONLINE</div></header><div class="rail"><span><b>01</b>SECURE LINK</span><span><b>02</b>NETWORK UPLINK</span><span><b>03</b>LOCAL CORE</span></div><main><div class="content">{content}</div></main><footer><span>RASPBERRY PI · LOCAL-FIRST · SECURE</span><span>SETUP GATEWAY {SETUP_IP}</span></footer></div></body></html>"""
     return document.encode("utf-8")
 
 
 class PortalHandler(http.server.BaseHTTPRequestHandler):
-    server_version = "GrowCentralSetup/1.1"
+    server_version = "GrowCentralSetup/1.2"
 
     def log_message(self, format_string: str, *args: object) -> None:
         print(f"portal {self.client_address[0]} {format_string % args}")
@@ -237,10 +232,12 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
             return
         _, session = self.session()
         if not session:
-            content = """<span class="kicker">FIRST BOOT / AUTHENTICATION GATE</span><h1>Lokalen Core<br><em>aktivieren.</em></h1>
-<p>Der Setup-Knoten läuft vollständig lokal auf diesem Raspberry Pi. Melde dich mit dem Gerätebenutzer <strong>GrowCentral</strong> an, um Netzwerk und Systemidentität sicher einzurichten.</p>
-<div class="hud-card"><h2>SECURE DEVICE LOGIN</h2><form method="post" action="/login"><div class="field-grid"><label>BENUTZER<input name="username" value="GrowCentral" autocomplete="username" required></label>
-<label>GERÄTEPASSWORT<input type="password" name="password" autocomplete="current-password" required></label></div><button type="submit">SETUP-SITZUNG ÖFFNEN</button></form></div>"""
+            content = f"""<span class="kicker">FIRST BOOT / AUTHENTICATION GATE</span><h1>Lokalen Core<br><em>aktivieren.</em></h1>
+<p>Der Setup-Knoten läuft vollständig lokal auf diesem Raspberry Pi. Diese Zugangsdaten gelten nur für den ersten Start und müssen im Setup geändert werden.</p>
+<div class="default-access"><div><span>SETUP WLAN</span><strong>{SETUP_SSID_PREFIX}XXXX</strong></div><div><span>SETUP ADRESSE</span><strong>https://{SETUP_IP}</strong></div><div><span>STANDARD-BENUTZER</span><strong>{DEFAULT_USERNAME}</strong></div><div><span>STANDARD-PASSWORT</span><strong>{DEFAULT_PASSWORD}</strong></div></div>
+<p class="notice">Nach erfolgreichem Setup verwendest du das neu gesetzte GrowCentral-Passwort auch für SSH. Die spätere IP-Adresse erhält der Pi per DHCP; zusätzlich ist der konfigurierte Hostname über mDNS als <strong>&lt;hostname&gt;.local</strong> vorgesehen.</p>
+<div class="hud-card"><h2>SECURE DEVICE LOGIN</h2><form method="post" action="/login"><div class="field-grid"><label>BENUTZER<input name="username" value="{DEFAULT_USERNAME}" autocomplete="username" required></label>
+<label>GERÄTEPASSWORT<input type="password" name="password" value="{DEFAULT_PASSWORD}" autocomplete="current-password" required></label></div><button type="submit">SETUP-SITZUNG ÖFFNEN</button></form></div>"""
             self.send_page(200, page("Grow Central Setup", content))
             return
 
@@ -315,12 +312,7 @@ class PortalHandler(http.server.BaseHTTPRequestHandler):
         os.replace(temporary, PENDING_FILE)
         SESSIONS.pop(session_id or "", None)
         apply_unit = f"grow-central-apply-setup-{secrets.token_hex(6)}"
-        started = subprocess.run(
-            ["systemd-run", f"--unit={apply_unit}", "--collect", "/usr/local/sbin/grow-central-apply-setup.py"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        started = subprocess.run(["systemd-run", f"--unit={apply_unit}", "--collect", "/usr/local/sbin/grow-central-apply-setup.py"], check=False, capture_output=True, text=True)
         if started.returncode != 0:
             PENDING_FILE.unlink(missing_ok=True)
             self.send_page(503, page("Setup konnte nicht gestartet werden", '<p class="error">Die Konfiguration wurde nicht gestartet. Bitte erneut versuchen.</p><p><a href="/setup">Zurück zur Konfiguration</a></p>'))
@@ -343,8 +335,6 @@ class RedirectHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    # The setup portal must listen on the temporary AP. UFW restricts both
-    # ports on the setup WLAN interface and the service stops after provisioning.
     redirect = http.server.ThreadingHTTPServer(("0.0.0.0", 80), RedirectHandler)  # nosec B104
     threading.Thread(target=redirect.serve_forever, daemon=True).start()
     server = http.server.ThreadingHTTPServer(("0.0.0.0", 443), PortalHandler)  # nosec B104
