@@ -7,6 +7,7 @@
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
 <link rel="stylesheet" href="/static/app.css?v=0.9.2">
+<link rel="stylesheet" href="/static/device_extensions.css?v=0.7.5">
 </head>
 <body>
 <a class="skip-link" href="#dashboard">Zum Inhalt / Skip to content</a>
@@ -18,6 +19,8 @@
       <button class="nav-item active" data-view="dashboard">◈ <span>Dashboard</span></button>
       <button class="nav-item" data-view="power">⌁ <span>Strom</span></button>
       <button class="nav-item" data-view="devices">⌁ <span>Geräte</span></button>
+      <button class="nav-item" data-view="network">⌁ <span>Netzwerk</span></button>
+      <button class="nav-item" data-view="camera">◉ <span>Kamera</span></button>
       <button class="nav-item" data-view="automation">⟲ <span>Automation</span></button>
       <button class="nav-item" data-view="history">⌁ <span>Historie</span></button>
       <button class="nav-item" data-view="system">⚙ <span>System</span></button>
@@ -45,53 +48,52 @@
       </div>
 
       <article class="panel power-preview"><div class="panel-head"><div><div class="eyebrow">POWER MATRIX</div><h2>Stromsteckdosen</h2></div><button class="ghost" data-open-view="power">DETAILS</button></div><div id="powerPreviewGrid" class="plug-grid"><div class="empty-state">Steckdosen werden geladen…</div></div></article>
-      <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Raspberry Pi</span><strong>CONTROL NODE</strong><small>FastAPI / iConnect target / Smart Home</small></article><article class="mini-panel"><span class="mini-label">Operating Mode</span><strong>LOCAL-FIRST</strong><small>Power telemetry remains local</small></article><article class="mini-panel"><span class="mini-label">Security</span><strong>DENY BY DEFAULT</strong><small>Writes require token + approval</small></article></div>
+      <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Raspberry Pi</span><strong>CONTROL NODE</strong><small>FastAPI / iConnect target / Smart Home</small></article><article class="mini-panel"><span class="mini-label">Operating Mode</span><strong>LOCAL-FIRST</strong><small>Power telemetry remains local</small></article><article class="mini-panel"><span class="mini-label">Security</span><strong>GUI LOGIN + WRITE GATES</strong><small>LAN/WAN access protected</small></article></div>
     </section>
 
     <section id="power" class="view">
       <article class="panel">
         <div class="panel-head"><div><div class="eyebrow">SMART POWER CONTROL</div><h2>Steckdosen & Verbrauch</h2></div><div class="device-badge" id="powerUpdated">NO DATA</div></div>
         <div class="power-summary"><div><span>Gesamtleistung</span><strong><b id="powerSummaryW">--</b> W</strong></div><div><span>Gesamtenergie</span><strong><b id="powerSummaryKwh">--</b> kWh</strong></div><div><span>Online</span><strong id="powerSummaryOnline">0 / 0</strong></div><div><span>Eingeschaltet</span><strong id="powerSummaryOn">0</strong></div></div>
-
-        <div class="tariff-panel">
-          <div><div class="eyebrow">COST MODEL</div><h3>Strompreis & Hochrechnung</h3><p>Die Hochrechnung basiert auf der aktuell gemessenen Gesamtleistung. Echte historische Periodenwerte werden später aus der Zeitreihendatenbank gespeist.</p></div>
-          <label>Strompreis <span>€/kWh</span><input id="energyPrice" type="number" min="0" step="0.001" inputmode="decimal" value="0.35"></label>
-        </div>
-
-        <div class="period-grid">
-          <div class="period-card"><span>STUNDE</span><strong><b id="projHourKwh">--</b> kWh</strong><small id="projHourCost">-- €</small></div>
-          <div class="period-card"><span>TAG</span><strong><b id="projDayKwh">--</b> kWh</strong><small id="projDayCost">-- €</small></div>
-          <div class="period-card"><span>WOCHE</span><strong><b id="projWeekKwh">--</b> kWh</strong><small id="projWeekCost">-- €</small></div>
-          <div class="period-card"><span>MONAT</span><strong><b id="projMonthKwh">--</b> kWh</strong><small id="projMonthCost">-- €</small></div>
-          <div class="period-card"><span>JAHR</span><strong><b id="projYearKwh">--</b> kWh</strong><small id="projYearCost">-- €</small></div>
-        </div>
-
+        <div class="tariff-panel"><div><div class="eyebrow">COST MODEL</div><h3>Strompreis & Hochrechnung</h3><p>Die Hochrechnung basiert auf der aktuell gemessenen Gesamtleistung. Echte historische Periodenwerte werden später aus der Zeitreihendatenbank gespeist.</p></div><label>Strompreis <span>€/kWh</span><input id="energyPrice" type="number" min="0" step="0.001" inputmode="decimal" value="0.35"></label></div>
+        <div class="period-grid"><div class="period-card"><span>STUNDE</span><strong><b id="projHourKwh">--</b> kWh</strong><small id="projHourCost">-- €</small></div><div class="period-card"><span>TAG</span><strong><b id="projDayKwh">--</b> kWh</strong><small id="projDayCost">-- €</small></div><div class="period-card"><span>WOCHE</span><strong><b id="projWeekKwh">--</b> kWh</strong><small id="projWeekCost">-- €</small></div><div class="period-card"><span>MONAT</span><strong><b id="projMonthKwh">--</b> kWh</strong><small id="projMonthCost">-- €</small></div><div class="period-card"><span>JAHR</span><strong><b id="projYearKwh">--</b> kWh</strong><small id="projYearCost">-- €</small></div></div>
         <div id="plugGrid" class="plug-grid"><div class="empty-state">Keine Steckdosendaten geladen.</div></div>
-        <div class="security-note">Live-Lesedaten sind lokal verfügbar. Schaltbefehle werden nur für registrierte, freigegebene und beschreibbare Geräte akzeptiert und benötigen das lokale API-Token.</div>
+        <div class="security-note">Live-Lesedaten sind lokal verfügbar. Schaltbefehle werden nur für registrierte, freigegebene und beschreibbare Geräte akzeptiert.</div>
       </article>
     </section>
 
     <section id="devices" class="view">
       <article class="panel onboarding-panel">
-        <div class="panel-head"><div><div class="eyebrow">UNIFIED DEVICE LAB · alpha-0.7.4</div><h2>Geräte suchen, anmelden & analysieren</h2><p class="panel-copy">Gemeinsame Diagnose für Bluetooth, lokales Netzwerk und zugangsgestützte Erkennung. Zugangsdaten bleiben nur für den laufenden Test im Arbeitsspeicher.</p></div></div>
+        <div class="panel-head"><div><div class="eyebrow">UNIFIED DEVICE LAB · alpha-0.7.5</div><h2>Geräte suchen, anmelden & analysieren</h2><p class="panel-copy">Bluetooth, Netzwerk, FRITZ!, Tapo und lokale Adapter werden getrennt diagnostiziert und einheitlich dargestellt.</p></div></div>
         <div class="discovery-actions"><button class="primary" id="bleScanBtn">BLUETOOTH SCANNEN</button><button class="primary" id="smartScanBtn">NETZWERK SCANNEN</button></div>
         <div class="provider-grid" id="providerGrid"></div>
-        <form class="account-discovery" id="tapoAccountForm" autocomplete="off">
-          <div><div class="eyebrow">TP-LINK / TAPO LOGIN</div><h3>Zugangsgestützte lokale Suche</h3><p>Es werden alle aktiven LAN/WLAN-Schnittstellen durchsucht. Tapo-Zugangsdaten bleiben nur im Arbeitsspeicher und werden weder gespeichert noch protokolliert.</p></div>
-          <label>Lokales API-Token<input id="tapoApiToken" type="password" autocomplete="off" placeholder="Testimage: test" required></label>
-          <label>Benutzername<input id="tapoUsername" type="email" autocomplete="username" required></label>
-          <label>Passwort<input id="tapoPassword" type="password" autocomplete="current-password" required></label>
-          <button class="secondary" type="submit">TAPO SUCHEN</button>
-        </form>
+        <form class="account-discovery" id="tapoAccountForm" autocomplete="off"><div><div class="eyebrow">TP-LINK / TAPO LOGIN</div><h3>Tapo lokal + WAN-fähig</h3><p>Der lokale Pfad wird bevorzugt; der Account bleibt als Basis für die Tapo-Gerätezuordnung erhalten.</p></div><label>Lokales API-Token<input id="tapoApiToken" type="password" autocomplete="off" placeholder="Testimage: test" required></label><label>Benutzername<input id="tapoUsername" type="email" autocomplete="username" required></label><label>Passwort<input id="tapoPassword" type="password" autocomplete="current-password" required></label><button class="secondary" type="submit">TAPO SUCHEN</button></form>
         <div class="scan-status" id="scanStatus">Bereit für Bluetooth-, Netzwerk- oder Login-Suche.</div><div class="candidate-grid" id="candidateGrid"><div class="empty-state">Noch keine Geräte gesucht.</div></div>
       </article>
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Registrierte Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>Mars Hydro FC3000</strong><span>Modell 2024 • USB • iConnect</span></div><span class="badge-offline">VALIDATION</span></div><div class="device-row"><div><strong>Mars Hydro iFresh / DF100</strong><span>iConnect target • DF100M BLE diagnostics fallback</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>Shelly / FRITZ! / Tapo / Matter target</span></div><span id="smartPlugState">WAITING</span></div></div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Registrierte Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>Mars Hydro FC3000</strong><span>Modell 2024 • USB • iConnect</span></div><span class="badge-offline">VALIDATION</span></div><div class="device-row"><div><strong>Mars Hydro iFresh / DF100</strong><span>iConnect target • DF100M BLE diagnostics fallback</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>FRITZ! / Tapo / Shelly / Home Assistant</span></div><span id="smartPlugState">WAITING</span></div></div></article>
     </section>
-    <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Steckdosenbefehlen.</div></article></section>
-    <section id="history" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div><div class="empty-state">Schaltbefehle werden bereits auditiert. Persistente Leistungs-Zeitreihen werden als nächster Datenbank-Schritt angebunden.</div></article></section>
-    <section id="system" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Platform</span><strong>Raspberry Pi 3B</strong></div><div><span>Version</span><strong>alpha-0.7.4</strong></div><div><span>Mars Hydro</span><strong>FC3000 2024 + iFresh/DF100 · iConnect</strong></div><div><span>Frontend</span><strong>Responsive HUD UI</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>Shelly + FRITZ! + Tapo + Matter target</strong></div><div><span>Diagnostics</span><strong>Token protected</strong></div><div><span>Security</span><strong>Token + approval + audit</strong></div></div></article><article class="panel diagnostics-console"><div class="panel-head"><div><div class="eyebrow">DEVELOPMENT DIAGNOSTICS</div><h2>Raspberry-Pi-Dienstprotokolle</h2><p class="panel-copy">Nur freigegebene Dienste, automatisch bereinigt. Zugriff benötigt das lokale API-Token.</p></div><button class="primary" id="loadDiagnosticsBtn">DIAGNOSE LADEN</button></div><pre id="systemDiagnostics">Noch keine Diagnose geladen.</pre></article></section>
+
+    <section id="network" class="view">
+      <div class="extension-grid">
+        <article class="panel"><div class="panel-head"><div><div class="eyebrow">PI NETWORK CONTROL</div><h2>Heimnetzwerk</h2><p class="panel-copy">LAN/WLAN-Status anzeigen und das Raspberry Pi jederzeit einem WLAN hinzufügen.</p></div><button class="ghost" id="networkRefreshBtn">STATUS</button></div><div id="networkStatus" class="device-list"><div class="empty-state">Netzwerkstatus wird geladen…</div></div></article>
+        <article class="panel"><div class="panel-head"><div><div class="eyebrow">WLAN JOIN</div><h2>WLAN suchen & beitreten</h2></div><button class="primary" id="wifiScanBtn">WLAN SCANNEN</button></div><div id="wifiScanStatus" class="scan-status">Noch kein Scan gestartet.</div><div id="wifiList" class="wifi-list"></div><form id="wifiJoinForm"><label>SSID manuell<input id="wifiManualSsid" maxlength="32"></label><label>WLAN-Passwort<input id="wifiJoinPassword" type="password" maxlength="63"></label><button class="secondary" type="submit">WLAN VERBINDEN</button></form></article>
+      </div>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">AVM SMART HOME</div><h2>FRITZ!Box</h2><p class="panel-copy">Wenn eine FRITZ!Box eindeutig erkannt wird, fordert Grow Central automatisch den eigens für Grow Central angelegten FRITZ!-Benutzer an und importiert die Smart-Home-Geräte.</p></div></div><div id="fritzPresence"><div class="empty-state">FRITZ!Box wird geprüft…</div></div></article>
+    </section>
+
+    <section id="camera" class="view">
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">LOCAL UVC / V4L2 CAMERA</div><h2>Kamera</h2><p class="panel-copy">Referenzhardware: Logitech C920 direkt am Raspberry Pi. Andere kompatible UVC-Kameras werden ebenfalls erkannt und bekommen nur die Funktionen angezeigt, die sie selbst melden.</p></div><div class="button-row"><button class="ghost" id="cameraRefreshBtn">NEU ERKENNEN</button><button class="secondary" id="cameraSnapshotBtn">SNAPSHOT</button></div></div><div id="cameraStatusText" class="scan-status">Kamera wird geprüft…</div><div class="camera-layout"><div id="cameraDeviceList" class="camera-device-list"><div class="empty-state">Suche /dev/video*…</div></div><div class="camera-preview"><img id="cameraSnapshot" alt="Kamera-Testbild"><div id="cameraControls" class="camera-controls"><div class="empty-state">Kamerafunktionen werden geladen…</div></div></div></div></article>
+    </section>
+
+    <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Gerätebefehlen.</div></article></section>
+    <section id="history" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div><div class="empty-state">Schalt- und Kamera-Control-Befehle werden auditiert. Persistente Leistungs-Zeitreihen folgen.</div></article></section>
+    <section id="system" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Platform</span><strong>Raspberry Pi 3B</strong></div><div><span>Version</span><strong>alpha-0.7.5</strong></div><div><span>Mars Hydro</span><strong>FC3000 2024 + iFresh/DF100 · iConnect</strong></div><div><span>Frontend</span><strong>Authenticated Responsive HUD</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>FRITZ! + Tapo + Shelly + HA</strong></div><div><span>Camera</span><strong>UVC/V4L2 · C920 reference</strong></div><div><span>Security</span><strong>GUI Session + Write Gates + Audit</strong></div></div></article><article class="panel diagnostics-console"><div class="panel-head"><div><div class="eyebrow">DEVELOPMENT DIAGNOSTICS</div><h2>Raspberry-Pi-Dienstprotokolle</h2></div><button class="primary" id="loadDiagnosticsBtn">DIAGNOSE LADEN</button></div><pre id="systemDiagnostics">Noch keine Diagnose geladen.</pre></article></section>
   </main>
 </div>
-<script src="/static/app.js?v=0.9.3"></script>
+
+<dialog id="fritzLoginDialog" class="dialog-panel"><form id="fritzLoginForm" method="dialog"><h2>FRITZ!Box erkannt</h2><p>Bitte Zugangsdaten des eigens für Grow Central angelegten FRITZ!Box-Benutzers eingeben. Danach werden Smart-Home-Geräte automatisch gelesen und importiert.</p><label>FRITZ!Box<input id="fritzHost" value="fritz.box" required></label><label>Benutzer<input id="fritzUsername" autocomplete="username" required></label><label>Passwort<input id="fritzPassword" type="password" autocomplete="current-password" required></label><div id="fritzLoginStatus" class="scan-status"></div><div class="button-row"><button class="primary" type="submit">ANMELDEN & IMPORTIEREN</button><button class="ghost" type="button" id="fritzCancelBtn">SPÄTER</button></div></form></dialog>
+
+<script src="/static/app.js?v=0.9.4"></script>
+<script src="/static/device_extensions.js?v=0.7.5"></script>
 </body>
 </html>
