@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Apply a validated first-boot configuration without logging secrets."""
+"""Apply validated first-boot configuration without logging secrets."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import re
+import secrets
 import subprocess
 import tempfile
 import time
@@ -18,8 +21,10 @@ APP_ENV = Path("/opt/135er-grow-central/.env")
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
 HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
+GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
 HOSTS_FILE = Path("/etc/hosts")
+PBKDF2_ITERATIONS = 240_000
 
 
 def run(*arguments: str, check: bool = True, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
@@ -51,7 +56,7 @@ def validate(config: dict[str, str]) -> None:
     if config.get("timezone") not in TIMEZONES:
         raise ValueError("invalid timezone")
     if len(config.get("new_password", "")) < 12:
-        raise ValueError("invalid user password")
+        raise ValueError("invalid system password")
     if config["mode"] == "wifi":
         ssid = config.get("ssid", "")
         wifi_password = config.get("wifi_password", "")
@@ -59,42 +64,51 @@ def validate(config: dict[str, str]) -> None:
             raise ValueError("invalid ssid")
         if wifi_password and not 8 <= len(wifi_password) <= 63:
             raise ValueError("invalid wifi password")
+    if not GUI_USER_RE.fullmatch(config.get("gui_username", "")):
+        raise ValueError("invalid GUI username")
+    if len(config.get("gui_password", "")) < 12:
+        raise ValueError("invalid GUI password")
+    fritz_enabled = config.get("fritz_enabled") == "1"
     fritz_host = config.get("fritz_host", "").strip()
     fritz_user = config.get("fritz_username", "").strip()
     fritz_password = config.get("fritz_password", "")
-    if any((fritz_user, fritz_password)) and not all((fritz_host, fritz_user, fritz_password)):
+    if fritz_enabled and not all((fritz_host, fritz_user, fritz_password)):
         raise ValueError("incomplete FRITZ credentials")
-    tapo_user = config.get("tapo_username", "").strip()
-    tapo_password = config.get("tapo_password", "")
-    if bool(tapo_user) != bool(tapo_password):
-        raise ValueError("incomplete Tapo credentials")
 
 
 def _quote_env(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "") + '"'
 
 
-def persist_integration_credentials(config: dict[str, str]) -> None:
-    """Store optional integration credentials in the root-owned application env file."""
+def _gui_hash(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS)
+    salt_text = base64.urlsafe_b64encode(salt).decode("ascii").rstrip("=")
+    digest_text = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt_text}${digest_text}"
+
+
+def persist_runtime_settings(config: dict[str, str]) -> None:
     existing = APP_ENV.read_text(encoding="utf-8").splitlines() if APP_ENV.exists() else []
     values = {
-        "GC_FRITZ_HOST": config.get("fritz_host", "").strip(),
-        "GC_FRITZ_USERNAME": config.get("fritz_username", "").strip(),
-        "GC_FRITZ_PASSWORD": config.get("fritz_password", ""),
-        "GC_TAPO_USERNAME": config.get("tapo_username", "").strip(),
-        "GC_TAPO_PASSWORD": config.get("tapo_password", ""),
-        "GC_TAPO_WAN_ENABLED": "true" if config.get("tapo_wan_enabled") == "1" else "false",
+        "GC_GUI_USERNAME": config["gui_username"].strip(),
+        "GC_GUI_PASSWORD_HASH": _gui_hash(config["gui_password"]),
+        "GC_SMARTHOME_ENABLED": "true",
+        "GC_FRITZ_HOST": config.get("fritz_host", "").strip() if config.get("fritz_enabled") == "1" else "",
+        "GC_FRITZ_USERNAME": config.get("fritz_username", "").strip() if config.get("fritz_enabled") == "1" else "",
+        "GC_FRITZ_PASSWORD": config.get("fritz_password", "") if config.get("fritz_enabled") == "1" else "",
     }
     keys = set(values)
     filtered = [line for line in existing if line.split("=", 1)[0] not in keys]
     for key, value in values.items():
-        if value or key == "GC_TAPO_WAN_ENABLED":
+        if value or key == "GC_SMARTHOME_ENABLED":
             filtered.append(f"{key}={_quote_env(value)}")
     temporary = APP_ENV.with_suffix(".env.tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         handle.write("\n".join(filtered).rstrip() + "\n")
-        handle.flush(); os.fsync(handle.fileno())
+        handle.flush()
+        os.fsync(handle.fileno())
     os.chown(temporary, 0, 0)
     os.replace(temporary, APP_ENV)
 
@@ -114,7 +128,8 @@ def mark_provisioned() -> None:
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         handle.write(f"provisioned_at={time.time_ns()}\n")
-        handle.flush(); os.fsync(handle.fileno())
+        handle.flush()
+        os.fsync(handle.fileno())
     os.replace(temporary, MARKER)
 
 
@@ -158,7 +173,7 @@ def main() -> int:
         run("systemctl", "restart", "avahi-daemon.service", check=False)
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
-        persist_integration_credentials(config)
+        persist_runtime_settings(config)
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
