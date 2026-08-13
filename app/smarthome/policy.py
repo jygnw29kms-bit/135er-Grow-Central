@@ -11,9 +11,9 @@ class PolicyDenied(ValueError):
 
 
 def smart_home_enabled() -> bool:
-    # Runtime integration is available by default; actual writes still require
-    # local API authentication plus approved+writable device flags.
-    return os.getenv("GC_SMARTHOME_ENABLED", "true").lower() == "true"
+    # Library/default posture remains fail-closed. The appliance image enables
+    # smart-home integration explicitly after the secured first-boot setup.
+    return os.getenv("GC_SMARTHOME_ENABLED", "false").lower() == "true"
 
 
 def assert_switch_write_allowed(device: DeviceConfig) -> None:
