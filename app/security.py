@@ -5,7 +5,9 @@ import os
 import secrets
 from typing import Annotated
 
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Request, status
+
+from app.gui_auth import authenticated
 
 
 def _candidate_token(x_api_token: str | None, authorization: str | None) -> str:
@@ -17,14 +19,18 @@ def _candidate_token(x_api_token: str | None, authorization: str | None) -> str:
 
 
 def require_write_auth(
+    request: Request,
     x_api_token: Annotated[str | None, Header(alias="X-API-Token")] = None,
     authorization: Annotated[str | None, Header()] = None,
 ) -> None:
-    """Require a configured local token for any state-changing device command.
+    """Allow an authenticated GUI session or an explicitly configured API token.
 
-    DE: Ohne explizit gesetztes Token bleiben geschützte Schreibpfade gesperrt.
-    EN: Protected write paths stay locked until an explicit token is configured.
+    Browser writes are already protected by the GUI session established during
+    first-boot configuration. Non-browser/API clients can still authenticate
+    with X-API-Token or a Bearer token. The dependency remains fail-closed.
     """
+    if authenticated(request):
+        return
     expected = os.getenv("GC_LOCAL_API_TOKEN", "").strip()
     if not expected:
         raise HTTPException(
