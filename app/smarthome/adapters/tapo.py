@@ -1,9 +1,8 @@
 """TP-Link Tapo/Kasa smart-plug adapter.
 
-Uses python-kasa for authenticated local control. Account credentials remain
-server-side and are referenced via environment variable names from DeviceConfig.
-WAN/cloud access is modeled as a project capability/fallback but is not faked
-here: the local adapter reports its active transport explicitly.
+Uses python-kasa for authenticated local control. Account credentials stay
+server-side. WAN/cloud capability is modeled separately; this adapter never
+pretends a local device path is cloud-backed.
 """
 from __future__ import annotations
 
@@ -12,6 +11,7 @@ from typing import Any
 
 from kasa import Credentials, Device
 
+from app.credential_store import get_credentials
 from ..models import DeviceConfig
 from .base import AdapterError, SwitchAdapter
 
@@ -22,6 +22,10 @@ class TapoSwitchAdapter(SwitchAdapter):
             raise AdapterError("Tapo host missing")
         username = os.getenv(device.username_env or "GC_TAPO_USERNAME", "").strip()
         password = os.getenv(device.password_env or "GC_TAPO_PASSWORD", "")
+        if not username or not password:
+            stored = get_credentials("tapo")
+            if stored:
+                username, password = stored
         if not username or not password:
             raise AdapterError("Tapo credentials are not configured")
         self.device = device
