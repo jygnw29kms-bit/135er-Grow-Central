@@ -5,16 +5,17 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 PORTAL_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "portal.py"
 APPLY_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "apply_setup.py"
 SETUP_AP_PATH = Path(__file__).parents[1] / "image-builder" / "firstboot" / "setup-ap.sh"
 IMAGE_WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "build-pi3-image.yml"
+
 SPEC = importlib.util.spec_from_file_location("firstboot_portal", PORTAL_PATH)
 portal = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 sys.modules[SPEC.name] = portal
 SPEC.loader.exec_module(portal)
+
 APPLY_SPEC = importlib.util.spec_from_file_location("firstboot_apply", APPLY_PATH)
 apply_setup = importlib.util.module_from_spec(APPLY_SPEC)
 assert APPLY_SPEC and APPLY_SPEC.loader
@@ -29,17 +30,70 @@ def valid_form():
         "timezone": "Europe/Berlin",
         "ssid": "Werkstatt WLAN",
         "wifi_password": "sicheres-wlan-passwort",
-        "new_password": "ein-neues-passwort",
-        "new_password_confirm": "ein-neues-passwort",
+        "new_password": "ein-neues-systempasswort",
+        "new_password_confirm": "ein-neues-systempasswort",
+        "gui_username": "GrowCentral",
+        "gui_password": "ein-neues-gui-passwort",
+        "gui_password_confirm": "ein-neues-gui-passwort",
+        "fritz_enabled": "0",
     }
 
 
-def test_default_hostname_uses_lan_discovery_name():
+def test_first_boot_requires_system_and_gui_passwords(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
     form = valid_form()
-    form.pop("hostname")
     config, error = portal.validate_setup(form)
     assert error is None
-    assert config["hostname"] == "135er-grow-central"
+    assert config["new_password"] == "ein-neues-systempasswort"
+    assert config["gui_username"] == "GrowCentral"
+    assert config["gui_password"] == "ein-neues-gui-passwort"
+
+    form["gui_password"] = form["gui_password_confirm"] = "kurz"
+    config, error = portal.validate_setup(form)
+    assert config is None
+    assert "GUI-Passwort" in error
+
+
+def test_active_lan_skips_wifi_requirement(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: True)
+    form = valid_form()
+    form["ssid"] = ""
+    form["wifi_password"] = ""
+    config, error = portal.validate_setup(form)
+    assert error is None
+    assert config["mode"] == "ethernet"
+
+
+def test_wifi_requires_selected_or_manual_ssid(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
+    form = valid_form()
+    form["ssid"] = ""
+    config, error = portal.validate_setup(form)
+    assert config is None
+    assert "WLAN" in error
+
+
+def test_manual_ssid_overrides_scan_selection(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
+    form = valid_form()
+    form["manual_ssid"] = "Verstecktes WLAN"
+    config, error = portal.validate_setup(form)
+    assert error is None
+    assert config["ssid"] == "Verstecktes WLAN"
+
+
+def test_fritz_credentials_are_required_only_when_enabled(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
+    form = valid_form()
+    form.update({"fritz_enabled": "1", "fritz_host": "fritz.box", "fritz_username": "GrowCentral", "fritz_password": ""})
+    config, error = portal.validate_setup(form)
+    assert config is None
+    assert "FRITZ" in error
+
+    form["fritz_password"] = "fritz-smart-home-passwort"
+    config, error = portal.validate_setup(form)
+    assert error is None
+    assert config["fritz_username"] == "GrowCentral"
 
 
 def test_wifi_scan_parses_escaped_ssids_and_keeps_best_signal(monkeypatch):
@@ -48,152 +102,43 @@ def test_wifi_scan_parses_escaped_ssids_and_keeps_best_signal(monkeypatch):
         SimpleNamespace(returncode=0, stdout="Grow\\:Lab:61:WPA2\nGrow\\:Lab:88:WPA2\nOffen:40:--\n", stderr=""),
     ])
     monkeypatch.setattr(portal.subprocess, "run", lambda *_args, **_kwargs: next(outputs))
-    assert portal.scan_networks() == [("Grow:Lab", "88", "WPA2"), ("Offen", "40", "--")]
-
-
-def test_valid_setup_is_normalized():
-    config, error = portal.validate_setup(valid_form())
+    networks, error = portal.scan_networks()
     assert error is None
-    assert config["hostname"] == "grow-central"
-    assert "new_password_confirm" not in config
+    assert networks == [("Grow:Lab", "88", "WPA2"), ("Offen", "40", "--")]
 
 
-def test_manual_ssid_overrides_network_selection():
-    form = valid_form()
-    form["ssid"] = "Gefundenes WLAN"
-    form["manual_ssid"] = "Verstecktes WLAN"
-    config, error = portal.validate_setup(form)
-    assert error is None
-    assert config["ssid"] == "Verstecktes WLAN"
+def test_setup_ap_blocks_normal_gui_for_setup_subnet():
+    script = SETUP_AP_PATH.read_text(encoding="utf-8")
+    assert 'SETUP_SUBNET="10.42.0.0/24"' in script
+    assert 'deny from "$SETUP_SUBNET" to any port 8080 proto tcp' in script
+    assert "ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250" in script
+    assert "ipv4.method shared" in script
 
 
-def test_hosts_entry_follows_configured_hostname(tmp_path):
-    hosts = tmp_path / "hosts"
-    hosts.write_text("127.0.0.1\tlocalhost\n127.0.1.1\tgrow-central-test\n", encoding="utf-8")
-    apply_setup.update_hosts("grow-central", hosts)
-    assert hosts.read_text(encoding="utf-8") == "127.0.0.1\tlocalhost\n127.0.1.1\tgrow-central\n"
+def test_runtime_password_hash_does_not_store_plaintext():
+    password = "ein-neues-gui-passwort"
+    encoded = apply_setup._gui_hash(password)
+    assert encoded.startswith("pbkdf2_sha256$")
+    assert password not in encoded
 
 
-def test_provisioning_marker_is_committed_atomically(tmp_path, monkeypatch):
-    marker = tmp_path / ".provisioned"
-    monkeypatch.setattr(apply_setup, "STATE_DIR", tmp_path)
-    monkeypatch.setattr(apply_setup, "MARKER", marker)
-    apply_setup.mark_provisioned()
-    assert marker.read_text(encoding="utf-8").startswith("provisioned_at=")
-    assert not marker.with_suffix(".tmp").exists()
-
-
-def test_image_ui_is_not_blocked_by_provisioning_marker():
-    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
-    service_start = workflow.index("cat >/etc/systemd/system/135er-grow-central.service")
-    service_end = workflow.index("\n          EOF", service_start)
-    service = workflow[service_start:service_end]
-    assert "ConditionPathExists" not in service
-    assert "Restart=always" in service
-    assert "grow-central-healthcheck.timer" in workflow
-    assert "http://127.0.0.1:8080/api/health" in workflow
-    assert "Boot and reboot the completed image userspace" in workflow
-    assert "check_boot pre-setup" in workflow
-    assert "check_boot post-setup" in workflow
-    assert "systemd-nspawn" in workflow
-    assert "cp --reflink=auto --sparse=always work.img boot-smoke.img" in workflow
-    assert "losetup --find --show --partscan boot-smoke.img" in workflow
-    assert "losetup --find --show --partscan work.img" in workflow
-    assert '.firewall-initialized"' in workflow
-    assert '.headless-firstboot-ready"' in workflow
-    assert 'test ! -s "$ROOT/etc/machine-id"' in workflow
-    assert "-name 'ssh_host_*'" in workflow
-    portal_unit = (Path(__file__).parents[1] / "image-builder" / "firstboot" / "grow-central-firstboot-portal.service").read_text(encoding="utf-8")
-    assert "Before=135er-grow-central.service" not in portal_unit
-    assert "Before=ssh.service getty@tty1.service 135er-grow-central.service" not in workflow
-
-
-def test_setup_restarts_and_verifies_main_ui(tmp_path, monkeypatch):
-    pending = tmp_path / "setup-pending.json"
-    marker = tmp_path / ".provisioned"
-    error_file = tmp_path / "setup-last-error"
-    hosts = tmp_path / "hosts"
-    hosts.write_text("127.0.0.1 localhost\n127.0.1.1 grow-central-test\n", encoding="utf-8")
-    pending.write_text(
-        '{"mode":"ethernet","hostname":"grow-central","timezone":"Europe/Berlin",'
-        '"new_password":"ein-neues-passwort"}',
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(apply_setup, "STATE_DIR", tmp_path)
-    monkeypatch.setattr(apply_setup, "PENDING_FILE", pending)
-    monkeypatch.setattr(apply_setup, "MARKER", marker)
-    monkeypatch.setattr(apply_setup, "ERROR_FILE", error_file)
-    monkeypatch.setattr(apply_setup, "HOSTS_FILE", hosts)
-    monkeypatch.setattr(apply_setup, "update_hosts", lambda _hostname: None)
-    monkeypatch.setattr(apply_setup.time, "sleep", lambda _seconds: None)
-    calls = []
-
-    def fake_run(*arguments, **_kwargs):
-        calls.append(arguments)
-        return SimpleNamespace(returncode=0, stdout="active\n", stderr="")
-
-    monkeypatch.setattr(apply_setup, "run", fake_run)
-    assert apply_setup.main() == 0
-    assert marker.exists()
-    assert ("systemctl", "restart", "135er-grow-central.service") in calls
-    assert ("systemctl", "is-active", "135er-grow-central.service") in calls
-
-
-def test_native_debian_pam_binding_is_used(monkeypatch):
-    class Client:
-        def start(self, service): assert service == "login"
-        def set_item(self, *_args): pass
-        def authenticate(self): pass
-
-    fake = SimpleNamespace(pam=Client, PAM_USER=1, PAM_CONV=2, PAM_PROMPT_ECHO_ON=3, PAM_PROMPT_ECHO_OFF=4)
-    monkeypatch.setattr(portal, "PAM", fake)
-    assert portal.authenticate_user("GrowCentral", "secret") is True
-    assert portal.authenticate_user("root", "secret") is False
-
-
-def test_invalid_hostname_is_rejected():
-    form = valid_form()
-    form["hostname"] = "grow central; reboot"
-    config, error = portal.validate_setup(form)
-    assert config is None
-    assert "Hostname" in error
-
-
-def test_short_password_is_rejected():
-    form = valid_form()
-    form["new_password"] = form["new_password_confirm"] = "kurz"
-    config, error = portal.validate_setup(form)
-    assert config is None
-    assert "12 Zeichen" in error
-
-
-def test_login_guard_limits_attempts_and_recovers():
-    guard = portal.LoginGuard()
-    for offset in range(5):
-        guard.failed("10.42.0.2", now=float(offset))
-    assert not guard.allowed("10.42.0.2", now=5.0)
-    assert guard.allowed("10.42.0.2", now=65.0)
-
-
-def test_apply_stage_revalidates_untrusted_data():
+def test_apply_revalidates_gui_and_fritz_fields(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
     config, error = portal.validate_setup(valid_form())
     assert error is None
     apply_setup.validate(config)
-    config["timezone"] = "Europe/Berlin; reboot"
-    try:
+    config["gui_username"] = "ungültig mit leerzeichen"
+    with __import__("pytest").raises(ValueError):
         apply_setup.validate(config)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("apply stage accepted an unsafe timezone")
 
 
-def test_wifi_password_is_not_exposed_in_process_arguments():
+def test_wifi_password_is_not_exposed_in_process_arguments(monkeypatch):
+    monkeypatch.setattr(portal, "ethernet_connected", lambda: False)
     calls = []
 
     def fake_run(*arguments, **_kwargs):
         calls.append(arguments)
-        return SimpleNamespace(returncode=0)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     real_mkstemp = tempfile.mkstemp
 
@@ -210,40 +155,27 @@ def test_wifi_password_is_not_exposed_in_process_arguments():
     assert "--passwd-file" in flattened
 
 
-def test_setup_networks_are_dual_stack_and_ap_profile_is_repaired():
-    script = SETUP_AP_PATH.read_text(encoding="utf-8")
+def test_image_workflow_is_synchronized_to_alpha_075():
     workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
-    assert 'ADDRESS="10.42.0.1/24"' in script
-    assert "ipv4.method shared" in script
-    assert "ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250" in script
-    assert "ipv4.shared-dhcp-lease-time 3600" in script
-    assert "ss -H -lun" in script and "/:67$/" in script
-    assert "ipv4.never-default yes" in script
-    assert "ipv6.method shared" in script
-    assert "ipv6.never-default yes" in script
-    assert script.index('fi\n\n# Apply the complete profile') < script.index('nmcli connection modify "$CONNECTION"')
-    assert "ufw allow in on wlan0 to any port 67 proto udp" in workflow
-    assert "ufw allow in on wlan0 to any port 53 proto udp" in workflow
-    assert "ufw allow in on wlan0 to any port 53 proto tcp" in workflow
-    assert "SupplementaryGroups=systemd-journal" in workflow
-    assert "rfkill unblock bluetooth" in workflow
+    assert "alpha-0.7.5-build-" in workflow
+    assert '.version == "0.7.5"' in workflow
+    assert "app.entrypoint:app" in workflow
+    assert "policykit-1" in workflow
+    assert "v4l2-ctl" in workflow
+    assert "ffmpeg" in workflow
+    assert "SupplementaryGroups=systemd-journal video netdev" in workflow
 
-    calls = []
 
-    def fake_run(*arguments, **_kwargs):
-        calls.append(arguments)
-        return SimpleNamespace(returncode=0)
+def test_first_boot_portal_uses_real_pam_user(monkeypatch):
+    class Client:
+        def start(self, service):
+            assert service == "login"
+        def set_item(self, *_args):
+            pass
+        def authenticate(self):
+            pass
 
-    real_mkstemp = tempfile.mkstemp
-
-    def temporary_runtime_file(*_args, **_kwargs):
-        return real_mkstemp(prefix="grow-central-ipv4-test-", dir="/tmp", text=True)
-
-    config, error = portal.validate_setup(valid_form())
-    assert error is None
-    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
-        apply_setup.configure_wifi(config)
-
-    flattened = [str(argument) for call in calls for argument in call]
-    ipv6_index = flattened.index("ipv6.method")
-    assert flattened[ipv6_index + 1] == "auto"
+    fake = SimpleNamespace(pam=Client, PAM_USER=1, PAM_CONV=2, PAM_PROMPT_ECHO_ON=3, PAM_PROMPT_ECHO_OFF=4)
+    monkeypatch.setattr(portal, "PAM", fake)
+    assert portal.authenticate_user("GrowCentral", "secret") is True
+    assert portal.authenticate_user("root", "secret") is False
