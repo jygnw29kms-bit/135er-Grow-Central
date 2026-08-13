@@ -9,11 +9,12 @@ CERT_DIR="/etc/135er-grow-central"
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
-# First boot is a dedicated provisioning state. Do not expose the normal GUI
-# with factory credentials in parallel. apply_setup.py starts the protected
-# runtime only after all mandatory setup gates have succeeded.
+# Keep the runtime alive for internal health checks, but during first boot the
+# setup WLAN must expose only the provisioning portal. Insert the interface-
+# specific deny before the generic port-8080 allow rule.
 if [[ ! -e "$STATE_DIR/.provisioned" ]]; then
-  systemctl stop 135er-grow-central.service >/dev/null 2>&1 || true
+  ufw --force delete deny in on wlan0 to any port 8080 proto tcp >/dev/null 2>&1 || true
+  ufw insert 1 deny in on wlan0 to any port 8080 proto tcp >/dev/null 2>&1 || true
 fi
 
 if [[ ! -s "$CERT_DIR/setup-portal.key" || ! -s "$CERT_DIR/setup-portal.crt" ]]; then
