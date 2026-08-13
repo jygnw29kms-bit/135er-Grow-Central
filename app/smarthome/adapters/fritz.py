@@ -1,7 +1,7 @@
 """Native FRITZ!Box AHA smart-home adapter.
 
-Uses AVM's local HTTP smart-home interface. Credentials stay in server-side
-environment variables and are never returned to the browser.
+Uses AVM's local HTTP smart-home interface. Credentials stay server-side and
+are never returned to the browser.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from app.credential_store import get_credentials
 from ..models import DeviceConfig
 from .base import AdapterError, SwitchAdapter
 
@@ -41,7 +42,7 @@ class FritzAhaClient:
             hash2 = hashlib.pbkdf2_hmac("sha256", hash1, bytes.fromhex(salt2), int(iter2))
             return f"{challenge}${hash2.hex()}"
         legacy = f"{challenge}-{password}".encode("utf-16le")
-        return f"{challenge}-{hashlib.md5(legacy).hexdigest()}"  # nosec B324 - required by legacy FRITZ!OS login protocol
+        return f"{challenge}-{hashlib.md5(legacy).hexdigest()}"  # nosec B324 - legacy FRITZ!OS protocol
 
     async def login(self) -> str:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -54,10 +55,7 @@ class FritzAhaClient:
             if not challenge:
                 raise AdapterError("FRITZ!Box login challenge missing")
             response_value = self._response(challenge, self.password)
-            response = await client.post(
-                f"{self.base}/login_sid.lua",
-                data={"username": self.username, "response": response_value},
-            )
+            response = await client.post(f"{self.base}/login_sid.lua", data={"username": self.username, "response": response_value})
             response.raise_for_status()
             logged = ET.fromstring(response.text)
             sid = (logged.findtext("SID") or "").strip()
@@ -92,12 +90,14 @@ class FritzAhaClient:
             if not ain:
                 continue
             switch = node.find("switch")
-            name = (node.findtext("name") or ain).strip()
-            present = (node.findtext("present") or "0").strip() == "1"
-            product = (node.attrib.get("productname") or "FRITZ! Smart Home").strip()
             if switch is None:
                 continue
-            rows.append({"ain": ain, "name": name, "present": present, "product": product})
+            rows.append({
+                "ain": ain,
+                "name": (node.findtext("name") or ain).strip(),
+                "present": (node.findtext("present") or "0").strip() == "1",
+                "product": (node.attrib.get("productname") or "FRITZ! Smart Home").strip(),
+            })
         return rows
 
 
@@ -107,6 +107,10 @@ class FritzSwitchAdapter(SwitchAdapter):
             raise AdapterError("FRITZ!Box host missing")
         username = os.getenv(device.username_env or "GC_FRITZ_USERNAME", "").strip()
         password = os.getenv(device.password_env or "GC_FRITZ_PASSWORD", "")
+        if not username or not password:
+            stored = get_credentials("fritz")
+            if stored:
+                username, password = stored
         if not username or not password:
             raise AdapterError("FRITZ!Box credentials are not configured")
         self.device = device
@@ -136,6 +140,7 @@ class FritzSwitchAdapter(SwitchAdapter):
             "frequency_hz": None,
             "native_name": name,
             "ain": self.ain,
+            "transport": "local-fritz-aha",
         }
 
     async def set_switch(self, on: bool) -> dict[str, Any]:
