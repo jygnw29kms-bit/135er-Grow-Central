@@ -6,6 +6,7 @@ from .base import AdapterError, SwitchAdapter
 from .fritz import FritzSwitchAdapter
 from .home_assistant import HomeAssistantSwitchAdapter
 from .shelly import ShellySwitchAdapter
+from .tapo import TapoSwitchAdapter
 
 
 def build_switch_adapter(device: DeviceConfig) -> SwitchAdapter:
@@ -15,4 +16,6 @@ def build_switch_adapter(device: DeviceConfig) -> SwitchAdapter:
         return HomeAssistantSwitchAdapter(device)
     if device.adapter == "fritz":
         return FritzSwitchAdapter(device)
+    if device.adapter == "tapo":
+        return TapoSwitchAdapter(device)
     raise AdapterError(f"unsupported adapter: {device.adapter}")
