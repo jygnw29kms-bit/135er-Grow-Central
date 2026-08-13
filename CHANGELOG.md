@@ -1,5 +1,27 @@
 # Changelog
 
+## alpha-0.7.5 – Secure onboarding, native FRITZ!, network control and camera panel (2026-08-13)
+
+- rebuilt first boot as a mandatory four-stage setup: system password, LAN/WLAN, optional dedicated FRITZ!Box user, mandatory Grow-Central GUI credentials
+- automatically detects active Ethernet; without LAN, presents a scanned WLAN list plus manual SSID fallback
+- keeps the normal GUI inaccessible to clients of the temporary setup subnet until provisioning is complete
+- added PBKDF2-SHA256 GUI password verifiers, HttpOnly GUI sessions and API protection for normal LAN/remote-facing use
+- retained explicit API-token authentication for non-browser/test clients while authenticated GUI sessions can perform approved writes without prompting for the factory test token
+- added a post-setup **Network** GUI section with interface state, WLAN scan, explicit scan/error feedback and WLAN join
+- added limited NetworkManager/Polkit permissions for the `growcentral` service account instead of unrestricted root networking
+- added native FRITZ!Box presence detection and local AVM/AHA login
+- added FRITZ!SmartHome switch import with name, presence, state, current power, energy and ON/OFF control where the device exposes those functions
+- added server-side FRITZ credential storage paths and automatic GUI login prompt when a FRITZ!Box is clearly detected
+- added authenticated local Tapo adapter and retained Tapo as a hybrid local/WAN architecture goal; Grow Central does not claim an unimplemented WAN transport
+- added directly testable Logitech C920/UVC support: `/dev/video*` enumeration, C920 identification, snapshot capture and dynamic V4L2 control discovery
+- camera GUI exposes only controls actually advertised by each camera and validates ranges/menu values before writes
+- camera control changes are audited and arbitrary browser-supplied device paths/control names are rejected
+- synchronized the Raspberry Pi image workflow, health tests, artifacts and prerelease naming to `alpha-0.7.5`
+- image installs `ffmpeg`, `v4l-utils` and PolicyKit; runtime gets only required `video`/`netdev` access
+- restored smart-home source policy to deny-by-default; the appliance image explicitly enables Smart Home behind GUI/API authentication and per-device approval/write gates
+- retained Mars Hydro FC3000 2024 + iFresh/DF100 as the iConnect target family and DF100M BLE as experimental diagnostics/fallback
+- recorded current real-hardware observation: first-boot/basic image functions and Bluetooth scanning/device communication are working; FRITZ/Tapo/C920/Mars-Hydro end-to-end validation remains part of Alpha testing
+
 ## alpha-0.7.4 – Mars Hydro/iConnect architecture alignment (2026-08-12)
 
 - defined the authoritative lighting target as **Mars Hydro FC3000 model year 2024 with USB port and iConnect support**
