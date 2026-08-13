@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import hashlib
 import os
-import xml.etree.ElementTree as ET
 from typing import Any
 
 import httpx
+from defusedxml import ElementTree as ET
 
 from app.credential_store import get_credentials
 from ..models import DeviceConfig

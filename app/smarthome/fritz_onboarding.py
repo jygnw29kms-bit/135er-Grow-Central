@@ -5,9 +5,9 @@ import asyncio
 import re
 import socket
 import subprocess
-import xml.etree.ElementTree as ET
 
 import httpx
+from defusedxml import ElementTree as ET
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, SecretStr
 

@@ -284,9 +284,7 @@ jobs:
           EOF
 
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh /usr/local/sbin/grow-central-setup-ap.sh
-          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/portal.py /usr/local/sbin/grow-central-firstboot-portal.py
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/apply_setup.py /usr/local/sbin/grow-central-apply-setup.py
-          install -o root -g root -m 0644 /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service /etc/systemd/system/grow-central-firstboot-portal.service
 
           cat >/etc/systemd/system/grow-central-setup-ap.service <<'EOF'
           [Unit]
@@ -368,7 +366,6 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl disable grow-central-firstboot-portal.service || true
           systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
@@ -393,8 +390,7 @@ jobs:
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
           systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
-          /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'
+          /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
           command -v ffmpeg
           command -v v4l2-ctl
