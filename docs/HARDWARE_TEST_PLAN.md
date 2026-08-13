@@ -1,178 +1,162 @@
-# Hardware Test Plan – Raspberry Pi 3B + Mars Hydro/iConnect
+# Hardware Test Plan – alpha-0.7.5
 
-## Purpose
+## Ziel
 
-Provide a repeatable, low-risk procedure for physical validation of 135er-Grow Central while keeping the project clearly in Alpha.
+Reproduzierbare Prüfung des aktuellen Raspberry-Pi-3B-Images auf realer Zielhardware. Ein Software-/CI-Test wird getrennt von einer echten Hardwarevalidierung dokumentiert.
 
-## Authoritative target hardware
+## Zielhardware
 
 - Raspberry Pi 3B / 3B+
-- **Mars Hydro FC3000, model year 2024, USB port, iConnect support**
-- **Mars Hydro iFresh / DF100 series using iConnect**
-- DF100M / `MZ_MZF002` only as experimental BLE diagnostics/fallback
-- Logitech C920 camera
-- supported smart-home/power targets: Shelly, TP-Link Tapo, FRITZ!SmartHome, Home Assistant
-- **no ESP32 in the target architecture**
+- **Mars Hydro FC3000, Modelljahr 2024, USB + iConnect**
+- **Mars Hydro iFresh / DF100 mit iConnect**
+- DF100M / `MZ_MZF002` nur BLE-Diagnose/Reverse Engineering/Fallback
+- **Logitech C920 direkt per USB am Raspberry Pi**
+- FRITZ!Box mit FRITZ!SmartHome-Steckdose
+- TP-Link Tapo-Geräte / Tapo-Account
+- optional Shelly / Home Assistant
+- kein ESP32 in der Zielarchitektur
 
-## Current Alpha observation
+## Bereits beobachtet
 
-The current image has been reported to behave well in its **first basic functions from first boot**. Record this as a positive smoke-test result only. Repeatability and all physical device paths below remain to be validated.
+Am bisherigen Image wurden die ersten Boot-/Grundfunktionen als gut gemeldet. Bluetooth reagiert, sucht Geräte, findet Geräte und kommuniziert mit Bluetooth-Geräten. Diese Punkte bleiben im neuen `alpha-0.7.5` erneut zu prüfen, gelten aber als positiver Ausgangsstand.
 
-## Phase A – Fresh image / first-boot validation
+## A – Neuer First Boot
 
-1. Flash the current published `135er-Grow-Central` Raspberry Pi 3B Alpha image to a clean microSD card.
-2. Boot without manual filesystem or configuration edits.
-3. Confirm that boot proceeds without an indefinite setup/Bluetooth dependency block.
-4. Confirm the setup AP appears when provisioning is required.
-5. Confirm a client receives an address from the dedicated `10.42.0.0/24` provisioning network.
-6. Open the setup portal and verify authentication.
-7. Verify WLAN list, hostname, timezone and password setup.
-8. Complete provisioning and confirm the main GUI becomes reachable.
-9. Confirm hostname `135er-grow-central` and mDNS URL `http://135er-grow-central.local:8080` on LAN.
-10. Reboot and confirm the main GUI returns without manual repair.
+1. Image frisch flashen; keine Dateien manuell ändern.
+2. Setup-AP `135er-GrowCentral-Setup-XXXX` verbinden.
+3. `https://10.42.0.1` öffnen.
+4. Mit temporärem Benutzer `GrowCentral` und Factory-Passwort anmelden.
+5. **Systempasswort zwingend ändern.**
+6. Bei aktivem Ethernet muss LAN automatisch erkannt werden.
+7. Ohne LAN muss eine WLAN-Liste erscheinen; WLAN auswählen und verbinden.
+8. Optional FRITZ!Box aktivieren und den dafür angelegten FRITZ!-Benutzer eingeben.
+9. **Separaten GUI-Benutzer und GUI-Passwort zwingend anlegen.**
+10. Setup abschließen.
+11. Prüfen, dass die normale GUI danach nur mit dem neu angelegten GUI-Login erreichbar ist.
+12. Reboot durchführen und Login erneut prüfen.
 
-### Acceptance criteria
+### Akzeptanz
 
-- first boot completes without manual intervention;
-- AP/DHCP works when required;
-- the local service is reachable on port 8080;
-- the provisioning marker is only committed after successful setup;
-- a failed setup does not permanently block the main GUI;
-- watchdog/recovery does not enter a restart loop;
-- reboot remains healthy.
+- Setup-AP + DHCP funktionieren ohne manuelle Reparatur.
+- Setup-Clients erhalten keinen normalen ungeschützten GUI-Zugriff auf Port 8080.
+- LAN wird erkannt oder WLAN-Auswahl funktioniert.
+- Factory-Systempasswort wird nicht in den Normalbetrieb übernommen.
+- GUI-Login ist nach Abschluss Pflicht.
+- `/api/health` bleibt lokal für Healthchecks verfügbar; normale GUI/API verlangt Authentifizierung.
+- GUI-Passwort liegt nicht im Klartext in `.env`.
 
-Useful checks:
+## B – Netzwerkbereich der GUI
 
-```bash
-systemctl is-active ssh
-systemctl is-active bluetooth
-systemctl is-active 135er-grow-central.service
-curl -fsS http://127.0.0.1:8080/api/health
-```
+Nach GUI-Login:
 
-## Phase B – Security/bootstrap validation
+1. **Netzwerk** öffnen.
+2. Schnittstellen-/Verbindungsstatus prüfen.
+3. `WLAN SCANNEN` ausführen.
+4. Prüfen, dass sichtbar `SCAN LÄUFT`, Trefferzahl, `0 Netze`, Timeout oder Fehler erscheint.
+5. Test-WLAN auswählen bzw. SSID manuell eingeben.
+6. WLAN beitreten.
+7. Prüfen, dass das Passwort nicht in Diagnoseausgaben oder Prozessargumenten erscheint.
+8. Verbindung nach Reboot erneut prüfen.
 
-Confirm that sensitive write and cloud paths remain disabled unless explicitly enabled for a controlled test:
+## C – FRITZ!Box / FRITZ!SmartHome
 
-```text
-DF100M_ALLOW_WRITES=false
-DF100M_ALLOW_RAW_WRITES=false
-GC_REMOTE_COMMANDS=false
-GC_CLOUD_ENABLED=false
-```
+Voraussetzung: eigener FRITZ!Box-Benutzer für Grow Central mit nur den benötigten Smart-Home-Rechten.
 
-Do not expose the Raspberry Pi service directly to the public internet. Public website, optional cloud and local control remain separate trust zones.
+1. GUI starten.
+2. Prüfen, ob die vorhandene FRITZ!Box eindeutig erkannt wird.
+3. Erwartung: Grow Central öffnet den FRITZ!-Login-Dialog.
+4. Zugangsdaten eingeben.
+5. Smart-Home-Geräteliste importieren.
+6. FRITZ!-Steckdose in **Geräte/Strom** prüfen.
+7. Gegen das FRITZ!Box-Portal vergleichen:
+   - Gerätename / AIN
+   - erreichbar / offline
+   - Ein / Aus
+   - aktuelle Leistung W
+   - Gesamtenergie Wh/kWh
+8. Steckdose über Grow Central ein- und ausschalten.
+9. Physisches Ergebnis und anschließend zurückgelesenen Zustand prüfen.
+10. Falsches FRITZ!-Passwort testen: verständlicher Auth-Fehler, kein Import.
+11. FRITZ!Box kurz trennen: Gerät muss offline/Fehler anzeigen statt falscher Werte.
 
-## Phase C – Bluetooth diagnostics validation
+## D – Tapo
 
-The BLE path is no longer the primary Mars-Hydro architecture. It is used only for diagnostics/reverse engineering/fallback.
+1. Tapo-Gerät und Pi im selben LAN betreiben.
+2. Tapo-Account für Discovery/Auth verwenden.
+3. Gerät lokal finden und authentifizieren.
+4. Name, Modell, Zustand und – falls vom Modell unterstützt – Leistungs-/Energiewerte vergleichen.
+5. Ein/Aus testen und realen Zustand zurücklesen.
+6. Internet trennen: lokalen Pfad erneut testen.
+7. WAN-Zugriff separat prüfen, sobald ein eigener Grow-Central-WAN-Transport implementiert ist. Die bestehende WAN-Fähigkeit der Tapo-App darf nicht fälschlich als bereits implementierter Grow-Central-Cloudpfad dokumentiert werden.
 
-Verify:
+## E – Logitech C920 direkt am Pi
 
-- Bluetooth is powered automatically;
-- advertised device names are shown when available;
-- generic devices are not falsely identified as Mars Hydro;
-- likely `MZ_MZF002` / iFresh-related advertisements are marked as diagnostics candidates;
-- connection and GATT inspection work without guessed writes.
+Die C920 ist für diesen Test physisch direkt mit dem Raspberry Pi verbunden.
 
-Relevant local endpoints:
+### GUI-Test
 
-```text
-GET  /api/discover
-POST /api/connect
-GET  /api/services
-POST /api/notify/start
-```
+1. **Kamera** öffnen.
+2. `NEU ERKENNEN` ausführen.
+3. Erwartung: mindestens ein `/dev/video*`-Gerät erscheint und die Logitech C920 wird nach Möglichkeit namentlich markiert.
+4. Status `READ OK` und `CAPTURE` prüfen.
+5. `SNAPSHOT` ausführen – ein echtes Bild muss in der GUI erscheinen.
+6. Das Bedienfeld muss die **tatsächlich von der C920 gemeldeten V4L2-Controls** auflisten.
+7. Verfügbare, risikoarme Regler nacheinander testen, beispielsweise Helligkeit/Kontrast/Sättigung oder Fokus, soweit sie gemeldet werden.
+8. Nach jeder Änderung Snapshot aktualisieren und sichtbaren Effekt/aktuellen Wert prüfen.
+9. Automatik-Regler wie Autofokus/Auto-Belichtung nur über ihre tatsächlich gemeldeten Menü-/Bool-Werte bedienen.
+10. C920 abziehen: GUI muss Nicht-erkannt/Fehler anzeigen und darf nicht hängen.
+11. Wieder einstecken und `NEU ERKENNEN` ausführen.
 
-## Phase D – Mars Hydro FC3000 2024 / iConnect observation
-
-With the exact target lamp:
-
-1. identify how the 2024 FC3000 USB/iConnect interface enumerates or communicates in normal supported use;
-2. record device identity, interface, state transitions and any locally observable traffic;
-3. compare off/on and known dim levels;
-4. document whether local communication is possible without vendor cloud dependency;
-5. do not implement or send guessed commands.
-
-Record at minimum:
-
-- exact hardware/revision information;
-- connection/interface type;
-- iConnect behavior;
-- readable state;
-- dimming/state changes;
-- reconnect behavior;
-- behavior after Raspberry Pi reboot or temporary link loss.
-
-## Phase E – Mars Hydro iFresh / DF100 observation
-
-Repeat the same evidence-driven process for the iFresh/DF100 series:
-
-- identity and pairing behavior;
-- iConnect communication path;
-- power/fan state;
-- speed levels;
-- modes/schedules if actually exposed;
-- reconnect and failure behavior.
-
-Only use the existing DF100M BLE tooling when it provides useful diagnostics. It must not silently substitute for a validated iConnect path.
-
-## Phase F – Controlled BLE replay, only if needed
-
-Only after a consistent BLE candidate is observed from real device/app behavior:
-
-1. enable writes temporarily;
-2. use a low-risk known command/value;
-3. send one candidate payload;
-4. observe and document the response;
-5. disable writes immediately after the test;
-6. repeat only after reviewing evidence.
-
-Never run uncontrolled write loops during protocol research.
-
-## Phase G – Logitech C920
-
-Verify:
+### CLI-Gegencheck
 
 ```bash
 v4l2-ctl --list-devices
-ffmpeg -f v4l2 -list_formats all -i /dev/video0
+v4l2-ctl --device /dev/video0 --all
+v4l2-ctl --device /dev/video0 --list-ctrls-menus
+ffmpeg -hide_banner -f v4l2 -i /dev/video0 -frames:v 1 /tmp/c920-test.jpg
 ```
 
-Confirm the Grow Central service account has access through the `video` group and that camera initialization does not block the main UI.
+Gerätenummer kann abweichen. Die GUI verwendet deshalb intern `cam0`, `cam1`, … und löst diese IDs ausschließlich serverseitig auf.
 
-## Phase H – Smart-home / power telemetry
+## F – Bluetooth / Mars Hydro
 
-For each real supported device path verify:
+Bluetooth-Baseline erneut prüfen:
 
-- discovery/onboarding;
-- readable name and status;
-- ON/OFF state;
-- W, kWh, V, A, Hz where the hardware actually exposes them;
-- protected writes;
-- disconnect/offline handling;
-- hour/day/week/month/year history once persistent time-series is active;
-- user-defined €/kWh cost projection against known reference values.
+- Scan startet sichtbar;
+- Geräte werden mit Namen/Typ-Hinweisen angezeigt;
+- Verbindung/GATT kann gelesen werden;
+- generische Geräte werden nicht als Mars Hydro ausgegeben;
+- MZ_MZF002/iFresh-Kandidaten werden nur als Diagnosekandidaten markiert.
 
-## Test record template
+FC3000 2024 und iFresh/DF100 bleiben iConnect-Zielgeräte. Unbekannte BLE/iConnect-Writes nicht aktivieren, bevor reale Telegramme beobachtet, korreliert und reproduzierbar validiert wurden.
 
-| Test | Device/path | Input/action | Observed state | Physical result | Recovery | Evidence |
-|---|---|---|---|---|---|---|
-| H01 | Pi image | fresh first boot | TBD | GUI reachable | TBD | observed |
-| H02 | FC3000 2024 | identity / iConnect observation | TBD | TBD | TBD | observed |
-| H03 | iFresh / DF100 | identity / iConnect observation | TBD | TBD | TBD | observed |
-| H04 | DF100M BLE diagnostics | discover/GATT | TBD | no write | TBD | observed |
-| H05 | C920 | enumerate/capture | TBD | video frame | TBD | observed |
+## G – Security / Fehlerfälle
 
-## Exit criteria before Beta consideration
+- ohne GUI-Login normale GUI/API nicht verwendbar;
+- falscher GUI-Login wird abgewiesen;
+- Smart-Home-Sourcecode bleibt deny-by-default;
+- Appliance aktiviert Smart Home explizit hinter Auth + Device Approval + Writable Gate;
+- unbekannte Kamera-Control-Namen und Werte außerhalb des Gerätebereichs werden abgewiesen;
+- Integrationspasswörter werden nicht an Browser-Read-APIs zurückgegeben;
+- DF100M-Raw-/Speed-Writes bleiben standardmäßig deaktiviert;
+- `GC_REMOTE_COMMANDS=false` und `GC_CLOUD_ENABLED=false` bleiben Default des Images.
 
-Beta is not reached merely because the image boots. Before a Beta designation, the project should have repeatable evidence that:
+## Testprotokoll
 
-- fresh image first boot and reboot work reliably;
-- setup AP/DHCP/provisioning are reproducible;
-- local GUI and watchdog recovery are stable;
-- FC3000 2024 and iFresh/DF100 communication paths are understood and safely implemented;
-- device writes are controlled, authenticated and audited;
-- Bluetooth diagnostics remain safe;
-- camera and intended smart-home/power paths work on real target hardware;
-- critical offline/error cases have been exercised.
+| ID | Pfad | Aktion | Erwartung | Ergebnis |
+|---|---|---|---|---|
+| A01 | First Boot | Factory-Start | Setup-Assistent | TBD |
+| A02 | WLAN | Scan + Join | Netzliste + Verbindung | TBD |
+| A03 | GUI Auth | Logout/Login | Zugriff nur authentifiziert | TBD |
+| F01 | FRITZ! | Erkennung/Login | Box + Geräte importiert | TBD |
+| F02 | FRITZ!-Steckdose | ON/OFF + Telemetrie | physisch + Rücklesen korrekt | TBD |
+| T01 | Tapo | lokale Discovery/Auth | Gerät erreichbar | TBD |
+| C01 | C920 | Erkennung | C920 / capture-capable | TBD |
+| C02 | C920 | Snapshot | echtes JPEG sichtbar | TBD |
+| C03 | C920 | Control ändern | Wert + Bild reagieren | TBD |
+| B01 | Bluetooth | Scan | Geräte sichtbar | bereits positiv / erneut prüfen |
+| M01 | Mars Hydro | Diagnose | kein unvalidierter Write | TBD |
+
+## Beta-Grenze
+
+Beta erst nach wiederholbaren First-Boot-/Reboot-Tests sowie realer Prüfung von Netzwerk, GUI-Login, FRITZ!-Steckdose, C920 und den vorgesehenen Geräte-/Fehlerpfaden. Ein erfolgreicher Build allein reicht nicht.
