@@ -87,10 +87,8 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager policykit-1 dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
-          # Keep the stock image's UID 1000, but give it the fixed appliance
-          # identity. Renaming also prevents userconfig from targeting "pi".
           if ! id GrowCentral >/dev/null 2>&1; then
             FIRST_USER="$(getent passwd 1000 | cut -d: -f1)"
             test -n "$FIRST_USER"
@@ -105,8 +103,6 @@ jobs:
           for g in bluetooth dialout video gpio i2c spi netdev; do getent group "$g" >/dev/null && usermod -aG "$g" GrowCentral || true; done
           rm -f /etc/sudoers.d/010-grow-central-test
 
-          # The stock image enables userconfig to rename UID 1000 interactively.
-          # A preconfigured appliance must never start that wizard on first boot.
           rm -f /etc/ssh/sshd_config.d/rename_user.conf /etc/xdg/autostart/piwiz.desktop
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
@@ -114,8 +110,6 @@ jobs:
           systemctl mask userconfig.service
           systemctl enable getty@tty1.service
 
-          # Germany defaults: German UTF-8, Europe/Berlin and German keyboard
-          # without dead keys for both the virtual console and XKB consumers.
           sed -i 's/^# *de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/' /etc/locale.gen
           locale-gen de_DE.UTF-8
           update-locale LANG=de_DE.UTF-8 LANGUAGE=de_DE:de
@@ -191,15 +185,13 @@ jobs:
           cat >/usr/local/sbin/grow-central-healthcheck.sh <<'EOF'
           #!/bin/bash
           set -euo pipefail
-          if curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health \
-            | jq -e '.ok == true' >/dev/null; then
+          if curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health | jq -e '.ok == true' >/dev/null; then
             exit 0
           fi
           systemctl reset-failed 135er-grow-central.service || true
           systemctl restart 135er-grow-central.service
           sleep 5
-          curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health \
-            | jq -e '.ok == true' >/dev/null
+          curl --fail --silent --max-time 8 http://127.0.0.1:8080/api/health | jq -e '.ok == true' >/dev/null
           EOF
           chmod 0755 /usr/local/sbin/grow-central-healthcheck.sh
 
@@ -293,18 +285,10 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
-          install -o root -g root -m 0755 \
-            /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh \
-            /usr/local/sbin/grow-central-setup-ap.sh
-          install -o root -g root -m 0755 \
-            /opt/135er-grow-central/image-builder/firstboot/portal.py \
-            /usr/local/sbin/grow-central-firstboot-portal.py
-          install -o root -g root -m 0755 \
-            /opt/135er-grow-central/image-builder/firstboot/apply_setup.py \
-            /usr/local/sbin/grow-central-apply-setup.py
-          install -o root -g root -m 0644 \
-            /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service \
-            /etc/systemd/system/grow-central-firstboot-portal.service
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh /usr/local/sbin/grow-central-setup-ap.sh
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/portal.py /usr/local/sbin/grow-central-firstboot-portal.py
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/apply_setup.py /usr/local/sbin/grow-central-apply-setup.py
+          install -o root -g root -m 0644 /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service /etc/systemd/system/grow-central-firstboot-portal.service
 
           THEME=/usr/share/plymouth/themes/135er-grow-central
           mkdir -p "$THEME" /etc/135er-grow-central
@@ -451,19 +435,15 @@ jobs:
             local nspawn_pid=$!
             local ready=0
             for attempt in $(seq 1 90); do
-              if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
-                /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health \
-                | jq -e '.ok == true and .version == "0.7.5"' >/dev/null 2>&1; then
+              if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health | jq -e '.ok == true and .version == "0.7.5"' >/dev/null 2>&1; then
                 ready=1
                 break
               fi
               sleep 1
             done
             if [ "$ready" -ne 1 ]; then
-              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
-                /usr/bin/systemctl status 135er-grow-central.service --no-pager -l || true
-              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
-                /usr/bin/journalctl -u 135er-grow-central.service -b --no-pager -n 200 || true
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl status 135er-grow-central.service --no-pager -l || true
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/journalctl -u 135er-grow-central.service -b --no-pager -n 200 || true
               echo "Image ${phase} boot did not expose a healthy local service on port 8080" >&2
               exit 1
             fi
@@ -474,12 +454,10 @@ jobs:
 
           sudo rm -f "$ROOT/var/lib/135er-grow-central/.provisioned"
           check_boot pre-setup
-
           SERVICE_UID=$(sudo chroot "$ROOT" id -u growcentral)
           SERVICE_GID=$(sudo chroot "$ROOT" id -g growcentral)
           sudo install -o "$SERVICE_UID" -g "$SERVICE_GID" -m 0640 /dev/null "$ROOT/var/lib/135er-grow-central/.provisioned"
           check_boot post-setup
-
           cleanup_boot
           trap - EXIT
 
