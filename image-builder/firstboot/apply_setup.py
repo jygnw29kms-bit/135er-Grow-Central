@@ -193,15 +193,55 @@ def configure_wifi(config: dict[str, str]) -> None:
         raise RuntimeError("Das gewählte WLAN konnte nicht verbunden werden.")
 
 
+def active_ipv4(device: str) -> str:
+    result = run("ip", "-4", "-o", "address", "show", "dev", device, "scope", "global", check=False)
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(f"{device} hat keine nutzbare IPv4-Adresse erhalten.")
+    return result.stdout.split()[3].split("/", 1)[0]
+
+
+def verify_network(device: str) -> str:
+    address = active_ipv4(device)
+    route = run("ip", "route", "show", "default", "dev", device, check=False)
+    if route.returncode != 0 or not route.stdout.strip():
+        raise RuntimeError(f"Für {device} wurde kein Standard-Gateway gefunden.")
+    dns = run("getent", "ahostsv4", "www.debian.org", check=False)
+    if dns.returncode != 0 or not dns.stdout.strip():
+        raise RuntimeError("Die DNS-Auflösung über das Heimnetz ist fehlgeschlagen.")
+    internet = run(
+        "curl", "--interface", device, "--fail", "--silent", "--show-error", "--location",
+        "--max-time", "15", "--output", "/dev/null", "https://www.debian.org/", check=False,
+    )
+    if internet.returncode != 0:
+        raise RuntimeError("Über die gewählte Verbindung konnte kein Internetzugang bestätigt werden.")
+    return address
+
+
+def verify_runtime(address: str) -> None:
+    active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
+    if active.returncode != 0:
+        raise RuntimeError("Die geschützte Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
+    for target in ("127.0.0.1", address):
+        health = run("curl", "--fail", "--silent", "--max-time", "10", f"http://{target}:8080/api/health", check=False)
+        if health.returncode != 0:
+            raise RuntimeError(f"Die Grow-Central-Oberfläche antwortet über {target}:8080 nicht.")
+    avahi = run("systemctl", "is-active", "avahi-daemon.service", check=False)
+    if avahi.returncode != 0:
+        raise RuntimeError("Die Erreichbarkeit über den lokalen Hostnamen konnte nicht aktiviert werden.")
+
+
 def main() -> int:
     if not PENDING_FILE.exists():
         return 0
     config = json.loads(PENDING_FILE.read_text(encoding="utf-8"))
     PENDING_FILE.unlink(missing_ok=True)
+    ERROR_FILE.unlink(missing_ok=True)
     try:
         validate(config)
         if config["mode"] == "wifi":
             configure_wifi(config)
+        network_device = "wlan0" if config["mode"] == "wifi" else "eth0"
+        network_address = verify_network(network_device)
         run("hostnamectl", "set-hostname", config["hostname"])
         update_hosts(config["hostname"])
         run("systemctl", "restart", "avahi-daemon.service", check=False)
@@ -225,12 +265,7 @@ def main() -> int:
         time.sleep(2)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
-        active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
-        if active.returncode != 0:
-            raise RuntimeError("Die geschützte Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
-        health = run("curl", "--fail", "--silent", "--max-time", "10", "http://127.0.0.1:8080/api/health", check=False)
-        if health.returncode != 0:
-            raise RuntimeError("Die Grow-Central-Oberfläche antwortet nach dem Setup nicht.")
+        verify_runtime(network_address)
         mark_provisioned()
         SETUP_FILE.unlink()
         return 0

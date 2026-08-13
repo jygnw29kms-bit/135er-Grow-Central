@@ -42,9 +42,35 @@ def setup_active() -> bool:
     return SETUP_FILE.is_file()
 
 
+def _command(*arguments: str, timeout: int = 15) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(arguments, capture_output=True, text=True, timeout=timeout, check=False)
+
+
+def _device_state(device: str) -> dict[str, object]:
+    result = _command("nmcli", "-t", "-f", "GENERAL.STATE,IP4.ADDRESS", "device", "show", device)
+    connected = result.returncode == 0 and any(
+        line.startswith("GENERAL.STATE:") and "(connected)" in line for line in result.stdout.splitlines()
+    )
+    addresses = [line.split(":", 1)[1] for line in result.stdout.splitlines() if line.startswith("IP4.ADDRESS")]
+    return {"connected": connected, "addresses": addresses}
+
+
 @router.get("/status")
 async def status():
-    return {"setup_required": setup_active(), "pending": PENDING_FILE.exists()}
+    error = ""
+    if not PENDING_FILE.exists() and (STATE_DIR / "setup-last-error").is_file():
+        error = (STATE_DIR / "setup-last-error").read_text(encoding="utf-8").strip()[:500]
+    return {"setup_required": setup_active(), "pending": PENDING_FILE.exists(), "error": error}
+
+
+@router.get("/network-status")
+async def network_status():
+    if not setup_active():
+        raise HTTPException(404, "Setup abgeschlossen")
+    ethernet = _device_state("eth0")
+    connectivity = _command("nmcli", "networking", "connectivity", "check").stdout.strip().lower()
+    ethernet["internet"] = ethernet["connected"] and connectivity == "full"
+    return {"ethernet": ethernet, "connectivity": connectivity or "unknown"}
 
 
 @router.get("/networks")

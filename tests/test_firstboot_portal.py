@@ -88,5 +88,23 @@ def test_image_workflow_is_synchronized_to_alpha_075():
 
 def test_setup_file_is_deleted_only_after_runtime_health_check():
     source = APPLY_PATH.read_text(encoding="utf-8")
-    assert source.index('http://127.0.0.1:8080/api/health') < source.index("SETUP_FILE.unlink()")
+    assert source.index("verify_runtime(network_address)") < source.index("SETUP_FILE.unlink()")
     assert source.index("mark_provisioned()") < source.index("SETUP_FILE.unlink()")
+
+
+def test_setup_verifies_real_network_before_deleting_setup_file():
+    source = APPLY_PATH.read_text(encoding="utf-8")
+    assert '"ip", "route", "show", "default"' in source
+    assert '"getent", "ahostsv4", "www.debian.org"' in source
+    assert '"curl", "--interface", device' in source
+    assert 'f"http://{target}:8080/api/health"' in source
+    main_source = source[source.index("def main()") :]
+    assert main_source.index("ERROR_FILE.unlink(missing_ok=True)") < main_source.index("try:")
+
+
+def test_setup_page_uses_network_detection_and_wifi_scan():
+    page = (Path(__file__).parents[1] / "web" / "setup.html").read_text(encoding="utf-8")
+    assert "/api/setup/network-status" in page
+    assert "/api/setup/networks" in page
+    assert "LAN dauerhaft verwenden" in page
+    assert "Mit WLAN verbinden" in page
