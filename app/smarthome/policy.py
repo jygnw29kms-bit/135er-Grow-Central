@@ -11,7 +11,9 @@ class PolicyDenied(ValueError):
 
 
 def smart_home_enabled() -> bool:
-    return os.getenv("GC_SMARTHOME_ENABLED", "false").lower() == "true"
+    # Runtime integration is available by default; actual writes still require
+    # local API authentication plus approved+writable device flags.
+    return os.getenv("GC_SMARTHOME_ENABLED", "true").lower() == "true"
 
 
 def assert_switch_write_allowed(device: DeviceConfig) -> None:
