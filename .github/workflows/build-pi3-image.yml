@@ -87,7 +87,7 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager policykit-1 dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           # Keep the stock image's UID 1000, but give it the fixed appliance
           # identity. Renaming also prevents userconfig from targeting "pi".
@@ -132,7 +132,7 @@ jobs:
           dpkg-reconfigure -f noninteractive keyboard-configuration
 
           if ! id growcentral >/dev/null 2>&1; then useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral; fi
-          getent group bluetooth >/dev/null && usermod -aG bluetooth growcentral || true
+          for g in bluetooth video netdev; do getent group "$g" >/dev/null && usermod -aG "$g" growcentral || true; done
           install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
           install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
 
@@ -154,6 +154,7 @@ jobs:
           GC_CLOUD_TOKEN=test
           GC_REMOTE_COMMANDS=false
           GC_CLOUD_ENABLED=false
+          GC_SMARTHOME_ENABLED=true
           GC_CAMERA_ENABLED=true
           GC_CAMERA_DEVICE=
           EOF
@@ -174,12 +175,12 @@ jobs:
           Group=growcentral
           WorkingDirectory=/opt/135er-grow-central
           EnvironmentFile=/opt/135er-grow-central/.env
-          ExecStart=/opt/135er-grow-central/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
+          ExecStart=/opt/135er-grow-central/.venv/bin/uvicorn app.entrypoint:app --host 0.0.0.0 --port 8080
           Restart=always
           RestartSec=3
           NoNewPrivileges=true
           PrivateTmp=true
-          SupplementaryGroups=systemd-journal video
+          SupplementaryGroups=systemd-journal video netdev
           ProtectSystem=strict
           ProtectHome=true
           ReadWritePaths=/opt/135er-grow-central/data /var/lib/135er-grow-central
@@ -247,8 +248,6 @@ jobs:
           Description=Prepare Grow Central console and SSH access
           After=local-fs.target bluetooth.service
           Wants=bluetooth.service
-          # Console/SSH/Bluetooth preparation must never hold the web UI in a
-          # pending start job when hardware initialization is slow.
           Before=ssh.service getty@tty1.service
           ConditionPathExists=!/var/lib/135er-grow-central/.headless-firstboot-ready
           [Service]
@@ -269,14 +268,9 @@ jobs:
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 8080/tcp
-          # mDNS advertises http://135er-grow-central.local:8080 on LAN/WLAN.
           ufw allow 5353/udp
-          # The provisioning portal is reachable through IPv4 and IPv6, but
-          # only from clients attached to the temporary setup WLAN.
           ufw allow in on wlan0 to any port 80 proto tcp
           ufw allow in on wlan0 to any port 443 proto tcp
-          # NetworkManager shared mode provides DHCP and DNS. Keep these
-          # services isolated to the temporary provisioning interface.
           ufw allow in on wlan0 to any port 67 proto udp
           ufw allow in on wlan0 to any port 53 proto udp
           ufw allow in on wlan0 to any port 53 proto tcp
@@ -299,10 +293,6 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
-          # First boot is an isolated provisioning phase. The public setup AP
-          # exposes only an HTTPS portal; login is verified against PAM for the
-          # real GrowCentral system user. The main service remains gated until
-          # a working LAN/WLAN configuration has been committed.
           install -o root -g root -m 0755 \
             /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh \
             /usr/local/sbin/grow-central-setup-ap.sh
@@ -316,7 +306,6 @@ jobs:
             /opt/135er-grow-central/image-builder/firstboot/grow-central-firstboot-portal.service \
             /etc/systemd/system/grow-central-firstboot-portal.service
 
-          # Boot console: live Plymouth/systemd status with a persistent brand mark.
           THEME=/usr/share/plymouth/themes/135er-grow-central
           mkdir -p "$THEME" /etc/135er-grow-central
           cp /opt/135er-grow-central/image-builder/brand/boot-splash-v0.9.png "$THEME/logo.png"
@@ -366,7 +355,6 @@ jobs:
           systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-firstboot-portal.service 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
-          # Fail the image build if headless provisioning regresses.
           id GrowCentral
           test "$(getent passwd 1000 | cut -d: -f1)" = GrowCentral
           test "$(getent passwd GrowCentral | cut -d: -f7)" = /bin/bash
@@ -376,15 +364,13 @@ jobs:
           test "$(systemctl is-enabled grow-central-firstboot-portal.service)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
           test "$(systemctl is-enabled avahi-daemon.service)" = enabled
-          # Validate sshd with temporary build-time host keys. Remove them
-          # immediately so every flashed Raspberry Pi creates unique keys.
           mkdir -p /run/sshd
           ssh-keygen -A
           /usr/sbin/sshd -t
           rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
-          ! grep -q '^ConditionPathExists=.*\.provisioned$' /etc/systemd/system/135er-grow-central.service
-          grep -q '^SupplementaryGroups=systemd-journal video$' /etc/systemd/system/135er-grow-central.service
+          grep -q '^ExecStart=.*/uvicorn app.entrypoint:app ' /etc/systemd/system/135er-grow-central.service
+          grep -q '^SupplementaryGroups=systemd-journal video netdev$' /etc/systemd/system/135er-grow-central.service
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
           systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer
@@ -392,18 +378,18 @@ jobs:
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-firstboot-portal.py /usr/local/sbin/grow-central-apply-setup.py
           /usr/bin/python3 -c 'import PAM; assert hasattr(PAM, "pam")'
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
+          command -v ffmpeg
+          command -v v4l2-ctl
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
           grep -qx 'Europe/Berlin' /etc/timezone
           grep -qx 'XKBLAYOUT="de"' /etc/default/keyboard
           grep -qx 'XKBVARIANT="nodeadkeys"' /etc/default/keyboard
 
-          # Start the exact application installed in the image as its service
-          # user and fail the build unless the real HTTP health endpoint works.
-          runuser -u growcentral -- /opt/135er-grow-central/.venv/bin/uvicorn app.main:app --app-dir /opt/135er-grow-central --host 127.0.0.1 --port 8080 >/tmp/grow-central-image-smoke.log 2>&1 &
+          runuser -u growcentral -- /opt/135er-grow-central/.venv/bin/uvicorn app.entrypoint:app --app-dir /opt/135er-grow-central --host 127.0.0.1 --port 8080 >/tmp/grow-central-image-smoke.log 2>&1 &
           SMOKE_PID=$!
           SMOKE_OK=0
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --max-time 2 http://127.0.0.1:8080/api/health | jq -e '.ok == true and .version == "0.7.4"' >/dev/null; then
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8080/api/health | jq -e '.ok == true and .version == "0.7.5"' >/dev/null; then
               SMOKE_OK=1
               break
             fi
@@ -417,20 +403,17 @@ jobs:
           fi
 
           cat >/etc/motd <<'EOF'
-          135er-Grow Central - Raspberry Pi 3B TEST IMAGE
+          135er-Grow Central - Raspberry Pi 3B TEST IMAGE alpha-0.7.5
           Hostname: 135er-grow-central
-          LAN URL: http://135er-grow-central.local:8080
-          SSH: GrowCentral / grow-central-test
           First boot AP: 135er-GrowCentral-Setup-XXXX
           Setup AP key: grow-central-test
           Setup portal: https://10.42.0.1
           Setup login: GrowCentral / grow-central-test
-          Web UI after setup: http://<PI-IP>:8080
-          Temporary application/API token: test
-          WARNING: change all test credentials after testing.
+          First boot requires: new system password, LAN/WLAN, optional FRITZ! user, GUI username/password
+          Web UI after setup: http://<PI-IP>:8080 (GUI login required)
+          Camera: Logitech C920 / UVC test panel in GUI
+          Temporary API token for test clients: test
           DF100M BLE writes and remote cloud commands are disabled by default.
-          Firewall is initialized automatically on first Raspberry Pi boot.
-          The main service starts only after successful first-boot provisioning.
           EOF
           truncate -s 0 /etc/machine-id
           rm -f /var/lib/dbus/machine-id
@@ -448,9 +431,6 @@ jobs:
           set -euxo pipefail
           ROOT=/mnt/grow-central-boot-smoke
           MACHINE=grow-central-image-smoke
-          # Never boot the image that will be published: systemd, the firewall
-          # and SSH legitimately create machine-specific first-boot state.
-          # Exercise a sparse copy and keep work.img pristine for release.
           cp --reflink=auto --sparse=always work.img boot-smoke.img
           LOOP=$(sudo losetup --find --show --partscan boot-smoke.img)
           sudo mkdir -p "$ROOT"
@@ -473,7 +453,7 @@ jobs:
             for attempt in $(seq 1 90); do
               if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
                 /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health \
-                | jq -e '.ok == true and .version == "0.7.4"' >/dev/null 2>&1; then
+                | jq -e '.ok == true and .version == "0.7.5"' >/dev/null 2>&1; then
                 ready=1
                 break
               fi
@@ -484,21 +464,17 @@ jobs:
                 /usr/bin/systemctl status 135er-grow-central.service --no-pager -l || true
               sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
                 /usr/bin/journalctl -u 135er-grow-central.service -b --no-pager -n 200 || true
-              echo "Image ${phase} boot did not expose a healthy UI on port 8080" >&2
+              echo "Image ${phase} boot did not expose a healthy local service on port 8080" >&2
               exit 1
             fi
-            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" \
-              /usr/bin/systemctl is-active 135er-grow-central.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active 135er-grow-central.service
             sudo machinectl poweroff "$MACHINE"
             wait "$nspawn_pid" || true
           }
 
-          # First boot: no provisioning marker. The diagnostic/main UI must
-          # still be reachable so a failed setup can never strand the device.
           sudo rm -f "$ROOT/var/lib/135er-grow-central/.provisioned"
           check_boot pre-setup
 
-          # Second boot: represent a completed setup and verify persistence.
           SERVICE_UID=$(sudo chroot "$ROOT" id -u growcentral)
           SERVICE_GID=$(sudo chroot "$ROOT" id -g growcentral)
           sudo install -o "$SERVICE_UID" -g "$SERVICE_GID" -m 0640 /dev/null "$ROOT/var/lib/135er-grow-central/.provisioned"
@@ -531,25 +507,25 @@ jobs:
 
       - name: Compress and checksum image
         run: |
-          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}"
+          VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
           cat > "${VERSIONED_NAME}-CREDENTIALS.txt" <<'EOF'
           Hostname: 135er-grow-central
-          LAN URL: http://135er-grow-central.local:8080
-          SSH username: GrowCentral
-          SSH password: grow-central-test
           First boot AP: 135er-GrowCentral-Setup-XXXX
           Setup AP key: grow-central-test
           Setup portal: https://10.42.0.1
           Setup login: GrowCentral / grow-central-test
-          Web UI after setup: http://<PI-IP>:8080
-          Temporary API/application token: test
+          Required: change the system password during first boot
+          Required: create a separate Grow Central GUI username/password
+          Network: LAN detected automatically, otherwise select WLAN from scan list
+          FRITZ!: optional dedicated GrowCentral FRITZ!Box user for Smart Home import
+          Web UI after setup: http://<PI-IP>:8080 (GUI login required)
+          Camera panel: Logitech C920 / compatible UVC cameras
+          Temporary API token for test clients: test
           BLE device writes: disabled
           Remote cloud commands: disabled
-          Firewall: initialized automatically on first boot
-          Required: choose a new GrowCentral password in the setup portal
           EOF
 
       - name: Upload workflow artifact
@@ -557,9 +533,9 @@ jobs:
         with:
           name: 135er-Grow-Central-RPi3B-Test-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*.img.xz
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*.img.xz
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -567,5 +543,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-alpha-0.7.4-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.4-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.4 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 recovery build. The main UI starts independently of the provisioning marker, setup verifies the restarted UI, a watchdog checks port 8080 after boot, and camera runtime packages are preinstalled." --prerelease
+          TAG="pi3-test-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. First boot requires password and GUI credentials, configures LAN/WLAN, can store a dedicated FRITZ!Box Smart Home user, protects the GUI/API with login sessions, exposes network management after login, and includes directly testable Logitech C920/UVC camera detection, snapshots and V4L2 controls." --prerelease
