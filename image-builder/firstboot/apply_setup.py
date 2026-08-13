@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import grp
 import hashlib
 import json
 import os
@@ -69,10 +70,7 @@ def validate(config: dict[str, str]) -> None:
     if len(config.get("gui_password", "")) < 12:
         raise ValueError("invalid GUI password")
     fritz_enabled = config.get("fritz_enabled") == "1"
-    fritz_host = config.get("fritz_host", "").strip()
-    fritz_user = config.get("fritz_username", "").strip()
-    fritz_password = config.get("fritz_password", "")
-    if fritz_enabled and not all((fritz_host, fritz_user, fritz_password)):
+    if fritz_enabled and not all((config.get("fritz_host", "").strip(), config.get("fritz_username", "").strip(), config.get("fritz_password", ""))):
         raise ValueError("incomplete FRITZ credentials")
 
 
@@ -109,8 +107,44 @@ def persist_runtime_settings(config: dict[str, str]) -> None:
         handle.write("\n".join(filtered).rstrip() + "\n")
         handle.flush()
         os.fsync(handle.fileno())
-    os.chown(temporary, 0, 0)
+    growcentral_gid = grp.getgrnam("growcentral").gr_gid
+    os.chown(temporary, 0, growcentral_gid)
     os.replace(temporary, APP_ENV)
+
+
+def install_runtime_policy() -> None:
+    """Switch the systemd service to the protected entry point and allow only NetworkManager actions needed by the GUI."""
+    dropin_dir = Path("/etc/systemd/system/135er-grow-central.service.d")
+    dropin_dir.mkdir(parents=True, exist_ok=True)
+    dropin = dropin_dir / "20-protected-runtime.conf"
+    dropin.write_text(
+        "[Service]\n"
+        "ExecStart=\n"
+        "ExecStart=/opt/135er-grow-central/.venv/bin/uvicorn app.entrypoint:app --host 0.0.0.0 --port 8080\n"
+        "SupplementaryGroups=systemd-journal video netdev\n",
+        encoding="utf-8",
+    )
+    os.chmod(dropin, 0o644)
+
+    polkit_dir = Path("/etc/polkit-1/rules.d")
+    if polkit_dir.exists():
+        rule = polkit_dir / "60-grow-central-network.rules"
+        rule.write_text(
+            "polkit.addRule(function(action, subject) {\n"
+            "  var allowed = [\n"
+            "    'org.freedesktop.NetworkManager.network-control',\n"
+            "    'org.freedesktop.NetworkManager.settings.modify.system',\n"
+            "    'org.freedesktop.NetworkManager.settings.modify.own'\n"
+            "  ];\n"
+            "  if (subject.user == 'growcentral' && allowed.indexOf(action.id) >= 0) {\n"
+            "    return polkit.Result.YES;\n"
+            "  }\n"
+            "});\n",
+            encoding="utf-8",
+        )
+        os.chmod(rule, 0o644)
+    run("usermod", "-aG", "video,netdev", "growcentral", check=False)
+    run("systemctl", "daemon-reload")
 
 
 def restore_access_point(message: str) -> None:
@@ -174,6 +208,7 @@ def main() -> int:
         run("timedatectl", "set-timezone", config["timezone"])
         run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
         persist_runtime_settings(config)
+        install_runtime_policy()
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
@@ -194,7 +229,7 @@ def main() -> int:
         run("systemctl", "restart", "135er-grow-central.service")
         active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
         if active.returncode != 0:
-            raise RuntimeError("Die Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
+            raise RuntimeError("Die geschützte Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
         return 0
     except Exception as error:
         config.clear()
