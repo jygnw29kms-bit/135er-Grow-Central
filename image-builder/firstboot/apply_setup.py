@@ -152,6 +152,7 @@ def restore_access_point(message: str) -> None:
     MARKER.unlink(missing_ok=True)
     ERROR_FILE.write_text(message[:500] + "\n", encoding="utf-8")
     os.chmod(ERROR_FILE, 0o640)
+    os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)
     run("nmcli", "connection", "down", TARGET_CONNECTION, check=False)
     run("nmcli", "connection", "up", AP_CONNECTION, check=False)
 
@@ -175,14 +176,13 @@ def configure_wifi(config: dict[str, str]) -> None:
         run("nmcli", "connection", "modify", TARGET_CONNECTION, "wifi-sec.key-mgmt", "wpa-psk")
     run("nmcli", "connection", "down", AP_CONNECTION, check=False)
     password_file = None
-    arguments = ["nmcli", "--wait", "35"]
+    arguments = ["nmcli", "--wait", "35", "connection", "up", TARGET_CONNECTION]
     if config.get("wifi_password"):
         descriptor, password_file = tempfile.mkstemp(prefix="grow-central-wifi-", dir="/run", text=True)
         os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.write(f"802-11-wireless-security.psk:{config['wifi_password']}\n")
-        arguments.extend(["--passwd-file", password_file])
-    arguments.extend(["connection", "up", TARGET_CONNECTION])
+        arguments.extend(["passwd-file", password_file])
     try:
         result = run(*arguments, check=False)
     finally:

@@ -59,7 +59,10 @@ def _device_state(device: str) -> dict[str, object]:
 async def status():
     error = ""
     if not PENDING_FILE.exists() and (STATE_DIR / "setup-last-error").is_file():
-        error = (STATE_DIR / "setup-last-error").read_text(encoding="utf-8").strip()[:500]
+        try:
+            error = (STATE_DIR / "setup-last-error").read_text(encoding="utf-8").strip()[:500]
+        except OSError:
+            error = "Die letzte Setup-Fehlermeldung konnte wegen falscher Dateirechte nicht gelesen werden."
     return {"setup_required": setup_active(), "pending": PENDING_FILE.exists(), "error": error}
 
 
@@ -86,7 +89,7 @@ async def networks():
     rows = []
     for line in result.stdout.splitlines():
         fields = re.split(r"(?<!\\):", line)
-        if len(fields) == 3 and fields[0]:
+        if len(fields) == 3 and fields[0] and not fields[0].startswith("135er-GrowCentral-Setup-"):
             rows.append({"ssid": fields[0].replace(r"\:", ":"), "signal": fields[1], "security": fields[2]})
     return {"networks": rows}
 

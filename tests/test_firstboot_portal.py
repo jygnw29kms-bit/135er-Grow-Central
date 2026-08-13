@@ -70,7 +70,10 @@ def test_wifi_password_is_not_exposed_in_process_arguments(monkeypatch):
 
     flattened = [str(argument) for call in calls for argument in call]
     assert config["wifi_password"] not in flattened
-    assert "--passwd-file" in flattened
+    assert "passwd-file" in flattened
+    activation = next(call for call in calls if "passwd-file" in call)
+    assert activation[:6] == ("nmcli", "--wait", "35", "connection", "up", "grow-central-uplink")
+    assert activation.index("passwd-file") > activation.index("grow-central-uplink")
 
 
 def test_image_workflow_is_synchronized_to_alpha_075():
@@ -108,3 +111,10 @@ def test_setup_page_uses_network_detection_and_wifi_scan():
     assert "/api/setup/networks" in page
     assert "LAN dauerhaft verwenden" in page
     assert "Mit WLAN verbinden" in page
+    assert "previousError()" in page
+    assert "Letzter Setupversuch" in page
+
+
+def test_setup_error_is_readable_by_the_web_service():
+    source = APPLY_PATH.read_text(encoding="utf-8")
+    assert 'os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)' in source
