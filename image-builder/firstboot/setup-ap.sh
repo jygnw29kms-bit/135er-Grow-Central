@@ -3,18 +3,19 @@ set -euo pipefail
 
 CONNECTION="grow-central-setup-ap"
 ADDRESS="10.42.0.1/24"
+SETUP_SUBNET="10.42.0.0/24"
 STATE_DIR="/var/lib/135er-grow-central"
 CERT_DIR="/etc/135er-grow-central"
 
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
-# Keep the runtime alive for internal health checks, but during first boot the
-# setup WLAN must expose only the provisioning portal. Insert the interface-
-# specific deny before the generic port-8080 allow rule.
+# Keep the runtime alive for internal health checks, but setup clients must see
+# only the provisioning portal. Restrict the gate to the dedicated setup subnet
+# so a later home-WLAN connection on wlan0 is not blocked by this rule.
 if [[ ! -e "$STATE_DIR/.provisioned" ]]; then
-  ufw --force delete deny in on wlan0 to any port 8080 proto tcp >/dev/null 2>&1 || true
-  ufw insert 1 deny in on wlan0 to any port 8080 proto tcp >/dev/null 2>&1 || true
+  ufw --force delete deny from "$SETUP_SUBNET" to any port 8080 proto tcp >/dev/null 2>&1 || true
+  ufw insert 1 deny from "$SETUP_SUBNET" to any port 8080 proto tcp >/dev/null 2>&1 || true
 fi
 
 if [[ ! -s "$CERT_DIR/setup-portal.key" || ! -s "$CERT_DIR/setup-portal.crt" ]]; then
