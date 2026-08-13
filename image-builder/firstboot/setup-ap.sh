@@ -9,6 +9,13 @@ CERT_DIR="/etc/135er-grow-central"
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
+# First boot is a dedicated provisioning state. Do not expose the normal GUI
+# with factory credentials in parallel. apply_setup.py starts the protected
+# runtime only after all mandatory setup gates have succeeded.
+if [[ ! -e "$STATE_DIR/.provisioned" ]]; then
+  systemctl stop 135er-grow-central.service >/dev/null 2>&1 || true
+fi
+
 if [[ ! -s "$CERT_DIR/setup-portal.key" || ! -s "$CERT_DIR/setup-portal.crt" ]]; then
   openssl req -x509 -newkey rsa:3072 -sha256 -nodes -days 3650 \
     -subj "/CN=135er-Grow-Central-Setup" \
@@ -24,8 +31,6 @@ if ! nmcli -t -f NAME connection show | grep -Fxq "$CONNECTION"; then
   nmcli connection add type wifi ifname wlan0 con-name "$CONNECTION" ssid "135er-GrowCentral-Setup-${MAC_SUFFIX}"
 fi
 
-# Apply the complete profile on every start. This deliberately repairs an
-# existing profile left incomplete by an interrupted first boot.
 nmcli connection modify "$CONNECTION" \
   connection.interface-name wlan0 \
   connection.autoconnect yes \
@@ -48,8 +53,6 @@ nmcli connection modify "$CONNECTION" \
 nmcli connection down "$CONNECTION" >/dev/null 2>&1 || true
 nmcli --wait 30 connection up "$CONNECTION"
 
-# Do not start the portal until the AP owns its documented IPv4 address and
-# NetworkManager's shared-mode DHCP server is actually listening.
 for _ in {1..20}; do
   if ip -4 address show dev wlan0 | grep -Fq "10.42.0.1/24" \
     && ss -H -lun | awk '$4 ~ /:67$/ { found=1 } END { exit !found }'; then
