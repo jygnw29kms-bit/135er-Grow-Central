@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#05090e">
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/app.css?v=0.9.6">
-<link rel="stylesheet" href="/static/device_extensions.css?v=0.7.7">
+<link rel="stylesheet" href="/static/app.css?v=0.9.7">
+<link rel="stylesheet" href="/static/device_extensions.css?v=0.7.8">
 </head>
 <body>
 <a class="skip-link" href="#dashboard">Zum Inhalt / Skip to content</a>
@@ -16,13 +16,15 @@
   <aside class="sidebar">
     <div class="brand"><img class="brand-logo" src="/static/brand-logo.png" alt="135er-Grow Central · J.L."></div>
     <nav>
+      <span class="nav-group-label">ÜBERSICHT</span>
       <button class="nav-item active" data-view="dashboard">◈ <span>Dashboard</span></button>
-      <button class="nav-item" data-view="power">⌁ <span>Strom</span></button>
-      <button class="nav-item" data-view="devices">⌁ <span>Geräte</span></button>
-      <button class="nav-item" data-view="network">⌁ <span>Netzwerk</span></button>
+      <span class="nav-group-label">STEUERUNG</span>
+      <button class="nav-item" data-view="power">⚡ <span>Strom</span></button>
+      <button class="nav-item" data-view="devices">◇ <span>Geräte</span></button>
       <button class="nav-item" data-view="camera">◉ <span>Kamera</span></button>
       <button class="nav-item" data-view="automation">⟲ <span>Automation</span></button>
-      <button class="nav-item" data-view="history">⌁ <span>Historie</span></button>
+      <span class="nav-group-label">VERWALTUNG</span>
+      <button class="nav-item" data-view="history">≋ <span>Historie</span></button>
       <button class="nav-item" data-view="system">⚙ <span>System</span></button>
     </nav>
     <div class="sidebar-footer"><div class="status-dot"></div><div><div class="small-label">SYSTEM</div><div class="online-text">LOCAL ONLINE</div></div></div>
@@ -41,6 +43,8 @@
         <article class="metric-card glow-green"><div class="card-top"><span>LIVE POWER</span><span class="chip">PLUGS</span></div><div class="metric"><span id="totalPower">--</span><small>W</small></div><div class="status-line"><span class="status-dot" id="powerDot"></span><span id="plugOnline">0 / 0 online</span></div></article>
         <article class="metric-card glow-amber"><div class="card-top"><span>ENERGY TOTAL</span><span class="chip">PLUGS</span></div><div class="metric"><span id="totalEnergy">--</span><small>kWh</small></div><div class="status-line"><span id="plugOnCount">0</span><span>Steckdosen aktiv</span></div></article>
       </div>
+
+      <article class="panel host-overview"><div class="panel-head"><div><div class="eyebrow">PI HOST · LIVE SYSTEM IDENTITY</div><h2 id="dashboardHostName">Host wird erkannt…</h2></div><span class="pulse" id="dashboardUptime">UPTIME --</span></div><div class="host-summary"><div><span>Primäre IP</span><strong id="dashboardPrimaryIp">Wird erkannt…</strong></div><div><span>Interne Domain</span><strong id="dashboardDomain">135er-Grow-Central.local</strong></div><div><span>Raspberry Pi</span><strong id="dashboardPiModel">Wird erkannt…</strong></div><div><span>Version / Build</span><strong id="dashboardBuild">Wird geladen…</strong></div><div><span>Betriebssystem</span><strong id="dashboardOs">Wird geladen…</strong></div><div><span>Kernel</span><strong id="dashboardKernel">Wird geladen…</strong></div></div><div id="dashboardHostInterfaces" class="interface-grid"><div class="empty-state">Netzwerkschnittstellen werden gelesen…</div></div></article>
 
       <div class="control-grid">
         <article class="panel fan-panel"><div class="panel-head"><div><div class="eyebrow">MARS HYDRO · EXPERIMENTAL BLE DIAGNOSTICS</div><h2>iFresh / DF100</h2></div><div class="device-badge">iConnect target · MZ_MZF002 fallback</div></div><div class="fan-control"><div class="ring" id="ring"><div class="ring-inner"><span id="speedValue">0</span><small>%</small></div></div><div class="slider-wrap"><label for="speedSlider">Fan Speed</label><input type="range" min="0" max="100" value="0" id="speedSlider"><div class="slider-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div><div class="button-row"><button class="primary" id="discoverBtn">DISCOVER BLE</button><button class="secondary" id="servicesBtn">READ GATT</button><button class="danger" id="sendSpeedBtn">BLE TEST SPEED</button></div></div></div></article>
@@ -71,18 +75,11 @@
         <div class="scan-status" id="scanStatus">Bereit für Bluetooth-, Netzwerk- oder Login-Suche.</div><div class="candidate-grid" id="candidateGrid"><div class="empty-state">Noch keine Geräte gesucht.</div></div>
       </article>
       <article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Registrierte Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>Mars Hydro FC3000</strong><span>Modell 2024 • USB • iConnect</span></div><span class="badge-offline">VALIDATION</span></div><div class="device-row"><div><strong>Mars Hydro iFresh / DF100</strong><span>iConnect target • DF100M BLE diagnostics fallback</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>FRITZ! / Tapo / Shelly / Home Assistant</span></div><span id="smartPlugState">WAITING</span></div></div></article>
-    </section>
-
-    <section id="network" class="view">
-      <div class="extension-grid">
-        <article class="panel"><div class="panel-head"><div><div class="eyebrow">PI NETWORK CONTROL</div><h2>Heimnetzwerk</h2><p class="panel-copy">LAN/WLAN-Status anzeigen und das Raspberry Pi jederzeit einem WLAN hinzufügen.</p></div><button class="ghost" id="networkRefreshBtn">STATUS</button></div><div id="networkStatus" class="device-list"><div class="empty-state">Netzwerkstatus wird geladen…</div></div></article>
-        <article class="panel"><div class="panel-head"><div><div class="eyebrow">WLAN JOIN</div><h2>WLAN suchen & beitreten</h2></div><button class="primary" id="wifiScanBtn">WLAN SCANNEN</button></div><div id="wifiScanStatus" class="scan-status">Noch kein Scan gestartet.</div><div id="wifiList" class="wifi-list"></div><form id="wifiJoinForm"><label>SSID manuell<input id="wifiManualSsid" maxlength="32"></label><label>WLAN-Passwort<input id="wifiJoinPassword" type="password" maxlength="63"></label><button class="secondary" type="submit">WLAN VERBINDEN</button></form></article>
-      </div>
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">AVM SMART HOME</div><h2>FRITZ!Box</h2><p class="panel-copy">Wenn eine FRITZ!Box eindeutig erkannt wird, fordert Grow Central automatisch den eigens für Grow Central angelegten FRITZ!-Benutzer an und importiert die Smart-Home-Geräte.</p></div></div><div id="fritzPresence"><div class="empty-state">FRITZ!Box wird geprüft…</div></div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">AVM SMART HOME</div><h2>FRITZ!Box</h2><p class="panel-copy">Wenn eine FRITZ!Box eindeutig erkannt wird, fordert Grow Central den eigens angelegten FRITZ!-Benutzer an und importiert die Smart-Home-Geräte.</p></div></div><div id="fritzPresence"><div class="empty-state">FRITZ!Box wird geprüft…</div></div></article>
     </section>
 
     <section id="camera" class="view">
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">LOCAL UVC / V4L2 CAMERA</div><h2>Kamera</h2><p class="panel-copy">Referenzhardware: Logitech C920 direkt am Raspberry Pi. Das sparsame MJPEG-Livebild wird bewusst nur auf Knopfdruck gestartet.</p></div><div class="button-row"><button class="ghost" id="cameraRefreshBtn">NEU ERKENNEN</button><button class="secondary" id="cameraSnapshotBtn">SNAPSHOT</button><button class="primary" id="cameraLiveBtn">LIVEBILD STARTEN</button></div></div><div id="cameraStatusText" class="scan-status">Kamera wird geprüft…</div><div class="camera-layout"><div id="cameraDeviceList" class="camera-device-list"><div class="empty-state">Suche /dev/video*…</div></div><div class="camera-preview"><img id="cameraSnapshot" alt="Kamera-Testbild"><div id="cameraControls" class="camera-controls"><div class="empty-state">Kamerafunktionen werden geladen…</div></div></div></div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">LOCAL UVC / V4L2 CAMERA</div><h2>Kamera</h2><p class="panel-copy">Logitech C920 direkt am Raspberry Pi. Native MJPEG-Auflösung wählen, Bild prüfen und Fokus einstellen.</p></div></div><div id="cameraStatusText" class="scan-status">Kamera wird geprüft…</div><div class="camera-layout"><aside class="camera-sidecar"><div id="cameraDeviceList" class="camera-device-list"><div class="empty-state">Suche /dev/video*…</div></div><label class="camera-resolution"><span>AUFLÖSUNG</span><select id="cameraResolutionSelect" disabled><option>Kamera erkennen…</option></select></label><div class="camera-command-pad" aria-label="Kamera Bedienteil"><button class="ghost" id="cameraRefreshBtn" title="Kamera neu erkennen" aria-label="Kamera neu erkennen">↻</button><button class="secondary" id="cameraSnapshotBtn" title="Snapshot" aria-label="Snapshot">◎</button><button class="primary" id="cameraLiveBtn" title="Livebild starten" aria-label="Livebild starten">▶</button></div></aside><div class="camera-preview"><img id="cameraSnapshot" alt="Kamera-Testbild"><div id="cameraControls" class="camera-controls"><div class="empty-state">Kamerafunktionen werden geladen…</div></div></div></div></article>
     </section>
 
     <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Gerätebefehlen.</div></article></section>
@@ -107,7 +104,11 @@
           <button class="primary" id="firstBootSubmitBtn" type="submit">KONFIGURATION SPEICHERN UND PRÜFEN</button>
         </form>
       </article>
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Raspberry Pi</span><strong id="systemPiModel">Wird erkannt…</strong></div><div><span>Version / Build</span><strong id="systemBuildVersion">Wird geladen…</strong></div><div><span>Interne Domain</span><strong id="systemDomain">135er-Grow-Central.local</strong></div><div><span>Kernel / Architektur</span><strong id="systemKernel">Wird geladen…</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>FRITZ! + Tapo + Shelly + HA</strong></div><div><span>Kamera</span><strong>UVC/V4L2 · MJPEG Live</strong></div><div><span>Sicherheit</span><strong>GUI Session + Write Gates + Audit</strong></div></div><div class="system-actions"><button class="secondary" id="restartSetupBtn">SETUP ERNEUT AUSFÜHREN</button><button class="primary" id="createSupportBundleBtn">SUPPORT-DATEI ERSTELLEN</button><a class="ghost button-link" id="downloadSupportBundleBtn" href="/api/v1/diagnostics/bundle/download" hidden>SUPPORT-DATEI LADEN</a></div><div id="supportBundleStatus" class="scan-status">Supportstatus wird geladen…</div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Hostname</span><strong id="systemHostname">Wird erkannt…</strong></div><div><span>Raspberry Pi</span><strong id="systemPiModel">Wird erkannt…</strong></div><div><span>Version / Build</span><strong id="systemBuildVersion">Wird geladen…</strong></div><div><span>Interne Domain</span><strong id="systemDomain">135er-Grow-Central.local</strong></div><div><span>Primäre IP</span><strong id="systemPrimaryIp">Wird erkannt…</strong></div><div><span>Kernel / Architektur</span><strong id="systemKernel">Wird geladen…</strong></div><div><span>Betriebssystem</span><strong id="systemOperatingSystem">Wird geladen…</strong></div><div><span>Laufzeit</span><strong id="systemUptime">Wird geladen…</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>FRITZ! + Tapo + Shelly + HA</strong></div><div><span>Kamera</span><strong>UVC/V4L2 · MJPEG Live</strong></div><div><span>Sicherheit</span><strong>GUI Session + Write Gates + Audit</strong></div></div><div id="systemInterfaces" class="interface-grid"><div class="empty-state">Netzwerkschnittstellen werden gelesen…</div></div><div class="system-actions"><button class="secondary" id="restartSetupBtn">SETUP ERNEUT AUSFÜHREN</button><button class="primary" id="createSupportBundleBtn">SUPPORT-DATEI ERSTELLEN</button><a class="ghost button-link" id="downloadSupportBundleBtn" href="/api/v1/diagnostics/bundle/download" hidden>SUPPORT-DATEI LADEN</a></div><div id="supportBundleStatus" class="scan-status">Supportstatus wird geladen…</div></article>
+      <div class="extension-grid system-network">
+        <article class="panel"><div class="panel-head"><div><div class="eyebrow">PI NETWORK CONTROL</div><h2>Heimnetzwerk</h2><p class="panel-copy">LAN/WLAN-Status und aktive Verbindungen des Raspberry Pi verwalten.</p></div><button class="ghost" id="networkRefreshBtn">STATUS</button></div><div id="networkStatus" class="device-list"><div class="empty-state">Netzwerkstatus wird geladen…</div></div></article>
+        <article class="panel"><div class="panel-head"><div><div class="eyebrow">WLAN JOIN</div><h2>WLAN suchen & beitreten</h2></div><button class="primary" id="wifiScanBtn">WLAN SCANNEN</button></div><div id="wifiScanStatus" class="scan-status">Noch kein Scan gestartet.</div><div id="wifiList" class="wifi-list"></div><form id="wifiJoinForm"><label>SSID manuell<input id="wifiManualSsid" maxlength="32"></label><label>WLAN-Passwort<input id="wifiJoinPassword" type="password" maxlength="63"></label><button class="secondary" type="submit">WLAN VERBINDEN</button></form></article>
+      </div>
       <article class="panel diagnostics-console"><div class="panel-head"><div><div class="eyebrow">DEVELOPMENT DIAGNOSTICS</div><h2>Raspberry-Pi-Dienstprotokolle</h2></div><button class="primary" id="loadDiagnosticsBtn">DIAGNOSE LADEN</button></div><pre id="systemDiagnostics">Noch keine Diagnose geladen.</pre></article>
     </section>
   </main>
@@ -115,7 +116,7 @@
 
 <dialog id="fritzLoginDialog" class="dialog-panel"><form id="fritzLoginForm" method="dialog"><h2>FRITZ!Box erkannt</h2><p>Bitte Zugangsdaten des eigens für Grow Central angelegten FRITZ!Box-Benutzers eingeben. Danach werden Smart-Home-Geräte automatisch gelesen und importiert.</p><label>FRITZ!Box<input id="fritzHost" value="fritz.box" required></label><label>Benutzer<input id="fritzUsername" autocomplete="username" required></label><label>Passwort<input id="fritzPassword" type="password" autocomplete="current-password" required></label><div id="fritzLoginStatus" class="scan-status"></div><div class="button-row"><button class="primary" type="submit">ANMELDEN & IMPORTIEREN</button><button class="ghost" type="button" id="fritzCancelBtn">SPÄTER</button></div></form></dialog>
 
-<script src="/static/app.js?v=0.9.6"></script>
-<script src="/static/device_extensions.js?v=0.7.7"></script>
+<script src="/static/app.js?v=0.9.7"></script>
+<script src="/static/device_extensions.js?v=0.7.8"></script>
 </body>
 </html>

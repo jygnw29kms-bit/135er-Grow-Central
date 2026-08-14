@@ -41,6 +41,39 @@ class CameraControlRequest(BaseModel):
     value: int
 
 
+def _parse_mjpeg_modes(text: str) -> list[dict[str, Any]]:
+    """Return only discrete native MJPEG modes advertised by V4L2."""
+    modes: dict[tuple[int, int], dict[str, Any]] = {}
+    pixel_format = ""
+    current: dict[str, Any] | None = None
+    for line in text.splitlines():
+        format_match = re.search(r"\[\d+\]:\s+'([A-Z0-9]{4})'", line)
+        if format_match:
+            pixel_format = format_match.group(1)
+            current = None
+            continue
+        if pixel_format != "MJPG":
+            continue
+        size_match = re.search(r"Size:\s+Discrete\s+(\d+)x(\d+)", line)
+        if size_match:
+            width, height = (int(value) for value in size_match.groups())
+            if not (160 <= width <= 4096 and 120 <= height <= 2160):
+                current = None
+                continue
+            current = modes.setdefault((width, height), {"width": width, "height": height, "fps": []})
+            continue
+        fps_match = re.search(r"\(([0-9]+(?:\.[0-9]+)?)\s+fps\)", line)
+        if current is not None and fps_match:
+            fps = float(fps_match.group(1))
+            if 0 < fps <= 120 and fps not in current["fps"]:
+                current["fps"].append(fps)
+    rows = sorted(modes.values(), key=lambda row: (row["width"] * row["height"], row["width"]))
+    for row in rows:
+        row["fps"].sort()
+        row["label"] = f'{row["width"]} × {row["height"]}'
+    return rows
+
+
 def _run(arguments: list[str], timeout: int = 8) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(arguments, capture_output=True, timeout=timeout, check=False)
 
@@ -85,6 +118,7 @@ def _device_info(camera_id: str, device: str) -> dict[str, Any]:
         "capture_capable": False,
         "stream_capable": False,
         "pixel_formats": [],
+        "mjpeg_modes": [],
         "error": None,
     }
     if not path.exists():
@@ -120,6 +154,7 @@ def _device_info(camera_id: str, device: str) -> dict[str, Any]:
         else:
             formats_text = (formats.stdout + b"\n" + formats.stderr).decode("utf-8", errors="replace")
             row["pixel_formats"] = list(dict.fromkeys(re.findall(r"'([A-Z0-9]{4})'", formats_text)))
+            row["mjpeg_modes"] = _parse_mjpeg_modes(formats_text)
             # The live endpoint copies MJPEG without transcoding. Hiding nodes
             # without native MJPEG avoids advertising devices that can only fail
             # (or would require expensive real-time transcoding on a Pi 3B).
@@ -231,6 +266,19 @@ def _set_control_sync(request: CameraControlRequest) -> dict[str, Any]:
     control = next((row for row in controls["controls"] if row["name"] == request.control), None)
     if not control:
         raise ValueError("camera does not expose this control")
+    auto_focus_disabled = False
+    if request.control == "focus_absolute":
+        auto_focus = next((row for row in controls["controls"] if row["name"] == "focus_auto"), None)
+        if auto_focus and auto_focus.get("writable") and auto_focus.get("value") != 0:
+            result = _run(["v4l2-ctl", "--device", controls["device"], "--set-ctrl", "focus_auto=0"], timeout=8)
+            if result.returncode != 0:
+                detail = (result.stdout + b"\n" + result.stderr).decode("utf-8", errors="replace").strip()[:300]
+                raise RuntimeError(detail or "camera autofocus could not be disabled")
+            auto_focus_disabled = True
+            controls = _controls_sync(request.camera_id)
+            control = next((row for row in controls["controls"] if row["name"] == request.control), None)
+            if not control:
+                raise RuntimeError("manual focus disappeared after disabling autofocus")
     if not control["writable"]:
         raise PermissionError("camera control is read-only or inactive")
     minimum, maximum = control.get("min"), control.get("max")
@@ -238,6 +286,9 @@ def _set_control_sync(request: CameraControlRequest) -> dict[str, Any]:
         raise ValueError(f"value below minimum {minimum}")
     if maximum is not None and request.value > maximum:
         raise ValueError(f"value above maximum {maximum}")
+    step = max(1, int(control.get("step") or 1))
+    if minimum is not None and (request.value - minimum) % step:
+        raise ValueError(f"value does not match step {step}")
     if control["menu"] and request.value not in {item["value"] for item in control["menu"]}:
         raise ValueError("invalid menu value")
     result = _run(["v4l2-ctl", "--device", controls["device"], "--set-ctrl", f"{request.control}={request.value}"], timeout=8)
@@ -246,20 +297,44 @@ def _set_control_sync(request: CameraControlRequest) -> dict[str, Any]:
         raise RuntimeError(text.strip()[:300] or "camera control write failed")
     refreshed = _controls_sync(request.camera_id)
     updated = next((row for row in refreshed["controls"] if row["name"] == request.control), None)
-    return {"ok": True, "camera_id": request.camera_id, "control": updated}
+    return {"ok": True, "camera_id": request.camera_id, "control": updated, "auto_focus_disabled": auto_focus_disabled}
 
 
-def _snapshot_sync(camera_id: str | None) -> tuple[bytes, str, str]:
+def _resolve_capture_mode(camera_id: str | None, width: int | None, height: int | None) -> tuple[str, str, dict[str, Any]]:
+    devices, _ignored = _discover_devices_sync()
+    row = next((item for item in devices if camera_id is None or item["id"] == camera_id), None)
+    if not row:
+        raise RuntimeError("unknown camera id" if camera_id else "no capture-capable camera detected")
+    modes = row.get("mjpeg_modes") or []
+    if not modes:
+        raise RuntimeError("camera exposes no discrete MJPEG resolution")
+    if (width is None) != (height is None):
+        raise ValueError("width and height must be selected together")
+    mode = None
+    if width is not None and height is not None:
+        mode = next((item for item in modes if item["width"] == width and item["height"] == height), None)
+        if mode is None:
+            raise ValueError("camera does not advertise this MJPEG resolution")
+    if mode is None:
+        mode = next((item for item in modes if item["width"] == 640 and item["height"] == 480), modes[0])
+    rates = [float(value) for value in mode.get("fps") or []]
+    preferred = [value for value in rates if value <= 10.01]
+    fps = max(preferred) if preferred else (min(rates) if rates else 10.0)
+    return row["id"], row["device"], {**mode, "selected_fps": fps}
+
+
+def _snapshot_sync(camera_id: str | None, width: int | None = None, height: int | None = None) -> tuple[bytes, str, str, dict[str, Any]]:
     status = _status_sync()
     if not status["enabled"]:
         raise RuntimeError("camera disabled")
-    resolved_id, device = _resolve_camera(camera_id)
+    resolved_id, device, mode = _resolve_capture_mode(camera_id, width, height)
     if not os.access(device, os.R_OK):
         raise PermissionError(f"camera device is not readable: {device}")
     try:
         result = _run([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "v4l2", "-i", device,
+            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}',
+            "-framerate", str(mode["selected_fps"]), "-i", device,
             "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1",
         ], timeout=12)
     except subprocess.TimeoutExpired as exc:
@@ -269,7 +344,7 @@ def _snapshot_sync(camera_id: str | None) -> tuple[bytes, str, str]:
     if result.returncode != 0 or not result.stdout:
         detail = result.stderr.decode("utf-8", errors="replace").strip()[:300]
         raise RuntimeError(detail or "camera capture failed")
-    return result.stdout, resolved_id, device
+    return result.stdout, resolved_id, device, mode
 
 
 @router.get("/status")
@@ -302,10 +377,12 @@ async def camera_control_set(request: CameraControlRequest):
 
 
 @router.get("/snapshot")
-async def camera_snapshot(camera_id: str | None = None):
+async def camera_snapshot(camera_id: str | None = None, width: int | None = None, height: int | None = None):
     await _stop_active_stream("snapshot")
     try:
-        data, resolved_id, device = await asyncio.to_thread(_snapshot_sync, camera_id)
+        data, resolved_id, device, mode = await asyncio.to_thread(_snapshot_sync, camera_id, width, height)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(403, str(exc)) from exc
     except TimeoutError as exc:
@@ -315,7 +392,7 @@ async def camera_snapshot(camera_id: str | None = None):
     return Response(
         content=data,
         media_type="image/jpeg",
-        headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device},
+        headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'},
     )
 
 
@@ -377,7 +454,7 @@ async def _release_stream(token: object, process: asyncio.subprocess.Process) ->
     await _terminate_process(process)
 
 
-async def _mjpeg_stream(resolved_id: str, device: str):
+async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
     token = object()
     process: asyncio.subprocess.Process | None = None
     stderr_task: asyncio.Task[bytes] | None = None
@@ -385,7 +462,7 @@ async def _mjpeg_stream(resolved_id: str, device: str):
     try:
         process = await asyncio.create_subprocess_exec(
             "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", "640x480", "-framerate", "10",
+            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}', "-framerate", str(mode["selected_fps"]),
             "-i", device, "-an", "-c:v", "copy", "-f", "mpjpeg", "pipe:1",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -417,20 +494,22 @@ async def _mjpeg_stream(resolved_id: str, device: str):
 
 
 @router.get("/stream")
-async def camera_stream(camera_id: str | None = None):
+async def camera_stream(camera_id: str | None = None, width: int | None = None, height: int | None = None):
     if os.getenv("GC_CAMERA_ENABLED", "true").lower() != "true":
         raise HTTPException(503, "camera disabled")
     try:
-        resolved_id, device = _resolve_camera(camera_id)
+        resolved_id, device, mode = _resolve_capture_mode(camera_id, width, height)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
     if not os.access(device, os.R_OK):
         raise HTTPException(403, f"camera device is not readable: {device}")
-    append_audit("camera.stream.opened", camera_id=resolved_id)
+    append_audit("camera.stream.opened", camera_id=resolved_id, width=mode["width"], height=mode["height"], fps=mode["selected_fps"])
     return StreamingResponse(
-        _mjpeg_stream(resolved_id, device),
+        _mjpeg_stream(resolved_id, device, mode),
         media_type="multipart/x-mixed-replace; boundary=ffmpeg",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-GrowCentral-Camera": resolved_id},
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'},
     )
 
 

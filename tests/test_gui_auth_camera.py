@@ -52,11 +52,88 @@ def test_camera_control_write_checks_range(monkeypatch):
         camera._set_control_sync(request)
 
 
+def test_camera_mjpeg_modes_exclude_uncompressed_formats():
+    output = """
+        [0]: 'MJPG' (Motion-JPEG, compressed)
+            Size: Discrete 640x480
+                Interval: Discrete 0.033s (30.000 fps)
+                Interval: Discrete 0.100s (10.000 fps)
+            Size: Discrete 1920x1080
+                Interval: Discrete 0.200s (5.000 fps)
+        [1]: 'YUYV' (YUYV 4:2:2)
+            Size: Discrete 320x240
+                Interval: Discrete 0.033s (30.000 fps)
+    """
+    assert camera._parse_mjpeg_modes(output) == [
+        {"width": 640, "height": 480, "fps": [10.0, 30.0], "label": "640 × 480"},
+        {"width": 1920, "height": 1080, "fps": [5.0], "label": "1920 × 1080"},
+    ]
+
+
+def test_camera_capture_mode_is_advertised_and_pi_friendly(monkeypatch):
+    devices = [{
+        "id": "cam0", "device": "/dev/video0",
+        "mjpeg_modes": [
+            {"width": 640, "height": 480, "fps": [5.0, 10.0, 30.0], "label": "640 × 480"},
+            {"width": 1920, "height": 1080, "fps": [5.0, 30.0], "label": "1920 × 1080"},
+        ],
+    }]
+    monkeypatch.setattr(camera, "_discover_devices_sync", lambda: (devices, 0))
+    _, _, default_mode = camera._resolve_capture_mode("cam0", None, None)
+    assert (default_mode["width"], default_mode["height"], default_mode["selected_fps"]) == (640, 480, 10.0)
+    _, _, full_hd = camera._resolve_capture_mode("cam0", 1920, 1080)
+    assert full_hd["selected_fps"] == 5.0
+    with pytest.raises(ValueError):
+        camera._resolve_capture_mode("cam0", 1280, 720)
+
+
+def test_manual_focus_disables_autofocus_and_reads_back(monkeypatch):
+    calls = []
+    states = [
+        {"camera_id": "cam0", "device": "/dev/video0", "controls": [
+            {"name": "focus_auto", "writable": True, "value": 1, "menu": []},
+            {"name": "focus_absolute", "writable": False, "value": 0, "min": 0, "max": 250, "step": 5, "menu": []},
+        ]},
+        {"camera_id": "cam0", "device": "/dev/video0", "controls": [
+            {"name": "focus_auto", "writable": True, "value": 0, "menu": []},
+            {"name": "focus_absolute", "writable": True, "value": 0, "min": 0, "max": 250, "step": 5, "menu": []},
+        ]},
+        {"camera_id": "cam0", "device": "/dev/video0", "controls": [
+            {"name": "focus_absolute", "writable": True, "value": 125, "min": 0, "max": 250, "step": 5, "menu": []},
+        ]},
+    ]
+    monkeypatch.setattr(camera, "_controls_sync", lambda _camera_id: states.pop(0))
+    monkeypatch.setattr(camera, "_run", lambda args, **_kwargs: (calls.append(args) or SimpleNamespace(returncode=0, stdout=b"", stderr=b"")))
+    result = camera._set_control_sync(camera.CameraControlRequest(camera_id="cam0", control="focus_absolute", value=125))
+    assert calls[-2][-1] == "focus_auto=0"
+    assert calls[-1][-1] == "focus_absolute=125"
+    assert result["auto_focus_disabled"] is True
+    assert result["control"]["value"] == 125
+
+
+def test_system_interface_parser_exposes_ipv4_and_ipv6():
+    rows = system_info._parse_interfaces('[{"ifname":"eth0","operstate":"UP","address":"dc:a6:32:00:00:01","mtu":1500,"addr_info":[{"family":"inet","local":"192.168.178.65","prefixlen":24,"scope":"global"},{"family":"inet6","local":"fe80::1","prefixlen":64,"scope":"link"}]}]')
+    assert rows[0]["name"] == "eth0"
+    assert [row["family"] for row in rows[0]["addresses"]] == ["IPv4", "IPv6"]
+    assert rows[0]["addresses"][0]["address"] == "192.168.178.65"
+
+
 def test_entrypoint_exposes_camera_and_login_sources():
     entrypoint = (__import__("pathlib").Path(__file__).parents[1] / "app" / "entrypoint.py").read_text(encoding="utf-8")
     assert "GuiAuthMiddleware" in entrypoint
     assert "camera_router" in entrypoint
     assert "include_router(camera_router)" in entrypoint
+
+
+def test_build65_gui_groups_system_data_and_compacts_camera():
+    page = (__import__("pathlib").Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+    assert 'data-view="network"' not in page
+    assert page.index('id="system"') < page.index('id="networkStatus"')
+    assert page.index('id="devices"') < page.index('id="fritzPresence"') < page.index('id="camera"')
+    assert 'id="dashboardPrimaryIp"' in page
+    assert 'id="dashboardHostInterfaces"' in page
+    assert 'id="cameraResolutionSelect"' in page
+    assert 'class="camera-command-pad"' in page
 
 
 def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):

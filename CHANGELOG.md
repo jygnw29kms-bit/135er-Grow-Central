@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.5 – Build 65 system and camera controls (2026-08-14)
+
+- reorganize the sidebar and place host, network, WLAN, setup, support and diagnostics settings under **System** while keeping FRITZ!Box onboarding with **Devices**
+- expose hostname, Pi model, OS, kernel, uptime, build and all IPv4/IPv6 interface addresses on the Dashboard and System pages
+- replace the large camera device block with a compact webcam graphic and a small three-button camera command pad
+- populate selectable resolutions from native discrete MJPEG modes actually advertised by V4L2 and reject unadvertised modes server-side
+- make manual C920 focus usable by switching off autofocus first, applying the requested step-aligned value and reading the effective value back from the camera
+
 ## alpha-0.7.5 – Build 64 simple login URL (2026-08-14)
 
 - make the appliance GUI available at `http://135er-grow-central.local/` and `http://<PI-IP>/` without requiring users to remember port 8080

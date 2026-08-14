@@ -62,15 +62,16 @@ Die **Logitech C920 ist die Referenzkamera und für den aktuellen Hardwaretest d
 - Kennzeichnung einer erkannten Logitech C920;
 - Anzeige von Lesbarkeit und Capture-Fähigkeit;
 - echter JPEG-Test-Snapshot über `ffmpeg`;
-- auf Knopfdruck gestartetes MJPEG-Livebild mit 640×480 und 10 Bildern/s; maximal ein Stream gleichzeitig;
+- Auswahl der von der Kamera tatsächlich gemeldeten nativen MJPEG-Auflösungen für Snapshot und Livebild; maximal ein Stream gleichzeitig;
 - dynamisches Bedienfeld aus den tatsächlich von der Kamera gemeldeten V4L2-Reglern;
+- Umschaltung von Autofokus auf manuellen Fokus, bevor ein manueller C920-Fokuswert gesetzt und vom Gerät zurückgelesen wird;
 - z. B. Helligkeit, Kontrast, Sättigung, Weißabgleich, Belichtung, Fokus, Zoom oder weitere Regler – **nur wenn die jeweilige Kamera sie meldet**;
 - Wertebereichs-/Menüvalidierung vor Änderungen;
 - Audit-Eintrag für Kamera-Control-Änderungen.
 
 Die Browseroberfläche darf weder einen beliebigen `/dev/video*`-Pfad noch einen unbekannten V4L2-Controlnamen an den Server durchreichen.
 
-Unter **System** werden das tatsächlich erkannte Raspberry-Pi-Modell (beispielsweise Pi 3B oder Pi 4), Kernel/Architektur sowie die installierte Version und exakte Image-Buildnummer angezeigt.
+Das **Dashboard** und **System** zeigen Hostname, Raspberry-Pi-Modell (beispielsweise Pi 3B oder Pi 4), Betriebssystem, Kernel/Architektur, Laufzeit, installierte Version, exakte Image-Buildnummer sowie IPv4-/IPv6-Adressen aller Schnittstellen. Netzwerk, WLAN, Setup, Support und Diagnose liegen gesammelt unter **System**.
 
 ### Mars Hydro
 

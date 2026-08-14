@@ -2,6 +2,14 @@
 (() => {
   const byId = (id) => document.getElementById(id);
   const html = (value) => String(value ?? "").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  const cameraDevices = new Map();
+  const controlLabels = {
+    brightness:"Helligkeit", contrast:"Kontrast", saturation:"Sättigung", sharpness:"Schärfe",
+    white_balance_temperature_auto:"Weißabgleich automatisch", white_balance_temperature:"Weißabgleich",
+    exposure_auto:"Belichtung automatisch", exposure_absolute:"Belichtungszeit", exposure_auto_priority:"Belichtungspriorität",
+    focus_auto:"Autofokus", focus_absolute:"Manueller Fokus", zoom_absolute:"Zoom",
+    power_line_frequency:"Netzfrequenz", backlight_compensation:"Gegenlichtausgleich", gain:"Verstärkung",
+  };
 
   // Normal browser writes are authorized by the authenticated Grow Central GUI
   // session. A local API token remains optional for external/test clients and
@@ -110,17 +118,19 @@
   }
 
   function controlWidget(cameraId, control) {
-    if (!control.writable) return `<div class="camera-control readonly"><span>${html(control.name)}</span><strong>${html(control.value)}</strong><small>read-only/inaktiv</small></div>`;
+    const label = controlLabels[control.name] || control.name;
+    const manualFocus = control.name === "focus_absolute";
+    if (!control.writable && !manualFocus) return `<div class="camera-control readonly"><span>${html(label)}</span><strong>${html(control.value)}</strong><small>read-only/inaktiv</small></div>`;
     if (control.menu?.length) {
-      return `<label class="camera-control"><span>${html(control.name)}</span><select data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}">${control.menu.map((item) => `<option value="${item.value}" ${item.value === control.value ? "selected" : ""}>${html(item.label)}</option>`).join("")}</select></label>`;
+      return `<label class="camera-control"><span>${html(label)}</span><select data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}">${control.menu.map((item) => `<option value="${item.value}" ${item.value === control.value ? "selected" : ""}>${html(item.label)}</option>`).join("")}</select></label>`;
     }
     if (control.type === "bool") {
-      return `<label class="camera-control"><span>${html(control.name)}</span><input type="checkbox" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}" ${control.value ? "checked" : ""}></label>`;
+      return `<label class="camera-control ${control.name === "focus_auto" ? "focus-control" : ""}"><span>${html(label)}</span><input type="checkbox" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}" ${control.value ? "checked" : ""}></label>`;
     }
     if (Number.isFinite(control.min) && Number.isFinite(control.max)) {
-      return `<label class="camera-control"><span>${html(control.name)} <b>${html(control.value)}</b></span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${control.value}" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}"></label>`;
+      return `<label class="camera-control ${manualFocus ? "focus-control" : ""}"><span>${html(label)} <b>${html(control.value)}</b></span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${control.value}" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}">${manualFocus && !control.writable ? "<small>Autofokus wird beim Verstellen automatisch ausgeschaltet.</small>" : ""}</label>`;
     }
-    return `<label class="camera-control"><span>${html(control.name)}</span><input type="number" value="${html(control.value)}" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}"></label>`;
+    return `<label class="camera-control"><span>${html(label)}</span><input type="number" value="${html(control.value)}" data-camera-control="${html(control.name)}" data-camera-id="${html(cameraId)}"></label>`;
   }
 
   async function setCameraControl(element) {
@@ -128,8 +138,10 @@
     try {
       const data = await writeApi("/api/v1/camera/controls", {method:"POST", body:JSON.stringify({camera_id:element.dataset.cameraId, control:element.dataset.cameraControl, value})});
       const parent = element.closest(".camera-control"); const label = parent?.querySelector("span b"); if (label) label.textContent = data.control?.value ?? value;
-      byId("cameraStatusText").textContent = `${element.dataset.cameraControl} = ${data.control?.value ?? value}`;
-      refreshCameraSnapshot(element.dataset.cameraId);
+      const action = data.auto_focus_disabled ? "Autofokus deaktiviert · " : "";
+      byId("cameraStatusText").textContent = `${action}${controlLabels[element.dataset.cameraControl] || element.dataset.cameraControl} = ${data.control?.value ?? value}`;
+      await loadCameraControls(element.dataset.cameraId);
+      await refreshCameraSnapshot(element.dataset.cameraId);
     } catch (error) {
       byId("cameraStatusText").textContent = `KAMERA-CONTROL FEHLER: ${error.message}`;
     }
@@ -158,9 +170,9 @@
     const image = byId("cameraSnapshot"); if (!image) return;
     await stopCameraLive(false);
     image.dataset.live = "false";
-    if (byId("cameraLiveBtn")) byId("cameraLiveBtn").textContent = "LIVEBILD STARTEN";
+    if (byId("cameraLiveBtn")) byId("cameraLiveBtn").textContent = "▶";
     image.onerror = () => { byId("cameraStatusText").textContent = "KAMERA-SNAPSHOT FEHLER: Der gewählte Videoknoten liefert kein Bild."; };
-    image.src = `/api/v1/camera/snapshot?camera_id=${encodeURIComponent(cameraId)}&t=${Date.now()}`;
+    image.src = `/api/v1/camera/snapshot?camera_id=${encodeURIComponent(cameraId)}${cameraModeQuery()}&t=${Date.now()}`;
   }
 
   async function stopCameraLive(showStatus = false) {
@@ -169,7 +181,7 @@
     const wasLive = image?.dataset.live === "true";
     if (wasLive) image.src = "";
     if (image) image.dataset.live = "false";
-    if (button) button.textContent = "LIVEBILD STARTEN";
+    if (button) { button.textContent = "▶"; button.setAttribute("aria-label", "Livebild starten"); }
     if (wasLive) {
       try {
         await writeApi("/api/v1/camera/stream/stop", {method:"POST", body:"{}"});
@@ -198,20 +210,43 @@
       await stopCameraLive(false);
       byId("cameraStatusText").textContent = "LIVEBILD FEHLER: Der Kamerastream wurde beendet. Bitte erneut starten.";
     };
-    image.src = `/api/v1/camera/stream?camera_id=${encodeURIComponent(selected)}&t=${Date.now()}`;
-    button.textContent = "LIVEBILD STOPPEN";
-    byId("cameraStatusText").textContent = "MJPEG-Livebild läuft mit 640×480 bei 10 Bildern/s.";
+    image.src = `/api/v1/camera/stream?camera_id=${encodeURIComponent(selected)}${cameraModeQuery()}&t=${Date.now()}`;
+    button.textContent = "■";
+    button.setAttribute("aria-label", "Livebild stoppen");
+    const option = byId("cameraResolutionSelect")?.selectedOptions?.[0];
+    byId("cameraStatusText").textContent = `MJPEG-Livebild läuft mit ${option?.textContent || "Kamera-Standard"}.`;
+  }
+
+  function cameraModeQuery() {
+    const option = byId("cameraResolutionSelect")?.selectedOptions?.[0];
+    return option?.dataset.width ? `&width=${encodeURIComponent(option.dataset.width)}&height=${encodeURIComponent(option.dataset.height)}` : "";
+  }
+
+  function populateCameraModes(cameraId) {
+    const select = byId("cameraResolutionSelect");
+    const device = cameraDevices.get(cameraId);
+    if (!select) return;
+    const modes = device?.mjpeg_modes || [];
+    select.innerHTML = modes.map((mode) => `<option data-width="${mode.width}" data-height="${mode.height}" ${mode.width === 640 && mode.height === 480 ? "selected" : ""}>${html(mode.label || `${mode.width} × ${mode.height}`)} · ${html((mode.fps || []).join("/"))} fps</option>`).join("");
+    select.disabled = !modes.length;
+    if (!modes.length) select.innerHTML = "<option>Keine MJPEG-Auflösung</option>";
   }
 
   async function loadSystemIdentity() {
     try {
       const data = await api("/api/v1/system/info");
-      byId("systemPiModel").textContent = data.model;
-      byId("systemBuildVersion").textContent = `${data.version} · Build ${data.build}`;
-      byId("systemDomain").textContent = data.domain;
-      byId("systemKernel").textContent = `${data.kernel} · ${data.architecture}`;
+      const set = (id, value) => { const element=byId(id); if(element) element.textContent=value || "Nicht verfügbar"; };
+      set("systemHostname", data.hostname); set("systemPiModel", data.model); set("systemBuildVersion", `${data.version} · Build ${data.build}`);
+      set("systemDomain", data.domain); set("systemPrimaryIp", data.primary_ipv4); set("systemKernel", `${data.kernel} · ${data.architecture}`);
+      set("systemOperatingSystem", data.operating_system); set("systemUptime", data.uptime?.display);
+      set("dashboardHostName", data.hostname); set("dashboardPiModel", data.model); set("dashboardBuild", `${data.version} · Build ${data.build}`);
+      set("dashboardDomain", data.domain); set("dashboardPrimaryIp", data.primary_ipv4); set("dashboardKernel", `${data.kernel} · ${data.architecture}`);
+      set("dashboardOs", data.operating_system); set("dashboardUptime", `UPTIME ${data.uptime?.display || "--"}`);
+      const interfaces = (data.interfaces || []).map((row) => `<div class="interface-card"><div><strong>${html(row.name)}</strong><span class="${row.state === "up" ? "badge-online" : "badge-offline"}">${html(row.state.toUpperCase())}</span></div><small>${html(row.mac || "keine MAC")} · MTU ${html(row.mtu)}</small>${row.addresses?.length ? row.addresses.map((address) => `<code>${html(address.family)} · ${html(address.address)}/${html(address.prefix)} · ${html(address.scope)}</code>`).join("") : "<code>Keine IP-Adresse</code>"}</div>`).join("") || '<div class="empty-state">Keine Netzwerkschnittstellen gemeldet.</div>';
+      ["dashboardHostInterfaces", "systemInterfaces"].forEach((id) => { const target=byId(id); if(target) target.innerHTML=interfaces; });
     } catch (error) {
-      byId("systemPiModel").textContent = `Erkennung fehlgeschlagen: ${error.message}`;
+      const target = byId("systemPiModel") || byId("dashboardPiModel");
+      if (target) target.textContent = `Erkennung fehlgeschlagen: ${error.message}`;
     }
   }
 
@@ -222,11 +257,12 @@
     statusText.textContent = "Kamera wird geprüft…";
     try {
       const data = await api("/api/v1/camera/status?refresh=true");
-      list.innerHTML = data.devices?.length ? data.devices.map((row) => `<button class="camera-device ${row.id === data.selected_camera_id ? "active" : ""}" data-camera-select="${html(row.id)}"><strong>${html(row.name || row.card || row.id)}</strong><span>${html(row.device)} · ${row.c920_match ? "Logitech C920" : html(row.driver || "UVC/V4L2")}</span><small>${row.readable ? "READ OK" : "NO READ"} · ${row.capture_capable ? "CAPTURE" : "NO CAPTURE"}</small></button>`).join("") : '<div class="empty-state">Keine /dev/video*-Kamera erkannt.</div>';
+      cameraDevices.clear(); (data.devices || []).forEach((row) => cameraDevices.set(row.id, row));
+      list.innerHTML = data.devices?.length ? data.devices.map((row) => `<button class="camera-device ${row.id === data.selected_camera_id ? "active" : ""}" data-camera-select="${html(row.id)}" title="${html(row.device)}"><span class="webcam-glyph" aria-hidden="true"><i></i></span><strong>${html(row.c920_match ? "C920" : row.name || row.card || row.id)}</strong><small>${row.readable && row.capture_capable ? "BEREIT" : "PRÜFEN"}</small></button>`).join("") : '<div class="empty-state">Keine /dev/video*-Kamera erkannt.</div>';
       statusText.textContent = data.ready ? `${data.selected_is_c920 ? "Logitech C920" : "Kamera"} erkannt und lesbar.` : "Kamera erkannt, aber noch nicht capture-bereit.";
       const selected = data.selected_camera_id;
-      document.querySelectorAll("[data-camera-select]").forEach((button) => button.addEventListener("click", async () => { await stopCameraLive(false);document.querySelectorAll("[data-camera-select]").forEach((b)=>b.classList.remove("active"));button.classList.add("active");await loadCameraControls(button.dataset.cameraSelect);await refreshCameraSnapshot(button.dataset.cameraSelect); }));
-      if (selected) { await loadCameraControls(selected); await refreshCameraSnapshot(selected); }
+      document.querySelectorAll("[data-camera-select]").forEach((button) => button.addEventListener("click", async () => { await stopCameraLive(false);document.querySelectorAll("[data-camera-select]").forEach((b)=>b.classList.remove("active"));button.classList.add("active");populateCameraModes(button.dataset.cameraSelect);await loadCameraControls(button.dataset.cameraSelect);await refreshCameraSnapshot(button.dataset.cameraSelect); }));
+      if (selected) { populateCameraModes(selected); await loadCameraControls(selected); await refreshCameraSnapshot(selected); }
     } catch (error) {
       statusText.textContent = `KAMERA FEHLER: ${error.message}`;
       list.innerHTML = '<div class="empty-state">Kamera-API nicht verfügbar.</div>';
@@ -241,12 +277,14 @@
   byId("cameraRefreshBtn")?.addEventListener("click", loadCamera);
   byId("cameraSnapshotBtn")?.addEventListener("click", async () => { const selected=document.querySelector("[data-camera-select].active")?.dataset.cameraSelect; if(selected) await refreshCameraSnapshot(selected); });
   byId("cameraLiveBtn")?.addEventListener("click", toggleCameraLive);
+  byId("cameraResolutionSelect")?.addEventListener("change", async () => { const selected=document.querySelector("[data-camera-select].active")?.dataset.cameraSelect; if(selected) await refreshCameraSnapshot(selected); });
 
   window.addEventListener("gc:view", (event) => {
     if (event.detail.id !== "camera") void stopCameraLive(false);
     if (event.detail.id === "camera") loadCamera();
-    if (event.detail.id === "network") { loadNetworkStatus(); checkFritzPresence(); }
-    if (event.detail.id === "system") loadSystemIdentity();
+    if (event.detail.id === "devices") checkFritzPresence();
+    if (event.detail.id === "dashboard") loadSystemIdentity();
+    if (event.detail.id === "system") { loadSystemIdentity(); loadNetworkStatus(); }
   });
 
   loadSystemIdentity();
