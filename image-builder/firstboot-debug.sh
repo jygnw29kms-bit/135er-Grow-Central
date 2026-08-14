@@ -88,6 +88,16 @@ run() {
   return 0
 }
 
+run_optional() {
+  local command_name=$1
+  shift
+  if command -v "$command_name" >/dev/null 2>&1; then
+    run "$command_name" "$@"
+  else
+    printf '\n[optional-unavailable] %s\n' "$command_name"
+  fi
+}
+
 run_shell() {
   printf '\n$ %s\n' "$1"
   bash -o pipefail -c "$1"
@@ -191,11 +201,11 @@ run systemctl is-system-running
 run systemctl --failed --no-pager -l
 run systemd-analyze time
 run systemd-analyze critical-chain 135er-grow-central.service
-run last reboot -n 3
+run_optional last reboot -n 3
 run journalctl --list-boots --no-pager
 run dmesg --ctime --level=emerg,alert,crit,err,warn
 run journalctl -b -1 --no-pager -o short-precise -p warning -n 500
-run coredumpctl list --no-pager
+run_optional coredumpctl list --no-pager
 
 section "Grow Central units"
 UNITS=(
@@ -231,6 +241,8 @@ run journalctl -b -p warning --no-pager -o short-precise -n 500
 
 section "Processes and listeners"
 run ps auxww
+run pgrep -a ffmpeg
+run fuser -v /dev/video0 /dev/video1
 run ss -lntup
 run systemctl show 135er-grow-central.service -p User -p Group -p SupplementaryGroups -p EnvironmentFiles -p ExecStart
 run systemctl show 135er-grow-central.service -p NoNewPrivileges -p PrivateTmp -p ProtectSystem -p ProtectHome -p ReadWritePaths
@@ -242,15 +254,15 @@ run ip -6 address show
 run ip route show table all
 run ip -6 route show table all
 run ip rule show
-run resolvectl status
+run_optional resolvectl status
 run nmcli general status
 run nmcli radio all
 run nmcli -f DEVICE,TYPE,STATE,CONNECTION,CON-PATH device status
 run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show wlan0
 run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show eth0
 run nmcli -f NAME,UUID,TYPE,DEVICE,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show
-run nmcli --show-secrets no connection show grow-central-setup-ap
-run nmcli --show-secrets no connection show grow-central-uplink
+run nmcli connection show grow-central-setup-ap
+run nmcli connection show grow-central-uplink
 run nmcli -f IN-USE,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,BARS,SECURITY device wifi list --rescan yes ifname wlan0
 run iw dev
 run iw reg get
@@ -259,12 +271,18 @@ section "Connectivity probes"
 run ping -4 -c 2 -W 2 10.42.0.1
 run getent ahostsv4 135er-grow-central.local
 run getent ahostsv4 www.debian.org
-run resolvectl query 135er-grow-central.local
-run avahi-resolve-host-name -4 135er-grow-central.local
+run_optional resolvectl query 135er-grow-central.local
+run_optional avahi-resolve-host-name -4 135er-grow-central.local
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/health
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/setup/status
 run curl --silent --show-error --max-time 5 --dump-header - http://127.0.0.1:8080/
 run curl --ipv4 --fail --silent --show-error --location --max-time 15 --output /dev/null https://www.debian.org/
+
+section "Camera capture diagnostics"
+run v4l2-ctl --device /dev/video0 --all
+run v4l2-ctl --device /dev/video0 --list-formats-ext
+run v4l2-ctl --device /dev/video1 --all
+run v4l2-ctl --device /dev/video1 --list-formats-ext
 
 section "Firewall"
 run ufw status verbose
@@ -348,6 +366,9 @@ run grep -RIn --exclude=.env --exclude='*.json' --exclude='*.db' \
 
 section "Application data integrity"
 run find "$APP_DIR/data" -maxdepth 2 -type f -printf '%M %u:%g %s %TY-%Tm-%TdT%TH:%TM:%TS %p\n'
+if [[ -r "$APP_DIR/data/audit.jsonl" ]]; then
+  run tail -n 500 "$APP_DIR/data/audit.jsonl"
+fi
 while IFS= read -r database; do
   run sqlite3 "$database" 'PRAGMA quick_check;'
   run sqlite3 "$database" '.schema'
@@ -474,7 +495,7 @@ run nmcli -f DEVICE,TYPE,STATE,CONNECTION device status
 run nmcli -f NAME,UUID,TYPE,DEVICE,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show
 run ip -4 address show
 run ip route show
-run resolvectl status
+run_optional resolvectl status
 run getent ahostsv4 135er-grow-central.local
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/health
 run curl --silent --show-error --max-time 5 --dump-header - http://127.0.0.1:8080/

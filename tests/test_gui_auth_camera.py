@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -69,4 +70,48 @@ def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):
 def test_camera_stream_route_is_exposed():
     paths = (__import__("app.entrypoint", fromlist=["app"]).app.openapi()["paths"])
     assert "/api/v1/camera/stream" in paths
+    assert "/api/v1/camera/stream/stop" in paths
     assert "/api/v1/system/info" in paths
+
+
+def test_camera_discovery_hides_pi_codec_and_metadata_nodes(monkeypatch):
+    monkeypatch.setattr(camera, "_DISCOVERY_CACHE", None)
+    monkeypatch.setattr(camera, "_candidate_devices", lambda: ["/dev/video0", "/dev/video1", "/dev/video10"])
+
+    rows = {
+        "/dev/video0": {"device": "/dev/video0", "capture_capable": True, "stream_capable": True, "readable": True, "bus_info": "usb-1.4", "driver": "uvcvideo", "c920_match": True},
+        "/dev/video1": {"device": "/dev/video1", "capture_capable": False, "stream_capable": False, "readable": True, "bus_info": "usb-1.4", "driver": "uvcvideo", "c920_match": True},
+        "/dev/video10": {"device": "/dev/video10", "capture_capable": True, "stream_capable": True, "readable": True, "bus_info": "platform:bcm2835-codec", "driver": "bcm2835-codec", "c920_match": False},
+    }
+    monkeypatch.setattr(camera, "_device_info", lambda _camera_id, device: dict(rows[device]))
+
+    devices, ignored = camera._discover_devices_sync(force=True)
+    assert [(row["id"], row["device"]) for row in devices] == [("cam0", "/dev/video0")]
+    assert ignored == 2
+
+
+def test_new_camera_stream_replaces_old_process(monkeypatch):
+    class Process:
+        def __init__(self):
+            self.returncode = None
+            self.terminated = False
+
+        def terminate(self):
+            self.terminated = True
+            self.returncode = 0
+
+        async def wait(self):
+            return self.returncode
+
+    async def scenario():
+        first_token = object()
+        second_token = object()
+        first_process = Process()
+        await camera._claim_stream(first_token)
+        assert await camera._register_stream_process(first_token, first_process)
+        await camera._claim_stream(second_token)
+        assert first_process.terminated
+        assert camera._ACTIVE_STREAM_TOKEN is second_token
+        await camera._stop_active_stream("test")
+
+    asyncio.run(scenario())

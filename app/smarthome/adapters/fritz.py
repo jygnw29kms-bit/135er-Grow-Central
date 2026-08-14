@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import asyncio
 from typing import Any
 
 import httpx
@@ -16,6 +15,15 @@ from defusedxml import ElementTree as ET
 from app.credential_store import get_credentials
 from ..models import DeviceConfig
 from .base import AdapterError, SwitchAdapter
+
+
+class FritzLoginError(AdapterError):
+    """Safe, machine-readable FRITZ! login failure without credential data."""
+
+    def __init__(self, code: str, message: str, *, retry_after: int = 0):
+        super().__init__(message)
+        self.code = code
+        self.retry_after = retry_after
 
 
 class FritzAhaClient:
@@ -41,7 +49,10 @@ class FritzAhaClient:
             _, iter1, salt1, iter2, salt2 = parts
             hash1 = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt1), int(iter1))
             hash2 = hashlib.pbkdf2_hmac("sha256", hash1, bytes.fromhex(salt2), int(iter2))
-            return f"{challenge}${hash2.hex()}"
+            # AVM specifies only the dynamic second salt and the second hash as
+            # the response. Build 62 incorrectly prefixed the complete challenge,
+            # which makes every valid FRITZ!OS 7.24+ login fail.
+            return f"{salt2}${hash2.hex()}"
         legacy = f"{challenge}-{password}".encode("utf-16le")
         return f"{challenge}-{hashlib.md5(legacy).hexdigest()}"  # nosec B324 - legacy FRITZ!OS protocol
 
@@ -54,27 +65,51 @@ class FritzAhaClient:
                 return sid
             challenge = (root.findtext("Challenge") or "").strip()
             if not challenge:
-                raise AdapterError("FRITZ!Box login challenge missing")
+                raise FritzLoginError("challenge_missing", "FRITZ!Box login challenge missing")
             known_users = {
                 (node.text or "").strip()
                 for node in root.findall(".//Users/User")
                 if (node.text or "").strip()
             }
             if known_users and self.username not in known_users:
-                raise AdapterError("FRITZ!Box username is unknown")
+                raise FritzLoginError("unknown_user", "FRITZ!Box username is unknown")
             try:
                 block_time = max(0, min(60, int((root.findtext("BlockTime") or "0").strip())))
             except ValueError:
                 block_time = 0
             if block_time:
-                await asyncio.sleep(block_time)
+                # Do not leave the GUI request hanging for up to a minute. AVM
+                # explicitly reports the remaining lockout time via BlockTime.
+                raise FritzLoginError(
+                    "blocked",
+                    "FRITZ!Box temporarily blocks login attempts",
+                    retry_after=block_time,
+                )
             response_value = self._response(challenge, self.password)
             response = await client.post(f"{self.base}/login_sid.lua", data={"username": self.username, "response": response_value})
             response.raise_for_status()
             logged = ET.fromstring(response.text)
             sid = (logged.findtext("SID") or "").strip()
             if not sid or sid == "0000000000000000":
-                raise AdapterError("FRITZ!Box authentication failed")
+                raise FritzLoginError("bad_credentials", "FRITZ!Box authentication failed")
+            rights_nodes = logged.findall(".//Rights")
+            rights: dict[str, int] = {}
+            for rights_node in rights_nodes:
+                names = rights_node.findall("Name")
+                access_values = rights_node.findall("Access")
+                for name_node, access_node in zip(names, access_values):
+                    name = (name_node.text or "").strip()
+                    try:
+                        access = int((access_node.text or "0").strip())
+                    except ValueError:
+                        access = 0
+                    if name:
+                        rights[name] = access
+            if rights and rights.get("HomeAuto", 0) < 1:
+                raise FritzLoginError(
+                    "missing_homeauto_permission",
+                    "FRITZ!Box user lacks Smart Home permission",
+                )
             self.sid = sid
             return sid
 

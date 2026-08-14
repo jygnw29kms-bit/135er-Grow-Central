@@ -1,5 +1,14 @@
 # Changelog
 
+## alpha-0.7.5 – Build 63 hardware recovery (2026-08-14)
+
+- correct the AVM PBKDF2 login response for FRITZ!OS 7.24+ and report unknown users, lockouts, bad credentials and missing Smart Home permission without exposing credentials
+- filter internal Raspberry Pi codec/ISP and metadata nodes from camera discovery and select the Logitech C920 deterministically
+- replace stale camera streams instead of returning HTTP 409, add an authenticated stop endpoint and keep live video on native MJPEG without transcoding
+- cache camera discovery, refresh it explicitly from the GUI and invalidate the browser cache for the repaired camera controls
+- fix invalid NetworkManager diagnostics, label unavailable optional host tools cleanly and include redacted audit events plus camera-process ownership in future support bundles
+- install the lightweight diagnostics used by support collection and enforce secure `0600` permissions for generated Netplan YAML during image creation
+
 ## alpha-0.7.5 – Hardware feedback follow-up
 
 - add an on-demand, single-client Logitech C920 MJPEG live view at 640×480/10 fps without transcoding the camera's native MJPEG stream

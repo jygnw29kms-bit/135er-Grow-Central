@@ -37,7 +37,8 @@ def test_support_collector_covers_future_system_hardware_and_app_failures():
     source = (Path(__file__).parents[1] / "image-builder" / "firstboot-debug.sh").read_text(encoding="utf-8")
     for evidence in ("journalctl -b -1", "coredumpctl", "lsusb", "bluetoothctl", "v4l2-ctl", "PRAGMA quick_check", "nft list ruleset"):
         assert evidence in source
-    assert "--show-secrets no" in source
+    assert "nmcli connection show grow-central-uplink" in source
+    assert "--show-secrets no" not in source
     assert "[REDACTED]" in source
 
 

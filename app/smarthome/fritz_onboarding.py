@@ -14,8 +14,7 @@ from pydantic import BaseModel, Field, SecretStr
 from app.audit import append_audit
 from app.credential_store import set_credentials
 from app.security import require_write_auth
-from .adapters.fritz import FritzAhaClient
-from .adapters.base import AdapterError
+from .adapters.fritz import FritzAhaClient, FritzLoginError
 from .models import DeviceConfig
 from .registry import DeviceRegistry
 
@@ -93,16 +92,32 @@ async def fritz_login(request: FritzLoginRequest):
     client = FritzAhaClient(request.host, username, password)
     try:
         devices = await client.list_devices()
+    except FritzLoginError as exc:
+        append_audit(
+            "fritz.login.failed",
+            host=request.host,
+            reason=exc.code,
+            retry_after=exc.retry_after,
+        )
+        if exc.code == "unknown_user":
+            raise HTTPException(401, "Der FRITZ!Box-Benutzername ist nicht bekannt. Bitte den vollständigen Namen aus System > FRITZ!Box-Benutzer verwenden.") from None
+        if exc.code == "bad_credentials":
+            raise HTTPException(401, "FRITZ!Box-Benutzername oder Passwort ist falsch. Nach Fehlversuchen kann die FRITZ!Box eine kurze Anmeldesperre setzen.") from None
+        if exc.code == "blocked":
+            raise HTTPException(
+                429,
+                f"Die FRITZ!Box-Anmeldung ist noch {exc.retry_after} Sekunden gesperrt. Bitte danach erneut versuchen.",
+                headers={"Retry-After": str(exc.retry_after)},
+            ) from None
+        if exc.code == "missing_homeauto_permission":
+            raise HTTPException(403, "Anmeldung erfolgreich, aber der Benutzer darf Smart Home nicht lesen. In der FRITZ!Box beim Benutzer die Berechtigung Smart Home aktivieren.") from None
+        raise HTTPException(502, f"FRITZ!Box antwortet, aber der Login schlug fehl ({exc.code}).") from None
     except AdapterError as exc:
         reason = str(exc)
-        append_audit("fritz.login.failed", host=request.host, reason=reason)
-        if "username is unknown" in reason:
-            raise HTTPException(401, "Der FRITZ!Box-Benutzername ist nicht bekannt. Bitte den vollständigen Namen aus System > FRITZ!Box-Benutzer verwenden.") from None
-        if "authentication failed" in reason:
-            raise HTTPException(401, "FRITZ!Box-Benutzername oder Passwort ist falsch. Nach Fehlversuchen kann die FRITZ!Box eine kurze Anmeldesperre setzen.") from None
+        append_audit("fritz.login.failed", host=request.host, reason="aha_rejected")
         if "rejected command" in reason:
             raise HTTPException(403, "Anmeldung erfolgreich, aber der Benutzer darf Smart Home nicht lesen. In der FRITZ!Box beim Benutzer die Berechtigung Smart Home aktivieren.") from None
-        raise HTTPException(502, f"FRITZ!Box antwortet, aber der Smart-Home-Aufruf schlug fehl: {reason}") from None
+        raise HTTPException(502, "FRITZ!Box antwortet, aber der Smart-Home-Aufruf wurde abgelehnt.") from None
     except Exception as exc:
         append_audit("fritz.login.failed", host=request.host, reason=type(exc).__name__)
         raise HTTPException(502, f"FRITZ!Box-Kommunikation fehlgeschlagen ({type(exc).__name__})") from None

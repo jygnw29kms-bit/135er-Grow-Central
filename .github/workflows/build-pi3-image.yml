@@ -88,7 +88,11 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon libnss-mdns ffmpeg v4l-utils plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+
+          # Netplan rejects world-readable YAML because it can contain network
+          # secrets. Raspberry Pi OS ships this NetworkManager file too openly.
+          find /etc/netplan /usr/lib/netplan -type f -name '*.yaml' -exec chmod 0600 {} + 2>/dev/null || true
 
           if ! id GrowCentral >/dev/null 2>&1; then
             FIRST_USER="$(getent passwd 1000 | cut -d: -f1)"
@@ -477,6 +481,9 @@ jobs:
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
           /bin/bash -n /usr/local/sbin/grow-central-support-bundle
           grep -q '^Storage=persistent$' /etc/systemd/journald.conf.d/20-grow-central-persistent.conf
+          command -v last
+          command -v avahi-resolve-host-name
+          test -z "$(find /etc/netplan /usr/lib/netplan -type f -name '*.yaml' ! -perm 0600 -print -quit 2>/dev/null)"
           id -nG GrowCentral | grep -qw growcentral
           for group in bluetooth video netdev; do id -nG growcentral | grep -qw "$group"; done
           test "$(stat -c '%U:%G:%a' /opt/135er-grow-central/.env)" = root:growcentral:640
