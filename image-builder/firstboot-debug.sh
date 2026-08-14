@@ -167,6 +167,7 @@ section "Operating system and hardware"
 run uname -a
 run cat /etc/os-release
 run cat /proc/device-tree/model
+run cat "$APP_DIR/BUILD"
 run uptime
 run timedatectl status
 run hostnamectl status
@@ -232,6 +233,7 @@ section "Processes and listeners"
 run ps auxww
 run ss -lntup
 run systemctl show 135er-grow-central.service -p User -p Group -p SupplementaryGroups -p EnvironmentFiles -p ExecStart
+run systemctl show 135er-grow-central.service -p NoNewPrivileges -p PrivateTmp -p ProtectSystem -p ProtectHome -p ReadWritePaths
 
 section "Network devices and routes"
 run ip -details link show
@@ -356,6 +358,12 @@ run id growcentral
 run runuser -u growcentral -- test -r "$STATE_DIR/setup-last-error"
 run runuser -u growcentral -- test -r "$STATE_DIR/setup-last-warning"
 run runuser -u growcentral -- test -r "$APP_DIR/.env"
+run runuser -u growcentral -- test -w "$APP_DIR/.env"
+run runuser -u growcentral -- test -w "$APP_DIR/data"
+run runuser -u growcentral -- test -w "$APP_DIR/app/main.py"
+run runuser -u growcentral -- test -r /dev/video0
+run runuser -u growcentral -- test -w /dev/video0
+run stat /etc/polkit-1/rules.d/60-grow-central-network.rules
 run runuser -u growcentral -- curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/health
 
 outcome=snapshot

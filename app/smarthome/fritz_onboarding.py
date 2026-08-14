@@ -15,6 +15,7 @@ from app.audit import append_audit
 from app.credential_store import set_credentials
 from app.security import require_write_auth
 from .adapters.fritz import FritzAhaClient
+from .adapters.base import AdapterError
 from .models import DeviceConfig
 from .registry import DeviceRegistry
 
@@ -92,9 +93,19 @@ async def fritz_login(request: FritzLoginRequest):
     client = FritzAhaClient(request.host, username, password)
     try:
         devices = await client.list_devices()
+    except AdapterError as exc:
+        reason = str(exc)
+        append_audit("fritz.login.failed", host=request.host, reason=reason)
+        if "username is unknown" in reason:
+            raise HTTPException(401, "Der FRITZ!Box-Benutzername ist nicht bekannt. Bitte den vollständigen Namen aus System > FRITZ!Box-Benutzer verwenden.") from None
+        if "authentication failed" in reason:
+            raise HTTPException(401, "FRITZ!Box-Benutzername oder Passwort ist falsch. Nach Fehlversuchen kann die FRITZ!Box eine kurze Anmeldesperre setzen.") from None
+        if "rejected command" in reason:
+            raise HTTPException(403, "Anmeldung erfolgreich, aber der Benutzer darf Smart Home nicht lesen. In der FRITZ!Box beim Benutzer die Berechtigung Smart Home aktivieren.") from None
+        raise HTTPException(502, f"FRITZ!Box antwortet, aber der Smart-Home-Aufruf schlug fehl: {reason}") from None
     except Exception as exc:
         append_audit("fritz.login.failed", host=request.host, reason=type(exc).__name__)
-        raise HTTPException(401, "FRITZ!Box-Anmeldung fehlgeschlagen oder Smart-Home-Zugriff nicht erlaubt") from None
+        raise HTTPException(502, f"FRITZ!Box-Kommunikation fehlgeschlagen ({type(exc).__name__})") from None
 
     set_credentials("fritz", username, password, host=request.host)
     imported = []

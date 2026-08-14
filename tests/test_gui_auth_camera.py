@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app import camera, gui_auth
+from app import system_info
 
 
 def test_gui_password_hash_roundtrip():
@@ -55,3 +56,17 @@ def test_entrypoint_exposes_camera_and_login_sources():
     assert "GuiAuthMiddleware" in entrypoint
     assert "camera_router" in entrypoint
     assert "include_router(camera_router)" in entrypoint
+
+
+def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):
+    model = tmp_path / "model"
+    model.write_bytes(b"Raspberry Pi 4 Model B Rev 1.4\x00")
+    assert system_info._text(model, "fallback") == "Raspberry Pi 4 Model B Rev 1.4"
+    missing = tmp_path / "missing"
+    assert system_info._text(missing, "fallback") == "fallback"
+
+
+def test_camera_stream_route_is_exposed():
+    paths = (__import__("app.entrypoint", fromlist=["app"]).app.openapi()["paths"])
+    assert "/api/v1/camera/stream" in paths
+    assert "/api/v1/system/info" in paths

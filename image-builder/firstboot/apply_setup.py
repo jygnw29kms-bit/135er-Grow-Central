@@ -136,7 +136,7 @@ def install_runtime_policy() -> None:
         "[Service]\n"
         "ExecStart=\n"
         "ExecStart=/opt/135er-grow-central/.venv/bin/uvicorn app.entrypoint:app --host 0.0.0.0 --port 8080\n"
-        "SupplementaryGroups=systemd-journal video netdev\n",
+        "# Supplementary groups are defined once in the main unit.\n",
         encoding="utf-8",
     )
     os.chmod(dropin, 0o644)

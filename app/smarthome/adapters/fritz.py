@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import asyncio
 from typing import Any
 
 import httpx
@@ -54,6 +55,19 @@ class FritzAhaClient:
             challenge = (root.findtext("Challenge") or "").strip()
             if not challenge:
                 raise AdapterError("FRITZ!Box login challenge missing")
+            known_users = {
+                (node.text or "").strip()
+                for node in root.findall(".//Users/User")
+                if (node.text or "").strip()
+            }
+            if known_users and self.username not in known_users:
+                raise AdapterError("FRITZ!Box username is unknown")
+            try:
+                block_time = max(0, min(60, int((root.findtext("BlockTime") or "0").strip())))
+            except ValueError:
+                block_time = 0
+            if block_time:
+                await asyncio.sleep(block_time)
             response_value = self._response(challenge, self.password)
             response = await client.post(f"{self.base}/login_sid.lua", data={"username": self.username, "response": response_value})
             response.raise_for_status()

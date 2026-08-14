@@ -50,6 +50,10 @@ Die normale Haupt-GUI ist ab dem ersten Boot verfügbar. Ihre System-Seite verla
 
 Bei Problemen immer die unter **System** erzeugbare Datei `Grow-Central-Support-latest.tar.gz` mitsenden. Das Image erstellt sie bei First-Boot- und Dienstfehlern auch automatisch.
 
+Unter **System** zeigt die GUI nicht nur die Softwareversion und Image-Buildnummer, sondern liest das reale Raspberry-Pi-Modell aus `/proc/device-tree/model`. Das gleiche Image kann dadurch bei Hardwaretests einen Pi 3B/3B+ und einen Pi 4 korrekt unterscheiden.
+
+Der Kamerabereich bietet neben Snapshots ein bewusst manuell gestartetes C920-MJPEG-Livebild mit 640×480 und 10 Bildern pro Sekunde. Es läuft maximal ein Stream gleichzeitig und wird beim Verlassen des Kamerabereichs beendet.
+
 Bei einer fehlgeschlagenen WLAN-Verbindung wird der Setup-Zugangspunkt automatisch wiederhergestellt. Ziel-WLAN-Passwörter werden nur in der rootgeschützten NetworkManager-Konfiguration gespeichert und nicht protokolliert.
 
 Das Setup-Netz arbeitet im Dual-Stack-Betrieb. Der zuverlässige IPv4-Hauptweg

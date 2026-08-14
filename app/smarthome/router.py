@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,6 +21,9 @@ from .fritz_onboarding import router as fritz_onboarding_router
 router = APIRouter(prefix="/api/v1/smarthome", tags=["smart-home"])
 router.include_router(onboarding_router)
 router.include_router(fritz_onboarding_router)
+OVERVIEW_CACHE_SECONDS = 10.0
+_overview_cache: tuple[float, dict] | None = None
+_overview_lock = asyncio.Lock()
 
 
 def _registry() -> DeviceRegistry:
@@ -64,14 +68,24 @@ async def _overview_row(device):
 
 
 @router.get("/overview")
-async def device_overview():
-    devices = _registry().list()
-    rows = await asyncio.gather(*(_overview_row(device) for device in devices))
-    power_w = sum((row.get("state") or {}).get("power_w") or 0.0 for row in rows)
-    energy_wh = sum((row.get("state") or {}).get("energy_wh") or 0.0 for row in rows)
-    online = sum(1 for row in rows if row.get("online"))
-    switched_on = sum(1 for row in rows if (row.get("state") or {}).get("on") is True)
-    return {"enabled": smart_home_enabled(), "timestamp": datetime.now(timezone.utc).isoformat(), "summary": {"configured": len(rows), "online": online, "switched_on": switched_on, "power_w": round(power_w, 3), "energy_wh": round(energy_wh, 3)}, "devices": rows}
+async def device_overview(refresh: bool = False):
+    global _overview_cache
+    now = time.monotonic()
+    if not refresh and _overview_cache and now - _overview_cache[0] < OVERVIEW_CACHE_SECONDS:
+        return _overview_cache[1]
+    async with _overview_lock:
+        now = time.monotonic()
+        if not refresh and _overview_cache and now - _overview_cache[0] < OVERVIEW_CACHE_SECONDS:
+            return _overview_cache[1]
+        devices = _registry().list()
+        rows = await asyncio.gather(*(_overview_row(device) for device in devices))
+        power_w = sum((row.get("state") or {}).get("power_w") or 0.0 for row in rows)
+        energy_wh = sum((row.get("state") or {}).get("energy_wh") or 0.0 for row in rows)
+        online = sum(1 for row in rows if row.get("online"))
+        switched_on = sum(1 for row in rows if (row.get("state") or {}).get("on") is True)
+        result = {"enabled": smart_home_enabled(), "timestamp": datetime.now(timezone.utc).isoformat(), "summary": {"configured": len(rows), "online": online, "switched_on": switched_on, "power_w": round(power_w, 3), "energy_wh": round(energy_wh, 3)}, "devices": rows}
+        _overview_cache = (time.monotonic(), result)
+        return result
 
 
 @router.get("/devices/{device_id}/state")
@@ -88,6 +102,7 @@ async def read_device_state(device_id: str):
 
 @router.post("/devices/{device_id}/switch", dependencies=[Depends(require_write_auth)])
 async def switch_device(device_id: str, command: SwitchCommand):
+    global _overview_cache
     device = _device(device_id)
     try:
         assert_switch_write_allowed(device)
@@ -100,4 +115,5 @@ async def switch_device(device_id: str, command: SwitchCommand):
         append_audit("smarthome.command.failed", device_id=device.id, action="switch", requested=command.on, reason=str(exc))
         raise HTTPException(502, str(exc)) from exc
     append_audit("smarthome.command.success", device_id=device.id, action="switch", requested=command.on)
+    _overview_cache = None
     return {"ok": True, "id": device.id, "state": result}
