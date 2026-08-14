@@ -18,7 +18,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.135er.growcentral.ios
-        PRODUCT_NAME: 135er Grow Central
+        PRODUCT_NAME: GrowCentral
         INFOPLIST_FILE: GrowCentral/Info.plist
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -35,4 +35,3 @@ targets:
       - path: GrowCentralTests
     dependencies:
       - target: GrowCentral
-

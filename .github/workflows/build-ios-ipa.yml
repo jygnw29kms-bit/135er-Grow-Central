@@ -58,7 +58,7 @@ jobs:
         working-directory: ios
         run: |
           mkdir -p Payload
-          cp -R 'build/Build/Products/Release-iphoneos/135er Grow Central.app' Payload/
+          cp -R build/Build/Products/Release-iphoneos/GrowCentral.app Payload/
           ditto -c -k --sequesterRsrc --keepParent Payload 135er_Grow_Central_iOS_unsigned.ipa
           shasum -a 256 135er_Grow_Central_iOS_unsigned.ipa > 135er_Grow_Central_iOS_unsigned.ipa.sha256
 
