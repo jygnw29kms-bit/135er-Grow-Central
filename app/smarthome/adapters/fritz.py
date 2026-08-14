@@ -17,6 +17,84 @@ from ..models import DeviceConfig
 from .base import AdapterError, SwitchAdapter
 
 
+FUNCTION_BITS = {
+    0: "HAN-FUN-Gerät",
+    2: "Licht",
+    4: "Alarmsensor",
+    5: "Taster",
+    6: "Heizkörperregler",
+    7: "Energiemessgerät",
+    8: "Temperatursensor",
+    9: "Schaltsteckdose",
+    10: "DECT-Repeater",
+    11: "Mikrofon",
+    13: "HAN-FUN-Unit",
+    15: "Schaltaktor",
+    16: "Levelsteuerung",
+    17: "Farbsteuerung",
+    18: "Rollladen",
+    20: "Luftfeuchtigkeitssensor",
+}
+
+
+def _number(text: str | None, scale: float = 1.0, *, allow_negative: bool = False) -> float | None:
+    value = (text or "").strip()
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    if parsed < 0 and not allow_negative:
+        return None
+    return parsed / scale
+
+
+def _flag(text: str | None) -> bool | None:
+    value = (text or "").strip()
+    return value == "1" if value in {"0", "1"} else None
+
+
+def _device_data(node: ET.Element) -> dict[str, Any]:
+    """Normalize all plug information published by AVM's device XML."""
+    try:
+        function_mask = int(node.attrib.get("functionbitmask") or 0)
+    except ValueError:
+        function_mask = 0
+    switch = node.find("switch")
+    powermeter = node.find("powermeter")
+    temperature = node.find("temperature")
+    power_w = _number(powermeter.findtext("power") if powermeter is not None else None, 1000.0)
+    voltage_v = _number(powermeter.findtext("voltage") if powermeter is not None else None, 1000.0)
+    current_a = power_w / voltage_v if power_w is not None and voltage_v and voltage_v > 0 else None
+    return {
+        "online": _flag(node.findtext("present")) is True,
+        "on": _flag(switch.findtext("state") if switch is not None else None),
+        "power_w": power_w,
+        "energy_wh": _number(powermeter.findtext("energy") if powermeter is not None else None),
+        "voltage_v": voltage_v,
+        "current_a": current_a,
+        "current_source": "calculated_from_power_and_voltage" if current_a is not None else None,
+        "frequency_hz": None,
+        "temperature_c": _number(temperature.findtext("celsius") if temperature is not None else None, 10.0, allow_negative=True),
+        "temperature_offset_c": _number(temperature.findtext("offset") if temperature is not None else None, 10.0, allow_negative=True),
+        "native_name": (node.findtext("name") or node.attrib.get("identifier") or "FRITZ! Smart Home").strip(),
+        "ain": (node.attrib.get("identifier") or "").strip(),
+        "device_id": (node.attrib.get("id") or "").strip() or None,
+        "product_name": (node.attrib.get("productname") or "FRITZ! Smart Home").strip(),
+        "manufacturer": (node.attrib.get("manufacturer") or "AVM").strip(),
+        "firmware_version": (node.attrib.get("fwversion") or "").strip() or None,
+        "function_bitmask": function_mask,
+        "functions": [label for bit, label in FUNCTION_BITS.items() if function_mask & (1 << bit)],
+        "tx_busy": _flag(node.findtext("txbusy")),
+        "battery_percent": _number(node.findtext("battery")),
+        "battery_low": _flag(node.findtext("batterylow")),
+        "switch_mode": (switch.findtext("mode") or "").strip() or None if switch is not None else None,
+        "ui_lock": _flag(switch.findtext("lock") if switch is not None else None),
+        "device_lock": _flag(switch.findtext("devicelock") if switch is not None else None),
+        "transport": "local-fritz-aha",
+        "data_source": "getdeviceinfos",
+    }
+
+
 class FritzLoginError(AdapterError):
     """Safe, machine-readable FRITZ! login failure without credential data."""
 
@@ -141,12 +219,8 @@ class FritzAhaClient:
             switch = node.find("switch")
             if switch is None:
                 continue
-            rows.append({
-                "ain": ain,
-                "name": (node.findtext("name") or ain).strip(),
-                "present": (node.findtext("present") or "0").strip() == "1",
-                "product": (node.attrib.get("productname") or "FRITZ! Smart Home").strip(),
-            })
+            data = _device_data(node)
+            rows.append({"ain": ain, "name": data["native_name"], "present": data["online"], "product": data["product_name"], "details": data})
         return rows
 
 
@@ -168,29 +242,18 @@ class FritzSwitchAdapter(SwitchAdapter):
 
     async def read_state(self) -> dict[str, Any]:
         try:
-            present_raw = await self.client.command("getswitchpresent", self.ain)
-            state_raw = await self.client.command("getswitchstate", self.ain)
-            power_raw = await self.client.command("getswitchpower", self.ain)
-            energy_raw = await self.client.command("getswitchenergy", self.ain)
-            name = await self.client.command("getswitchname", self.ain)
+            xml_text = await self.client.command("getdeviceinfos", self.ain)
+            node = ET.fromstring(xml_text)
         except (httpx.HTTPError, ET.ParseError, ValueError) as exc:
             raise AdapterError(f"FRITZ!Box read failed ({type(exc).__name__})") from exc
-        present = present_raw == "1"
-        on = state_raw == "1"
-        power_w = float(power_raw) / 1000.0 if power_raw.lstrip("-").isdigit() and int(power_raw) >= 0 else None
-        energy_wh = float(energy_raw) if energy_raw.lstrip("-").isdigit() and int(energy_raw) >= 0 else None
-        return {
-            "online": present,
-            "on": on,
-            "power_w": power_w,
-            "energy_wh": energy_wh,
-            "voltage_v": None,
-            "current_a": None,
-            "frequency_hz": None,
-            "native_name": name,
-            "ain": self.ain,
-            "transport": "local-fritz-aha",
-        }
+        if node.tag not in {"device", "group"}:
+            candidate = next((item for item in node.findall(".//device") if (item.attrib.get("identifier") or "").replace(" ", "") == self.ain.replace(" ", "")), None)
+            if candidate is None:
+                raise AdapterError("FRITZ!Box device information did not contain the configured AIN")
+            node = candidate
+        if node.find("switch") is None:
+            raise AdapterError("FRITZ!Box device does not expose a switch")
+        return _device_data(node)
 
     async def set_switch(self, on: bool) -> dict[str, Any]:
         command = "setswitchon" if on else "setswitchoff"

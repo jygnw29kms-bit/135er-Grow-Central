@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.smarthome.adapters.factory import build_switch_adapter
-from app.smarthome.adapters.fritz import FritzAhaClient, FritzLoginError, FritzSwitchAdapter
+from app.smarthome.adapters.fritz import FritzAhaClient, FritzLoginError, FritzSwitchAdapter, _device_data
 from app.smarthome.adapters.base import AdapterError
 from app.smarthome.adapters.tapo import TapoSwitchAdapter
 from app.smarthome.models import DeviceConfig
@@ -72,6 +72,53 @@ def test_fritz_login_rejects_unknown_username_before_password_attempt(monkeypatc
     monkeypatch.setattr("app.smarthome.adapters.fritz.httpx.AsyncClient", lambda **_kwargs: Client())
     with pytest.raises(AdapterError, match="username is unknown"):
         asyncio.run(FritzAhaClient("fritz.box", "growcentral", "secret").login())
+
+
+def test_fritz_plug_device_xml_exposes_identity_energy_and_temperature():
+    from defusedxml import ElementTree as ET
+
+    node = ET.fromstring("""
+    <device identifier="08761 0001234" id="17" functionbitmask="896" fwversion="05.26" manufacturer="AVM" productname="FRITZ!DECT 210">
+      <present>1</present><txbusy>0</txbusy><name>Grow Lampe</name>
+      <switch><state>1</state><mode>manuell</mode><lock>0</lock><devicelock>1</devicelock></switch>
+      <powermeter><power>123456</power><energy>9876</energy><voltage>231200</voltage></powermeter>
+      <temperature><celsius>237</celsius><offset>-15</offset></temperature>
+    </device>
+    """)
+    state = _device_data(node)
+    assert state["product_name"] == "FRITZ!DECT 210"
+    assert state["firmware_version"] == "05.26"
+    assert state["ain"] == "08761 0001234"
+    assert state["on"] is True
+    assert state["power_w"] == 123.456
+    assert state["energy_wh"] == 9876.0
+    assert state["voltage_v"] == 231.2
+    assert state["current_a"] == pytest.approx(123.456 / 231.2)
+    assert state["temperature_c"] == 23.7
+    assert state["temperature_offset_c"] == -1.5
+    assert state["ui_lock"] is False
+    assert state["device_lock"] is True
+    assert "Energiemessgerät" in state["functions"]
+    assert "Temperatursensor" in state["functions"]
+    assert "Schaltsteckdose" in state["functions"]
+
+
+def test_fritz_adapter_reads_single_complete_device_response(monkeypatch):
+    monkeypatch.setenv("GC_FRITZ_USERNAME", "growcentral")
+    monkeypatch.setenv("GC_FRITZ_PASSWORD", "secret")
+    device = DeviceConfig(id="fritz-plug", name="FRITZ Plug", adapter="fritz", native_id="08761 0001234", host="fritz.box")
+    adapter = FritzSwitchAdapter(device)
+    calls = []
+
+    async def command(name, ain=None):
+        calls.append((name, ain))
+        return '<device identifier="08761 0001234" id="17" functionbitmask="896" fwversion="05.26" manufacturer="AVM" productname="FRITZ!DECT 210"><present>1</present><name>Grow Lampe</name><switch><state>0</state><mode>auto</mode><lock>0</lock><devicelock>0</devicelock></switch><powermeter><power>0</power><energy>42</energy><voltage>230000</voltage></powermeter><temperature><celsius>221</celsius><offset>0</offset></temperature></device>'
+
+    monkeypatch.setattr(adapter.client, "command", command)
+    state = asyncio.run(adapter.read_state())
+    assert calls == [("getdeviceinfos", "08761 0001234")]
+    assert state["temperature_c"] == 22.1
+    assert state["switch_mode"] == "auto"
 
 
 def test_factory_builds_fritz(monkeypatch):

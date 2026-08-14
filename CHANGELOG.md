@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.5 – Build 66 complete FRITZ! plug telemetry (2026-08-14)
+
+- read each imported FRITZ! smart plug through the complete local `getdeviceinfos` AHA response instead of five reduced switch commands
+- identify the exact plug model and expose its live name, AIN, internal ID, manufacturer, firmware and advertised function classes
+- show ambient temperature and configured temperature offset whenever the FRITZ! plug includes its temperature sensor block
+- display switch mode, UI/device locks, transmission state, power, lifetime energy, voltage and a clearly labelled current calculated from power and voltage
+- retain explicit unsupported/unknown states rather than fabricating measurements the connected FRITZ! device does not publish
+
 ## alpha-0.7.5 – Build 65 system and camera controls (2026-08-14)
 
 - reorganize the sidebar and place host, network, WLAN, setup, support and diagnostics settings under **System** while keeping FRITZ!Box onboarding with **Devices**

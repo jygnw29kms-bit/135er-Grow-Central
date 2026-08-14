@@ -50,6 +50,8 @@ Grow Central prüft nach dem GUI-Start auf eine eindeutig erkennbare FRITZ!Box. 
 
 Reale Funktion und Messwerte müssen gegen die jeweilige FRITZ!Box-/Steckdosen-Kombination bestätigt werden.
 
+Die Detailansicht liest die vollständige lokale AHA-Geräteinformation. Bei FRITZ!-Steckdosen werden dadurch das konkrete Modell, Name, AIN, Firmware, Funktionsumfang, Schaltmodus und Sperren sowie Leistung, Gesamtenergie, Spannung, Umgebungstemperatur und Temperatur-Offset angezeigt, sofern das jeweilige Gerät diese Felder liefert. Der Stromwert wird aus Leistung und Spannung berechnet und in der GUI entsprechend gekennzeichnet.
+
 ### TP-Link Tapo
 
 Tapo bleibt als **hybride Integration** vorgesehen: lokale Gerätekommunikation wird im Heimnetz bevorzugt; der Tapo/TP-Link-Account bleibt Grundlage für authentifizierte Gerätezuordnung und die bestehende WAN-Fähigkeit des Tapo-Ökosystems soll nicht verloren gehen. Der aktuelle Grow-Central-Adapter implementiert den lokalen authentifizierten `python-kasa`-Pfad. Ein eigener validierter Grow-Central-WAN/Cloud-Transport wird nicht vorgetäuscht und bleibt separat zu implementieren und zu testen.

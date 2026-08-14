@@ -136,6 +136,15 @@ def test_build65_gui_groups_system_data_and_compacts_camera():
     assert 'class="camera-command-pad"' in page
 
 
+def test_build66_gui_shows_complete_fritz_identity_and_temperature():
+    script = (__import__("pathlib").Path(__file__).parents[1] / "web" / "app.js").read_text(encoding="utf-8")
+    for label in ("UMGEBUNG", "Modell", "AIN", "Firmware", "Funktionsbitmaske", "Gerätesperre"):
+        assert label in script
+    assert "temperature_c" in script
+    assert "temperature_offset_c" in script
+    assert "Strom${s.current_source?\" (berechnet)\"" in script
+
+
 def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):
     model = tmp_path / "model"
     model.write_bytes(b"Raspberry Pi 4 Model B Rev 1.4\x00")
