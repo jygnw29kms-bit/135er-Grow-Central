@@ -90,7 +90,7 @@ PostgreSQL is the target for users/RBAC, sites/devices, consolidated history, au
 
 ## 8. Network boundary
 
-- No direct public exposure of Pi port 8080.
+- No direct public exposure of the Pi GUI ports 80 or 8080.
 - Pi cloud communication is outbound HTTPS.
 - Remote commands are treated as requests and validated locally.
 - First boot uses the dedicated provisioning AP and portal; main UI availability must recover even if provisioning fails.

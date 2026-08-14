@@ -58,7 +58,7 @@ Production credentials must never use `test`, `CHANGE_ME` or values committed to
 
 ## Network guidance
 
-Recommended topology separates trusted clients and IoT devices where possible. The Pi should be permitted to reach configured local device endpoints, while unsolicited IoT-to-trusted-LAN traffic is blocked. Port 8080 must not be exposed directly to the public internet.
+Recommended topology separates trusted clients and IoT devices where possible. The Pi should be permitted to reach configured local device endpoints, while unsolicited IoT-to-trusted-LAN traffic is blocked. The local GUI ports 80 and 8080 must not be exposed directly to the public internet.
 
 ## Remaining security work
 

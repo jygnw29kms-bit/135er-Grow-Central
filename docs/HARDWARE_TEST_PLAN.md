@@ -24,7 +24,7 @@ Am bisherigen Image wurden die ersten Boot-/Grundfunktionen als gut gemeldet. Bl
 
 1. Image frisch flashen; keine Dateien manuell ändern.
 2. Setup-AP `135er-GrowCentral-Setup-XXXX` verbinden.
-3. `http://10.42.0.1:8080` öffnen.
+3. `http://10.42.0.1/` öffnen (`:8080` bleibt als Kompatibilitätsadresse testbar).
 4. Mit temporärem Benutzer `GrowCentral` und Factory-Passwort an der normalen GUI anmelden und System öffnen.
 5. **Systempasswort zwingend ändern.**
 6. Bei aktivem Ethernet muss LAN automatisch erkannt werden.
@@ -39,7 +39,7 @@ Am bisherigen Image wurden die ersten Boot-/Grundfunktionen als gut gemeldet. Bl
 ### Akzeptanz
 
 - Setup-AP + DHCP funktionieren ohne manuelle Reparatur.
-- Setup-Clients erhalten keinen normalen ungeschützten GUI-Zugriff auf Port 8080.
+- Setup-Clients erhalten weder auf Port 80 noch auf Port 8080 einen ungeschützten normalen GUI-Zugriff.
 - LAN wird erkannt oder WLAN-Auswahl funktioniert.
 - Factory-Systempasswort wird nicht in den Normalbetrieb übernommen.
 - GUI-Login ist nach Abschluss Pflicht.

@@ -29,7 +29,7 @@ Der neue First-Boot-Ablauf findet direkt in der geschützten Haupt-GUI unter **S
 3. **FRITZ!Box optional anbinden.** Für Grow Central soll ein eigener FRITZ!Box-Benutzer mit den für Smart Home notwendigen Rechten verwendet werden.
 4. **Grow-Central-GUI absichern – Pflicht.** Ein separater GUI-Benutzer und ein mindestens 12 Zeichen langes GUI-Passwort werden eingerichtet. Danach schützt eine serverseitige Sitzung die lokale GUI und API.
 
-Das Setup-WLAN verwendet `135er-GrowCentral-Setup-XXXX`. Die normale GUI ist ab dem ersten Start unter `http://10.42.0.1:8080` mit dem temporären Zugang `GrowCentral / grow-central-test` verfügbar. Nach Abschluss bleibt die interne Domain fest `http://135er-Grow-Central.local:8080`. Da der einzelne WLAN-Chip des Raspberry Pi 3B während seines aktiven APs andere Netze nicht zuverlässig scannt, bleibt die manuelle SSID-Eingabe ausdrücklich verfügbar.
+Das Setup-WLAN verwendet `135er-GrowCentral-Setup-XXXX`. Die normale GUI ist ab dem ersten Start unter `http://10.42.0.1/` mit dem temporären Zugang `GrowCentral / grow-central-test` verfügbar. Nach Abschluss bleibt die interne Domain fest `http://135er-Grow-Central.local/`; Port `8080` bleibt als Kompatibilitätsadresse erhalten. Da der einzelne WLAN-Chip des Raspberry Pi 3B während seines aktiven APs andere Netze nicht zuverlässig scannt, bleibt die manuelle SSID-Eingabe ausdrücklich verfügbar.
 
 ### Dauerhafte Support-Diagnose
 

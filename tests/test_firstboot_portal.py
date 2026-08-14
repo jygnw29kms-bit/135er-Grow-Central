@@ -92,6 +92,23 @@ def test_image_workflow_is_synchronized_to_alpha_075():
     assert "Storage=persistent" in workflow
 
 
+def test_appliance_exposes_a_simple_port_80_login_without_changing_the_backend_port():
+    root = Path(__file__).parents[1]
+    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    socket = (root / "systemd" / "grow-central-http.socket").read_text(encoding="utf-8")
+    proxy = (root / "systemd" / "grow-central-http.service").read_text(encoding="utf-8")
+    assert "ListenStream=80" in socket
+    assert "systemd-socket-proxyd 127.0.0.1:8080" in proxy
+    assert "DynamicUser=true" in proxy
+    assert "NoNewPrivileges=true" in proxy
+    assert "CapabilityBoundingSet=\n" in proxy
+    assert "SystemCallFilter=@system-service" in proxy
+    assert "RestrictNamespaces=true" in proxy
+    assert "ufw allow 80/tcp" in workflow
+    assert "systemctl enable" in workflow and "grow-central-http.socket" in workflow
+    assert "http://127.0.0.1/api/health" in workflow
+
+
 def test_setup_completion_marker_is_written_only_after_runtime_and_password_change():
     source = APPLY_PATH.read_text(encoding="utf-8")
     main_source = source[source.index("def main()") :]

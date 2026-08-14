@@ -18,10 +18,10 @@ Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er-Grow Cent
 
 Das aktuelle Repository wird nach `/opt/135er-grow-central` kopiert. Die Python-Abhängigkeiten werden in `/opt/135er-grow-central/.venv` installiert.
 
-Der lokale Dienst startet nach abgeschlossener Web-Ersteinrichtung automatisch über `135er-grow-central.service` und stellt die Web/API-Oberfläche auf Port `8080` bereit.
+Der lokale Dienst startet automatisch über `135er-grow-central.service`. Die einfache Adresse wird über einen abgesicherten systemd-Socket auf Port `80` bereitgestellt; die Anwendung bleibt intern und zur Kompatibilität auf Port `8080` erreichbar.
 
 ```text
-http://<PI-IP>:8080
+http://<PI-IP>/
 ```
 
 ## Temporäre Test-Zugangsdaten
@@ -30,7 +30,7 @@ Nur für die ersten Hardwaretests:
 
 ```text
 Hostname: 135er-grow-central
-LAN-Adresse: http://135er-grow-central.local:8080
+LAN-Adresse: http://135er-grow-central.local/
 SSH-Benutzer: GrowCentral
 SSH-Passwort: grow-central-test
 API-/App-Token: test
@@ -43,10 +43,10 @@ Die normale Haupt-GUI ist ab dem ersten Boot verfügbar. Ihre System-Seite verla
 
 1. Nach dem ersten Start das WLAN `135er-GrowCentral-Setup-XXXX` auswählen. Die vier Schlusszeichen stammen aus der WLAN-MAC-Adresse des Pi.
 2. Mit dem temporären WLAN-Schlüssel `grow-central-test` verbinden.
-3. `http://10.42.0.1:8080` öffnen.
+3. `http://10.42.0.1/` öffnen.
 4. Mit `GrowCentral` / `grow-central-test` an der Haupt-GUI anmelden und **System** öffnen.
 5. Ziel-WLAN oder LAN, Zeitzone sowie neue System- und GUI-Zugangsdaten eintragen. Beim aktiven Pi-3B-AP die SSID nötigenfalls manuell eingeben.
-6. Nach erfolgreicher Netzwerk-, GUI- und mDNS-Prüfung wird der Setup-Zugangspunkt deaktiviert; die feste Adresse ist `http://135er-Grow-Central.local:8080`.
+6. Nach erfolgreicher Netzwerk-, GUI- und mDNS-Prüfung wird der Setup-Zugangspunkt deaktiviert; die feste Adresse ist `http://135er-Grow-Central.local/`. Port `8080` bleibt kompatibel.
 
 Bei Problemen immer die unter **System** erzeugbare Datei `Grow-Central-Support-latest.tar.gz` mitsenden. Das Image erstellt sie bei First-Boot- und Dienstfehlern auch automatisch.
 
@@ -72,7 +72,7 @@ Zielnetz beide Protokolle anbietet.
 - Locale `de_DE.UTF-8`, Zeitzone `Europe/Berlin` und Tastaturbelegung `de(nodeadkeys)` vorkonfiguriert
 - interaktive First-Boot-Abfragen für Benutzer und Tastatur deaktiviert
 - UFW aktiviert
-- eingehend erlaubt: TCP 22 und TCP 8080; während der Ersteinrichtung zusätzlich TCP 80/443 sowie DHCP 67/UDP und DNS 53/TCP+UDP ausschließlich auf dem Setup-WLAN `wlan0`
+- eingehend erlaubt: TCP 22, TCP 80 für die einfache GUI-Adresse, TCP 8080 als Kompatibilitätsadresse und UDP 5353 für mDNS; während der Ersteinrichtung zusätzlich DHCP 67/UDP und DNS 53/TCP+UDP auf dem Setup-WLAN `wlan0`
 - automatische Sicherheitsupdates aktiviert
 - DF100M-Schreibzugriffe standardmäßig deaktiviert
 - Remote-Cloud-Befehle standardmäßig deaktiviert
@@ -121,7 +121,7 @@ Die Korrektur umfasst:
 2. Pi booten und die oben beschriebene Web-Ersteinrichtung abschließen.
 3. Die neue IP im Portal/Router ermitteln.
 4. SSH testen: `ssh GrowCentral@<PI-IP>`.
-5. Webinterface öffnen: `http://<PI-IP>:8080`.
+5. Webinterface öffnen: `http://<PI-IP>/`.
 7. Service prüfen: `systemctl status 135er-grow-central`.
 8. Bluetooth prüfen: `bluetoothctl show`.
 9. Mars Legacy App vollständig schließen, bevor BLE-Tests gestartet werden.

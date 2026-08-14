@@ -1,5 +1,12 @@
 # Changelog
 
+## alpha-0.7.5 – Build 64 simple login URL (2026-08-14)
+
+- make the appliance GUI available at `http://135er-grow-central.local/` and `http://<PI-IP>/` without requiring users to remember port 8080
+- retain port 8080 as a compatibility endpoint while forwarding port 80 locally through systemd socket activation
+- isolate the forwarding service with a dynamic user and systemd filesystem, device, privilege and address-family restrictions
+- verify both port 80 and port 8080 during the automated image boot and reboot tests
+
 ## alpha-0.7.5 – Build 63 hardware recovery (2026-08-14)
 
 - correct the AVM PBKDF2 login response for FRITZ!OS 7.24+ and report unknown users, lockouts, bad credentials and missing Smart Home permission without exposing credentials

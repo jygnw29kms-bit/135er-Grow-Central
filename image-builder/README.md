@@ -24,7 +24,7 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 - Keyboard: German (`de`), variant `nodeadkeys`
 - Interactive first-boot user setup: disabled
 - Grow Central/API token: `test`
-- First and permanent Web UI: `http://10.42.0.1:8080` / `http://135er-Grow-Central.local:8080`
+- First and permanent Web UI: `http://10.42.0.1/` / `http://135er-Grow-Central.local/` (`:8080` remains compatible)
 
 The same temporary credentials protect the setup WLAN and authenticate the normal main GUI. Setup is embedded in its System section and requires new system and GUI passwords with at least 12 characters.
 
@@ -32,7 +32,7 @@ The same temporary credentials protect the setup WLAN and authenticate the norma
 
 1. Flash the image and start the Raspberry Pi.
 2. Join `135er-GrowCentral-Setup-XXXX` with WLAN key `grow-central-test`.
-3. Open `http://10.42.0.1:8080`.
+3. Open `http://10.42.0.1/`.
 4. Sign in as `GrowCentral` with password `grow-central-test`.
 5. Open **System**, select LAN or WLAN, keep the fixed hostname and choose new system/GUI passwords. Enter the SSID manually if the Pi 3B cannot scan while its AP is active.
 6. After network, DNS, GUI and mDNS readiness checks, the setup AP stops. Runtime health is retried for up to 60 seconds before failure recovery begins.
@@ -49,7 +49,7 @@ Persistent, size-limited journals survive reboots. First boot and systemd failur
 - `GC_REMOTE_COMMANDS=false`
 - `GC_CLOUD_ENABLED=false`
 - root SSH login disabled
-- UFW enabled; TCP 80/443 is temporarily limited to the setup subnet, while TCP 22 and 8080 remain available for the appliance
+- UFW enabled; TCP 80 is the simple authenticated GUI entry point, TCP 8080 remains compatible, TCP 22 provides SSH, and setup DHCP/DNS rules stay limited to the setup interface
 - unattended security updates enabled
 
 ## Automatic build

@@ -210,6 +210,8 @@ run_optional coredumpctl list --no-pager
 section "Grow Central units"
 UNITS=(
   135er-grow-central.service
+  grow-central-http.socket
+  grow-central-http.service
   grow-central-headless-firstboot.service
   grow-central-firstboot-firewall.service
   grow-central-setup-ap.service
@@ -274,6 +276,7 @@ run getent ahostsv4 www.debian.org
 run_optional resolvectl query 135er-grow-central.local
 run_optional avahi-resolve-host-name -4 135er-grow-central.local
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/health
+run curl --fail --silent --show-error --max-time 5 http://127.0.0.1/api/health
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/setup/status
 run curl --silent --show-error --max-time 5 --dump-header - http://127.0.0.1:8080/
 run curl --ipv4 --fail --silent --show-error --location --max-time 15 --output /dev/null https://www.debian.org/
@@ -498,6 +501,7 @@ run ip route show
 run_optional resolvectl status
 run getent ahostsv4 135er-grow-central.local
 run curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/api/health
+run curl --fail --silent --show-error --max-time 5 http://127.0.0.1/api/health
 run curl --silent --show-error --max-time 5 --dump-header - http://127.0.0.1:8080/
 if [[ -r "$STATE_DIR/setup-last-error" ]]; then
   run sed -n 1,20p "$STATE_DIR/setup-last-error"
