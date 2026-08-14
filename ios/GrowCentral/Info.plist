@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key><string>135er Grow Central</string>
+  <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>LSRequiresIPhoneOS</key><true/>
+  <key>UILaunchScreen</key><dict><key>UIColorName</key><string>LaunchBackground</string></dict>
+  <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+  <key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Grow Central sucht und verbindet Mars-Hydro- und andere BLE-Geräte in deiner Nähe.</string>
+  <key>NSBluetoothPeripheralUsageDescription</key><string>Grow Central benötigt Bluetooth für lokale Geräte.</string>
+  <key>NSLocalNetworkUsageDescription</key><string>Grow Central verbindet sich lokal mit deiner FRITZ!Box und Smart-Home-Geräten.</string>
+  <key>NSBonjourServices</key><array><string>_http._tcp</string><string>_https._tcp</string></array>
+  <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoadsInLocalNetwork</key><true/></dict>
+  <key>UIBackgroundModes</key><array><string>bluetooth-central</string></array>
+</dict>
+</plist>
+

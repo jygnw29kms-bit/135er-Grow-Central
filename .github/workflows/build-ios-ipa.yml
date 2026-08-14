@@ -1,0 +1,78 @@
+name: Build 135er Grow Central iOS IPA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/build-ios-ipa.yml'
+      - 'docs/de/IOS_PC_INSTALLATION.md'
+  push:
+    branches: [ master ]
+    tags:
+      - 'ios-*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build tests for simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project GrowCentralIOS.xcodeproj \
+            -scheme GrowCentral \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build unsigned device app
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project GrowCentralIOS.xcodeproj \
+            -scheme GrowCentral \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=''
+
+      - name: Package IPA for PC signing
+        working-directory: ios
+        run: |
+          mkdir -p Payload
+          cp -R 'build/Build/Products/Release-iphoneos/135er Grow Central.app' Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload 135er_Grow_Central_iOS_unsigned.ipa
+          shasum -a 256 135er_Grow_Central_iOS_unsigned.ipa > 135er_Grow_Central_iOS_unsigned.ipa.sha256
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: 135er-Grow-Central-iOS-unsigned
+          path: |
+            ios/135er_Grow_Central_iOS_unsigned.ipa
+            ios/135er_Grow_Central_iOS_unsigned.ipa.sha256
+          retention-days: 30
+
+      - name: Attach IPA to tagged release
+        if: startsWith(github.ref, 'refs/tags/ios-')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" ios/135er_Grow_Central_iOS_unsigned.ipa ios/135er_Grow_Central_iOS_unsigned.ipa.sha256 --generate-notes --title "135er Grow Central iOS ${GITHUB_REF_NAME}"

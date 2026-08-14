@@ -1,0 +1,38 @@
+name: GrowCentralIOS
+options:
+  bundleIdPrefix: de.135er.growcentral
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+    DEVELOPMENT_TEAM: ""
+targets:
+  GrowCentral:
+    type: application
+    platform: iOS
+    sources:
+      - path: GrowCentral
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.135er.growcentral.ios
+        PRODUCT_NAME: 135er Grow Central
+        INFOPLIST_FILE: GrowCentral/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    entitlements:
+      path: GrowCentral/GrowCentral.entitlements
+    scheme:
+      testTargets:
+        - GrowCentralTests
+  GrowCentralTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: GrowCentralTests
+    dependencies:
+      - target: GrowCentral
+
