@@ -121,6 +121,24 @@ def test_fritz_adapter_reads_single_complete_device_response(monkeypatch):
     assert state["switch_mode"] == "auto"
 
 
+def test_fritz_automation_parser_exposes_routines_and_visible_templates(monkeypatch):
+    client = FritzAhaClient("fritz.box", "growcentral", "secret")
+    responses = {
+        "gettriggerlistinfos": '<triggerlist version="1"><trigger identifier="trg-1" active="1"><name>Lichtzeit</name></trigger></triggerlist>',
+        "gettemplatelistinfos": '<templatelist version="1"><template identifier="tmp-1" autocreate="0"><name>Lampe an</name><devices><device identifier="08761 0001"/></devices><sub_templates/><applymask><relay_manual/></applymask></template><template identifier="tmp-hidden" autocreate="1"><name>Intern</name><devices/><applymask><relay_manual/></applymask></template></templatelist>',
+    }
+
+    async def command(name, *_args, **_kwargs):
+        return responses[name]
+
+    monkeypatch.setattr(client, "command", command)
+    result = asyncio.run(client.list_automations())
+    assert result["triggers"] == [{"identifier": "trg-1", "name": "Lichtzeit", "active": True}]
+    assert result["templates"][0]["devices"] == ["08761 0001"]
+    assert result["templates"][0]["actions"] == ["relay_manual"]
+    assert [row["identifier"] for row in result["templates"]] == ["tmp-1"]
+
+
 def test_factory_builds_fritz(monkeypatch):
     monkeypatch.setenv("GC_FRITZ_USERNAME", "growcentral")
     monkeypatch.setenv("GC_FRITZ_PASSWORD", "secret")

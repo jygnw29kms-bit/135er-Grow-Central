@@ -1,5 +1,14 @@
 # Changelog
 
+## alpha-0.7.5 – Build 68 manual FRITZ! sessions, automations and unified GUI (2026-08-14)
+
+- remove automatic FRITZ! Smart Home polling and require a fresh, non-persisted FRITZ!Box login for every read, switch, routine and template action
+- expose FRITZ!Box routines and templates under Automation, including routine activation and explicit template execution
+- add persistent local Grow Central automation definitions with manual, time and temperature triggers plus login-gated manual execution
+- show manually queried FRITZ! plug temperatures by device name on the dashboard and format power, energy, temperature and cost values to two decimal places
+- reduce manufacturer previews to the compact C920 reference size and optimize the webcam device selector, resolution picker and control pad for desktop, tablet and mobile
+- align the productive Raspberry Pi GUI with the public `dezender.de` project interface: framed tablet surface, cyan/lime palette, monospace typography, technical grid and angular controls
+
 ## alpha-0.7.5 – Build 67 manufacturer model previews (2026-08-14)
 
 - add optimized, offline manufacturer model images to device-search results for the Mars Hydro FC3000 family, Mars Hydro DF150-M/iFresh 6-inch fan, Logitech C920 and FRITZ!DECT 210

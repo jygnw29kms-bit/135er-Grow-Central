@@ -174,6 +174,27 @@ def test_build66_gui_shows_complete_fritz_identity_and_temperature():
     assert "Strom${s.current_source?\" (berechnet)\"" in script
 
 
+def test_build68_gui_uses_manual_fritz_login_and_two_decimals():
+    page = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    script = (WEB_DIR / "app.js").read_text(encoding="utf-8")
+    extensions = (WEB_DIR / "device_extensions.js").read_text(encoding="utf-8")
+    assert "Keine automatische Geräteabfrage" in page
+    assert 'id="fritzManualBtn"' in page
+    assert 'id="plugTemperatureGrid"' in page
+    assert 'id="automationCreateForm"' in page
+    assert "toFixed(2)" in script
+    assert "gcManualFritzDevices" in script
+    assert "credentials_stored" not in extensions
+
+
+def test_build68_camera_and_product_previews_are_compact():
+    app_css = (WEB_DIR / "app.css").read_text(encoding="utf-8")
+    camera_css = (WEB_DIR / "device_extensions.css").read_text(encoding="utf-8")
+    assert ".device-preview{width:96px;height:68px" in app_css
+    assert ".camera-layout{display:grid;grid-template-columns:118px" in camera_css
+    assert ".camera-device{min-height:84px" in camera_css
+
+
 def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):
     model = tmp_path / "model"
     model.write_bytes(b"Raspberry Pi 4 Model B Rev 1.4\x00")

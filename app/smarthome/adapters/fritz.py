@@ -5,6 +5,7 @@ are never returned to the browser.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import os
 from typing import Any
@@ -191,11 +192,13 @@ class FritzAhaClient:
             self.sid = sid
             return sid
 
-    async def command(self, switchcmd: str, ain: str | None = None) -> str:
+    async def command(self, switchcmd: str, ain: str | None = None, **arguments: str | int | bool) -> str:
         sid = self.sid or await self.login()
         params: dict[str, str] = {"sid": sid, "switchcmd": switchcmd}
         if ain:
             params["ain"] = ain
+        for key, value in arguments.items():
+            params[key] = "1" if value is True else "0" if value is False else str(value)
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(f"{self.base}/webservices/homeautoswitch.lua", params=params)
             if response.status_code in {401, 403}:
@@ -222,6 +225,40 @@ class FritzAhaClient:
             data = _device_data(node)
             rows.append({"ain": ain, "name": data["native_name"], "present": data["online"], "product": data["product_name"], "details": data})
         return rows
+
+    async def list_automations(self) -> dict[str, list[dict[str, Any]]]:
+        """Read the routine and template data exposed by AVM AHA."""
+        trigger_xml, template_xml = await asyncio.gather(
+            self.command("gettriggerlistinfos"),
+            self.command("gettemplatelistinfos"),
+        )
+        trigger_root = ET.fromstring(trigger_xml)
+        template_root = ET.fromstring(template_xml)
+        triggers = [{
+            "identifier": (node.attrib.get("identifier") or "").strip(),
+            "name": (node.findtext("name") or "Unbenannte FRITZ!-Routine").strip(),
+            "active": _flag(node.attrib.get("active")) is True,
+        } for node in trigger_root.findall(".//trigger") if (node.attrib.get("identifier") or "").strip()]
+        templates = []
+        for node in template_root.findall(".//template"):
+            identifier = (node.attrib.get("identifier") or "").strip()
+            if not identifier or node.attrib.get("autocreate") == "1" and node.find("sub_templates") is None:
+                continue
+            templates.append({
+                "identifier": identifier,
+                "name": (node.findtext("name") or "Unbenannte FRITZ!-Vorlage").strip(),
+                "devices": [(item.attrib.get("identifier") or "").strip() for item in node.findall("./devices/device") if (item.attrib.get("identifier") or "").strip()],
+                "actions": [item.tag for item in node.findall("./applymask/*")],
+                "scenario": node.find("sub_templates") is not None,
+            })
+        return {"triggers": triggers, "templates": templates}
+
+    async def set_trigger_active(self, identifier: str, active: bool) -> bool:
+        result = await self.command("settriggeractive", identifier, active=active)
+        return result not in {"", "0", "inval"} if active else result != "inval"
+
+    async def apply_template(self, identifier: str) -> None:
+        await self.command("applytemplate", identifier)
 
 
 class FritzSwitchAdapter(SwitchAdapter):
