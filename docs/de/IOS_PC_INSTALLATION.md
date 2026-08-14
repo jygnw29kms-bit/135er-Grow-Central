@@ -71,5 +71,4 @@ xcodegen generate
 open GrowCentralIOS.xcodeproj
 ```
 
-GitHub Actions führt die iOS-Unit-Tests im Simulator aus und erzeugt anschließend den unsignierten Gerätebuild für das PC-Sideloading.
-
+GitHub Actions kompiliert App und Test-Bundle für den iOS-Simulator und erzeugt anschließend den unsignierten Gerätebuild für das PC-Sideloading.
