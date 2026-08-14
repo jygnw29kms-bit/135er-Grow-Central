@@ -90,6 +90,65 @@ def test_tapo_account_is_verified_with_device_update(monkeypatch):
     assert rows[0].metadata["authentication"] == "verified-for-this-request"
 
 
+def test_tapo_login_stores_verified_account_and_imports_name_room(monkeypatch):
+    stored = {}
+    imported = []
+    candidate = onboarding.Candidate(
+        provider="tapo", host="192.168.1.20", name="Grow Lüfter",
+        source="test", native_id="DEVICE-123",
+        metadata={"model": "P110", "device_type": "plug", "room": "Growzelt"},
+    )
+
+    async def fake_discovery(request):
+        assert request.username == "user@example.test"
+        assert request.password.get_secret_value() == "secret-value"
+        return [candidate]
+
+    def fake_store(provider, username, password, **metadata):
+        stored.update(provider=provider, username=username, password=password, **metadata)
+
+    class Registry:
+        def upsert(self, device):
+            imported.append(device)
+
+    monkeypatch.setattr(onboarding, "_kasa_account_candidates", fake_discovery)
+    monkeypatch.setattr(onboarding, "set_credentials", fake_store)
+    monkeypatch.setattr(onboarding, "get_provider_config", lambda _provider: stored or None)
+    monkeypatch.setattr(onboarding.DeviceRegistry, "from_env", lambda: Registry())
+    monkeypatch.setattr(onboarding, "_ipv4_discovery_targets", lambda: [("eth0", "192.168.1.255")])
+
+    request = onboarding.TapoLoginRequest(
+        username="user@example.test", password="secret-value", import_devices=True,
+    )
+    result = asyncio.run(onboarding.tapo_login(request))
+
+    assert result["credentials_stored"] is True
+    assert result["cloud_inventory"] is False
+    assert result["networks_scanned"] == 1
+    assert imported[0].id == "tapo-device-123"
+    assert imported[0].name == "Grow Lüfter"
+    assert imported[0].metadata["room"] == "Growzelt"
+    assert imported[0].approved is True
+    assert imported[0].writable is True
+    assert "secret-value" not in repr(result)
+
+
+def test_tapo_stored_login_is_reused_and_status_never_exposes_password(monkeypatch):
+    stored = {"username": "user@example.test", "password": "secret-value", "transport": "local-authenticated"}
+    monkeypatch.setattr(onboarding, "get_provider_config", lambda _provider: stored)
+
+    assert onboarding._tapo_request_credentials(onboarding.TapoLoginRequest()) == (
+        "user@example.test", "secret-value", False,
+    )
+    status = asyncio.run(onboarding.tapo_credentials_status())
+    assert status == {
+        "configured": True,
+        "username": "user@example.test",
+        "transport": "local-authenticated",
+    }
+    assert "password" not in status
+
+
 def test_smarthome_overview_cache_and_forced_refresh(monkeypatch):
     router = importlib.import_module("app.smarthome.router")
     calls = []

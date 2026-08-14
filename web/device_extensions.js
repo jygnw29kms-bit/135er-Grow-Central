@@ -131,10 +131,51 @@
     const target=byId("registeredDeviceList");if(!target)return;
     try {
       const devices=await api("/api/v1/smarthome/devices");
-      target.innerHTML=devices.length?devices.map(row=>`<div class="device-row"><div><strong>${html(row.name)}</strong><span>${html(row.adapter.toUpperCase())} · ${html(row.metadata?.product||row.capability||"Smart Home")} · ID ${html(row.id)}</span></div><span class="${row.approved?"badge-online":"badge-offline"}">${row.approved?"DAUERHAFT":"NICHT FREIGEGEBEN"}</span></div>`).join(""):'<div class="empty-state">Noch kein Smart-Home-Gerät dauerhaft registriert.</div>';
+      target.innerHTML=devices.length?devices.map(row=>`<div class="device-row"><div><strong>${html(row.name)}</strong><span>${html(row.adapter.toUpperCase())} · ${html(row.metadata?.product||row.capability||"Smart Home")}${row.metadata?.room?` · Raum ${html(row.metadata.room)}`:""} · ID ${html(row.id)}</span></div><span class="${row.approved?"badge-online":"badge-offline"}">${row.approved?"DAUERHAFT":"NICHT FREIGEGEBEN"}</span></div>`).join(""):'<div class="empty-state">Noch kein Smart-Home-Gerät dauerhaft registriert.</div>';
     } catch(error) { target.innerHTML=`<div class="empty-state">Geräteregistrierung konnte nicht gelesen werden: ${html(error.message)}</div>`; }
   }
   window.gcLoadRegisteredDevices=loadRegisteredDevices;
+
+  let tapoConfigured=false;
+  function renderTapoDevices(devices=[]) {
+    const target=byId("tapoPresence");if(!target)return;
+    target.innerHTML=devices.length?devices.map(row=>`<div class="device-row"><div><strong>${html(row.name)}</strong><span>${html(row.metadata?.product||"TP-Link Tapo")} · ${html(row.metadata?.room?`Raum ${row.metadata.room}`:"Raum nicht vom Gerät gemeldet")} · ${html(row.host||"")}</span></div><span class="badge-online">IMPORTIERT</span></div>`).join(""):'<div class="device-row"><div><strong>Tapo-Konto eingerichtet</strong><span>Gespeicherte Anmeldung bereit für lokalen Geräteabruf.</span></div><span class="badge-online">GESPEICHERT</span></div>';
+  }
+
+  async function loadTapoCredentialStatus() {
+    const form=byId("tapoAccountForm");const target=byId("tapoPresence");
+    try {
+      const data=await api("/api/v1/smarthome/onboarding/tapo/credentials");
+      tapoConfigured=Boolean(data.configured);
+      if(form)form.hidden=tapoConfigured;
+      const username=byId("tapoUsername");if(username&&data.username)username.value=data.username;
+      ["tapoRefreshBtn","tapoDeleteBtn"].forEach(id=>{const button=byId(id);if(button)button.hidden=!tapoConfigured});
+      if(target)target.innerHTML=tapoConfigured?`<div class="device-row"><div><strong>Tapo-Konto eingerichtet</strong><span>Benutzer ${html(data.username)} · authentifizierter lokaler Zugriff</span></div><span class="badge-online">GESPEICHERT</span></div>`:'<div class="empty-state">Tapo-Konto noch nicht eingerichtet. Anmeldung wird erst nach erfolgreicher Geräteprüfung gespeichert.</div>';
+      return tapoConfigured;
+    } catch(error) {
+      tapoConfigured=false;if(target)target.innerHTML=`<div class="empty-state">Tapo-Status fehlgeschlagen: ${html(error.message)}</div>`;return false;
+    }
+  }
+
+  async function syncTapo(credentials=null) {
+    const status=byId("scanStatus");const button=credentials?byId("tapoAccountForm")?.querySelector('button[type="submit"]'):byId("tapoRefreshBtn");
+    if(button)button.disabled=true;if(status)status.textContent="Tapo-Geräte werden auf allen aktiven Pi-Netzwerken gesucht und authentifiziert…";
+    try {
+      const body=credentials?{...credentials,timeout:6,import_devices:true}:{timeout:6,import_devices:true};
+      const data=await writeApi("/api/v1/smarthome/onboarding/tapo/login",{method:"POST",body:JSON.stringify(body)});
+      tapoConfigured=true;
+      if(status)status.textContent=`${data.devices_found} Tapo-Gerät(e) in ${data.networks_scanned} Netzwerk(en) dauerhaft importiert. Anmeldung verschlüsselt gespeichert.`;
+      await loadRegisteredDevices();await refreshPower(true);await loadTapoCredentialStatus();renderTapoDevices(data.imported||[]);
+      return data;
+    } catch(error) {
+      if(status)status.textContent=`TAPO-IMPORT FEHLER: ${error.message}`;
+    } finally {if(byId("tapoPassword"))byId("tapoPassword").value="";if(button)button.disabled=false}
+  }
+
+  async function tapoLogin(event) {
+    event.preventDefault();
+    await syncTapo({username:byId("tapoUsername").value.trim(),password:byId("tapoPassword").value});
+  }
 
   async function fritzLogin(event) {
     event.preventDefault();
@@ -351,6 +392,9 @@
   byId("fritzAutomationBtn")?.addEventListener("click", () => useFritz({purpose:"automations"}));
   byId("fritzChangeBtn")?.addEventListener("click", () => openFritzLogin({purpose:"devices"}));
   byId("fritzDeleteBtn")?.addEventListener("click", async () => {if(!confirm("Gespeicherte FRITZ!-Anmeldung wirklich löschen?"))return;await writeApi("/api/v1/smarthome/onboarding/fritz/credentials",{method:"DELETE"});window.gcManualFritzDevices=[];updateAutomationDevices();await loadFritzCredentialStatus();await refreshPower(true)});
+  byId("tapoAccountForm")?.addEventListener("submit", tapoLogin);
+  byId("tapoRefreshBtn")?.addEventListener("click", () => syncTapo());
+  byId("tapoDeleteBtn")?.addEventListener("click", async () => {if(!confirm("Gespeicherte Tapo-Anmeldung wirklich löschen? Die registrierten Geräte bleiben erhalten, sind ohne Zugang aber offline."))return;await writeApi("/api/v1/smarthome/onboarding/tapo/credentials",{method:"DELETE"});await loadTapoCredentialStatus();await refreshPower(true)});
   byId("automationCreateForm")?.addEventListener("submit", createAutomation);
   window.addEventListener("gc:fritz-login", event => useFritz(event.detail));
   byId("cameraRefreshBtn")?.addEventListener("click", loadCamera);
@@ -362,7 +406,7 @@
     if (event.detail.id !== "camera") void stopCameraLive(false);
     if (event.detail.id === "camera") loadCamera();
     if (event.detail.id === "automation") loadLocalAutomations();
-    if (event.detail.id === "devices") loadRegisteredDevices();
+    if (event.detail.id === "devices") { loadRegisteredDevices(); loadTapoCredentialStatus(); }
     if (event.detail.id === "dashboard") loadSystemIdentity();
     if (event.detail.id === "system") { loadSystemIdentity(); loadNetworkStatus(); }
   });
@@ -370,5 +414,6 @@
   loadSystemIdentity();
   loadRegisteredDevices();
   loadFritzCredentialStatus();
+  loadTapoCredentialStatus();
   loadLocalAutomations();
 })();

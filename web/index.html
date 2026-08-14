@@ -6,12 +6,13 @@
 <meta name="theme-color" content="#02070a">
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/app.css?v=0.10.0">
+<link rel="stylesheet" href="/static/app.css?v=0.11.0">
 <link rel="stylesheet" href="/static/device_extensions.css?v=0.9.0">
 </head>
 <body>
 <a class="skip-link" href="#dashboard">Zum Inhalt / Skip to content</a>
 <div class="scanline"></div>
+<div id="piOfflineOverlay" class="pi-offline-overlay" hidden role="alert" aria-live="assertive"><div class="pi-offline-card"><div class="eyebrow">LIVE CONNECTION CHECK</div><h2>Raspberry Pi nicht erreichbar</h2><p id="piOfflineDetail">Der Raspberry Pi antwortet nicht. Angezeigte Werte sind nicht aktuell.</p><button class="primary" id="connectionRetryBtn">VERBINDUNG ERNEUT PRÜFEN</button></div></div>
 <div class="app-shell">
   <aside class="sidebar">
     <div class="brand"><img class="brand-logo" src="/static/brand-logo.png" alt="135er-Grow Central · J.L."></div>
@@ -52,15 +53,15 @@
       </div>
 
       <article class="panel power-preview"><div class="panel-head"><div><div class="eyebrow">POWER MATRIX</div><h2>Stromsteckdosen</h2></div><button class="ghost" data-open-view="power">DETAILS</button></div><div id="powerPreviewGrid" class="plug-grid"><div class="empty-state">Steckdosen werden geladen…</div></div></article>
-      <article class="panel temperature-overview"><div class="panel-head"><div><div class="eyebrow">FRITZ! PLUG SENSORS</div><h2>Umgebungstemperaturen</h2></div></div><div id="plugTemperatureGrid" class="temperature-grid"><div class="empty-state">Nach manueller FRITZ!-Abfrage erscheinen hier die Temperaturen nach Steckdosennamen.</div></div></article>
+      <article class="panel temperature-overview"><div class="panel-head"><div><div class="eyebrow">FRITZ! PLUG SENSORS</div><h2>Umgebungstemperaturen</h2></div></div><div id="plugTemperatureGrid" class="temperature-grid"><div class="empty-state">Nach der FRITZ!-Einrichtung erscheinen hier automatisch die Temperaturen nach Steckdosennamen.</div></div></article>
       <div class="bottom-grid"><article class="mini-panel"><span class="mini-label">Raspberry Pi</span><strong>CONTROL NODE</strong><small>FastAPI / iConnect target / Smart Home</small></article><article class="mini-panel"><span class="mini-label">Operating Mode</span><strong>LOCAL-FIRST</strong><small>Power telemetry remains local</small></article><article class="mini-panel"><span class="mini-label">Security</span><strong>GUI LOGIN + WRITE GATES</strong><small>LAN/WAN access protected</small></article></div>
     </section>
 
     <section id="power" class="view">
       <article class="panel">
         <div class="panel-head"><div><div class="eyebrow">SMART POWER CONTROL</div><h2>Steckdosen & Verbrauch</h2></div><div class="device-badge" id="powerUpdated">NO DATA</div></div>
-        <div class="power-summary"><div><span>Gesamtleistung</span><strong><b id="powerSummaryW">--</b> W</strong></div><div><span>Gesamtenergie</span><strong><b id="powerSummaryKwh">--</b> kWh</strong></div><div><span>Online</span><strong id="powerSummaryOnline">0 / 0</strong></div><div><span>Eingeschaltet</span><strong id="powerSummaryOn">0</strong></div></div>
-        <div class="tariff-panel"><div><div class="eyebrow">COST MODEL</div><h3>Strompreis & Hochrechnung</h3><p>Die Hochrechnung basiert auf der aktuell gemessenen Gesamtleistung. Echte historische Periodenwerte werden später aus der Zeitreihendatenbank gespeist.</p></div><label>Strompreis <span>€/kWh</span><input id="energyPrice" type="number" min="0" step="0.001" inputmode="decimal" value="0.35"></label></div>
+        <div class="power-summary"><div><span>Gesamtleistung</span><strong><b id="powerSummaryW">--</b> W</strong></div><div><span>Gesamtenergie</span><strong><b id="powerSummaryKwh">--</b> kWh</strong></div><div><span>Bisherige Kosten</span><strong id="powerSummaryCost">-- €</strong></div><div><span>Online</span><strong id="powerSummaryOnline">0 / 0</strong></div><div><span>Eingeschaltet</span><strong id="powerSummaryOn">0</strong></div></div>
+        <div class="tariff-panel"><div><div class="eyebrow">COST MODEL</div><h3>Strompreis & Hochrechnung</h3><p>Die bisherigen Kosten werden aus der gemeldeten Gesamtenergie berechnet und bleiben auch bei ausgeschalteter Steckdose sichtbar. Die Zukunftsprognose basiert auf der aktuell gemessenen Leistung und beträgt bei AUS entsprechend 0.</p></div><label>Strompreis <span>€/kWh</span><input id="energyPrice" type="number" min="0" step="0.001" inputmode="decimal" value="0.35"></label></div>
         <div class="period-grid"><div class="period-card"><span>STUNDE</span><strong><b id="projHourKwh">--</b> kWh</strong><small id="projHourCost">-- €</small></div><div class="period-card"><span>TAG</span><strong><b id="projDayKwh">--</b> kWh</strong><small id="projDayCost">-- €</small></div><div class="period-card"><span>WOCHE</span><strong><b id="projWeekKwh">--</b> kWh</strong><small id="projWeekCost">-- €</small></div><div class="period-card"><span>MONAT</span><strong><b id="projMonthKwh">--</b> kWh</strong><small id="projMonthCost">-- €</small></div><div class="period-card"><span>JAHR</span><strong><b id="projYearKwh">--</b> kWh</strong><small id="projYearCost">-- €</small></div></div>
         <div id="plugGrid" class="plug-grid"><div class="empty-state">Keine Steckdosendaten geladen.</div></div>
         <div class="security-note">Live-Lesedaten sind lokal verfügbar. Schaltbefehle werden nur für registrierte, freigegebene und beschreibbare Geräte akzeptiert.</div>
@@ -72,7 +73,8 @@
         <div class="panel-head"><div><div class="eyebrow">UNIFIED DEVICE LAB · alpha-0.7.5</div><h2>Geräte suchen, anmelden & analysieren</h2><p class="panel-copy">Bluetooth, Netzwerk, FRITZ!, Tapo und lokale Adapter werden getrennt diagnostiziert und einheitlich dargestellt.</p></div></div>
         <div class="discovery-actions"><button class="primary" id="bleScanBtn">BLUETOOTH SCANNEN</button><button class="primary" id="smartScanBtn">NETZWERK SCANNEN</button></div>
         <div class="provider-grid" id="providerGrid"></div>
-        <form class="account-discovery" id="tapoAccountForm" autocomplete="off"><div><div class="eyebrow">TP-LINK / TAPO LOGIN</div><h3>Tapo lokal + WAN-fähig</h3><p>Der lokale Pfad wird bevorzugt; der Account bleibt als Basis für die Tapo-Gerätezuordnung erhalten.</p></div><label>Lokales API-Token<input id="tapoApiToken" type="password" autocomplete="off" placeholder="Testimage: test" required></label><label>Benutzername<input id="tapoUsername" type="email" autocomplete="username" required></label><label>Passwort<input id="tapoPassword" type="password" autocomplete="current-password" required></label><button class="secondary" type="submit">TAPO SUCHEN</button></form>
+        <form class="account-discovery" id="tapoAccountForm" autocomplete="off"><div><div class="eyebrow">TP-LINK / TAPO · SICHER VERBUNDEN</div><h3>Tapo-Konto & lokaler Geräteimport</h3><p>Grow Central speichert die erste erfolgreich geprüfte Anmeldung verschlüsselt. Alle im Pi-Netz erreichbaren Tapo-Geräte werden mit Name, Modell und – falls vom Gerät gemeldet – Raum übernommen. Die private Tapo-Cloud-Geräteliste wird nicht vorgetäuscht.</p></div><label>Benutzer / E-Mail<input id="tapoUsername" type="email" autocomplete="username" required></label><label>Passwort<input id="tapoPassword" type="password" autocomplete="current-password" required></label><button class="secondary" type="submit">ANMELDEN & IMPORTIEREN</button></form>
+        <div id="tapoPresence"><div class="empty-state">Tapo-Konto noch nicht eingerichtet.</div></div><div class="button-row tapo-actions"><button class="primary" id="tapoRefreshBtn" hidden>TAPO-GERÄTE AKTUALISIEREN</button><button class="ghost" id="tapoDeleteBtn" hidden>ZUGANG LÖSCHEN</button></div>
         <div class="scan-status" id="scanStatus">Bereit für Bluetooth-, Netzwerk- oder Login-Suche.</div><div class="candidate-grid" id="candidateGrid"><div class="empty-state">Noch keine Geräte gesucht.</div></div>
       </article>
       <article class="panel"><div class="panel-head"><div><div class="eyebrow">DEVICE MATRIX</div><h2>Registrierte Hardware</h2></div></div><div class="device-list"><div class="device-row"><div><strong>Mars Hydro FC3000</strong><span>Modell 2024 • USB • iConnect</span></div><span class="badge-offline">VALIDATION</span></div><div class="device-row"><div><strong>Mars Hydro iFresh / DF100</strong><span>iConnect target • DF100M BLE diagnostics fallback</span></div><span id="deviceListState" class="badge-offline">OFFLINE</span></div><div class="device-row"><div><strong>Smart Plugs</strong><span>FRITZ! / Tapo / Shelly / Home Assistant</span></div><span id="smartPlugState">WAITING</span></div></div><div class="eyebrow">DAUERHAFT REGISTRIERTE SMART-HOME-GERÄTE</div><div id="registeredDeviceList" class="device-list"><div class="empty-state">Geräteregistrierung wird geladen…</div></div></article>
@@ -120,7 +122,7 @@
 
 <dialog id="fritzLoginDialog" class="dialog-panel"><form id="fritzLoginForm" method="dialog"><h2>FRITZ!Box einmalig anmelden</h2><p id="fritzLoginPurpose">Nach erfolgreicher Prüfung werden Benutzer und Passwort verschlüsselt auf diesem Grow-Central-Gerät gespeichert.</p><label>FRITZ!Box<input id="fritzHost" value="fritz.box" required></label><label>Benutzer<input id="fritzUsername" autocomplete="username" required></label><label>Passwort<input id="fritzPassword" type="password" autocomplete="current-password" required></label><div id="fritzLoginStatus" class="scan-status"></div><div class="button-row"><button class="primary" type="submit">ANMELDEN UND SICHER SPEICHERN</button><button class="ghost" type="button" id="fritzCancelBtn">ABBRECHEN</button></div></form></dialog>
 
-<script src="/static/app.js?v=0.11.0"></script>
-<script src="/static/device_extensions.js?v=0.9.0"></script>
+<script src="/static/app.js?v=0.12.0"></script>
+<script src="/static/device_extensions.js?v=0.10.0"></script>
 </body>
 </html>

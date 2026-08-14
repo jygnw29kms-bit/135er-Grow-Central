@@ -647,6 +647,7 @@ jobs:
           Required: change system and GUI passwords during first boot
           Network: LAN is detected; during the Pi 3B setup AP enter the home SSID manually if scanning is unavailable
           FRITZ!: optional dedicated GrowCentral FRITZ!Box user for Smart Home import
+          Tapo: optional TP-Link account for encrypted local authentication and automatic LAN import
           Permanent URL: http://135er-Grow-Central.local/
           Compatibility URL: http://135er-Grow-Central.local:8080/
           Support bundle: GUI > System or /var/lib/135er-grow-central/support/Grow-Central-Support-latest.tar.gz
@@ -672,4 +673,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. The System view reports the detected Pi model and exact build, the C920 panel includes an on-demand low-overhead MJPEG live view, and the first successfully validated FRITZ!Box login is stored in the appliance-local encrypted credential store for automatic telemetry, switching and automation actions. Image construction verifies effective service groups, file permissions and sandbox boundaries." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. Build 70 retains accumulated plug costs while devices are off, checks Pi reachability on every menu change, and stores successfully verified FRITZ!Box or Tapo credentials in the appliance-local encrypted credential store. Tapo devices are authenticated and imported over the local network; this image does not claim access to TP-Link's private cloud inventory. Image construction verifies effective service groups, file permissions and sandbox boundaries." --prerelease

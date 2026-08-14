@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.7.5 – Build 70 live-state, durable costs and Tapo onboarding (2026-08-14)
+
+- keep accumulated electricity costs visible while a smart plug is switched off by calculating them from the plug's retained total-energy counter and the configured tariff
+- distinguish retained historical cost from live-power projections, which correctly become zero when current consumption is zero
+- perform a no-cache live health request on every menu change and refresh the selected view's data instead of leaving stale values on screen
+- replace the GUI with an explicit full-screen Raspberry Pi offline state after timeouts or connection failures and provide an immediate retry action
+- add encrypted reusable Tapo credentials, authenticated discovery across every active Pi IPv4 network and automatic durable import of verified local Tapo devices
+- carry Tapo alias, model, device type and any locally reported room/location into the common device registry and GUI without exposing the password
+- keep the Tapo cloud boundary explicit: the maintained `python-kasa` path authenticates and controls local devices but does not claim access to TP-Link's private cloud inventory
+- validate the Build 69 reboot support bundle: persistent FRITZ! credentials and device registry survived reboot with correct ownership and no failed application unit
+
 ## alpha-0.7.5 – Build 69 encrypted reusable FRITZ! login (2026-08-14)
 
 - validate the first FRITZ!Box login before storing username, password and host in an appliance-local Fernet-encrypted credential store with `0600` permissions

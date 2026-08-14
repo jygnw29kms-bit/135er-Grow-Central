@@ -22,7 +22,7 @@
 
 ### alpha-0.7.5 – aktueller Zielstand
 
-Build 69 nutzt dieselbe visuelle Sprache wie die öffentliche Referenz-GUI auf `dezender.de`. Die erste erfolgreich geprüfte FRITZ!Box-Anmeldung wird lokal verschlüsselt und mit restriktiven Dateirechten gespeichert. Gerätewerte, Schaltaktionen, Routinen, Vorlagen und lokale Automationsaktionen verwenden sie danach automatisch; über die GUI kann der Zugang geändert oder gelöscht werden. Registrierte Geräte werden atomar in der dauerhaften Registry gesichert, nach Browser- oder Pi-Neustarts wieder geladen und unter **Geräte** ausdrücklich als dauerhaft registriert angezeigt.
+Build 70 nutzt dieselbe visuelle Sprache wie die öffentliche Referenz-GUI auf `dezender.de`. Die erste erfolgreich geprüfte FRITZ!Box- oder Tapo-Anmeldung wird lokal verschlüsselt und mit restriktiven Dateirechten gespeichert. Gerätewerte und Schaltaktionen verwenden sie danach automatisch; über die GUI kann der jeweilige Zugang gelöscht werden. Registrierte Geräte werden atomar in der dauerhaften Registry gesichert, nach Browser- oder Pi-Neustarts wieder geladen und unter **Geräte** ausdrücklich als dauerhaft registriert angezeigt. Stromkosten beruhen auf der gemeldeten Gesamtenergie und bleiben deshalb auch bei ausgeschalteter Steckdose sichtbar. Jeder Menüwechsel prüft den Pi ohne Browsercache; bei Ausfall ersetzt eine klare Offline-Ansicht die möglicherweise veralteten Messwerte.
 
 Der neue First-Boot-Ablauf findet direkt in der geschützten Haupt-GUI unter **System** statt:
 
@@ -56,7 +56,7 @@ Die Detailansicht liest die vollständige lokale AHA-Geräteinformation. Bei FRI
 
 ### TP-Link Tapo
 
-Tapo bleibt als **hybride Integration** vorgesehen: lokale Gerätekommunikation wird im Heimnetz bevorzugt; der Tapo/TP-Link-Account bleibt Grundlage für authentifizierte Gerätezuordnung und die bestehende WAN-Fähigkeit des Tapo-Ökosystems soll nicht verloren gehen. Der aktuelle Grow-Central-Adapter implementiert den lokalen authentifizierten `python-kasa`-Pfad. Ein eigener validierter Grow-Central-WAN/Cloud-Transport wird nicht vorgetäuscht und bleibt separat zu implementieren und zu testen.
+Tapo bleibt als **hybride Integration** vorgesehen: lokale Gerätekommunikation wird im Heimnetz bevorzugt; der Tapo/TP-Link-Account bleibt Grundlage für authentifizierte Gerätezuordnung. Build 70 prüft die Kontoanmeldung an tatsächlich erreichbaren Geräten, speichert sie verschlüsselt, durchsucht alle aktiven IPv4-Netze des Pi und übernimmt bestätigte Geräte dauerhaft mit Alias, Modell, Typ sowie einer lokal gemeldeten Raum-/Standortangabe. Der aktuelle Grow-Central-Adapter implementiert den lokalen authentifizierten `python-kasa`-Pfad. Die offizielle Tapo-App verwendet zusätzlich private TP-Link-Cloud-Dienste; ein eigener validierter Grow-Central-WAN/Cloud-Inventarpfad wird nicht vorgetäuscht und bleibt separat zu implementieren und zu testen.
 
 ### Logitech C920 / UVC-Kameras
 

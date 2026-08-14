@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import re
 import socket
 import subprocess
 import time
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, SecretStr
 
 from app.audit import append_audit
+from app.credential_store import delete_credentials, get_provider_config, set_credentials
 from app.security import require_write_auth
 
 from .models import DeviceConfig
@@ -59,6 +61,13 @@ class AccountDiscoveryRequest(BaseModel):
     username: str = Field(min_length=3, max_length=254)
     password: SecretStr
     timeout: float = Field(default=5.0, ge=1.0, le=10.0)
+
+
+class TapoLoginRequest(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=254)
+    password: SecretStr | None = None
+    timeout: float = Field(default=6.0, ge=1.0, le=10.0)
+    import_devices: bool = True
 
 
 def _lan_host(value: str) -> str:
@@ -166,8 +175,35 @@ async def _kasa_account_candidates(request: AccountDiscoveryRequest) -> list[Can
     rows: list[Candidate] = []
     for host, device in authenticated:
         alias = getattr(device, "alias", None) or getattr(device, "model", None) or "TP-Link device"
-        rows.append(Candidate(provider="tapo", host=host, name=str(alias), source="tp-link-account-assisted", native_id=str(getattr(device, "device_id", "") or "") or None, metadata={"model": getattr(device, "model", None), "device_type": str(getattr(device, "device_type", "unknown")), "authentication": "verified-for-this-request"}))
+        sys_info = getattr(device, "sys_info", {})
+        sys_info = sys_info if isinstance(sys_info, dict) else {}
+        room = next((str(value).strip() for value in (
+            getattr(device, "room", None), getattr(device, "location", None),
+            sys_info.get("room"), sys_info.get("location"),
+        ) if value and str(value).strip()), None)
+        rows.append(Candidate(provider="tapo", host=host, name=str(alias), source="tp-link-account-assisted", native_id=str(getattr(device, "device_id", "") or sys_info.get("device_id") or "") or None, metadata={"model": getattr(device, "model", None), "device_type": str(getattr(device, "device_type", "unknown")), "room": room, "authentication": "verified-for-this-request"}))
     return rows
+
+
+def _tapo_request_credentials(request: TapoLoginRequest) -> tuple[str, str, bool]:
+    username = (request.username or "").strip()
+    password = request.password.get_secret_value() if request.password is not None else ""
+    supplied = bool(username or password)
+    if supplied and (not username or not password):
+        raise HTTPException(422, "Tapo-E-Mail und Passwort müssen gemeinsam angegeben werden")
+    if not supplied:
+        stored = get_provider_config("tapo") or {}
+        username = str(stored.get("username") or "").strip()
+        password = str(stored.get("password") or "")
+    if not username or not password:
+        raise HTTPException(428, "Tapo-Anmeldung muss einmalig eingerichtet werden")
+    return username, password, supplied
+
+
+def _tapo_device_id(candidate: Candidate) -> str:
+    seed = candidate.native_id or candidate.host
+    safe = re.sub(r"[^a-z0-9]+", "-", seed.lower()).strip("-")[:48] or "device"
+    return f"tapo-{safe}"
 
 
 def _ssdp_candidates(timeout: float) -> list[Candidate]:
@@ -264,6 +300,67 @@ async def discover_devices_with_account(request: AccountDiscoveryRequest):
     rows = await _kasa_account_candidates(request)
     append_audit("smarthome.account_discovery.completed", provider=request.provider, found=len(rows))
     return {"devices": [row.model_dump(mode="json") for row in rows], "count": len(rows), "credentials_stored": False, "networks_scanned": len(_ipv4_discovery_targets())}
+
+
+@router.get("/tapo/credentials")
+async def tapo_credentials_status():
+    stored = get_provider_config("tapo") or {}
+    return {
+        "configured": bool(stored.get("username") and stored.get("password")),
+        "username": str(stored.get("username") or ""),
+        "transport": "local-authenticated",
+    }
+
+
+@router.delete("/tapo/credentials", dependencies=[Depends(require_write_auth)])
+async def tapo_credentials_delete():
+    removed = delete_credentials("tapo")
+    append_audit("tapo.credentials.deleted", removed=removed)
+    return {"ok": True, "removed": removed}
+
+
+@router.post("/tapo/login", dependencies=[Depends(require_write_auth)])
+async def tapo_login(request: TapoLoginRequest):
+    username, password, supplied = _tapo_request_credentials(request)
+    discovery = AccountDiscoveryRequest(
+        provider="tapo", username=username, password=SecretStr(password), timeout=request.timeout,
+    )
+    rows = await _kasa_account_candidates(discovery)
+    if not rows:
+        append_audit("tapo.login.failed", reason="no_local_device")
+        raise HTTPException(404, "Kein Tapo-Gerät im lokalen Netz gefunden. Das Konto kann ohne erreichbares Gerät nicht sicher geprüft werden.")
+    if supplied:
+        try:
+            set_credentials("tapo", username, password, transport="local-authenticated")
+        except OSError:
+            raise HTTPException(500, "Tapo-Anmeldung war erfolgreich, konnte aber nicht sicher gespeichert werden") from None
+
+    imported = []
+    if request.import_devices:
+        registry = DeviceRegistry.from_env()
+        for row in rows:
+            device = DeviceConfig(
+                id=_tapo_device_id(row), name=row.name, adapter="tapo",
+                native_id=row.native_id or "switch:0", capability="switch",
+                approved=True, writable=True, host=_lan_host(row.host),
+                metadata={
+                    "product": row.metadata.get("model") or "TP-Link Tapo",
+                    "device_type": row.metadata.get("device_type"),
+                    "room": row.metadata.get("room"),
+                    "auto_imported": True,
+                    "transport": "local-authenticated",
+                },
+            )
+            registry.upsert(device)
+            imported.append(device.model_dump(mode="json"))
+    append_audit("tapo.login.success", found=len(rows), imported=len(imported), credentials_saved=supplied)
+    return {
+        "ok": True, "devices_found": len(rows), "imported": imported,
+        "credentials_stored": get_provider_config("tapo") is not None,
+        "networks_scanned": len(_ipv4_discovery_targets()),
+        "transport": "local-authenticated",
+        "cloud_inventory": False,
+    }
 
 
 @router.post("/probe", dependencies=[Depends(require_write_auth)])

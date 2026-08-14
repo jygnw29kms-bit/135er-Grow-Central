@@ -201,6 +201,20 @@ def test_build68_camera_and_product_previews_are_compact():
     assert ".camera-device{min-height:84px" in camera_css
 
 
+def test_build70_gui_keeps_off_plug_costs_and_checks_pi_on_navigation():
+    page = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    script = (WEB_DIR / "app.js").read_text(encoding="utf-8")
+    extensions = (WEB_DIR / "device_extensions.js").read_text(encoding="utf-8")
+    assert 'id="powerSummaryCost"' in page
+    assert "Kosten gesamt" in script
+    assert 'id="piOfflineOverlay"' in page
+    assert "/api/health?live=" in script
+    assert "refreshAll(true)" in script
+    assert "/onboarding/tapo/login" in extensions
+    assert "/onboarding/tapo/credentials" in extensions
+    assert "Raum nicht vom Gerät gemeldet" in extensions
+
+
 def test_system_identity_reads_detected_model_and_build(monkeypatch, tmp_path):
     model = tmp_path / "model"
     model.write_bytes(b"Raspberry Pi 4 Model B Rev 1.4\x00")
