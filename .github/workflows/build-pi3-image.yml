@@ -74,6 +74,7 @@ jobs:
             --exclude='base.img*' --exclude='work.img*' \
             --exclude='*.img' --exclude='*.img.xz' \
             ./ "$ROOT/opt/135er-grow-central/"
+          printf '%s\n' "$GITHUB_RUN_NUMBER" | sudo tee "$ROOT/opt/135er-grow-central/BUILD" >/dev/null
 
           sudo mount --bind /dev "$ROOT/dev"
           sudo mount --bind /dev/pts "$ROOT/dev/pts"
@@ -132,6 +133,20 @@ jobs:
           install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
           install -d -o root -g growcentral -m 0750 /var/lib/135er-grow-central/support
           install -d -o root -g systemd-journal -m 2755 /var/log/journal
+          mkdir -p /etc/polkit-1/rules.d
+          cat >/etc/polkit-1/rules.d/60-grow-central-network.rules <<'EOF'
+          polkit.addRule(function(action, subject) {
+            var allowed = [
+              'org.freedesktop.NetworkManager.network-control',
+              'org.freedesktop.NetworkManager.settings.modify.system',
+              'org.freedesktop.NetworkManager.settings.modify.own'
+            ];
+            if (subject.user == 'growcentral' && allowed.indexOf(action.id) >= 0) {
+              return polkit.Result.YES;
+            }
+          });
+          EOF
+          chmod 0644 /etc/polkit-1/rules.d/60-grow-central-network.rules
           mkdir -p /etc/systemd/journald.conf.d
           cat >/etc/systemd/journald.conf.d/20-grow-central-persistent.conf <<'EOF'
           [Journal]
@@ -463,6 +478,17 @@ jobs:
           /bin/bash -n /usr/local/sbin/grow-central-support-bundle
           grep -q '^Storage=persistent$' /etc/systemd/journald.conf.d/20-grow-central-persistent.conf
           id -nG GrowCentral | grep -qw growcentral
+          for group in bluetooth video netdev; do id -nG growcentral | grep -qw "$group"; done
+          test "$(stat -c '%U:%G:%a' /opt/135er-grow-central/.env)" = root:growcentral:640
+          test "$(stat -c '%U:%G:%a' /var/lib/135er-grow-central)" = growcentral:growcentral:750
+          test "$(stat -c '%U:%G:%a' /var/lib/135er-grow-central/support)" = root:growcentral:750
+          test "$(stat -c '%U:%G:%a' /etc/polkit-1/rules.d/60-grow-central-network.rules)" = root:root:644
+          runuser -u growcentral -- test -r /opt/135er-grow-central/.env
+          if runuser -u growcentral -- test -w /opt/135er-grow-central/.env; then exit 1; fi
+          runuser -u growcentral -- test -w /opt/135er-grow-central/data
+          runuser -u growcentral -- test -w /var/lib/135er-grow-central
+          if runuser -u growcentral -- test -w /opt/135er-grow-central/app/main.py; then exit 1; fi
+          grep -Eq '^[0-9]+$' /opt/135er-grow-central/BUILD
           grep -q '^GC_GUI_USERNAME=GrowCentral$' /opt/135er-grow-central/.env
           grep -q '^GC_GUI_PASSWORD_HASH=pbkdf2_sha256\$' /opt/135er-grow-central/.env
           command -v ffmpeg
@@ -627,4 +653,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. The authenticated main GUI is available from first boot, setup runs under System, the permanent local domain is 135er-Grow-Central.local, runtime readiness is retried safely, and a redacted support bundle with persistent multi-boot diagnostics is created automatically for first-boot and service failures or manually from the GUI." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. The System view reports the detected Pi model and exact build, the C920 panel includes an on-demand low-overhead MJPEG live view, GUI/background polling is reduced and deduplicated, FRITZ! login diagnostics distinguish credentials, lockout and Smart Home permissions, and image construction verifies effective service groups, file permissions and sandbox boundaries." --prerelease

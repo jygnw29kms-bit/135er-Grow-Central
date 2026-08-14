@@ -1,4 +1,5 @@
 import asyncio
+import importlib
 import json
 from types import SimpleNamespace
 
@@ -86,3 +87,28 @@ def test_tapo_account_is_verified_with_device_update(monkeypatch):
     rows = asyncio.run(onboarding._kasa_account_candidates(request))
     assert updates == [True]
     assert rows[0].metadata["authentication"] == "verified-for-this-request"
+
+
+def test_smarthome_overview_cache_and_forced_refresh(monkeypatch):
+    router = importlib.import_module("app.smarthome.router")
+    calls = []
+    device = SimpleNamespace(id="plug", name="Plug", adapter="test", approved=True, writable=False, metadata={})
+    monkeypatch.setattr(router, "_registry", lambda: SimpleNamespace(list=lambda: [device]))
+
+    async def fake_row(_device):
+        calls.append(True)
+        return {"id": "plug", "online": True, "state": {"on": False, "power_w": 1.0, "energy_wh": 2.0}}
+
+    monkeypatch.setattr(router, "_overview_row", fake_row)
+    router._overview_cache = None
+
+    async def scenario():
+        first = await router.device_overview()
+        second = await router.device_overview()
+        refreshed = await router.device_overview(refresh=True)
+        return first, second, refreshed
+
+    first, second, refreshed = asyncio.run(scenario())
+    assert first is second
+    assert refreshed["summary"]["power_w"] == 1.0
+    assert len(calls) == 2

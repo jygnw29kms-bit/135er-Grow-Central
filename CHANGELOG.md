@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.7.5 – Hardware feedback follow-up
+
+- add an on-demand, single-client Logitech C920 MJPEG live view at 640×480/10 fps without transcoding the camera's native MJPEG stream
+- reduce GUI background work: 15-second polling, pause hidden tabs, prevent overlapping refreshes, cache Smart-Home reads for 10 seconds and rebuild device cards only when their state changes
+- remove continuous scanline repainting and sidebar blur from the appliance UI
+- show the detected Raspberry Pi model, kernel, architecture, application version and exact GitHub image build number under System
+- honor the FRITZ!Box login `BlockTime`, detect unknown FRITZ!Box usernames and distinguish bad credentials from missing Smart Home permissions
+- install only the required NetworkManager PolicyKit actions and verify effective service groups, file ownership, read/write boundaries and systemd sandbox paths during every image build
+- extend the permanent support bundle with build identity, sandbox settings, PolicyKit state and positive/negative service-user permission probes
+
 ## alpha-0.7.5 – Secure onboarding, native FRITZ!, network control and camera panel (2026-08-13)
 
 - integrated first-boot configuration into the authenticated main GUI and fixed the permanent local domain to `135er-Grow-Central.local`

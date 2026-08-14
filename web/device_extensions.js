@@ -101,6 +101,7 @@
       byId("fritzPassword").value = "";
       status.textContent = `${data.devices_found} FRITZ!-Gerät(e) gefunden, ${data.imported?.length || 0} importiert.`;
       byId("fritzLoginDialog")?.close();
+      await api("/api/v1/smarthome/overview?refresh=true");
       await refreshPower();
       checkFritzPresence();
     } catch (error) {
@@ -155,7 +156,46 @@
 
   function refreshCameraSnapshot(cameraId) {
     const image = byId("cameraSnapshot"); if (!image) return;
+    image.dataset.live = "false";
+    if (byId("cameraLiveBtn")) byId("cameraLiveBtn").textContent = "LIVEBILD STARTEN";
     image.src = `/api/v1/camera/snapshot?camera_id=${encodeURIComponent(cameraId)}&t=${Date.now()}`;
+  }
+
+  function stopCameraLive() {
+    const image = byId("cameraSnapshot");
+    const button = byId("cameraLiveBtn");
+    if (image?.dataset.live === "true") image.src = "";
+    if (image) image.dataset.live = "false";
+    if (button) button.textContent = "LIVEBILD STARTEN";
+  }
+
+  function toggleCameraLive() {
+    const image = byId("cameraSnapshot");
+    const button = byId("cameraLiveBtn");
+    const selected = document.querySelector("[data-camera-select].active")?.dataset.cameraSelect;
+    if (!image || !button || !selected) return;
+    if (image.dataset.live === "true") {
+      stopCameraLive();
+      refreshCameraSnapshot(selected);
+      byId("cameraStatusText").textContent = "Livebild gestoppt.";
+      return;
+    }
+    image.dataset.live = "true";
+    image.src = `/api/v1/camera/stream?camera_id=${encodeURIComponent(selected)}&t=${Date.now()}`;
+    button.textContent = "LIVEBILD STOPPEN";
+    byId("cameraStatusText").textContent = "MJPEG-Livebild läuft mit 640×480 bei 10 Bildern/s.";
+  }
+
+  async function loadSystemIdentity() {
+    try {
+      const data = await api("/api/v1/system/info");
+      byId("systemPiModel").textContent = data.model;
+      byId("systemBuildVersion").textContent = `${data.version} · Build ${data.build}`;
+      byId("systemDomain").textContent = data.domain;
+      byId("systemKernel").textContent = `${data.kernel} · ${data.architecture}`;
+    } catch (error) {
+      byId("systemPiModel").textContent = `Erkennung fehlgeschlagen: ${error.message}`;
+    }
   }
 
   async function loadCamera() {
@@ -168,7 +208,7 @@
       list.innerHTML = data.devices?.length ? data.devices.map((row) => `<button class="camera-device ${row.id === data.selected_camera_id ? "active" : ""}" data-camera-select="${html(row.id)}"><strong>${html(row.name || row.card || row.id)}</strong><span>${html(row.device)} · ${row.c920_match ? "Logitech C920" : html(row.driver || "UVC/V4L2")}</span><small>${row.readable ? "READ OK" : "NO READ"} · ${row.capture_capable ? "CAPTURE" : "NO CAPTURE"}</small></button>`).join("") : '<div class="empty-state">Keine /dev/video*-Kamera erkannt.</div>';
       statusText.textContent = data.ready ? `${data.selected_is_c920 ? "Logitech C920" : "Kamera"} erkannt und lesbar.` : "Kamera erkannt, aber noch nicht capture-bereit.";
       const selected = data.selected_camera_id;
-      document.querySelectorAll("[data-camera-select]").forEach((button) => button.addEventListener("click", () => { document.querySelectorAll("[data-camera-select]").forEach((b)=>b.classList.remove("active"));button.classList.add("active");loadCameraControls(button.dataset.cameraSelect);refreshCameraSnapshot(button.dataset.cameraSelect); }));
+      document.querySelectorAll("[data-camera-select]").forEach((button) => button.addEventListener("click", () => { stopCameraLive();document.querySelectorAll("[data-camera-select]").forEach((b)=>b.classList.remove("active"));button.classList.add("active");loadCameraControls(button.dataset.cameraSelect);refreshCameraSnapshot(button.dataset.cameraSelect); }));
       if (selected) { await loadCameraControls(selected); refreshCameraSnapshot(selected); }
     } catch (error) {
       statusText.textContent = `KAMERA FEHLER: ${error.message}`;
@@ -183,8 +223,14 @@
   byId("fritzCancelBtn")?.addEventListener("click", () => byId("fritzLoginDialog")?.close());
   byId("cameraRefreshBtn")?.addEventListener("click", loadCamera);
   byId("cameraSnapshotBtn")?.addEventListener("click", () => { const selected=document.querySelector("[data-camera-select].active")?.dataset.cameraSelect; if(selected) refreshCameraSnapshot(selected); });
+  byId("cameraLiveBtn")?.addEventListener("click", toggleCameraLive);
 
-  loadNetworkStatus();
-  checkFritzPresence();
-  loadCamera();
+  window.addEventListener("gc:view", (event) => {
+    if (event.detail.id !== "camera") stopCameraLive();
+    if (event.detail.id === "camera") loadCamera();
+    if (event.detail.id === "network") { loadNetworkStatus(); checkFritzPresence(); }
+    if (event.detail.id === "system") loadSystemIdentity();
+  });
+
+  loadSystemIdentity();
 })();

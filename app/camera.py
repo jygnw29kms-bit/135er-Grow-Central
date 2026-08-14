@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.audit import append_audit
@@ -24,6 +25,7 @@ from app.security import require_write_auth
 router = APIRouter(prefix="/api/v1/camera", tags=["camera"])
 CONTROL_RE = re.compile(r"^\s*([a-zA-Z0-9_]+)\s+0x[0-9a-fA-F]+\s+\(([^)]+)\)\s*:\s*(.*)$")
 PAIR_RE = re.compile(r"([a-zA-Z_]+)=(-?\d+)")
+STREAM_LOCK = asyncio.Lock()
 
 
 class CameraControlRequest(BaseModel):
@@ -257,3 +259,61 @@ async def camera_snapshot(camera_id: str | None = None):
         media_type="image/jpeg",
         headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device},
     )
+
+
+async def _mjpeg_stream(camera_id: str | None):
+    resolved_id, device = _resolve_camera(camera_id)
+    process = None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", "640x480", "-framerate", "10",
+            "-i", device, "-an", "-c:v", "copy", "-f", "mpjpeg", "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        if process.stdout is None:
+            return
+        while chunk := await process.stdout.read(64 * 1024):
+            yield chunk
+    finally:
+        if process is not None and process.returncode is None:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+            else:
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+        if STREAM_LOCK.locked():
+            STREAM_LOCK.release()
+        append_audit("camera.stream.closed", camera_id=resolved_id)
+
+
+@router.get("/stream")
+async def camera_stream(camera_id: str | None = None):
+    if os.getenv("GC_CAMERA_ENABLED", "true").lower() != "true":
+        raise HTTPException(503, "camera disabled")
+    try:
+        resolved_id, device = _resolve_camera(camera_id)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    if not os.access(device, os.R_OK):
+        raise HTTPException(403, f"camera device is not readable: {device}")
+    try:
+        await asyncio.wait_for(STREAM_LOCK.acquire(), timeout=0.05)
+    except asyncio.TimeoutError:
+        raise HTTPException(409, "Es läuft bereits ein Kamera-Livebild")
+    append_audit("camera.stream.opened", camera_id=resolved_id)
+    try:
+        return StreamingResponse(
+            _mjpeg_stream(resolved_id),
+            media_type="multipart/x-mixed-replace; boundary=ffmpeg",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-GrowCentral-Camera": resolved_id},
+        )
+    except Exception:
+        STREAM_LOCK.release()
+        raise

@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#05090e">
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/app.css?v=0.9.2">
-<link rel="stylesheet" href="/static/device_extensions.css?v=0.7.5">
+<link rel="stylesheet" href="/static/app.css?v=0.9.6">
+<link rel="stylesheet" href="/static/device_extensions.css?v=0.7.6">
 </head>
 <body>
 <a class="skip-link" href="#dashboard">Zum Inhalt / Skip to content</a>
@@ -82,7 +82,7 @@
     </section>
 
     <section id="camera" class="view">
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">LOCAL UVC / V4L2 CAMERA</div><h2>Kamera</h2><p class="panel-copy">Referenzhardware: Logitech C920 direkt am Raspberry Pi. Andere kompatible UVC-Kameras werden ebenfalls erkannt und bekommen nur die Funktionen angezeigt, die sie selbst melden.</p></div><div class="button-row"><button class="ghost" id="cameraRefreshBtn">NEU ERKENNEN</button><button class="secondary" id="cameraSnapshotBtn">SNAPSHOT</button></div></div><div id="cameraStatusText" class="scan-status">Kamera wird geprüft…</div><div class="camera-layout"><div id="cameraDeviceList" class="camera-device-list"><div class="empty-state">Suche /dev/video*…</div></div><div class="camera-preview"><img id="cameraSnapshot" alt="Kamera-Testbild"><div id="cameraControls" class="camera-controls"><div class="empty-state">Kamerafunktionen werden geladen…</div></div></div></div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">LOCAL UVC / V4L2 CAMERA</div><h2>Kamera</h2><p class="panel-copy">Referenzhardware: Logitech C920 direkt am Raspberry Pi. Das sparsame MJPEG-Livebild wird bewusst nur auf Knopfdruck gestartet.</p></div><div class="button-row"><button class="ghost" id="cameraRefreshBtn">NEU ERKENNEN</button><button class="secondary" id="cameraSnapshotBtn">SNAPSHOT</button><button class="primary" id="cameraLiveBtn">LIVEBILD STARTEN</button></div></div><div id="cameraStatusText" class="scan-status">Kamera wird geprüft…</div><div class="camera-layout"><div id="cameraDeviceList" class="camera-device-list"><div class="empty-state">Suche /dev/video*…</div></div><div class="camera-preview"><img id="cameraSnapshot" alt="Kamera-Testbild"><div id="cameraControls" class="camera-controls"><div class="empty-state">Kamerafunktionen werden geladen…</div></div></div></div></article>
     </section>
 
     <section id="automation" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">AUTOMATION ENGINE</div><h2>Rules & Control Logic</h2></div></div><div class="empty-state">Automation bleibt getrennt von manuellen Gerätebefehlen.</div></article></section>
@@ -107,7 +107,7 @@
           <button class="primary" id="firstBootSubmitBtn" type="submit">KONFIGURATION SPEICHERN UND PRÜFEN</button>
         </form>
       </article>
-      <article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Platform</span><strong>Raspberry Pi 3B</strong></div><div><span>Version</span><strong>alpha-0.7.5</strong></div><div><span>Interne Domain</span><strong>135er-Grow-Central.local</strong></div><div><span>Frontend</span><strong>Authenticated Responsive HUD</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>FRITZ! + Tapo + Shelly + HA</strong></div><div><span>Camera</span><strong>UVC/V4L2 · C920 reference</strong></div><div><span>Security</span><strong>GUI Session + Write Gates + Audit</strong></div></div><div class="system-actions"><button class="secondary" id="restartSetupBtn">SETUP ERNEUT AUSFÜHREN</button><button class="primary" id="createSupportBundleBtn">SUPPORT-DATEI ERSTELLEN</button><a class="ghost button-link" id="downloadSupportBundleBtn" href="/api/v1/diagnostics/bundle/download" hidden>SUPPORT-DATEI LADEN</a></div><div id="supportBundleStatus" class="scan-status">Supportstatus wird geladen…</div></article>
+      <article class="panel"><div class="panel-head"><div><div class="eyebrow">SYSTEM CORE</div><h2>135er-Grow Central</h2></div></div><div class="system-grid"><div><span>Raspberry Pi</span><strong id="systemPiModel">Wird erkannt…</strong></div><div><span>Version / Build</span><strong id="systemBuildVersion">Wird geladen…</strong></div><div><span>Interne Domain</span><strong id="systemDomain">135er-Grow-Central.local</strong></div><div><span>Kernel / Architektur</span><strong id="systemKernel">Wird geladen…</strong></div><div><span>Backend</span><strong>FastAPI</strong></div><div><span>Smart Home</span><strong>FRITZ! + Tapo + Shelly + HA</strong></div><div><span>Kamera</span><strong>UVC/V4L2 · MJPEG Live</strong></div><div><span>Sicherheit</span><strong>GUI Session + Write Gates + Audit</strong></div></div><div class="system-actions"><button class="secondary" id="restartSetupBtn">SETUP ERNEUT AUSFÜHREN</button><button class="primary" id="createSupportBundleBtn">SUPPORT-DATEI ERSTELLEN</button><a class="ghost button-link" id="downloadSupportBundleBtn" href="/api/v1/diagnostics/bundle/download" hidden>SUPPORT-DATEI LADEN</a></div><div id="supportBundleStatus" class="scan-status">Supportstatus wird geladen…</div></article>
       <article class="panel diagnostics-console"><div class="panel-head"><div><div class="eyebrow">DEVELOPMENT DIAGNOSTICS</div><h2>Raspberry-Pi-Dienstprotokolle</h2></div><button class="primary" id="loadDiagnosticsBtn">DIAGNOSE LADEN</button></div><pre id="systemDiagnostics">Noch keine Diagnose geladen.</pre></article>
     </section>
   </main>
@@ -115,7 +115,7 @@
 
 <dialog id="fritzLoginDialog" class="dialog-panel"><form id="fritzLoginForm" method="dialog"><h2>FRITZ!Box erkannt</h2><p>Bitte Zugangsdaten des eigens für Grow Central angelegten FRITZ!Box-Benutzers eingeben. Danach werden Smart-Home-Geräte automatisch gelesen und importiert.</p><label>FRITZ!Box<input id="fritzHost" value="fritz.box" required></label><label>Benutzer<input id="fritzUsername" autocomplete="username" required></label><label>Passwort<input id="fritzPassword" type="password" autocomplete="current-password" required></label><div id="fritzLoginStatus" class="scan-status"></div><div class="button-row"><button class="primary" type="submit">ANMELDEN & IMPORTIEREN</button><button class="ghost" type="button" id="fritzCancelBtn">SPÄTER</button></div></form></dialog>
 
-<script src="/static/app.js?v=0.9.5"></script>
-<script src="/static/device_extensions.js?v=0.7.5"></script>
+<script src="/static/app.js?v=0.9.6"></script>
+<script src="/static/device_extensions.js?v=0.7.6"></script>
 </body>
 </html>
