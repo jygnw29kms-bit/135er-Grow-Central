@@ -37,16 +37,18 @@ API/application token: test
 Cloud token: test
 ```
 
-The setup portal requires a new `GrowCentral` password of at least twelve characters before the main system can start.
+The normal main GUI is available from first boot. Its System section requires new system and GUI passwords of at least twelve characters.
 
 ## First-boot web provisioning
 
 1. After the first boot, join `135er-GrowCentral-Setup-XXXX`. The four-character suffix comes from the Pi WLAN MAC address.
 2. Use the temporary WLAN key `grow-central-test`.
-3. Open `https://10.42.0.1` and accept the locally generated device certificate once.
-4. Sign in with `GrowCentral` / `grow-central-test`. PAM verifies these credentials against the real system user.
-5. Select target WLAN or LAN, hostname, timezone and a new `GrowCentral` password.
-6. After a successful connection check, the setup access point stops and the main service starts.
+3. Open `http://10.42.0.1:8080`.
+4. Sign in to the main GUI with `GrowCentral` / `grow-central-test` and open **System**.
+5. Select WLAN or LAN, timezone and new system/GUI credentials. Enter the SSID manually when the active Pi 3B AP cannot scan.
+6. After network, GUI and mDNS validation, the setup AP stops; the fixed URL is `http://135er-Grow-Central.local:8080`.
+
+Always attach `Grow-Central-Support-latest.tar.gz` from **System** to a problem report. First-boot and service failures also create it automatically.
 
 If the target WLAN connection fails, the setup access point is restored automatically. Target WLAN passwords are stored only in NetworkManager's root-protected configuration and are never logged.
 

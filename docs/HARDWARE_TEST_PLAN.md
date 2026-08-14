@@ -24,16 +24,17 @@ Am bisherigen Image wurden die ersten Boot-/Grundfunktionen als gut gemeldet. Bl
 
 1. Image frisch flashen; keine Dateien manuell ändern.
 2. Setup-AP `135er-GrowCentral-Setup-XXXX` verbinden.
-3. `https://10.42.0.1` öffnen.
-4. Mit temporärem Benutzer `GrowCentral` und Factory-Passwort anmelden.
+3. `http://10.42.0.1:8080` öffnen.
+4. Mit temporärem Benutzer `GrowCentral` und Factory-Passwort an der normalen GUI anmelden und System öffnen.
 5. **Systempasswort zwingend ändern.**
 6. Bei aktivem Ethernet muss LAN automatisch erkannt werden.
-7. Ohne LAN muss eine WLAN-Liste erscheinen; WLAN auswählen und verbinden.
+7. Ohne LAN WLAN wählen; während des aktiven Pi-3B-APs muss die SSID manuell eingebbar sein.
 8. Optional FRITZ!Box aktivieren und den dafür angelegten FRITZ!-Benutzer eingeben.
 9. **Separaten GUI-Benutzer und GUI-Passwort zwingend anlegen.**
 10. Setup abschließen.
 11. Prüfen, dass die normale GUI danach nur mit dem neu angelegten GUI-Login erreichbar ist.
 12. Reboot durchführen und Login erneut prüfen.
+13. Unter System `Grow-Central-Support-latest.tar.gz` erzeugen, herunterladen und auf vollständige Schwärzung prüfen.
 
 ### Akzeptanz
 

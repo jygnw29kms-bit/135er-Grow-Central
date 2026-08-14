@@ -127,8 +127,20 @@ jobs:
 
           if ! id growcentral >/dev/null 2>&1; then useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral; fi
           for g in bluetooth video netdev; do getent group "$g" >/dev/null && usermod -aG "$g" growcentral || true; done
+          usermod -aG growcentral GrowCentral
           install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
           install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
+          install -d -o root -g growcentral -m 0750 /var/lib/135er-grow-central/support
+          install -d -o root -g systemd-journal -m 2755 /var/log/journal
+          mkdir -p /etc/systemd/journald.conf.d
+          cat >/etc/systemd/journald.conf.d/20-grow-central-persistent.conf <<'EOF'
+          [Journal]
+          Storage=persistent
+          Compress=yes
+          Seal=yes
+          SystemMaxUse=150M
+          MaxRetentionSec=14day
+          EOF
 
           cd /opt/135er-grow-central
           python3 -m venv .venv
@@ -152,6 +164,8 @@ jobs:
           GC_CAMERA_ENABLED=true
           GC_CAMERA_DEVICE=
           EOF
+          GUI_PASSWORD_HASH="$(.venv/bin/python -c "from app.gui_auth import hash_password; print(hash_password('grow-central-test'))")"
+          printf 'GC_GUI_USERNAME=GrowCentral\nGC_GUI_PASSWORD_HASH=%s\n' "$GUI_PASSWORD_HASH" >>.env
           chown -R root:growcentral /opt/135er-grow-central
           chmod -R g+rX /opt/135er-grow-central
           chmod 0640 /opt/135er-grow-central/.env
@@ -163,6 +177,7 @@ jobs:
           Description=135er-Grow Central Local
           After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-setup-ap.service
           Wants=network-online.target bluetooth.target grow-central-setup-ap.service
+          OnFailure=grow-central-support-on-failure@%n.service
           [Service]
           Type=simple
           User=growcentral
@@ -199,6 +214,7 @@ jobs:
           [Unit]
           Description=Verify and recover the Grow Central web interface
           After=135er-grow-central.service
+          OnFailure=grow-central-support-on-failure@%n.service
           [Service]
           Type=oneshot
           ExecStart=/usr/local/sbin/grow-central-healthcheck.sh
@@ -285,13 +301,14 @@ jobs:
 
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh /usr/local/sbin/grow-central-setup-ap.sh
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/apply_setup.py /usr/local/sbin/grow-central-apply-setup.py
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot-debug.sh /usr/local/sbin/grow-central-support-bundle
 
           cat >/etc/systemd/system/grow-central-setup-ap.service <<'EOF'
           [Unit]
           Description=Prepare the first-boot access point
           After=NetworkManager.service grow-central-firstboot-firewall.service
           Wants=NetworkManager.service
-          ConditionPathExists=/opt/135er-grow-central/web/setup.html
+          ConditionPathExists=!/var/lib/135er-grow-central/.provisioned
           [Service]
           Type=oneshot
           ExecStart=/usr/local/sbin/grow-central-setup-ap.sh
@@ -303,7 +320,6 @@ jobs:
           cat >/etc/systemd/system/grow-central-apply-setup.path <<'EOF'
           [Unit]
           Description=Watch for submitted Grow Central first-boot configuration
-          ConditionPathExists=/opt/135er-grow-central/web/setup.html
           [Path]
           PathExists=/var/lib/135er-grow-central/setup-pending.json
           Unit=grow-central-apply-setup.service
@@ -315,9 +331,59 @@ jobs:
           [Unit]
           Description=Validate and apply Grow Central first-boot configuration
           After=NetworkManager.service
+          OnFailure=grow-central-support-on-failure@%n.service
           [Service]
           Type=oneshot
           ExecStart=/usr/local/sbin/grow-central-apply-setup.py
+          EOF
+
+          cat >/etc/systemd/system/grow-central-firstboot-debug.service <<'EOF'
+          [Unit]
+          Description=Record the complete 135er-Grow Central first-boot transition
+          Wants=NetworkManager.service avahi-daemon.service 135er-grow-central.service
+          After=NetworkManager.service
+          ConditionPathExists=!/var/lib/135er-grow-central/.firstboot-debug-complete
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/sbin/grow-central-support-bundle --boot-watch
+          Environment=GC_DEBUG_WATCH_SECONDS=3600
+          TimeoutStopSec=30
+          KillMode=control-group
+          Nice=10
+          IOSchedulingClass=best-effort
+          IOSchedulingPriority=7
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          cat >/etc/systemd/system/grow-central-support-bundle.path <<'EOF'
+          [Unit]
+          Description=Watch for Grow Central support-bundle requests
+          [Path]
+          PathChanged=/var/lib/135er-grow-central/support-bundle-request
+          Unit=grow-central-support-bundle.service
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          cat >/etc/systemd/system/grow-central-support-bundle.service <<'EOF'
+          [Unit]
+          Description=Create a redacted Grow Central support bundle
+          After=local-fs.target
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-support-bundle --snapshot
+          ExecStartPost=/usr/bin/rm -f /var/lib/135er-grow-central/support-bundle-request
+          TimeoutStartSec=300
+          Nice=10
+          EOF
+
+          cat >/etc/systemd/system/grow-central-support-on-failure@.service <<'EOF'
+          [Unit]
+          Description=Queue Grow Central support bundle after %i failure
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/touch /var/lib/135er-grow-central/support-bundle-request
           EOF
 
           THEME=/usr/share/plymouth/themes/135er-grow-central
@@ -366,7 +432,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path 135er-grow-central.service grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           id GrowCentral
@@ -377,6 +443,8 @@ jobs:
           test "$(systemctl is-enabled grow-central-headless-firstboot.service)" = enabled
           test "$(systemctl is-enabled grow-central-setup-ap.service)" = enabled
           test "$(systemctl is-enabled grow-central-apply-setup.path)" = enabled
+          test "$(systemctl is-enabled grow-central-firstboot-debug.service)" = enabled
+          test "$(systemctl is-enabled grow-central-support-bundle.path)" = enabled
           test "$(systemctl is-enabled ssh.service)" = enabled
           test "$(systemctl is-enabled avahi-daemon.service)" = enabled
           mkdir -p /run/sshd
@@ -388,10 +456,15 @@ jobs:
           grep -q '^SupplementaryGroups=systemd-journal video netdev$' /etc/systemd/system/135er-grow-central.service
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
-          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service
+          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
+          /bin/bash -n /usr/local/sbin/grow-central-support-bundle
+          grep -q '^Storage=persistent$' /etc/systemd/journald.conf.d/20-grow-central-persistent.conf
+          id -nG GrowCentral | grep -qw growcentral
+          grep -q '^GC_GUI_USERNAME=GrowCentral$' /opt/135er-grow-central/.env
+          grep -q '^GC_GUI_PASSWORD_HASH=pbkdf2_sha256\$' /opt/135er-grow-central/.env
           command -v ffmpeg
           command -v v4l2-ctl
           grep -qx 'LANG=de_DE.UTF-8' /etc/default/locale
@@ -421,10 +494,11 @@ jobs:
           Hostname: 135er-grow-central
           First boot AP: 135er-GrowCentral-Setup-XXXX
           Setup AP key: grow-central-test
-          Setup portal: https://10.42.0.1
-          Setup login: GrowCentral / grow-central-test
-          First boot requires: new system password, LAN/WLAN, optional FRITZ! user, GUI username/password
-          Web UI after setup: http://<PI-IP>:8080 (GUI login required)
+          First GUI: http://10.42.0.1:8080
+          Initial GUI login: GrowCentral / grow-central-test
+          Setup: Haupt-GUI > System (new system password, LAN/WLAN, GUI credentials)
+          Permanent URL: http://135er-Grow-Central.local:8080
+          Support file: /var/lib/135er-grow-central/support/Grow-Central-Support-latest.tar.gz
           Camera: Logitech C920 / UVC test panel in GUI
           Temporary API token for test clients: test
           DF100M BLE writes and remote cloud commands are disabled by default.
@@ -523,13 +597,14 @@ jobs:
           Hostname: 135er-grow-central
           First boot AP: 135er-GrowCentral-Setup-XXXX
           Setup AP key: grow-central-test
-          Setup portal: https://10.42.0.1
-          Setup login: GrowCentral / grow-central-test
-          Required: change the system password during first boot
-          Required: create a separate Grow Central GUI username/password
-          Network: LAN detected automatically, otherwise select WLAN from scan list
+          First GUI: http://10.42.0.1:8080
+          Initial GUI login: GrowCentral / grow-central-test
+          Setup location: authenticated main GUI > System
+          Required: change system and GUI passwords during first boot
+          Network: LAN is detected; during the Pi 3B setup AP enter the home SSID manually if scanning is unavailable
           FRITZ!: optional dedicated GrowCentral FRITZ!Box user for Smart Home import
-          Web UI after setup: http://<PI-IP>:8080 (GUI login required)
+          Permanent URL: http://135er-Grow-Central.local:8080
+          Support bundle: GUI > System or /var/lib/135er-grow-central/support/Grow-Central-Support-latest.tar.gz
           Camera panel: Logitech C920 / compatible UVC cameras
           Temporary API token for test clients: test
           BLE device writes: disabled
@@ -552,4 +627,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi3-test-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. First boot requires password and GUI credentials, configures LAN/WLAN, can store a dedicated FRITZ!Box Smart Home user, protects the GUI/API with login sessions, exposes network management after login, and includes directly testable Logitech C920/UVC camera detection, snapshots and V4L2 controls." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. The authenticated main GUI is available from first boot, setup runs under System, the permanent local domain is 135er-Grow-Central.local, runtime readiness is retried safely, and a redacted support bundle with persistent multi-boot diagnostics is created automatically for first-boot and service failures or manually from the GUI." --prerelease

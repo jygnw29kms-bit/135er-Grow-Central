@@ -9,6 +9,10 @@ CERT_DIR="/etc/135er-grow-central"
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
+if nmcli -t -f NAME,DEVICE connection show --active | grep -Fxq "grow-central-uplink:wlan0"; then
+  exit 0
+fi
+
 nmcli radio wifi on
 if ! nmcli -t -f NAME connection show | grep -Fxq "$CONNECTION"; then
   MAC_SUFFIX="$(cat /sys/class/net/wlan0/address | tr -d ':' | tail -c 5 | tr '[:lower:]' '[:upper:]')"

@@ -37,16 +37,18 @@ API-/App-Token: test
 Cloud-Token: test
 ```
 
-Das Setup-Portal verlangt vor dem Start des Hauptsystems ein neues `GrowCentral`-Passwort mit mindestens zwölf Zeichen.
+Die normale Haupt-GUI ist ab dem ersten Boot verfügbar. Ihre System-Seite verlangt neue System- und GUI-Passwörter mit mindestens zwölf Zeichen.
 
 ## Web-Ersteinrichtung
 
 1. Nach dem ersten Start das WLAN `135er-GrowCentral-Setup-XXXX` auswählen. Die vier Schlusszeichen stammen aus der WLAN-MAC-Adresse des Pi.
 2. Mit dem temporären WLAN-Schlüssel `grow-central-test` verbinden.
-3. `https://10.42.0.1` öffnen und das lokal erzeugte Gerätezertifikat einmalig bestätigen.
-4. Mit `GrowCentral` / `grow-central-test` anmelden. Das Portal prüft diese Daten direkt über PAM gegen den Systembenutzer.
-5. Ziel-WLAN oder LAN, Hostname, Zeitzone und ein neues `GrowCentral`-Passwort eintragen.
-6. Nach erfolgreicher Verbindungsprüfung wird der Setup-Zugangspunkt deaktiviert und das Hauptsystem gestartet.
+3. `http://10.42.0.1:8080` öffnen.
+4. Mit `GrowCentral` / `grow-central-test` an der Haupt-GUI anmelden und **System** öffnen.
+5. Ziel-WLAN oder LAN, Zeitzone sowie neue System- und GUI-Zugangsdaten eintragen. Beim aktiven Pi-3B-AP die SSID nötigenfalls manuell eingeben.
+6. Nach erfolgreicher Netzwerk-, GUI- und mDNS-Prüfung wird der Setup-Zugangspunkt deaktiviert; die feste Adresse ist `http://135er-Grow-Central.local:8080`.
+
+Bei Problemen immer die unter **System** erzeugbare Datei `Grow-Central-Support-latest.tar.gz` mitsenden. Das Image erstellt sie bei First-Boot- und Dienstfehlern auch automatisch.
 
 Bei einer fehlgeschlagenen WLAN-Verbindung wird der Setup-Zugangspunkt automatisch wiederhergestellt. Ziel-WLAN-Passwörter werden nur in der rootgeschützten NetworkManager-Konfiguration gespeichert und nicht protokolliert.
 

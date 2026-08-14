@@ -49,4 +49,4 @@
 - [Cloud](CLOUD.md)
 - [Installation](INSTALLATION.md)
 
-On first boot, the test image starts the protected `135er-GrowCentral-Setup-XXXX` access point. The temporary `GrowCentral` / `grow-central-test` credentials apply to WLAN, portal and SSH; the portal requires a new device password before the main system starts. Application tokens remain `test` during hardware validation and must be replaced before production use.
+On first boot, the test image starts the protected `135er-GrowCentral-Setup-XXXX` access point. The temporary `GrowCentral` / `grow-central-test` credentials apply to WLAN, SSH and the normal GUI at `http://10.42.0.1:8080`; setup runs in its System section and the fixed post-setup URL is `http://135er-Grow-Central.local:8080`. Application tokens remain `test` during hardware validation and must be replaced before production use. Persistent multi-boot logs and automatic/manual redacted support bundles are available for every problem report.

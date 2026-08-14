@@ -4,17 +4,16 @@ from __future__ import annotations
 import json
 import os
 import re
-import secrets
 import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, SecretStr
 
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
-SETUP_FILE = Path(__file__).resolve().parent.parent / "web" / "setup.html"
-HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
+MARKER = STATE_DIR / ".provisioned"
+FIXED_HOSTNAME = "135er-grow-central"
 GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
 
@@ -22,10 +21,7 @@ router = APIRouter(prefix="/api/setup", tags=["firstboot"])
 
 
 class SetupBody(BaseModel):
-    setup_username: str
-    setup_password: SecretStr
     mode: str
-    hostname: str
     timezone: str
     ssid: str = ""
     wifi_password: SecretStr = SecretStr("")
@@ -39,7 +35,7 @@ class SetupBody(BaseModel):
 
 
 def setup_active() -> bool:
-    return SETUP_FILE.is_file()
+    return not MARKER.is_file()
 
 
 def _command(*arguments: str, timeout: int = 15) -> subprocess.CompletedProcess[str]:
@@ -98,7 +94,28 @@ async def networks():
         fields = re.split(r"(?<!\\):", line)
         if len(fields) == 3 and fields[0] and not fields[0].startswith("135er-GrowCentral-Setup-"):
             rows.append({"ssid": fields[0].replace(r"\:", ":"), "signal": fields[1], "security": fields[2]})
-    return {"networks": rows}
+    active = _command("nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active")
+    setup_ap_active = "grow-central-setup-ap:wlan0" in active.stdout.splitlines()
+    return {
+        "networks": rows,
+        "setup_ap_active": setup_ap_active,
+        "manual_ssid_required": setup_ap_active and not rows,
+        "message": (
+            "Der Raspberry Pi 3B kann während des aktiven Setup-APs keine anderen WLANs zuverlässig anzeigen. "
+            "Bitte die SSID manuell eintragen."
+            if setup_ap_active and not rows else ""
+        ),
+    }
+
+
+@router.post("/restart")
+async def restart_setup():
+    if PENDING_FILE.exists():
+        raise HTTPException(409, "Setup wird bereits geprüft")
+    MARKER.unlink(missing_ok=True)
+    (STATE_DIR / "setup-last-error").unlink(missing_ok=True)
+    (STATE_DIR / "setup-last-warning").unlink(missing_ok=True)
+    return {"ok": True, "setup_required": True}
 
 
 @router.post("")
@@ -107,12 +124,10 @@ async def apply(body: SetupBody):
         raise HTTPException(409, "Setup bereits abgeschlossen")
     if PENDING_FILE.exists():
         raise HTTPException(409, "Setup wird bereits geprüft")
-    if not secrets.compare_digest(body.setup_username, "GrowCentral") or not secrets.compare_digest(body.setup_password.get_secret_value(), "grow-central-test"):
-        raise HTTPException(401, "Temporäre Zugangsdaten falsch")
     if body.mode not in {"wifi", "ethernet"}:
         raise HTTPException(422, "Ungültiger Netzwerkmodus")
-    if not HOSTNAME_RE.fullmatch(body.hostname.lower()) or body.timezone not in TIMEZONES:
-        raise HTTPException(422, "Hostname oder Zeitzone ungültig")
+    if body.timezone not in TIMEZONES:
+        raise HTTPException(422, "Zeitzone ungültig")
     if len(body.new_password.get_secret_value()) < 12 or not GUI_USER_RE.fullmatch(body.gui_username) or len(body.gui_password.get_secret_value()) < 12:
         raise HTTPException(422, "System- und GUI-Passwort müssen mindestens 12 Zeichen haben")
     if body.mode == "wifi" and (not 1 <= len(body.ssid.encode()) <= 32 or (body.wifi_password.get_secret_value() and not 8 <= len(body.wifi_password.get_secret_value()) <= 63)):
@@ -120,7 +135,7 @@ async def apply(body: SetupBody):
     if body.fritz_enabled and not (body.fritz_host and body.fritz_username and body.fritz_password.get_secret_value()):
         raise HTTPException(422, "FRITZ!-Zugangsdaten unvollständig")
     config = {
-        "mode": body.mode, "hostname": body.hostname.lower(), "timezone": body.timezone,
+        "mode": body.mode, "hostname": FIXED_HOSTNAME, "timezone": body.timezone,
         "ssid": body.ssid, "wifi_password": body.wifi_password.get_secret_value(),
         "new_password": body.new_password.get_secret_value(), "gui_username": body.gui_username,
         "gui_password": body.gui_password.get_secret_value(), "fritz_enabled": "1" if body.fritz_enabled else "0",

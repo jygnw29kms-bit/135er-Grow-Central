@@ -17,27 +17,31 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 
 **These credentials are intentionally temporary and insecure.**
 
-- Hostname: `grow-central-test`
+- Hostname/domain: `135er-grow-central` / `135er-Grow-Central.local`
 - SSH user: `GrowCentral`
 - SSH password: `grow-central-test`
 - Locale/timezone: `de_DE.UTF-8`, `Europe/Berlin`
 - Keyboard: German (`de`), variant `nodeadkeys`
 - Interactive first-boot user setup: disabled
 - Grow Central/API token: `test`
-- Web UI: `http://<PI-IP>:8080`
+- First and permanent Web UI: `http://10.42.0.1:8080` / `http://135er-Grow-Central.local:8080`
 
-The same temporary credentials protect the setup WLAN and authenticate the web portal. The portal requires a new password with at least 12 characters before completing setup.
+The same temporary credentials protect the setup WLAN and authenticate the normal main GUI. Setup is embedded in its System section and requires new system and GUI passwords with at least 12 characters.
 
 ## First-boot web setup / Web-Ersteinrichtung
 
 1. Flash the image and start the Raspberry Pi.
 2. Join `135er-GrowCentral-Setup-XXXX` with WLAN key `grow-central-test`.
-3. Open `https://10.42.0.1` and accept the local device certificate once.
+3. Open `http://10.42.0.1:8080`.
 4. Sign in as `GrowCentral` with password `grow-central-test`.
-5. Select WLAN or LAN, set hostname/timezone and choose a new GrowCentral password.
-6. After a successful connection test, the setup AP stops and the main service starts.
+5. Open **System**, select LAN or WLAN, keep the fixed hostname and choose new system/GUI passwords. Enter the SSID manually if the Pi 3B cannot scan while its AP is active.
+6. After network, DNS, GUI and mDNS readiness checks, the setup AP stops. Runtime health is retried for up to 60 seconds before failure recovery begins.
 
 DE: Schlägt die Verbindung zum gewählten WLAN fehl, wird der Setup-Zugangspunkt automatisch wieder aktiviert. EN: If the selected WLAN cannot be reached, the setup access point is restored automatically.
+
+## Support bundle
+
+Persistent, size-limited journals survive reboots. First boot and systemd failures automatically create `/var/lib/135er-grow-central/support/Grow-Central-Support-latest.tar.gz`; the authenticated GUI can generate and download a new bundle under **System**. Always attach this redacted archive to a problem report.
 
 ## Safe defaults
 

@@ -22,22 +22,24 @@ http://<PI-IP>:8080
 ## Temporäre Zugangsdaten
 
 ```text
-Hostname: grow-central-test
+Hostname: 135er-grow-central
 Benutzer: GrowCentral
 Passwort: grow-central-test
 API-/App-Token: test
 Cloud-Token: test
 ```
 
-**Nur für den Erststart.** Das Portal verlangt vor dem Start des Hauptsystems ein neues Passwort mit mindestens zwölf Zeichen.
+**Nur für den Erststart.** Die Haupt-GUI verlangt unter System neue System- und GUI-Passwörter mit mindestens zwölf Zeichen.
 
 ## Erster Start
 
 1. Mit `135er-GrowCentral-Setup-XXXX` verbinden; WLAN-Schlüssel: `grow-central-test`.
-2. `https://10.42.0.1` öffnen und das lokale Zertifikat bestätigen.
-3. Als `GrowCentral` mit `grow-central-test` anmelden.
-4. Ziel-WLAN oder LAN, Hostname, Zeitzone und neues Passwort festlegen.
-5. Nach erfolgreicher Prüfung beendet sich der Setup-Modus und Grow Central startet.
+2. `http://10.42.0.1:8080` öffnen.
+3. Als `GrowCentral` mit `grow-central-test` an der Haupt-GUI anmelden und System öffnen.
+4. Ziel-WLAN oder LAN, Zeitzone und neue System-/GUI-Passwörter festlegen; SSID beim aktiven AP nötigenfalls manuell eingeben.
+5. Nach erfolgreicher Prüfung ist die GUI unter `http://135er-Grow-Central.local:8080` erreichbar.
+
+Bei Problemen immer `Grow-Central-Support-latest.tar.gz` aus System mitsenden.
 
 Schlägt die WLAN-Verbindung fehl, wird der Setup-Zugangspunkt automatisch wieder aktiviert.
 

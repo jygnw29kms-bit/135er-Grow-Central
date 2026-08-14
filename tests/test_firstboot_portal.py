@@ -17,7 +17,7 @@ APPLY_SPEC.loader.exec_module(apply_setup)
 def valid_form():
     return {
         "mode": "wifi",
-        "hostname": "grow-central",
+        "hostname": "135er-grow-central",
         "timezone": "Europe/Berlin",
         "ssid": "Werkstatt WLAN",
         "wifi_password": "sicheres-wlan-passwort",
@@ -87,32 +87,50 @@ def test_image_workflow_is_synchronized_to_alpha_075():
     assert "SupplementaryGroups=systemd-journal video netdev" in workflow
     assert "grow-central-apply-setup.path" in workflow
     assert "grow-central-setup-ap.service" in workflow
+    assert "grow-central-firstboot-debug.service" in workflow
+    assert "grow-central-support-bundle.path" in workflow
+    assert "Storage=persistent" in workflow
 
 
-def test_setup_file_is_deleted_only_after_runtime_health_check():
+def test_setup_completion_marker_is_written_only_after_runtime_and_password_change():
     source = APPLY_PATH.read_text(encoding="utf-8")
-    assert source.index("verify_runtime(network_address)") < source.index("SETUP_FILE.unlink()")
-    assert source.index("mark_provisioned()") < source.index("SETUP_FILE.unlink()")
+    main_source = source[source.index("def main()") :]
+    assert main_source.index("verify_runtime(network_address)") < main_source.index('run("chpasswd"')
+    assert main_source.index('run("chpasswd"') < main_source.index("mark_provisioned()")
+    assert "SETUP_FILE" not in source
 
 
-def test_setup_verifies_real_network_before_deleting_setup_file():
+def test_setup_verifies_real_network_and_retries_runtime():
     source = APPLY_PATH.read_text(encoding="utf-8")
     assert '"ip", "route", "show", "default"' in source
     assert '"getent", "ahostsv4", "www.debian.org"' in source
     assert '"curl", "--ipv4", "--interface", device' in source
     assert 'f"http://{target}:8080/api/health"' in source
+    assert "time.monotonic() + 60" in source
+    assert "restore_runtime_settings(previous_env)" in source
     main_source = source[source.index("def main()") :]
     assert main_source.index("ERROR_FILE.unlink(missing_ok=True)") < main_source.index("try:")
 
 
-def test_setup_page_uses_network_detection_and_wifi_scan():
-    page = (Path(__file__).parents[1] / "web" / "setup.html").read_text(encoding="utf-8")
-    assert "/api/setup/network-status" in page
-    assert "/api/setup/networks" in page
-    assert "LAN dauerhaft verwenden" in page
-    assert "Mit WLAN verbinden" in page
-    assert "previousError()" in page
-    assert "Letzter Setupversuch" in page
+def test_setup_is_integrated_into_authenticated_main_gui():
+    root = Path(__file__).parents[1]
+    page = (root / "web" / "index.html").read_text(encoding="utf-8")
+    script = (root / "web" / "app.js").read_text(encoding="utf-8")
+    assert not (root / "web" / "setup.html").exists()
+    assert 'id="firstBootSetupForm"' in page
+    assert 'id="restartSetupBtn"' in page
+    assert "135er-Grow-Central.local" in page
+    assert "/api/setup/network-status" in script
+    assert "/api/setup/networks" in script
+    assert "/api/setup/restart" in script
+
+
+def test_pi3_ap_scan_limitation_is_explicit_and_manual_ssid_remains_available():
+    source = (Path(__file__).parents[1] / "app" / "firstboot.py").read_text(encoding="utf-8")
+    page = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+    assert '"manual_ssid_required"' in source
+    assert "während des aktiven Setup-APs" in source
+    assert 'name="ssid"' in page
 
 
 def test_setup_error_is_readable_by_the_web_service():

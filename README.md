@@ -22,14 +22,18 @@
 
 ### alpha-0.7.5 – aktueller Zielstand
 
-Der neue First-Boot-Ablauf ist verbindlich:
+Der neue First-Boot-Ablauf findet direkt in der geschützten Haupt-GUI unter **System** statt:
 
 1. **Systempasswort ändern – Pflicht.** Das Factory-Passwort darf nicht in den normalen Betrieb übernommen werden.
 2. **Heimnetzwerk einrichten.** Aktives LAN wird automatisch erkannt. Ohne LAN zeigt das Setup eine WLAN-Liste und verlangt die Auswahl bzw. manuelle SSID.
 3. **FRITZ!Box optional anbinden.** Für Grow Central soll ein eigener FRITZ!Box-Benutzer mit den für Smart Home notwendigen Rechten verwendet werden.
 4. **Grow-Central-GUI absichern – Pflicht.** Ein separater GUI-Benutzer und ein mindestens 12 Zeichen langes GUI-Passwort werden eingerichtet. Danach schützt eine serverseitige Sitzung die lokale GUI und API.
 
-Das Setup-WLAN verwendet weiterhin `135er-GrowCentral-Setup-XXXX`, das Setup-Portal `https://10.42.0.1` und den temporären Factory-Zugang `GrowCentral / grow-central-test`. Der normale GUI-Zugang ist für Clients des Setup-Netzes gesperrt, bis die Einrichtung abgeschlossen ist.
+Das Setup-WLAN verwendet `135er-GrowCentral-Setup-XXXX`. Die normale GUI ist ab dem ersten Start unter `http://10.42.0.1:8080` mit dem temporären Zugang `GrowCentral / grow-central-test` verfügbar. Nach Abschluss bleibt die interne Domain fest `http://135er-Grow-Central.local:8080`. Da der einzelne WLAN-Chip des Raspberry Pi 3B während seines aktiven APs andere Netze nicht zuverlässig scannt, bleibt die manuelle SSID-Eingabe ausdrücklich verfügbar.
+
+### Dauerhafte Support-Diagnose
+
+Das Image speichert systemd-Journale begrenzt und komprimiert über mehrere Boots. First Boot und Dienstfehler erzeugen automatisch ein geschwärztes Support-Paket; unter **System → Support-Datei erstellen** kann jederzeit ein aktuelles Paket angefordert und heruntergeladen werden. Bei einer Fehlermeldung wird immer `Grow-Central-Support-latest.tar.gz` benötigt. Passwörter, Tokens, Cookies, PSKs und Hashwerte werden entfernt; technische Netzwerk- und Hardwarekennungen bleiben für die Analyse enthalten.
 
 ### Heimnetzwerk und FRITZ!SmartHome
 

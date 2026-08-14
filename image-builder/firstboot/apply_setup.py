@@ -20,10 +20,9 @@ MARKER = STATE_DIR / ".provisioned"
 ERROR_FILE = STATE_DIR / "setup-last-error"
 WARNING_FILE = STATE_DIR / "setup-last-warning"
 APP_ENV = Path("/opt/135er-grow-central/.env")
-SETUP_FILE = Path("/opt/135er-grow-central/web/setup.html")
+FIXED_HOSTNAME = "135er-grow-central"
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
-HOSTNAME_RE = re.compile(r"(?=^.{1,63}$)^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$")
 GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
 HOSTS_FILE = Path("/etc/hosts")
@@ -54,7 +53,7 @@ def update_hosts(hostname: str, hosts_file: Path = HOSTS_FILE) -> None:
 def validate(config: dict[str, str]) -> None:
     if config.get("mode") not in {"wifi", "ethernet"}:
         raise ValueError("invalid network mode")
-    if not HOSTNAME_RE.fullmatch(config.get("hostname", "")):
+    if config.get("hostname") != FIXED_HOSTNAME:
         raise ValueError("invalid hostname")
     if config.get("timezone") not in TIMEZONES:
         raise ValueError("invalid timezone")
@@ -111,6 +110,20 @@ def persist_runtime_settings(config: dict[str, str]) -> None:
         os.fsync(handle.fileno())
     growcentral_gid = grp.getgrnam("growcentral").gr_gid
     os.chown(temporary, 0, growcentral_gid)
+    os.replace(temporary, APP_ENV)
+
+
+def restore_runtime_settings(previous: bytes | None) -> None:
+    if previous is None:
+        APP_ENV.unlink(missing_ok=True)
+        return
+    temporary = APP_ENV.with_suffix(".env.rollback")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(previous)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.chown(temporary, 0, grp.getgrnam("growcentral").gr_gid)
     os.replace(temporary, APP_ENV)
 
 
@@ -230,13 +243,21 @@ def verify_network(device: str) -> str:
 
 
 def verify_runtime(address: str) -> None:
-    active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
-    if active.returncode != 0:
-        raise RuntimeError("Die geschützte Grow-Central-Oberfläche konnte nach dem Setup nicht gestartet werden.")
-    for target in ("127.0.0.1", address):
-        health = run("curl", "--fail", "--silent", "--max-time", "10", f"http://{target}:8080/api/health", check=False)
-        if health.returncode != 0:
-            raise RuntimeError(f"Die Grow-Central-Oberfläche antwortet über {target}:8080 nicht.")
+    deadline = time.monotonic() + 60
+    pending = {"127.0.0.1", address}
+    while time.monotonic() < deadline:
+        active = run("systemctl", "is-active", "135er-grow-central.service", check=False)
+        if active.returncode == 0:
+            for target in tuple(pending):
+                health = run("curl", "--fail", "--silent", "--max-time", "3", f"http://{target}:8080/api/health", check=False)
+                if health.returncode == 0:
+                    pending.discard(target)
+            if not pending:
+                break
+        time.sleep(2)
+    if pending:
+        targets = ", ".join(f"{target}:8080" for target in sorted(pending))
+        raise RuntimeError(f"Die Grow-Central-Oberfläche wurde innerhalb von 60 Sekunden nicht über {targets} erreichbar.")
     avahi = run("systemctl", "is-active", "avahi-daemon.service", check=False)
     if avahi.returncode != 0:
         raise RuntimeError("Die Erreichbarkeit über den lokalen Hostnamen konnte nicht aktiviert werden.")
@@ -248,8 +269,12 @@ def main() -> int:
     config = json.loads(PENDING_FILE.read_text(encoding="utf-8"))
     PENDING_FILE.unlink(missing_ok=True)
     ERROR_FILE.unlink(missing_ok=True)
+    previous_env = APP_ENV.read_bytes() if APP_ENV.exists() else None
+    runtime_settings_changed = False
+    system_credential = ""
     try:
         validate(config)
+        system_credential = config["new_password"]
         if config["mode"] == "wifi":
             configure_wifi(config)
         network_device = "wlan0" if config["mode"] == "wifi" else "eth0"
@@ -258,8 +283,8 @@ def main() -> int:
         update_hosts(config["hostname"])
         run("systemctl", "restart", "avahi-daemon.service", check=False)
         run("timedatectl", "set-timezone", config["timezone"])
-        run("chpasswd", input_text=f"GrowCentral:{config['new_password']}\n")
         persist_runtime_settings(config)
+        runtime_settings_changed = True
         install_runtime_policy()
         network_mode = config["mode"]
         config.clear()
@@ -274,15 +299,19 @@ def main() -> int:
             run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "67", "proto", "udp", check=False)
             run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "udp", check=False)
             run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "tcp", check=False)
-        time.sleep(2)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
         verify_runtime(network_address)
+        run("chpasswd", input_text=f"GrowCentral:{system_credential}\n")
+        system_credential = ""
         mark_provisioned()
-        SETUP_FILE.unlink()
         return 0
     except Exception as error:
         config.clear()
+        system_credential = ""
+        if runtime_settings_changed:
+            restore_runtime_settings(previous_env)
+            run("systemctl", "restart", "135er-grow-central.service", check=False)
         restore_access_point(str(error))
         return 1
 

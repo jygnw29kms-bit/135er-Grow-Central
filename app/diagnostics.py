@@ -9,7 +9,8 @@ import socket
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 
 from app.audit import append_audit
 from app.security import require_write_auth
@@ -27,6 +28,10 @@ COMPLETION_MARKERS = {
     "grow-central-headless-firstboot.service": Path("/var/lib/135er-grow-central/.headless-firstboot-ready"),
     "grow-central-firstboot-firewall.service": Path("/var/lib/135er-grow-central/.firewall-initialized"),
 }
+STATE_DIR = Path("/var/lib/135er-grow-central")
+SUPPORT_DIR = STATE_DIR / "support"
+SUPPORT_REQUEST = STATE_DIR / "support-bundle-request"
+SUPPORT_LATEST = SUPPORT_DIR / "Grow-Central-Support-latest.tar.gz"
 SECRET_PATTERN = re.compile(r"(?i)(authorization|password|passwd|secret|token)(\s*[:=]\s*)([^\s,;]+)")
 
 
@@ -83,3 +88,43 @@ async def diagnostic_snapshot(lines: int = Query(default=80, ge=10, le=300)):
     }
     append_audit("diagnostics.snapshot.read", lines=lines, units=list(UNITS))
     return result
+
+
+@router.post("/bundle")
+async def create_support_bundle():
+    if SUPPORT_REQUEST.exists():
+        raise HTTPException(409, "Ein Support-Paket wird bereits erstellt")
+    STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
+    try:
+        descriptor = os.open(SUPPORT_REQUEST, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(datetime.now(timezone.utc).isoformat() + "\n")
+    except FileExistsError as exc:
+        raise HTTPException(409, "Ein Support-Paket wird bereits erstellt") from exc
+    append_audit("diagnostics.bundle.requested")
+    return {"ok": True, "pending": True}
+
+
+@router.get("/bundle/status")
+async def support_bundle_status():
+    available = SUPPORT_LATEST.is_file()
+    stat = SUPPORT_LATEST.stat() if available else None
+    return {
+        "pending": SUPPORT_REQUEST.exists(),
+        "available": available,
+        "filename": "Grow-Central-Support-latest.tar.gz" if available else "",
+        "size": stat.st_size if stat else 0,
+        "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat() if stat else "",
+    }
+
+
+@router.get("/bundle/download")
+async def download_support_bundle():
+    if not SUPPORT_LATEST.is_file():
+        raise HTTPException(404, "Noch kein Support-Paket vorhanden")
+    append_audit("diagnostics.bundle.downloaded")
+    return FileResponse(
+        SUPPORT_LATEST,
+        media_type="application/gzip",
+        filename="Grow-Central-Support.tar.gz",
+    )

@@ -2,6 +2,13 @@
 
 ## alpha-0.7.5 – Secure onboarding, native FRITZ!, network control and camera panel (2026-08-13)
 
+- integrated first-boot configuration into the authenticated main GUI and fixed the permanent local domain to `135er-Grow-Central.local`
+- added persistent, bounded multi-boot journaling plus automatic/manual redacted support bundles covering systemd, network, hardware, Bluetooth, camera, storage, database and application state
+- added GUI creation and download of `Grow-Central-Support-latest.tar.gz`; future problem reports require this bundle
+- fixed the real-hardware runtime race by retrying GUI health for 60 seconds instead of failing immediately after service restart
+- defer the system-password change until runtime validation succeeds and roll GUI runtime settings back after a failed setup
+- report the Raspberry Pi 3B single-radio AP scan limitation and retain explicit manual SSID entry
+
 - rebuilt first boot as a mandatory four-stage setup: system password, LAN/WLAN, optional dedicated FRITZ!Box user, mandatory Grow-Central GUI credentials
 - automatically detects active Ethernet; without LAN, presents a scanned WLAN list plus manual SSID fallback
 - keeps the normal GUI inaccessible to clients of the temporary setup subnet until provisioning is complete
