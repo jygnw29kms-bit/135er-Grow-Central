@@ -10,28 +10,6 @@ enum GCTheme {
     static let danger = Color(red: 1.0, green: 0.36, blue: 0.45)
 }
 
-struct GCPanel<Content: View>: View {
-    @ViewBuilder var content: Content
-    var body: some View {
-        content.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .background(GCTheme.surface.opacity(0.94))
-            .overlay(RoundedRectangle(cornerRadius: 11).stroke(GCTheme.line))
-            .clipShape(RoundedRectangle(cornerRadius: 11))
-    }
-}
-
-struct GCMetric: View {
-    let title: String
-    let value: String
-    let tint: Color
-    var body: some View {
-        GCPanel(content: VStack(alignment: .leading, spacing: 9) {
-            Text(title.uppercased()).font(.caption2.monospaced()).foregroundStyle(GCTheme.muted)
-            Text(value).font(.title2.monospaced().weight(.medium)).foregroundStyle(tint)
-        })
-    }
-}
-
 struct GCBackground: ViewModifier {
     func body(content: Content) -> some View {
         content.background(
@@ -40,4 +18,3 @@ struct GCBackground: ViewModifier {
         ).preferredColorScheme(.dark).tint(GCTheme.green)
     }
 }
-
