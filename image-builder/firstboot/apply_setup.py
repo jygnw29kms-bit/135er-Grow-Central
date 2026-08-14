@@ -18,6 +18,7 @@ STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
 MARKER = STATE_DIR / ".provisioned"
 ERROR_FILE = STATE_DIR / "setup-last-error"
+WARNING_FILE = STATE_DIR / "setup-last-warning"
 APP_ENV = Path("/opt/135er-grow-central/.env")
 SETUP_FILE = Path("/opt/135er-grow-central/web/setup.html")
 AP_CONNECTION = "grow-central-setup-ap"
@@ -157,6 +158,12 @@ def restore_access_point(message: str) -> None:
     run("nmcli", "connection", "up", AP_CONNECTION, check=False)
 
 
+def write_warning(message: str) -> None:
+    WARNING_FILE.write_text(message[:500] + "\n", encoding="utf-8")
+    os.chmod(WARNING_FILE, 0o640)
+    os.chown(WARNING_FILE, 0, grp.getgrnam("growcentral").gr_gid)
+
+
 def mark_provisioned() -> None:
     STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
     temporary = MARKER.with_suffix(".tmp")
@@ -209,11 +216,16 @@ def verify_network(device: str) -> str:
     if dns.returncode != 0 or not dns.stdout.strip():
         raise RuntimeError("Die DNS-Auflösung über das Heimnetz ist fehlgeschlagen.")
     internet = run(
-        "curl", "--interface", device, "--fail", "--silent", "--show-error", "--location",
+        "curl", "--ipv4", "--interface", device, "--fail", "--silent", "--show-error", "--location",
         "--max-time", "15", "--output", "/dev/null", "https://www.debian.org/", check=False,
     )
     if internet.returncode != 0:
-        raise RuntimeError("Über die gewählte Verbindung konnte kein Internetzugang bestätigt werden.")
+        write_warning(
+            "Heimnetz und DNS funktionieren, aber der externe Internet-Test konnte nicht bestätigt werden. "
+            "Das Setup wurde trotzdem abgeschlossen."
+        )
+    else:
+        WARNING_FILE.unlink(missing_ok=True)
     return address
 
 

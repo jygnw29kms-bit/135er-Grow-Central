@@ -58,12 +58,19 @@ def _device_state(device: str) -> dict[str, object]:
 @router.get("/status")
 async def status():
     error = ""
+    warning = ""
     if not PENDING_FILE.exists() and (STATE_DIR / "setup-last-error").is_file():
         try:
             error = (STATE_DIR / "setup-last-error").read_text(encoding="utf-8").strip()[:500]
         except OSError:
             error = "Die letzte Setup-Fehlermeldung konnte wegen falscher Dateirechte nicht gelesen werden."
-    return {"setup_required": setup_active(), "pending": PENDING_FILE.exists(), "error": error}
+    warning_file = STATE_DIR / "setup-last-warning"
+    if warning_file.is_file():
+        try:
+            warning = warning_file.read_text(encoding="utf-8").strip()[:500]
+        except OSError:
+            warning = "Eine Setup-Warnung konnte nicht gelesen werden."
+    return {"setup_required": setup_active(), "pending": PENDING_FILE.exists(), "error": error, "warning": warning}
 
 
 @router.get("/network-status")

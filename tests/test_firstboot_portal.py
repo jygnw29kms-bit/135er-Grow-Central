@@ -99,7 +99,7 @@ def test_setup_verifies_real_network_before_deleting_setup_file():
     source = APPLY_PATH.read_text(encoding="utf-8")
     assert '"ip", "route", "show", "default"' in source
     assert '"getent", "ahostsv4", "www.debian.org"' in source
-    assert '"curl", "--interface", device' in source
+    assert '"curl", "--ipv4", "--interface", device' in source
     assert 'f"http://{target}:8080/api/health"' in source
     main_source = source[source.index("def main()") :]
     assert main_source.index("ERROR_FILE.unlink(missing_ok=True)") < main_source.index("try:")
@@ -118,3 +118,11 @@ def test_setup_page_uses_network_detection_and_wifi_scan():
 def test_setup_error_is_readable_by_the_web_service():
     source = APPLY_PATH.read_text(encoding="utf-8")
     assert 'os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)' in source
+
+
+def test_external_probe_is_a_warning_not_a_setup_blocker():
+    source = APPLY_PATH.read_text(encoding="utf-8")
+    assert "write_warning(" in source
+    assert "Das Setup wurde trotzdem abgeschlossen." in source
+    assert 'raise RuntimeError("Über die gewählte Verbindung konnte kein Internetzugang bestätigt werden.")' not in source
+    assert 'os.chown(WARNING_FILE, 0, grp.getgrnam("growcentral").gr_gid)' in source
