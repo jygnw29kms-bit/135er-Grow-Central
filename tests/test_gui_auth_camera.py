@@ -174,17 +174,23 @@ def test_build66_gui_shows_complete_fritz_identity_and_temperature():
     assert "Strom${s.current_source?\" (berechnet)\"" in script
 
 
-def test_build68_gui_uses_manual_fritz_login_and_two_decimals():
+def test_build69_gui_uses_encrypted_reusable_fritz_login_and_two_decimals():
     page = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     script = (WEB_DIR / "app.js").read_text(encoding="utf-8")
     extensions = (WEB_DIR / "device_extensions.js").read_text(encoding="utf-8")
-    assert "Keine automatische Geräteabfrage" in page
+    assert "lokal verschlüsselt gespeichert" in page
     assert 'id="fritzManualBtn"' in page
+    assert 'id="fritzChangeBtn"' in page
+    assert 'id="fritzDeleteBtn"' in page
+    assert 'id="registeredDeviceList"' in page
     assert 'id="plugTemperatureGrid"' in page
     assert 'id="automationCreateForm"' in page
     assert "toFixed(2)" in script
     assert "gcManualFritzDevices" in script
-    assert "credentials_stored" not in extensions
+    assert "/onboarding/fritz/credentials" in extensions
+    assert "/api/v1/smarthome/devices" in extensions
+    assert "Anmeldung geprüft und verschlüsselt gespeichert" in extensions
+    assert "Passwort" in extensions
 
 
 def test_build68_camera_and_product_previews_are_compact():

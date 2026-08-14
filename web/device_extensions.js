@@ -84,11 +84,31 @@
   }
 
   let fritzPurpose = {purpose:"devices"};
+  let fritzConfigured = false;
   function openFritzLogin(detail={purpose:"devices"}) {
     fritzPurpose=detail;
-    const labels={devices:"Geräte und Messwerte manuell lesen",automations:"Routinen und Vorlagen manuell lesen",switch:"Steckdose nach Login schalten",trigger:"Routine nach Login ändern",template:"Vorlage nach Login anwenden"};
-    byId("fritzLoginPurpose").textContent=`${labels[detail.purpose]||"FRITZ!-Aufruf"}. Die Zugangsdaten werden nur für diesen einzelnen Aufruf verwendet und nicht gespeichert.`;
+    const labels={devices:"Geräte und Messwerte lesen",automations:"Routinen und Vorlagen lesen",switch:"Steckdose schalten",trigger:"Routine ändern",template:"Vorlage anwenden"};
+    byId("fritzLoginPurpose").textContent=`${labels[detail.purpose]||"FRITZ!-Aufruf"}. Nach erfolgreicher Prüfung werden Benutzer und Passwort verschlüsselt auf diesem Grow-Central-Gerät gespeichert und künftig automatisch verwendet.`;
     const dialog=byId("fritzLoginDialog");if(dialog&&!dialog.open)dialog.showModal();
+  }
+
+  async function loadFritzCredentialStatus() {
+    const card=byId("fritzPresence");
+    try {
+      const data=await api("/api/v1/smarthome/onboarding/fritz/credentials");
+      fritzConfigured=Boolean(data.configured);
+      if(card)card.innerHTML=fritzConfigured?`<div class="device-row"><div><strong>FRITZ!Box eingerichtet</strong><span>${html(data.host)} · Benutzer ${html(data.username)}</span></div><span class="badge-online">GESPEICHERT</span></div>`:'<div class="empty-state">FRITZ!Box noch nicht eingerichtet. Die erste erfolgreiche Anmeldung wird sicher gespeichert.</div>';
+      const host=byId("fritzHost");if(host&&data.host)host.value=data.host;
+      const username=byId("fritzUsername");if(username&&data.username)username.value=data.username;
+      const manual=byId("fritzManualBtn");if(manual)manual.textContent=fritzConfigured?"FRITZ! DATEN AKTUALISIEREN":"FRITZ! EINRICHTEN";
+      ["fritzChangeBtn","fritzDeleteBtn"].forEach(id=>{const button=byId(id);if(button)button.hidden=!fritzConfigured});
+      if(fritzConfigured)await loadFritzDevicesForAutomation();
+      return fritzConfigured;
+    } catch(error) {
+      fritzConfigured=false;
+      if(card)card.innerHTML=`<div class="empty-state">FRITZ!-Status fehlgeschlagen: ${html(error.message)}</div>`;
+      return false;
+    }
   }
 
   async function checkFritzPresence() {
@@ -100,44 +120,74 @@
         card.innerHTML = '<div class="empty-state">Keine FRITZ!Box eindeutig erkannt.</div>';
         return;
       }
-      card.innerHTML = `<div class="device-row"><div><strong>FRITZ!Box erkannt</strong><span>${html(data.host)} · ${html(data.fingerprint || "AVM")}</span></div><span class="badge-online">MANUELL BEREIT</span></div>`;
+      card.innerHTML = `<div class="device-row"><div><strong>FRITZ!Box erkannt</strong><span>${html(data.host)} · ${html(data.fingerprint || "AVM")}</span></div><span class="badge-online">BEREIT</span></div>`;
       const host = byId("fritzHost"); if (host) host.value = data.host || "fritz.box";
     } catch (error) {
       card.innerHTML = `<div class="empty-state">FRITZ!-Erkennung fehlgeschlagen: ${html(error.message)}</div>`;
     }
   }
 
+  async function loadRegisteredDevices() {
+    const target=byId("registeredDeviceList");if(!target)return;
+    try {
+      const devices=await api("/api/v1/smarthome/devices");
+      target.innerHTML=devices.length?devices.map(row=>`<div class="device-row"><div><strong>${html(row.name)}</strong><span>${html(row.adapter.toUpperCase())} · ${html(row.metadata?.product||row.capability||"Smart Home")} · ID ${html(row.id)}</span></div><span class="${row.approved?"badge-online":"badge-offline"}">${row.approved?"DAUERHAFT":"NICHT FREIGEGEBEN"}</span></div>`).join(""):'<div class="empty-state">Noch kein Smart-Home-Gerät dauerhaft registriert.</div>';
+    } catch(error) { target.innerHTML=`<div class="empty-state">Geräteregistrierung konnte nicht gelesen werden: ${html(error.message)}</div>`; }
+  }
+  window.gcLoadRegisteredDevices=loadRegisteredDevices;
+
   async function fritzLogin(event) {
     event.preventDefault();
     const status = byId("fritzLoginStatus");
-    status.textContent = "FRITZ!Box wird nur für diesen Aufruf angemeldet…";
+    status.textContent = "FRITZ!Box wird geprüft und die Anmeldung sicher gespeichert…";
     const credentials={host:byId("fritzHost").value.trim()||"fritz.box",username:byId("fritzUsername").value.trim(),password:byId("fritzPassword").value,import_devices:true};
     try {
-      let data;
-      if(fritzPurpose.purpose==="devices"){
-        data=await writeApi("/api/v1/smarthome/onboarding/fritz/login",{method:"POST",body:JSON.stringify(credentials)});
-        window.gcManualFritzDevices=data.imported||[];updateAutomationDevices();await refreshPower();
-      }else if(fritzPurpose.purpose==="automations"){
-        data=await writeApi("/api/v1/smarthome/onboarding/fritz/automations",{method:"POST",body:JSON.stringify({...credentials,import_devices:false})});renderFritzAutomations(data);
-      }else if(fritzPurpose.purpose==="switch"){
-        data=await writeApi("/api/v1/smarthome/onboarding/fritz/switch",{method:"POST",body:JSON.stringify({...credentials,import_devices:false,ain:fritzPurpose.ain,on:fritzPurpose.on})});const row=window.gcManualFritzDevices.find(item=>item.id===fritzPurpose.id);if(row)row.state=data.state;await refreshPower();
-      }else if(fritzPurpose.purpose==="trigger"){
-        data=await writeApi("/api/v1/smarthome/onboarding/fritz/automations/trigger",{method:"POST",body:JSON.stringify({...credentials,import_devices:false,identifier:fritzPurpose.identifier,active:fritzPurpose.active})});
-      }else if(fritzPurpose.purpose==="template"){
-        data=await writeApi("/api/v1/smarthome/onboarding/fritz/automations/template",{method:"POST",body:JSON.stringify({...credentials,import_devices:false,identifier:fritzPurpose.identifier})});
-      }
+      const pending=fritzPurpose;
+      const data=await writeApi("/api/v1/smarthome/onboarding/fritz/login",{method:"POST",body:JSON.stringify(credentials)});
+      window.gcManualFritzDevices=data.imported||[];updateAutomationDevices(data.imported||[]);
       byId("fritzPassword").value = "";
-      status.textContent = "Aufruf erfolgreich. Zugangsdaten wurden verworfen.";
+      status.textContent = "Anmeldung geprüft und verschlüsselt gespeichert.";
       byId("fritzLoginDialog")?.close();
+      await loadFritzCredentialStatus();await loadRegisteredDevices();await refreshPower();window.gcManualFritzDevices=[];
+      if(pending.purpose!=="devices")await executeStoredFritz(pending);
     } catch (error) {
       status.textContent = `FRITZ!-LOGIN FEHLER: ${error.message}`;
     }
   }
 
-  function renderFritzAutomations(data){const target=byId("fritzAutomationList");if(!target)return;const triggers=(data.triggers||[]).map(row=>`<article class="automation-card"><small>FRITZ!-ROUTINE</small><strong>${html(row.name)}</strong><span>${row.active?"AKTIV":"INAKTIV"}</span><button class="secondary" data-fritz-trigger="${html(row.identifier)}" data-active="${!row.active}">${row.active?"DEAKTIVIEREN":"AKTIVIEREN"}</button></article>`);const templates=(data.templates||[]).map(row=>`<article class="automation-card"><small>${row.scenario?"FRITZ!-SZENARIO":"FRITZ!-VORLAGE"}</small><strong>${html(row.name)}</strong><span>${html((row.actions||[]).join(" · ")||"Aktion")}</span><button class="secondary" data-fritz-template="${html(row.identifier)}">ANWENDEN</button></article>`);target.innerHTML=[...triggers,...templates].join("")||'<div class="empty-state">Die FRITZ!Box meldet keine Routinen oder sichtbaren Vorlagen.</div>';document.querySelectorAll("[data-fritz-trigger]").forEach(button=>button.addEventListener("click",()=>openFritzLogin({purpose:"trigger",identifier:button.dataset.fritzTrigger,active:button.dataset.active==="true"})));document.querySelectorAll("[data-fritz-template]").forEach(button=>button.addEventListener("click",()=>openFritzLogin({purpose:"template",identifier:button.dataset.fritzTemplate})))}
+  async function executeStoredFritz(detail={purpose:"devices"}) {
+    if(detail.purpose==="devices"){
+      const data=await writeApi("/api/v1/smarthome/onboarding/fritz/login",{method:"POST",body:JSON.stringify({import_devices:true})});
+      window.gcManualFritzDevices=data.imported||[];updateAutomationDevices(data.imported||[]);await loadRegisteredDevices();await refreshPower();window.gcManualFritzDevices=[];return data;
+    }
+    if(detail.purpose==="automations"){
+      const data=await writeApi("/api/v1/smarthome/onboarding/fritz/automations",{method:"POST",body:JSON.stringify({import_devices:false})});renderFritzAutomations(data);return data;
+    }
+    if(detail.purpose==="switch"){
+      const data=await writeApi(`/api/v1/smarthome/devices/${encodeURIComponent(detail.id)}/switch`,{method:"POST",body:JSON.stringify({on:detail.on})});
+      await refreshPower(true);return data;
+    }
+    if(detail.purpose==="trigger"){
+      const data=await writeApi("/api/v1/smarthome/onboarding/fritz/automations/trigger",{method:"POST",body:JSON.stringify({import_devices:false,identifier:detail.identifier,active:detail.active})});
+      await executeStoredFritz({purpose:"automations"});return data;
+    }
+    if(detail.purpose==="template")return writeApi("/api/v1/smarthome/onboarding/fritz/automations/template",{method:"POST",body:JSON.stringify({import_devices:false,identifier:detail.identifier})});
+  }
 
-  function updateAutomationDevices(){const select=byId("automationDevice");if(!select)return;select.innerHTML=window.gcManualFritzDevices.length?window.gcManualFritzDevices.map(row=>`<option value="${html(row.id)}" data-ain="${html(row.state?.ain||"")}">${html(row.state?.native_name||row.name)}</option>`).join(""):'<option value="">Zuerst FRITZ! manuell abfragen</option>'}
-  async function loadLocalAutomations(){try{const data=await api("/api/v1/automations");const target=byId("localAutomationList");target.innerHTML=data.automations?.length?data.automations.map(row=>`<article class="automation-card"><small>GROW CENTRAL · ${html(row.trigger)}</small><strong>${html(row.name)}</strong><span>${html(row.device_id)} → ${row.on?"EIN":"AUS"}</span><div class="button-row"><button class="secondary" data-run-automation="${html(row.id)}" data-ain="${html(row.ain)}" data-device="${html(row.device_id)}" data-on="${row.on}">MANUELL AUSFÜHREN</button><button class="ghost" data-delete-automation="${html(row.id)}">LÖSCHEN</button></div></article>`).join(""):'<div class="empty-state">Noch keine lokale Automation erstellt.</div>';document.querySelectorAll("[data-run-automation]").forEach(button=>button.addEventListener("click",()=>openFritzLogin({purpose:"switch",id:button.dataset.device,ain:button.dataset.ain,on:button.dataset.on==="true"})));document.querySelectorAll("[data-delete-automation]").forEach(button=>button.addEventListener("click",async()=>{await writeApi(`/api/v1/automations/${encodeURIComponent(button.dataset.deleteAutomation)}`,{method:"DELETE"});await loadLocalAutomations()}))}catch(error){byId("localAutomationList").innerHTML=`<div class="empty-state">${html(error.message)}</div>`}}
+  async function useFritz(detail={purpose:"devices"}) {
+    if(!fritzConfigured&&!(await loadFritzCredentialStatus())){openFritzLogin(detail);return;}
+    try { await executeStoredFritz(detail); }
+    catch(error) {
+      const target=detail.purpose==="automations"?byId("fritzAutomationList"):byId("fritzPresence");
+      if(target)target.innerHTML=`<div class="empty-state">FRITZ!-AUFRUF FEHLER: ${html(error.message)}</div>`;
+    }
+  }
+
+  function renderFritzAutomations(data){const target=byId("fritzAutomationList");if(!target)return;const triggers=(data.triggers||[]).map(row=>`<article class="automation-card"><small>FRITZ!-ROUTINE</small><strong>${html(row.name)}</strong><span>${row.active?"AKTIV":"INAKTIV"}</span><button class="secondary" data-fritz-trigger="${html(row.identifier)}" data-active="${!row.active}">${row.active?"DEAKTIVIEREN":"AKTIVIEREN"}</button></article>`);const templates=(data.templates||[]).map(row=>`<article class="automation-card"><small>${row.scenario?"FRITZ!-SZENARIO":"FRITZ!-VORLAGE"}</small><strong>${html(row.name)}</strong><span>${html((row.actions||[]).join(" · ")||"Aktion")}</span><button class="secondary" data-fritz-template="${html(row.identifier)}">ANWENDEN</button></article>`);target.innerHTML=[...triggers,...templates].join("")||'<div class="empty-state">Die FRITZ!Box meldet keine Routinen oder sichtbaren Vorlagen.</div>';document.querySelectorAll("[data-fritz-trigger]").forEach(button=>button.addEventListener("click",()=>useFritz({purpose:"trigger",identifier:button.dataset.fritzTrigger,active:button.dataset.active==="true"})));document.querySelectorAll("[data-fritz-template]").forEach(button=>button.addEventListener("click",()=>useFritz({purpose:"template",identifier:button.dataset.fritzTemplate})))}
+
+  function updateAutomationDevices(devices=window.gcManualFritzDevices){const select=byId("automationDevice");if(!select)return;select.innerHTML=devices.length?devices.map(row=>`<option value="${html(row.id)}" data-ain="${html(row.state?.ain||"")}">${html(row.state?.native_name||row.name)}</option>`).join(""):'<option value="">Zuerst FRITZ! einrichten</option>'}
+  async function loadFritzDevicesForAutomation(){try{const data=await api("/api/v1/smarthome/overview");updateAutomationDevices((data.devices||[]).filter(row=>row.adapter==="fritz"&&row.state?.ain))}catch{updateAutomationDevices()}}
+  async function loadLocalAutomations(){try{const data=await api("/api/v1/automations");const target=byId("localAutomationList");target.innerHTML=data.automations?.length?data.automations.map(row=>`<article class="automation-card"><small>GROW CENTRAL · ${html(row.trigger)}</small><strong>${html(row.name)}</strong><span>${html(row.device_id)} → ${row.on?"EIN":"AUS"}</span><div class="button-row"><button class="secondary" data-run-automation="${html(row.id)}" data-ain="${html(row.ain)}" data-device="${html(row.device_id)}" data-on="${row.on}">MANUELL AUSFÜHREN</button><button class="ghost" data-delete-automation="${html(row.id)}">LÖSCHEN</button></div></article>`).join(""):'<div class="empty-state">Noch keine lokale Automation erstellt.</div>';document.querySelectorAll("[data-run-automation]").forEach(button=>button.addEventListener("click",()=>useFritz({purpose:"switch",id:button.dataset.device,ain:button.dataset.ain,on:button.dataset.on==="true"})));document.querySelectorAll("[data-delete-automation]").forEach(button=>button.addEventListener("click",async()=>{await writeApi(`/api/v1/automations/${encodeURIComponent(button.dataset.deleteAutomation)}`,{method:"DELETE"});await loadLocalAutomations()}))}catch(error){byId("localAutomationList").innerHTML=`<div class="empty-state">${html(error.message)}</div>`}}
   async function createAutomation(event){event.preventDefault();const option=byId("automationDevice").selectedOptions[0];if(!option?.value)return;await writeApi("/api/v1/automations",{method:"POST",body:JSON.stringify({name:byId("automationName").value,trigger:byId("automationTrigger").value,trigger_value:byId("automationTriggerValue").value,device_id:option.value,ain:option.dataset.ain,on:byId("automationAction").value==="on",enabled:true})});event.currentTarget.reset();await loadLocalAutomations()}
 
   function controlWidget(cameraId, control) {
@@ -297,10 +347,12 @@
   byId("networkRefreshBtn")?.addEventListener("click", loadNetworkStatus);
   byId("fritzLoginForm")?.addEventListener("submit", fritzLogin);
   byId("fritzCancelBtn")?.addEventListener("click", () => byId("fritzLoginDialog")?.close());
-  byId("fritzManualBtn")?.addEventListener("click", async () => { await checkFritzPresence(); openFritzLogin({purpose:"devices"}); });
-  byId("fritzAutomationBtn")?.addEventListener("click", () => openFritzLogin({purpose:"automations"}));
+  byId("fritzManualBtn")?.addEventListener("click", async () => { if(fritzConfigured||await loadFritzCredentialStatus())await useFritz({purpose:"devices"});else{await checkFritzPresence();openFritzLogin({purpose:"devices"})} });
+  byId("fritzAutomationBtn")?.addEventListener("click", () => useFritz({purpose:"automations"}));
+  byId("fritzChangeBtn")?.addEventListener("click", () => openFritzLogin({purpose:"devices"}));
+  byId("fritzDeleteBtn")?.addEventListener("click", async () => {if(!confirm("Gespeicherte FRITZ!-Anmeldung wirklich löschen?"))return;await writeApi("/api/v1/smarthome/onboarding/fritz/credentials",{method:"DELETE"});window.gcManualFritzDevices=[];updateAutomationDevices();await loadFritzCredentialStatus();await refreshPower(true)});
   byId("automationCreateForm")?.addEventListener("submit", createAutomation);
-  window.addEventListener("gc:fritz-login", event => openFritzLogin(event.detail));
+  window.addEventListener("gc:fritz-login", event => useFritz(event.detail));
   byId("cameraRefreshBtn")?.addEventListener("click", loadCamera);
   byId("cameraSnapshotBtn")?.addEventListener("click", async () => { const selected=document.querySelector("[data-camera-select].active")?.dataset.cameraSelect; if(selected) await refreshCameraSnapshot(selected); });
   byId("cameraLiveBtn")?.addEventListener("click", toggleCameraLive);
@@ -310,10 +362,13 @@
     if (event.detail.id !== "camera") void stopCameraLive(false);
     if (event.detail.id === "camera") loadCamera();
     if (event.detail.id === "automation") loadLocalAutomations();
+    if (event.detail.id === "devices") loadRegisteredDevices();
     if (event.detail.id === "dashboard") loadSystemIdentity();
     if (event.detail.id === "system") { loadSystemIdentity(); loadNetworkStatus(); }
   });
 
   loadSystemIdentity();
+  loadRegisteredDevices();
+  loadFritzCredentialStatus();
   loadLocalAutomations();
 })();

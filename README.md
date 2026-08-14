@@ -22,7 +22,7 @@
 
 ### alpha-0.7.5 – aktueller Zielstand
 
-Build 68 nutzt dieselbe visuelle Sprache wie die öffentliche Referenz-GUI auf `dezender.de`. FRITZ!Box-Zugangsdaten werden nicht gespeichert: Gerätewerte, Schaltaktionen, Routinen und Vorlagen verlangen bei jedem Aufruf eine neue Anmeldung. Lokale Automationsdefinitionen können gespeichert und nach erneuter Anmeldung manuell ausgeführt werden.
+Build 69 nutzt dieselbe visuelle Sprache wie die öffentliche Referenz-GUI auf `dezender.de`. Die erste erfolgreich geprüfte FRITZ!Box-Anmeldung wird lokal verschlüsselt und mit restriktiven Dateirechten gespeichert. Gerätewerte, Schaltaktionen, Routinen, Vorlagen und lokale Automationsaktionen verwenden sie danach automatisch; über die GUI kann der Zugang geändert oder gelöscht werden. Registrierte Geräte werden atomar in der dauerhaften Registry gesichert, nach Browser- oder Pi-Neustarts wieder geladen und unter **Geräte** ausdrücklich als dauerhaft registriert angezeigt.
 
 Der neue First-Boot-Ablauf findet direkt in der geschützten Haupt-GUI unter **System** statt:
 

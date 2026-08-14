@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, SecretStr
 
 from app.audit import append_audit
+from app.credential_store import delete_credentials, get_provider_config, set_credentials
 from app.security import require_write_auth
 from .adapters.base import AdapterError
 from .adapters.fritz import FritzAhaClient, FritzLoginError
@@ -22,9 +23,9 @@ router = APIRouter(prefix="/onboarding/fritz", tags=["fritz-onboarding"])
 
 
 class FritzLoginRequest(BaseModel):
-    host: str = Field(default="fritz.box", min_length=1, max_length=253)
-    username: str = Field(min_length=1, max_length=128)
-    password: SecretStr
+    host: str | None = Field(default=None, min_length=1, max_length=253)
+    username: str | None = Field(default=None, min_length=1, max_length=128)
+    password: SecretStr | None = None
     import_devices: bool = True
 
 
@@ -94,18 +95,17 @@ async def fritz_presence():
 
 @router.post("/login", dependencies=[Depends(require_write_auth)])
 async def fritz_login(request: FritzLoginRequest):
-    verified = await _verify_fritz(request.host)
+    host, username, password, supplied = _request_credentials(request)
+    verified = await _verify_fritz(host)
     if not verified:
         raise HTTPException(404, "Keine eindeutige FRITZ!Box unter dieser Adresse erkannt")
-    username = request.username.strip()
-    password = request.password.get_secret_value()
-    client = FritzAhaClient(request.host, username, password)
+    client = FritzAhaClient(host, username, password)
     try:
         devices = await client.list_devices()
     except FritzLoginError as exc:
         append_audit(
             "fritz.login.failed",
-            host=request.host,
+            host=host,
             reason=exc.code,
             retry_after=exc.retry_after,
         )
@@ -124,13 +124,19 @@ async def fritz_login(request: FritzLoginRequest):
         raise HTTPException(502, f"FRITZ!Box antwortet, aber der Login schlug fehl ({exc.code}).") from None
     except AdapterError as exc:
         reason = str(exc)
-        append_audit("fritz.login.failed", host=request.host, reason="aha_rejected")
+        append_audit("fritz.login.failed", host=host, reason="aha_rejected")
         if "rejected command" in reason:
             raise HTTPException(403, "Anmeldung erfolgreich, aber der Benutzer darf Smart Home nicht lesen. In der FRITZ!Box beim Benutzer die Berechtigung Smart Home aktivieren.") from None
         raise HTTPException(502, "FRITZ!Box antwortet, aber der Smart-Home-Aufruf wurde abgelehnt.") from None
     except Exception as exc:
-        append_audit("fritz.login.failed", host=request.host, reason=type(exc).__name__)
+        append_audit("fritz.login.failed", host=host, reason=type(exc).__name__)
         raise HTTPException(502, f"FRITZ!Box-Kommunikation fehlgeschlagen ({type(exc).__name__})") from None
+
+    if supplied:
+        try:
+            set_credentials("fritz", username, password, host=host)
+        except OSError:
+            raise HTTPException(500, "FRITZ!-Anmeldung war erfolgreich, konnte aber nicht sicher gespeichert werden") from None
 
     imported = []
     if request.import_devices:
@@ -145,63 +151,99 @@ async def fritz_login(request: FritzLoginRequest):
                 capability="switch",
                 approved=True,
                 writable=True,
-                host=request.host,
+                host=host,
                 metadata={"product": row.get("product"), "auto_imported": True, "transport": "local-fritz-aha"},
             )
             registry.upsert(device)
             imported.append({"id": device.id, "name": device.name, "adapter": "fritz", "approved": True, "writable": True, "product": row.get("product"), "online": row.get("present"), "state": row.get("details")})
 
-    append_audit("fritz.login.success", host=request.host, found=len(devices), imported=len(imported))
-    return {"ok": True, "host": request.host, "devices_found": len(devices), "imported": imported, "credentials_stored": False}
+    append_audit("fritz.login.success", host=host, found=len(devices), imported=len(imported), credentials_saved=supplied)
+    return {"ok": True, "host": host, "devices_found": len(devices), "imported": imported, "credentials_stored": get_provider_config("fritz") is not None}
 
 
-async def _manual_client(request: FritzLoginRequest) -> FritzAhaClient:
-    client = FritzAhaClient(request.host, request.username.strip(), request.password.get_secret_value())
+def _request_credentials(request: FritzLoginRequest) -> tuple[str, str, str, bool]:
+    username = (request.username or "").strip()
+    password = request.password.get_secret_value() if request.password is not None else ""
+    supplied = bool(username or password)
+    stored = get_provider_config("fritz") or {}
+    if supplied and (not username or not password):
+        raise HTTPException(422, "FRITZ!-Benutzer und Passwort müssen gemeinsam angegeben werden")
+    if not supplied:
+        username = str(stored.get("username") or "").strip()
+        password = str(stored.get("password") or "")
+    if not username or not password:
+        raise HTTPException(428, "FRITZ!-Anmeldung muss einmalig eingerichtet werden")
+    host = (request.host or str(stored.get("host") or "fritz.box")).strip()
+    return host, username, password, supplied
+
+
+async def _manual_client(request: FritzLoginRequest) -> tuple[FritzAhaClient, str]:
+    host, username, password, _supplied = _request_credentials(request)
+    client = FritzAhaClient(host, username, password)
     try:
         await client.login()
     except FritzLoginError as exc:
         raise HTTPException(401 if exc.code != "blocked" else 429, "FRITZ!-Anmeldung fehlgeschlagen. Zugang und Smart-Home-Berechtigung prüfen.") from None
-    return client
+    except (AdapterError, httpx.HTTPError, OSError) as exc:
+        raise HTTPException(502, f"FRITZ!Box-Verbindung fehlgeschlagen ({type(exc).__name__})") from None
+    return client, host
+
+
+@router.get("/credentials")
+async def fritz_credentials_status():
+    stored = get_provider_config("fritz") or {}
+    return {
+        "configured": bool(stored.get("username") and stored.get("password")),
+        "host": str(stored.get("host") or "fritz.box"),
+        "username": str(stored.get("username") or ""),
+    }
+
+
+@router.delete("/credentials", dependencies=[Depends(require_write_auth)])
+async def fritz_credentials_delete():
+    removed = delete_credentials("fritz")
+    append_audit("fritz.credentials.deleted", removed=removed)
+    return {"ok": True, "removed": removed}
 
 
 @router.post("/automations", dependencies=[Depends(require_write_auth)])
 async def fritz_automations(request: FritzLoginRequest):
-    client = await _manual_client(request)
+    client, host = await _manual_client(request)
     try:
         result = await client.list_automations()
     except (AdapterError, httpx.HTTPError, ET.ParseError) as exc:
         raise HTTPException(502, f"FRITZ!-Automationen konnten nicht gelesen werden ({type(exc).__name__})") from None
-    append_audit("fritz.automations.read", host=request.host, triggers=len(result["triggers"]), templates=len(result["templates"]))
-    return {**result, "credentials_stored": False}
+    append_audit("fritz.automations.read", host=host, triggers=len(result["triggers"]), templates=len(result["templates"]))
+    return {**result, "credentials_stored": True}
 
 
 @router.post("/automations/trigger", dependencies=[Depends(require_write_auth)])
 async def fritz_trigger_set(request: FritzObjectActionRequest):
     if request.active is None:
         raise HTTPException(422, "Aktivzustand fehlt")
-    client = await _manual_client(request)
+    client, _host = await _manual_client(request)
     try:
         await client.set_trigger_active(request.identifier, request.active)
     except (AdapterError, httpx.HTTPError) as exc:
         raise HTTPException(502, f"FRITZ!-Routine konnte nicht geändert werden ({type(exc).__name__})") from None
     append_audit("fritz.trigger.set", identifier=request.identifier, active=request.active)
-    return {"ok": True, "identifier": request.identifier, "active": request.active, "credentials_stored": False}
+    return {"ok": True, "identifier": request.identifier, "active": request.active, "credentials_stored": True}
 
 
 @router.post("/automations/template", dependencies=[Depends(require_write_auth)])
 async def fritz_template_apply(request: FritzObjectActionRequest):
-    client = await _manual_client(request)
+    client, _host = await _manual_client(request)
     try:
         await client.apply_template(request.identifier)
     except (AdapterError, httpx.HTTPError) as exc:
         raise HTTPException(502, f"FRITZ!-Vorlage konnte nicht angewendet werden ({type(exc).__name__})") from None
     append_audit("fritz.template.applied", identifier=request.identifier)
-    return {"ok": True, "identifier": request.identifier, "credentials_stored": False}
+    return {"ok": True, "identifier": request.identifier, "credentials_stored": True}
 
 
 @router.post("/switch", dependencies=[Depends(require_write_auth)])
 async def fritz_manual_switch(request: FritzSwitchRequest):
-    client = await _manual_client(request)
+    client, _host = await _manual_client(request)
     try:
         result = await client.command("setswitchon" if request.on else "setswitchoff", request.ain)
         if result not in {"0", "1"}:
@@ -213,4 +255,4 @@ async def fritz_manual_switch(request: FritzSwitchRequest):
     from .adapters.fritz import _device_data
     state = _device_data(node)
     append_audit("fritz.switch.manual", ain=request.ain, on=request.on)
-    return {"ok": True, "state": state, "credentials_stored": False}
+    return {"ok": True, "state": state, "credentials_stored": True}

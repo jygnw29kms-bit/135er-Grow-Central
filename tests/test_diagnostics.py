@@ -38,6 +38,8 @@ def test_support_collector_covers_future_system_hardware_and_app_failures():
     for evidence in ("journalctl -b -1", "coredumpctl", "lsusb", "bluetoothctl", "v4l2-ctl", "PRAGMA quick_check", "nft list ruleset"):
         assert evidence in source
     assert "nmcli connection show grow-central-uplink" in source
+    assert '"registered_devices": safe' in source
+    assert '"password"' not in source[source.index('section "Application data integrity"'):source.index('section "Permissions as service user"')]
     assert "--show-secrets no" not in source
     assert "[REDACTED]" in source
 

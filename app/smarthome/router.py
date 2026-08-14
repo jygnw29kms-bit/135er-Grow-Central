@@ -58,8 +58,6 @@ async def list_devices():
 
 async def _overview_row(device):
     base = {"id": device.id, "name": device.name, "adapter": device.adapter, "approved": device.approved, "writable": device.writable, "metadata": device.metadata}
-    if device.adapter == "fritz":
-        return {**base, "online": False, "manual_login_required": True, "error": None, "state": None}
     if not device.approved:
         return {**base, "online": False, "error": "not approved", "state": None}
     try:
@@ -93,8 +91,6 @@ async def device_overview(refresh: bool = False):
 @router.get("/devices/{device_id}/state")
 async def read_device_state(device_id: str):
     device = _device(device_id)
-    if device.adapter == "fritz":
-        raise HTTPException(428, "FRITZ!-Geräte werden nur nach einer neuen manuellen Anmeldung gelesen")
     if not device.approved:
         raise HTTPException(403, "device is not approved")
     try:
@@ -108,8 +104,6 @@ async def read_device_state(device_id: str):
 async def switch_device(device_id: str, command: SwitchCommand):
     global _overview_cache
     device = _device(device_id)
-    if device.adapter == "fritz":
-        raise HTTPException(428, "FRITZ!-Schalten erfordert bei jedem Aufruf eine neue Anmeldung")
     try:
         assert_switch_write_allowed(device)
     except PolicyDenied as exc:

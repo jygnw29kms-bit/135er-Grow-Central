@@ -369,6 +369,31 @@ run grep -RIn --exclude=.env --exclude='*.json' --exclude='*.db' \
 
 section "Application data integrity"
 run find "$APP_DIR/data" -maxdepth 2 -type f -printf '%M %u:%g %s %TY-%Tm-%TdT%TH:%TM:%TS %p\n'
+if [[ -r "$STATE_DIR/devices.json" ]]; then
+  run stat "$STATE_DIR/devices.json"
+  python3 - "$STATE_DIR/devices.json" <<'PY'
+import json, sys
+from pathlib import Path
+
+try:
+    payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    rows = payload.get("devices", payload) if isinstance(payload, dict) else payload
+    if not isinstance(rows, list):
+        raise ValueError("device registry is not a list")
+    safe = [{
+        "id": str(row.get("id", "")),
+        "name": str(row.get("name", "")),
+        "adapter": str(row.get("adapter", "")),
+        "approved": bool(row.get("approved")),
+        "writable": bool(row.get("writable")),
+    } for row in rows if isinstance(row, dict)]
+    print(json.dumps({"registered_devices": safe, "count": len(safe)}, ensure_ascii=False, indent=2))
+except (OSError, ValueError, json.JSONDecodeError) as error:
+    print(f"DEVICE REGISTRY ERROR: {type(error).__name__}")
+PY
+else
+  echo "MISSING: $STATE_DIR/devices.json"
+fi
 if [[ -r "$APP_DIR/data/audit.jsonl" ]]; then
   run tail -n 500 "$APP_DIR/data/audit.jsonl"
 fi
@@ -384,6 +409,8 @@ run runuser -u growcentral -- test -r "$STATE_DIR/setup-last-warning"
 run runuser -u growcentral -- test -r "$APP_DIR/.env"
 run runuser -u growcentral -- test -w "$APP_DIR/.env"
 run runuser -u growcentral -- test -w "$APP_DIR/data"
+run runuser -u growcentral -- test -r "$STATE_DIR/devices.json"
+run runuser -u growcentral -- test -w "$STATE_DIR/devices.json"
 run runuser -u growcentral -- test -w "$APP_DIR/app/main.py"
 run runuser -u growcentral -- test -r /dev/video0
 run runuser -u growcentral -- test -w /dev/video0

@@ -1,8 +1,10 @@
 """Configuration-backed device registry."""
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from .models import DeviceConfig
@@ -39,11 +41,38 @@ class DeviceRegistry:
             raise KeyError(f"unknown device: {device_id}") from exc
 
     def upsert(self, device: DeviceConfig) -> None:
-        self._devices[device.id] = device
         path = self.config_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(path.suffix + ".tmp")
-        payload = {"devices": [item.model_dump(mode="json") for item in self.list()]}
-        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        temporary.chmod(0o600)
-        temporary.replace(path)
+        lock_path = path.with_name(f".{path.name}.lock")
+        lock_descriptor = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
+        try:
+            os.fchmod(lock_descriptor, 0o600)
+            fcntl.flock(lock_descriptor, fcntl.LOCK_EX)
+            # Reload under the lock so concurrent discovery/import requests do
+            # not overwrite devices registered by the other request.
+            current = DeviceRegistry.from_env()._devices
+            for identifier, existing in self._devices.items():
+                current.setdefault(identifier, existing)
+            current[device.id] = device
+            self._devices = current
+            payload = {"devices": [item.model_dump(mode="json") for item in self.list()]}
+            descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}-", dir=path.parent)
+            try:
+                os.fchmod(descriptor, 0o600)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    json.dump(payload, handle, indent=2, ensure_ascii=False)
+                    handle.write("\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, path)
+                os.chmod(path, 0o600)
+                directory_descriptor = os.open(path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_descriptor)
+                finally:
+                    os.close(directory_descriptor)
+            finally:
+                Path(temporary).unlink(missing_ok=True)
+        finally:
+            fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+            os.close(lock_descriptor)

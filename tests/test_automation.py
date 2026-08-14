@@ -11,7 +11,7 @@ def test_local_automation_create_list_and_delete(tmp_path, monkeypatch):
     )
     created = asyncio.run(automation.create_automation(definition))
     assert created["automation"]["id"] == "gc-1"
-    assert created["execution_policy"] == "manual_fritz_login_required"
+    assert created["execution_policy"] == "stored_fritz_credentials"
     listed = asyncio.run(automation.list_automations())
     assert listed["automations"][0]["name"] == "Lampe morgens"
     asyncio.run(automation.delete_automation("gc-1"))

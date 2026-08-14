@@ -4,6 +4,7 @@ import json
 from types import SimpleNamespace
 
 from app.smarthome import onboarding
+from app.smarthome.adapters.base import AdapterError
 from app.main import app
 
 
@@ -112,3 +113,21 @@ def test_smarthome_overview_cache_and_forced_refresh(monkeypatch):
     assert first is second
     assert refreshed["summary"]["power_w"] == 1.0
     assert len(calls) == 2
+
+
+def test_registered_fritz_device_remains_visible_without_live_credentials(monkeypatch):
+    router = importlib.import_module("app.smarthome.router")
+    device = SimpleNamespace(
+        id="fritz-lampe", name="Lampe", adapter="fritz",
+        approved=True, writable=True, metadata={"product": "FRITZ!DECT 210"},
+    )
+
+    def unavailable_adapter(_device):
+        raise AdapterError("FRITZ!Box credentials are not configured")
+
+    monkeypatch.setattr(router, "build_switch_adapter", unavailable_adapter)
+    row = asyncio.run(router._overview_row(device))
+
+    assert row["id"] == "fritz-lampe"
+    assert row["online"] is False
+    assert row["error"] == "FRITZ!Box credentials are not configured"

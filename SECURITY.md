@@ -25,3 +25,9 @@ Nicht committen:
 - WLAN-Passwörter
 - private Schlüssel
 - Accountsitzungen
+
+FRITZ!Box-Zugangsdaten werden nach einer erfolgreichen Anmeldung ausschließlich
+im lokalen Credential Store unter `/var/lib/135er-grow-central` gespeichert. Der
+Payload ist per Fernet verschlüsselt, Schlüssel und Payload haben Modus `0600`,
+das Passwort wird nie über Status-APIs ausgegeben und beide Dateien sind von
+Support-Archiven ausgeschlossen.

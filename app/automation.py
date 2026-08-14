@@ -1,7 +1,7 @@
-"""Persistent local automation definitions without stored device credentials.
+"""Persistent local automation definitions using the appliance credential store.
 
 FRITZ! routines remain owned by the FRITZ!Box. Grow Central stores only local
-rule definitions; executing a FRITZ! action still requires an explicit login.
+rule definitions; their actions reuse the separately encrypted FRITZ! login.
 """
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _save(rows: list[dict]) -> None:
 
 @router.get("")
 async def list_automations():
-    return {"automations": _load(), "execution_policy": "manual_fritz_login_required"}
+    return {"automations": _load(), "execution_policy": "stored_fritz_credentials"}
 
 
 @router.post("", dependencies=[Depends(require_write_auth)])
@@ -69,7 +69,7 @@ async def create_automation(definition: AutomationDefinition):
     rows.append(row)
     _save(rows)
     append_audit("automation.created", automation_id=row["id"], trigger=row["trigger"], device_id=row["device_id"])
-    return {"ok": True, "automation": row, "execution_policy": "manual_fritz_login_required"}
+    return {"ok": True, "automation": row, "execution_policy": "stored_fritz_credentials"}
 
 
 @router.delete("/{automation_id}", dependencies=[Depends(require_write_auth)])

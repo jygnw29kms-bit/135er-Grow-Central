@@ -265,12 +265,12 @@ class FritzSwitchAdapter(SwitchAdapter):
     def __init__(self, device: DeviceConfig):
         if not device.host:
             raise AdapterError("FRITZ!Box host missing")
-        username = os.getenv(device.username_env or "GC_FRITZ_USERNAME", "").strip()
-        password = os.getenv(device.password_env or "GC_FRITZ_PASSWORD", "")
-        if not username or not password:
-            stored = get_credentials("fritz")
-            if stored:
-                username, password = stored
+        stored = get_credentials("fritz")
+        if stored:
+            username, password = stored
+        else:
+            username = os.getenv(device.username_env or "GC_FRITZ_USERNAME", "").strip()
+            password = os.getenv(device.password_env or "GC_FRITZ_PASSWORD", "")
         if not username or not password:
             raise AdapterError("FRITZ!Box credentials are not configured")
         self.device = device

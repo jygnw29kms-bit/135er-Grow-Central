@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.7.5 – Build 69 encrypted reusable FRITZ! login (2026-08-14)
+
+- validate the first FRITZ!Box login before storing username, password and host in an appliance-local Fernet-encrypted credential store with `0600` permissions
+- automatically reuse the stored login for live plug telemetry, switching, FRITZ! routines, templates and manual Grow Central automation actions
+- expose only configured state, host and username to the authenticated GUI; never return the password and keep credential/key files out of support bundles
+- add GUI controls to replace or explicitly delete the saved FRITZ! login and migrate the legacy plaintext credential format on the next successful write
+- keep registered devices visibly available after browser or Pi restarts, reload them from the persistent registry and show a dedicated durable-device list in the Devices view
+- make registry writes locked, atomic and filesystem-synchronized so concurrent imports and sudden power loss cannot silently discard an already registered device
+- confirm from the latest Build 68 support bundle that `devices.json` survived the reboot with correct ownership; the apparent loss was the old volatile browser-only FRITZ! display path
+
 ## alpha-0.7.5 – Build 68 manual FRITZ! sessions, automations and unified GUI (2026-08-14)
 
 - remove automatic FRITZ! Smart Home polling and require a fresh, non-persisted FRITZ!Box login for every read, switch, routine and template action
