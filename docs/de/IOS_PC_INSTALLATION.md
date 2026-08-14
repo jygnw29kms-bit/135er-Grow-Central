@@ -1,55 +1,69 @@
-# 135er Grow Central für iOS – Installation über Windows-PC
+# 135er Grow Central für iOS – WebGUI-App über Windows installieren
 
-## Ziel und aktueller Umfang
+## Richtige Architektur
 
-Die native iOS-Variante ist eine Alternative für direkte Bedienung und Messwertanzeige auf iPhone oder iPad. Der erste Testbuild enthält:
+Die iOS-App ersetzt weder den Raspberry Pi noch die Grow-Central-Serverdienste. Sie ist ein nativer, auf iPhone und iPad abgestimmter Zugang zur bestehenden WebGUI.
 
-- native SwiftUI-Oberfläche im verbindlichen Show-/Test-Design;
-- lokale FRITZ!Box-Anmeldung über die AVM-AHA-Schnittstelle;
-- Import, Status, Leistung, Gesamtenergie, Kosten und Schalten geeigneter FRITZ!-Geräte;
-- Kostenanzeige auch bei ausgeschalteter Steckdose;
-- lokale History für Stunde, Tag, Monat und Jahr;
-- CoreBluetooth-Suche mit Erkennung von `DF100M`/`MZ_MZF002`-Kandidaten;
-- Zugangsdaten im iOS-Schlüsselbund;
-- vollständige Live-Aktualisierung bei App-Aktivierung, Tabwechsel und manuellem Refresh.
+```text
+iPhone/iPad-App ── Heimnetz ──► Raspberry Pi / Grow Central Local
+       │
+       └──────── HTTPS ────────► optionale Grow-Central-Serverversion
+                                      │
+                                      └── abgesicherte Verbindung zur lokalen Zentrale
+```
 
-Noch nicht als native iOS-Funktion validiert sind Tapo/KLAP-Steuerung, Mars-Hydro-Schreibtelegramme und USB-Kameras. Die App weist sichtbar darauf hin und täuscht diese Funktionen nicht vor.
+- **Ohne Serverversion:** voller WebGUI-Zugriff im eigenen WLAN/LAN auf den Raspberry Pi.
+- **Mit optionaler Serverversion:** derselbe WebGUI-Zugang von unterwegs über HTTPS.
+- **Auf Pi/Server:** FRITZ!, Tapo, Mars Hydro, Kamera, Gerätepolicy, History und Automationen.
+- **In der App:** Anzeige, Navigation, Login-Sitzung, Live-Refresh und Umschaltung zwischen Heimnetz und Server.
+
+Die App enthält absichtlich keine eigene FRITZ!- oder Tapo-Anmeldung und steuert kein Bluetooth-Gerät direkt. Dadurch bleiben Logik, Daten und Zugangsdaten an der vorgesehenen zentralen Stelle.
+
+## Funktionen des ersten iOS-Testbuilds
+
+- native SwiftUI-Hülle mit `WKWebView` für die produktive Grow-Central-WebGUI;
+- Standardadresse `http://135er-Grow-Central.local/` für das Heimnetz;
+- frei einstellbare lokale Pi-/Serveradresse;
+- optionale externe Serveradresse, ausschließlich über HTTPS;
+- schnelle Umschaltung **LOCAL** / **SERVER**;
+- persistente Web-Sitzung und Cookies für den GUI-Login;
+- vollständige Aktualisierung ohne Browsercache beim erneuten Öffnen der App und über die Refresh-Taste;
+- klarer Offline-Status mit erneutem Versuch und Wechsel auf den jeweils anderen Zugang;
+- iPhone- und iPad-Layout sowie Projekt-App-Icon.
 
 ## IPA unter Windows installieren
 
-Das GitHub-Build erzeugt `135er_Grow_Central_iOS_unsigned.ipa`. Die Datei ist bewusst noch nicht mit einer fremden Apple-ID signiert. Die Signatur wird erst auf dem eigenen PC erstellt.
+Das GitHub-Build erzeugt `135er_Grow_Central_iOS_unsigned.ipa`. Die Signatur wird erst auf dem eigenen Windows-PC mit der eigenen Apple-ID erstellt.
 
-1. Sideloadly ausschließlich von `https://sideloadly.io/` laden und unter Windows installieren.
+1. Sideloadly ausschließlich von `https://sideloadly.io/` laden und installieren.
 2. iPhone oder iPad per USB verbinden, entsperren und **Diesem Computer vertrauen** bestätigen.
-3. Falls Windows das Gerät nicht erkennt, die aktuellen Apple-Gerätetreiber bzw. Apple Devices installieren.
+3. Falls Windows das Gerät nicht erkennt, Apple Devices bzw. die aktuellen Apple-Gerätetreiber installieren.
 4. `135er_Grow_Central_iOS_unsigned.ipa` in Sideloadly ziehen.
-5. Die eigene Apple-ID eingeben und **Start** wählen. Ein App-spezifisches Passwort kann bei Konten mit entsprechender Apple-Sicherheitskonfiguration erforderlich sein.
-6. Auf dem iPhone/iPad gegebenenfalls unter **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** den Entwicklermodus aktivieren und neu starten.
-7. Unter **Einstellungen → Allgemein → VPN & Geräteverwaltung** dem eigenen Entwicklerprofil vertrauen, falls iOS danach fragt.
-8. Die App starten und lokalen Netzwerk- sowie Bluetooth-Zugriff erlauben.
+5. Die eigene Apple-ID eingeben und **Start** wählen.
+6. Falls verlangt, auf iPhone/iPad den Entwicklermodus aktivieren und dem eigenen Entwicklerprofil vertrauen.
+7. App starten und den Zugriff auf das lokale Netzwerk erlauben.
 
-Bei einer kostenlosen Apple-ID läuft das persönliche Provisioning-Profil nach sieben Tagen ab. Danach wird dasselbe IPA erneut mit derselben Apple-ID installiert; die lokale App-Datenbank bleibt bei einem normalen Update erhalten. Eine bezahlte Apple-Developer-Mitgliedschaft oder später TestFlight/App Store vermeidet diesen wöchentlichen Testzyklus.
+Bei einer kostenlosen Apple-ID läuft das persönliche Provisioning-Profil nach sieben Tagen ab. Danach wird das IPA mit derselben Apple-ID erneut installiert. Eine Apple-Developer-Mitgliedschaft bzw. eine spätere TestFlight-/App-Store-Verteilung vermeidet diesen wöchentlichen Testzyklus.
 
-## FRITZ!Box einrichten
+## App einrichten
 
-1. In der FRITZ!Box einen eigenen Benutzer für Grow Central mit Smart-Home-Rechten anlegen.
-2. iPhone/iPad mit demselben Heimnetz verbinden.
-3. In der App **System** öffnen.
-4. Adresse `fritz.box`, Benutzer und Passwort eintragen.
-5. **Anmeldung prüfen und Geräte importieren** wählen.
+### Im Heimnetz
 
-Das Passwort wird im iOS-Schlüsselbund nur auf diesem Gerät gespeichert. Für lokales HTTP muss iOS beim ersten Zugriff die Berechtigung für das lokale Netzwerk erhalten.
+1. iPhone/iPad mit demselben WLAN wie den Raspberry Pi verbinden.
+2. In der App **Heimnetz** wählen.
+3. Standardadresse `http://135er-Grow-Central.local/` verwenden oder die konkrete Pi-IP eintragen.
+4. Mit dem normalen Grow-Central-GUI-Benutzer anmelden.
 
-## Wichtige iOS-Betriebsgrenze
+### Zugriff von überall
 
-iOS hält eine normale App nicht als frei laufenden 24/7-Dienst aktiv. BLE-Ereignisse können mit dem vorgesehenen Hintergrundmodus zugestellt werden, aber beliebige Zeitpläne, sekündliche Netzwerkabfragen und Schutzautomationen sind nach Suspendierung nicht garantiert. Deshalb gilt:
+1. Die optionale Grow-Central-Serverversion unter einer gültigen HTTPS-Domain bereitstellen.
+2. In der App unter **Verbindungen** diese `https://`-Adresse eintragen.
+3. **Server · überall** wählen.
+4. Mit dem von der Serverversion bereitgestellten Benutzer anmelden.
 
-- iOS-App: direkte Steuerung, Anzeige, Diagnose und History während der Nutzung;
-- Raspberry Pi: weiterhin freigegebene autoritative Instanz für unbeaufsichtigte 24/7-Automation, Kamera und dauerhafte Überwachung.
+Die iOS-App öffnet niemals unverschlüsseltes HTTP für den externen Servermodus und umgeht keine Zertifikatsprüfung.
 
 ## Für Entwickler
-
-Auf einem Mac mit Xcode und XcodeGen:
 
 ```bash
 cd ios
@@ -57,5 +71,5 @@ xcodegen generate
 open GrowCentralIOS.xcodeproj
 ```
 
-Die CI führt Unit-Tests im Simulator aus und erzeugt anschließend einen unsignierten `iphoneos`-Build für das PC-Sideloading.
+GitHub Actions führt die iOS-Unit-Tests im Simulator aus und erzeugt anschließend den unsignierten Gerätebuild für das PC-Sideloading.
 

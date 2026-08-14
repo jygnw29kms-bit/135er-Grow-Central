@@ -14,12 +14,8 @@
   <key>UILaunchScreen</key><dict><key>UIColorName</key><string>LaunchBackground</string></dict>
   <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
   <key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
-  <key>NSBluetoothAlwaysUsageDescription</key><string>Grow Central sucht und verbindet Mars-Hydro- und andere BLE-Geräte in deiner Nähe.</string>
-  <key>NSBluetoothPeripheralUsageDescription</key><string>Grow Central benötigt Bluetooth für lokale Geräte.</string>
-  <key>NSLocalNetworkUsageDescription</key><string>Grow Central verbindet sich lokal mit deiner FRITZ!Box und Smart-Home-Geräten.</string>
+  <key>NSLocalNetworkUsageDescription</key><string>Grow Central verbindet die App mit der WebGUI des Raspberry Pi oder lokalen Servers.</string>
   <key>NSBonjourServices</key><array><string>_http._tcp</string><string>_https._tcp</string></array>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoadsInLocalNetwork</key><true/></dict>
-  <key>UIBackgroundModes</key><array><string>bluetooth-central</string></array>
 </dict>
 </plist>
-

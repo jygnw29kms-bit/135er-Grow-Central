@@ -1,15 +1,18 @@
 import XCTest
 @testable import GrowCentral
 
+@MainActor
 final class GrowCentralTests: XCTestCase {
-    func testPBKDF2Vector() {
-        let result = PBKDF2.sha256(password: Data("password".utf8), salt: Data("salt".utf8), iterations: 1, length: 32)
-        XCTAssertEqual(result.hexString, "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b")
+    func testLocalAddressGetsHTTPWhenSchemeIsMissing() {
+        let settings = ConnectionSettings(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        XCTAssertEqual(settings.normalizedURL("135er-Grow-Central.local", requireHTTPS: false)?.absoluteString,
+                       "http://135er-Grow-Central.local/")
     }
-    func testPeriodsAreOrderedBySize() {
-        XCTAssertLessThan(HistoryPeriod.hour.seconds, HistoryPeriod.day.seconds)
-        XCTAssertLessThan(HistoryPeriod.day.seconds, HistoryPeriod.month.seconds)
-        XCTAssertLessThan(HistoryPeriod.month.seconds, HistoryPeriod.year.seconds)
+
+    func testRemoteServerRequiresHTTPS() {
+        let settings = ConnectionSettings(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        XCTAssertNil(settings.normalizedURL("http://example.test", requireHTTPS: true))
+        XCTAssertEqual(settings.normalizedURL("https://example.test", requireHTTPS: true)?.absoluteString,
+                       "https://example.test/")
     }
 }
-

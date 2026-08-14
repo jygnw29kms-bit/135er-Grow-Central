@@ -17,7 +17,7 @@
 > **Alpha / Hardwarevalidierung.** Der aktuelle Teststand bootet und die Bluetooth-Grundfunktionen wurden auf echter Hardware positiv beobachtet. Das ersetzt noch keine vollständige Freigabe aller Netzwerk-, Smart-Home-, Kamera- und Mars-Hydro-Pfade.
 
 > [!NOTE]
-> **Native iOS-Testlinie.** Unter [`ios/`](ios/) liegt eine eigenständige SwiftUI-App für iPhone/iPad. GitHub Actions erzeugt ein unsigniertes IPA, das auf einem Windows-PC mit der eigenen Apple-ID installiert werden kann. Anleitung: [iOS über Windows-PC installieren](docs/de/IOS_PC_INSTALLATION.md).
+> **Native iOS-WebGUI.** Unter [`ios/`](ios/) liegt die SwiftUI/WKWebView-App für iPhone und iPad. Sie ersetzt den Raspberry Pi nicht: Im Heimnetz öffnet sie die lokale Grow-Central-GUI; mit der optionalen HTTPS-Serverversion ermöglicht sie denselben Zugriff von überall. GitHub Actions erzeugt ein unsigniertes IPA zur Installation über Windows mit der eigenen Apple-ID. Anleitung: [iOS über Windows-PC installieren](docs/de/IOS_PC_INSTALLATION.md).
 
 ## Deutsch
 
