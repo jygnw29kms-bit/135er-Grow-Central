@@ -1,5 +1,12 @@
 # Changelog
 
+## alpha-0.7.5 – Build 67 manufacturer model previews (2026-08-14)
+
+- add optimized, offline manufacturer model images to device-search results for the Mars Hydro FC3000 family, Mars Hydro DF150-M/iFresh 6-inch fan, Logitech C920 and FRITZ!DECT 210
+- map images only from sufficiently specific model identifiers and retain a neutral placeholder for unresolved devices
+- show the C920 manufacturer image in the compact camera selector and the exact FRITZ!DECT 210 image in its registered plug card
+- record the official manufacturer product pages and original image sources alongside the local assets
+
 ## alpha-0.7.5 – Build 66 complete FRITZ! plug telemetry (2026-08-14)
 
 - read each imported FRITZ! smart plug through the complete local `getdeviceinfos` AHA response instead of five reduced switch commands

@@ -1,10 +1,39 @@
 import asyncio
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from app import camera, gui_auth
 from app import system_info
+
+
+WEB_DIR = Path(__file__).resolve().parents[1] / "web"
+
+
+def test_manufacturer_model_previews_are_local_and_model_specific():
+    app_js = (WEB_DIR / "app.js").read_text(encoding="utf-8")
+    camera_js = (WEB_DIR / "device_extensions.js").read_text(encoding="utf-8")
+    expected = {
+        "mars-hydro-fc3000.webp": "fc[- _]?3000",
+        "mars-hydro-df150-m.webp": "df[- _]?150",
+        "logitech-c920.webp": "c920",
+        "fritz-dect-210.webp": "210",
+    }
+    for filename, model_token in expected.items():
+        image = WEB_DIR / "device-images" / filename
+        assert image.is_file()
+        assert image.stat().st_size < 100_000
+        assert filename in app_js or filename in camera_js
+        assert model_token in app_js
+    assert "MODELL NOCH NICHT EINDEUTIG" in app_js
+    assert "https://" not in app_js
+
+
+def test_manufacturer_image_sources_are_documented():
+    sources = (WEB_DIR / "device-images" / "SOURCES.md").read_text(encoding="utf-8")
+    for domain in ("mars-hydro.com", "logitech.com", "avm.de"):
+        assert domain in sources
 
 
 def test_gui_password_hash_roundtrip():

@@ -8,6 +8,7 @@
 .camera-device{min-height:116px;border:1px solid var(--line);border-radius:15px;background:#031014;color:var(--text);display:grid;place-items:center;align-content:center;gap:5px;cursor:pointer;padding:10px}
 .camera-device.active{border-color:var(--green);box-shadow:0 0 20px rgba(113,255,59,.08)}
 .camera-device small{font-size:8px;color:var(--green);letter-spacing:.1em}.camera-device strong{font-size:11px}
+.camera-model-image{width:76px;height:58px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(53,232,218,.12))}
 .webcam-glyph{width:58px;height:35px;border:2px solid var(--cyan);border-radius:18px 18px 10px 10px;display:grid;place-items:center;position:relative;box-shadow:0 0 18px rgba(53,232,218,.12)}
 .webcam-glyph:before{content:"";width:20px;height:20px;border:2px solid var(--green);border-radius:50%;box-shadow:inset 0 0 8px rgba(113,255,59,.25)}
 .webcam-glyph:after{content:"";position:absolute;left:16px;right:16px;bottom:-10px;height:7px;border-bottom:2px solid var(--cyan);border-radius:50%}
