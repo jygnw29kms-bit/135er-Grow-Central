@@ -1,0 +1,29 @@
+{
+  "name": "135er GrowCentral Mobile",
+  "short_name": "GrowCentral",
+  "description": "Lokale mobile Steuerung für 135er-Grow Central im Heimnetz.",
+  "id": "/mobile",
+  "start_url": "/mobile",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#05090c",
+  "theme_color": "#05090c",
+  "lang": "de-DE",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/static/brand-mark.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/brand-mark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
