@@ -1,4 +1,6 @@
 """Production entry point for the Raspberry Pi appliance."""
+from fastapi.responses import RedirectResponse
+
 from app.main import app
 from app.camera import router as camera_router
 from app.automation import router as automation_router
@@ -12,3 +14,8 @@ app.include_router(camera_router)
 app.include_router(automation_router)
 app.include_router(firstboot_router)
 app.include_router(vendor_integrations_router)
+
+
+@app.get("/compact", include_in_schema=False)
+async def compact_dashboard():
+    return RedirectResponse(url="/static/compact.html", status_code=307)
