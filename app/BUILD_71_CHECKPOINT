@@ -1,0 +1,5 @@
+135er-Grow Central Build 71 checkpoint
+Date: 2026-08-16
+Base: alpha-0.7.5 / Build 70 validated public line
+Purpose: reproducible source checkpoint before Build 72 and Mobile v0.1.
+This file intentionally triggers the Raspberry Pi image workflow as run/build 71.
