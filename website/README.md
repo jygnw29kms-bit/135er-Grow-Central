@@ -2,33 +2,61 @@
 
 Die statische Projektseite unter `website/` ist die öffentliche Präsentationsfläche von 135er-Grow Central.
 
-**Website-Version:** `alpha-0.7.1`
+**Website-Version:** `alpha-0.7.5`
 
-> **Status: WORK IN PROGRESS** – die Projektseite zeigt bewusst den aktiven Entwicklungsstand und darf nicht als Hinweis auf vollständig validierte Produktionsreife verstanden werden.
+**Öffentlicher Raspberry-Pi-Teststand:** `Build 70`
+
+> **Status: ALPHA / HARDWAREVALIDIERUNG** – geplante Builds und Mobile-Pakete werden ausdrücklich von veröffentlichten Downloads getrennt dargestellt.
+
+## Aktuelle Release-Pipeline
+
+Die öffentliche Seite bildet ab 2026-08-16 die verbindliche Reihenfolge ab:
+
+1. Build 71 sichern;
+2. Build 72 ausschließlich auf Build 71 aufsetzen;
+3. Mobile v0.1 auf iPhone und Android testen;
+4. Prüfen → Probieren/Testen → Optimieren → Absichern → Abschlussprüfung;
+5. Build 72 und Mobile v0.1 veröffentlichen;
+6. Installationslinks und QR-Codes für iPhone und Android bereitstellen.
+
+Details: [`docs/RELEASE_PIPELINE.md`](../docs/RELEASE_PIPELINE.md)
+
+## Mobile-Architektur
+
+Mobile v0.1 ist ein WebGUI-Client und **kein Ersatz für den Raspberry Pi**. Der Raspberry Pi bleibt die autoritative lokale Instanz für Gerätezugriff, Policy und Automation. Optional kann die Server-Version später einen abgesicherten Remote-Zugriff bereitstellen.
 
 ## Design
 
-Die Website orientiert sich direkt an der lokalen Grow Central-Ziel-GUI: feste Navigation/Sidebar, technische Statuskarten, HUD-Panels, Ringanzeige, Diagnostikflächen sowie grün-cyanfarbene Zustände. Das Layout ist für Desktop, iPad und Smartphone responsive ausgelegt.
+Die Website orientiert sich direkt an der lokalen Grow-Central-Ziel-GUI: technische Statuskarten, HUD-Panels, grün-cyanfarbene Zustände sowie responsive Ansichten für Desktop, iPad und Smartphone.
 
-Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
+Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine lokalen Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
 
-## Branding und Grafikformate
+## Branding und GUI-Vorschau
 
-Die öffentliche Website verwendet das PNG-Logo:
+Verwendete Markenassets:
 
+- `assets/brand/135er-grow-central-lockup-v0.9.png`
 - `assets/brand/135er-grow-central-logo.png`
 - `assets/brand/135er-grow-central-mark.png`
 
-WebP wird nicht mehr verwendet. Rastergrafiken werden als PNG eingebunden; ICO ist für das Browser-Favicon zulässig. SVG bleibt für technische Vektorgrafiken und Diagramme erlaubt.
-
-## GUI-Vorschau
+GUI-Vorschauen:
 
 - `assets/gui/local-desktop-v0.9.png`
 - `assets/gui/local-tablet-v0.9.png`
 - `assets/gui/local-mobile-v0.9.png`
 - `assets/gui/cloud-desktop-v0.9.png`
 
-Alle vier vorhandenen GUI-Demos werden direkt als PNG geladen. Es gibt keine WebP- oder GUI-SVG-Referenzen mehr.
+## Produktions-Deployment auf dezender.de
+
+Der bestätigte Plesk-Webroot lautet:
+
+```text
+/var/www/vhosts/dezender.de/httpdocs
+```
+
+Das Repository enthält `.github/workflows/deploy-website-sftp.yml`. Jeder Push auf `master`, der `website/**` verändert, veröffentlicht den Inhalt des Website-Verzeichnisses automatisch per SFTP nach dezender.de.
+
+Die Zugangsdaten liegen ausschließlich als GitHub Actions Secrets vor und werden nicht in Website oder Repository geschrieben.
 
 ## Lokale Vorschau
 
@@ -38,67 +66,3 @@ python3 -m http.server 8000
 ```
 
 Danach `http://localhost:8000` im Browser öffnen.
-
-## Produktions-Deployment auf dezender.de
-
-Der per SSH bestätigte absolute Plesk-Webroot ist:
-
-```text
-/var/www/vhosts/dezender.de/httpdocs
-```
-
-**Wichtig:** Der Verzeichnisname lautet `vhosts` (Plural). Der Login-Benutzer `dezender` sieht denselben Bereich als `~/httpdocs`.
-
-### Deployment als root
-
-```bash
-set -e
-WEBROOT=/var/www/vhosts/dezender.de/httpdocs
-TMP=/tmp/135er-Grow-Central
-
-rm -rf "$TMP"
-git clone --depth 1 https://github.com/jygnw29kms-bit/135er-Grow-Central.git "$TMP"
-mkdir -p "$WEBROOT"
-cp -a "$TMP/website/." "$WEBROOT/"
-```
-
-### Eigentümer und sichere Standardrechte
-
-Nach einem Root-Deployment werden Eigentümer und Rechte auf den Systembenutzer `dezender` zurückgesetzt. Die primäre Gruppe wird dynamisch ermittelt, damit keine Plesk-Gruppenbezeichnung geraten werden muss:
-
-```bash
-WEBROOT=/var/www/vhosts/dezender.de/httpdocs
-DEZENDER_GROUP="$(id -gn dezender)"
-
-chown -R dezender:"$DEZENDER_GROUP" "$WEBROOT"
-find "$WEBROOT" -type d -exec chmod 755 {} +
-find "$WEBROOT" -type f -exec chmod 644 {} +
-```
-
-Für diese statische Website werden keine ausführbaren Dateien im Webroot benötigt. Deshalb sind `755` für Verzeichnisse und `644` für reguläre Dateien die vorgesehenen Standardrechte.
-
-### Prüfung
-
-```bash
-stat -c '%U:%G %a %n' \
-  /var/www/vhosts/dezender.de/httpdocs \
-  /var/www/vhosts/dezender.de/httpdocs/index.html \
-  /var/www/vhosts/dezender.de/httpdocs/styles.css
-
-find /var/www/vhosts/dezender.de/httpdocs -maxdepth 2 -type f | sort
-```
-
-Danach sollten insbesondere folgende Dateien vorhanden sein:
-
-```text
-/var/www/vhosts/dezender.de/httpdocs/index.html
-/var/www/vhosts/dezender.de/httpdocs/styles.css
-/var/www/vhosts/dezender.de/httpdocs/assets/architecture.svg
-/var/www/vhosts/dezender.de/httpdocs/assets/gui/local-desktop-v0.9.png
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-logo.png
-/var/www/vhosts/dezender.de/httpdocs/assets/brand/135er-grow-central-mark.png
-```
-
-## GitHub Pages
-
-Die Pages-Workflow-Datei liegt unter `.github/workflows/pages.yml`. Der Workflow wird manuell gestartet. Für die erstmalige Nutzung muss GitHub Pages unter **Settings → Pages → Source: GitHub Actions** aktiviert werden.
