@@ -1,0 +1,21 @@
+{
+  "appId": "de.dezender.growcentral",
+  "appName": "135er Grow Central",
+  "webDir": "www",
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "135er-grow-central.local",
+      "10.42.0.1",
+      "192.168.*",
+      "10.*",
+      "172.16.*",
+      "172.17.*",
+      "172.18.*",
+      "172.19.*",
+      "172.2*.*",
+      "172.30.*",
+      "172.31.*"
+    ]
+  }
+}
