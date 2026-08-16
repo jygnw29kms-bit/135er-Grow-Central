@@ -1,0 +1,7 @@
+node_modules/
+android/
+ios/
+build/
+*.ipa
+*.apk
+.DS_Store
