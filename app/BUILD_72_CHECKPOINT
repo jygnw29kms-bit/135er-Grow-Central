@@ -1,0 +1,5 @@
+135er-Grow Central Build 72 candidate
+Date: 2026-08-16
+Base checkpoint: Build 71 commit 6547857e9a4f7431218399591a3fef8435115cb6
+Purpose: trigger Build 72 from the secured Build 71 line and include Mobile v0.1 integration metadata.
+Mobile remains a client only; Raspberry Pi remains authoritative.
