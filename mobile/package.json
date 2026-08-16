@@ -1,0 +1,21 @@
+{
+  "name": "135er-grow-central-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "135er-Grow Central Mobile WebGUI client for iOS and Android",
+  "scripts": {
+    "native:android": "npx cap add android || npx cap sync android",
+    "native:ios": "npx cap add ios || npx cap sync ios",
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}
