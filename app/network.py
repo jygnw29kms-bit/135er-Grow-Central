@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.audit import append_audit
+from app.hardware import wifi_interface
 from app.security import require_write_auth
 
 router = APIRouter(prefix="/api/v1/network", tags=["network"])
@@ -64,9 +65,12 @@ def _status_sync() -> dict[str, Any]:
 
 
 def _scan_sync() -> dict[str, Any]:
+    wlan = wifi_interface()
+    if not wlan:
+        return {"ok": False, "error": "wifi-unavailable", "message": "Keine WLAN-Schnittstelle erkannt.", "networks": []}
     try:
-        _run(["nmcli", "device", "wifi", "rescan", "ifname", "wlan0"], timeout=20)
-        result = _run(["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list", "ifname", "wlan0", "--rescan", "auto"], timeout=20)
+        _run(["nmcli", "device", "wifi", "rescan", "ifname", wlan], timeout=20)
+        result = _run(["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"], timeout=20)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout", "message": "WLAN-Suche hat das Zeitlimit überschritten.", "networks": []}
     except OSError:
@@ -93,7 +97,10 @@ def _scan_sync() -> dict[str, Any]:
 def _join_sync(request: WifiJoinRequest) -> dict[str, Any]:
     # nmcli accepts secrets through stdin with --ask; this avoids putting the
     # WLAN password in process arguments. The SSID is passed as a single argv.
-    cmd = ["nmcli", "--wait", "35", "device", "wifi", "connect", request.ssid, "ifname", "wlan0"]
+    wlan = wifi_interface()
+    if not wlan:
+        raise HTTPException(503, "Keine WLAN-Schnittstelle erkannt")
+    cmd = ["nmcli", "--wait", "35", "device", "wifi", "connect", request.ssid, "ifname", wlan]
     input_text = ""
     if request.password:
         cmd.append("--ask")

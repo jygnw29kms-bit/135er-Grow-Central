@@ -260,12 +260,14 @@ run_optional resolvectl status
 run nmcli general status
 run nmcli radio all
 run nmcli -f DEVICE,TYPE,STATE,CONNECTION,CON-PATH device status
-run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show wlan0
-run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show eth0
+WLAN_DEVICE="$(cat "$STATE_DIR/hardware-wlan-interface" 2>/dev/null || nmcli -t -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1; exit}')"
+LAN_DEVICE="$(nmcli -t -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "ethernet" {print $1; exit}')"
+[ -n "$WLAN_DEVICE" ] && run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show "$WLAN_DEVICE"
+[ -n "$LAN_DEVICE" ] && run nmcli -f GENERAL,IP4,IP6,DHCP4,DHCP6 device show "$LAN_DEVICE"
 run nmcli -f NAME,UUID,TYPE,DEVICE,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show
 run nmcli connection show grow-central-setup-ap
 run nmcli connection show grow-central-uplink
-run nmcli -f IN-USE,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,BARS,SECURITY device wifi list --rescan yes ifname wlan0
+[ -n "$WLAN_DEVICE" ] && run nmcli -f IN-USE,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,BARS,SECURITY device wifi list --rescan yes ifname "$WLAN_DEVICE"
 run iw dev
 run iw reg get
 
@@ -463,7 +465,7 @@ while (( $(date +%s) < deadline )); do
   app_active=$(systemctl is-active 135er-grow-central.service 2>/dev/null || true)
   avahi_active=$(systemctl is-active avahi-daemon.service 2>/dev/null || true)
   active_connections=$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | tr '\n' ',' || true)
-  wlan_ipv4=$(ip -4 -o address show dev wlan0 scope global 2>/dev/null | awk '{print $4}' | tr '\n' ',' || true)
+  wlan_ipv4=$([ -n "${WLAN_DEVICE:-}" ] && ip -4 -o address show dev "$WLAN_DEVICE" scope global 2>/dev/null | awk '{print $4}' | tr '\n' ',' || true)
   default_route=$(ip -4 route show default 2>/dev/null | tr '\n' ',' || true)
   pending_mtime=$(stat -c %Y "$STATE_DIR/setup-pending.json" 2>/dev/null || echo 0)
   error_mtime=$(stat -c %Y "$STATE_DIR/setup-last-error" 2>/dev/null || echo 0)
@@ -493,7 +495,7 @@ while (( $(date +%s) < deadline )); do
 
   if (( attempt_seen == 1 )) \
     && [[ "$marker" == yes && "$app_active" == active && "$avahi_active" == active ]] \
-    && { [[ "$active_connections" == *grow-central-uplink:wlan0* ]] || [[ "$active_connections" == *:eth0* ]]; } \
+    && { [[ "$active_connections" == *grow-central-uplink:* ]] || { [[ -n "${LAN_DEVICE:-}" ]] && [[ "$active_connections" == *:"$LAN_DEVICE"* ]]; }; } \
     && [[ "$health_code" == 200 ]]; then
     outcome=success
     echo "Übergang erfolgreich erkannt; zeichne 10 Sekunden Nachlauf auf." | tee -a "$TRANSITION_LOG"

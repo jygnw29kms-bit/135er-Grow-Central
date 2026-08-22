@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, SecretStr
+from app.hardware import ethernet_interface, wifi_interface
 
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
@@ -73,7 +74,9 @@ async def status():
 async def network_status():
     if not setup_active():
         raise HTTPException(404, "Setup abgeschlossen")
-    ethernet = _device_state("eth0")
+    lan = ethernet_interface()
+    ethernet = _device_state(lan) if lan else {"connected": False, "addresses": []}
+    ethernet["interface"] = lan
     connectivity = _command("nmcli", "networking", "connectivity", "check").stdout.strip().lower()
     ethernet["internet"] = ethernet["connected"] and connectivity == "full"
     return {"ethernet": ethernet, "connectivity": connectivity or "unknown"}
@@ -83,8 +86,11 @@ async def network_status():
 async def networks():
     if not setup_active():
         raise HTTPException(404, "Setup abgeschlossen")
+    wlan = wifi_interface()
+    if not wlan:
+        raise HTTPException(503, "Keine von NetworkManager verwaltete WLAN-Schnittstelle erkannt")
     result = subprocess.run(
-        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", "wlan0", "--rescan", "auto"],
+        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"],
         capture_output=True, text=True, timeout=25, check=False,
     )
     if result.returncode != 0:
@@ -95,10 +101,11 @@ async def networks():
         if len(fields) == 3 and fields[0] and not fields[0].startswith("135er-GrowCentral-Setup-"):
             rows.append({"ssid": fields[0].replace(r"\:", ":"), "signal": fields[1], "security": fields[2]})
     active = _command("nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active")
-    setup_ap_active = "grow-central-setup-ap:wlan0" in active.stdout.splitlines()
+    setup_ap_active = f"grow-central-setup-ap:{wlan}" in active.stdout.splitlines()
     return {
         "networks": rows,
         "setup_ap_active": setup_ap_active,
+        "wifi_interface": wlan,
         "manual_ssid_required": setup_ap_active and not rows,
         "message": (
             "Der Raspberry Pi 3B kann während des aktiven Setup-APs keine anderen WLANs zuverlässig anzeigen. "

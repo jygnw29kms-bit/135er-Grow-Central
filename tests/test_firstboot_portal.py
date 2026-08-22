@@ -33,7 +33,8 @@ def valid_form():
 def test_setup_ap_exposes_always_on_gui_for_firstboot():
     script = SETUP_AP_PATH.read_text(encoding="utf-8")
     assert 'deny from "$SETUP_SUBNET" to any port 8080 proto tcp' not in script
-    assert "ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250" in script
+    assert 'DHCP_RANGE="10.42.0.10,10.42.0.250"' in script
+    assert 'ipv4.shared-dhcp-range "$DHCP_RANGE"' in script
     assert "ipv4.method shared" in script
 
 
@@ -65,7 +66,7 @@ def test_wifi_password_is_not_exposed_in_process_arguments(monkeypatch):
         return real_mkstemp(prefix="grow-central-test-", dir="/tmp", text=True)
 
     config = valid_form()
-    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
+    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup, "wifi_interface", lambda: "wlan0"), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
         apply_setup.configure_wifi(config)
 
     flattened = [str(argument) for call in calls for argument in call]

@@ -1,4 +1,4 @@
-name: Build 135er-Grow Central Raspberry Pi 3B Test Image
+name: Build 135er-Grow Central Universal Raspberry Pi Image
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
     env:
       BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
       BASE_SHA256: acff736ca7945e3b305f07cda4abdb870910e12634991da69783611756e381b3
-      IMAGE_NAME: 135er_Grow_Central_RPi3B_Test
+      IMAGE_NAME: 135er_Grow_Central_RPi3Plus_Universal
     steps:
       - name: Checkout 135er-Grow Central
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -262,8 +262,6 @@ jobs:
           usermod --shell /bin/bash GrowCentral
           passwd --unlock GrowCentral || true
           chage --expiredate -1 --inactive -1 GrowCentral
-          rfkill unblock bluetooth || true
-          bluetoothctl power on || true
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
           ssh-keygen -A
@@ -272,6 +270,28 @@ jobs:
           touch /var/lib/135er-grow-central/.headless-firstboot-ready
           EOF
           chmod 0755 /usr/local/sbin/grow-central-headless-firstboot.sh
+
+          cat >/usr/local/sbin/grow-central-bluetooth-init.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          command -v rfkill >/dev/null && rfkill unblock bluetooth || true
+          systemctl is-active --quiet bluetooth.service || exit 0
+          timeout 10 bluetoothctl power on || true
+          exit 0
+          EOF
+          chmod 0755 /usr/local/sbin/grow-central-bluetooth-init.sh
+
+          cat >/etc/systemd/system/grow-central-bluetooth-init.service <<'EOF'
+          [Unit]
+          Description=Initialize optional Grow Central Bluetooth radio
+          After=bluetooth.service
+          Wants=bluetooth.service
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/grow-central-bluetooth-init.sh
+          [Install]
+          WantedBy=multi-user.target
+          EOF
 
           cat >/etc/systemd/system/grow-central-headless-firstboot.service <<'EOF'
           [Unit]
@@ -300,9 +320,15 @@ jobs:
           ufw allow 80/tcp
           ufw allow 8080/tcp
           ufw allow 5353/udp
-          ufw allow in on wlan0 to any port 67 proto udp
-          ufw allow in on wlan0 to any port 53 proto udp
-          ufw allow in on wlan0 to any port 53 proto tcp
+          WLAN="$(cat /var/lib/135er-grow-central/hardware-wlan-interface 2>/dev/null || true)"
+          if [ -z "$WLAN" ]; then
+            WLAN="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1; exit}')"
+          fi
+          if [ -n "$WLAN" ]; then
+            ufw allow in on "$WLAN" to any port 67 proto udp
+            ufw allow in on "$WLAN" to any port 53 proto udp
+            ufw allow in on "$WLAN" to any port 53 proto tcp
+          fi
           ufw --force enable
           install -o growcentral -g growcentral -m 0640 /dev/null "$MARKER"
           EOF
@@ -455,7 +481,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-http.socket grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-http.socket grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           id GrowCentral
@@ -485,6 +511,7 @@ jobs:
           systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          /bin/bash -n /usr/local/sbin/grow-central-bluetooth-init.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
           /bin/bash -n /usr/local/sbin/grow-central-support-bundle
@@ -660,11 +687,11 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: 135er-Grow-Central-RPi3B-Test-Image
+          name: 135er-Grow-Central-RPi3Plus-Universal-Image
           path: |
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*.img.xz
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz
+            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz.sha256
+            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-CREDENTIALS.txt
           compression-level: 0
           retention-days: 14
 
@@ -672,5 +699,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="pi3-test-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3B_Test_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3B Test Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Raspberry Pi OS Lite 64-bit / Debian 13 alpha build. Build 70 retains accumulated plug costs while devices are off, checks Pi reachability on every menu change, and stores successfully verified FRITZ!Box or Tapo credentials in the appliance-local encrypted credential store. Tapo devices are authenticated and imported over the local network; this image does not claim access to TP-Link's private cloud inventory. Image construction verifies effective service groups, file permissions and sandbox boundaries." --prerelease
+          TAG="pi-universal-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Universal Raspberry Pi OS Lite 64-bit image for Raspberry Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Hardware and NetworkManager interface names are detected at runtime; Pi 3B keeps the confirmed conservative 2.4 GHz setup-AP behavior." --prerelease

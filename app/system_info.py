@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
+from app.hardware import hardware_identity
 
 router = APIRouter(prefix="/api/v1/system", tags=["system"])
 ROOT = Path(__file__).resolve().parent.parent
@@ -98,9 +99,11 @@ def system_identity() -> dict[str, Any]:
         if address["scope"] in {"global", "site"}
     ]
     primary_ipv4 = next((row["address"] for row in usable if row["family"] == "IPv4"), None)
+    hardware = hardware_identity()
     return {
         "hostname": socket.gethostname(),
-        "model": _text(Path("/proc/device-tree/model"), platform.machine()),
+        "model": hardware["model"] if hardware["model"] != "unknown" else platform.machine(),
+        "hardware": hardware,
         "version": _text(ROOT / "VERSION", "unknown"),
         "build": _text(ROOT / "BUILD", "development"),
         "kernel": platform.release(),
