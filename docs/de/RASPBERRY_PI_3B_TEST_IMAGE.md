@@ -1,12 +1,13 @@
-# Raspberry Pi 3B Test-Image
+# Universelles Raspberry-Pi-Test-Image ab Pi 3B
 
-Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er-Grow Central** auf Raspberry Pi 3B / 3B+.
+Dieses Dokument beschreibt das reproduzierbare Test-Image für **135er-Grow Central** auf Raspberry Pi 3B/3B+, 4B/400, 5 und kompatiblen Compute Modules. Bei Compute Modules hängen WLAN, Bluetooth und Ethernet vom Carrier und den bestückten Funkmodulen ab.
 
 ## Basis
 
 - Raspberry Pi OS Lite 64-bit
 - Debian 13 / Trixie
-- Raspberry Pi 3B / 3B+
+- Raspberry Pi 3B / 3B+, 4B, 400 und 5; CM3+/4/5 mit kompatibler Carrier-Hardware
+- robuste Laufzeiterkennung über `/proc/device-tree/model`; `wlan0` bleibt bevorzugt, andere von NetworkManager gemeldete WLAN-Namen werden als Fallback verwendet
 - systemd
 - Python Virtual Environment
 - Bluetooth / BlueZ
@@ -72,7 +73,7 @@ Zielnetz beide Protokolle anbietet.
 - Locale `de_DE.UTF-8`, Zeitzone `Europe/Berlin` und Tastaturbelegung `de(nodeadkeys)` vorkonfiguriert
 - interaktive First-Boot-Abfragen für Benutzer und Tastatur deaktiviert
 - UFW aktiviert
-- eingehend erlaubt: TCP 22, TCP 80 für die einfache GUI-Adresse, TCP 8080 als Kompatibilitätsadresse und UDP 5353 für mDNS; während der Ersteinrichtung zusätzlich DHCP 67/UDP und DNS 53/TCP+UDP auf dem Setup-WLAN `wlan0`
+- eingehend erlaubt: TCP 22, TCP 80 für die einfache GUI-Adresse, TCP 8080 als Kompatibilitätsadresse und UDP 5353 für mDNS; während der Ersteinrichtung zusätzlich DHCP 67/UDP und DNS 53/TCP+UDP ausschließlich auf der erkannten Setup-WLAN-Schnittstelle
 - automatische Sicherheitsupdates aktiviert
 - DF100M-Schreibzugriffe standardmäßig deaktiviert
 - Remote-Cloud-Befehle standardmäßig deaktiviert

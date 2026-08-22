@@ -1,6 +1,6 @@
-# Raspberry Pi 3B Test Image / Test-Image
+# Universal Raspberry Pi 3+ Test Image / Test-Image
 
-This directory documents the reproducible Raspberry Pi 3B image build used for the first 135er-Grow Central hardware tests.
+This directory documents the reproducible 64-bit image for Raspberry Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules.
 
 <p align="center"><img src="brand/boot-splash-v0.9.png" alt="135er-Grow Central Raspberry Pi boot splash" width="760"></p>
 
@@ -8,7 +8,9 @@ This directory documents the reproducible Raspberry Pi 3B image build used for t
 
 - Raspberry Pi OS Lite 64-bit
 - Debian 13 (Trixie)
-- Raspberry Pi 3B / 3B+ compatible
+- Raspberry Pi 3B / 3B+, 4B, 400 and 5 compatible
+- Compute Module 3+/4/5 compatible when the carrier provides supported LAN/WLAN hardware
+- runtime model detection from the device tree; `wlan0` is preferred with a NetworkManager Wi-Fi fallback
 - systemd
 - BlueZ / Bluetooth LE
 - Python virtual environment with the project requirements preinstalled

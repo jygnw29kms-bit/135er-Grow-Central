@@ -1,12 +1,13 @@
-# Raspberry Pi 3B Test Image
+# Universal Raspberry Pi 3+ Test Image
 
-This document describes the reproducible **135er-Grow Central** test image for Raspberry Pi 3B / 3B+.
+This document describes the reproducible **135er-Grow Central** image for Raspberry Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Compute Module Wi-Fi, Bluetooth and Ethernet depend on the carrier and fitted radio hardware.
 
 ## Base
 
 - Raspberry Pi OS Lite 64-bit
 - Debian 13 / Trixie
-- Raspberry Pi 3B / 3B+
+- Raspberry Pi 3B / 3B+, 4B, 400 and 5; CM3+/4/5 with compatible carrier hardware
+- runtime device-tree model detection; `wlan0` remains preferred with fallback to another NetworkManager Wi-Fi device
 - systemd
 - Python virtual environment
 - Bluetooth / BlueZ
@@ -65,7 +66,7 @@ IPv4 and IPv6 whenever the target network provides both protocols.
 - root SSH login disabled
 - password SSH enabled for the fixed headless user `GrowCentral`
 - UFW enabled
-- incoming TCP 22, TCP 80 for the simple GUI URL, TCP 8080 as a compatibility endpoint and UDP 5353 for mDNS; during setup DHCP 67/UDP and DNS 53/TCP+UDP are additionally allowed on the `wlan0` setup network
+- incoming TCP 22, TCP 80 for the simple GUI URL, TCP 8080 as a compatibility endpoint and UDP 5353 for mDNS; during setup DHCP 67/UDP and DNS 53/TCP+UDP are additionally allowed only on the detected setup Wi-Fi interface
 - automatic security updates enabled
 - DF100M writes disabled by default
 - remote cloud commands disabled by default

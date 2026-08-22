@@ -14,6 +14,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from app.hardware import ethernet_interface, wifi_interface
+
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
 MARKER = STATE_DIR / ".provisioned"
@@ -189,8 +191,11 @@ def mark_provisioned() -> None:
 
 
 def configure_wifi(config: dict[str, str]) -> None:
+    wlan = wifi_interface()
+    if not wlan:
+        raise RuntimeError("Keine von NetworkManager verwaltete WLAN-Schnittstelle erkannt.")
     run("nmcli", "connection", "delete", TARGET_CONNECTION, check=False)
-    run("nmcli", "connection", "add", "type", "wifi", "ifname", "wlan0", "con-name", TARGET_CONNECTION, "ssid", config["ssid"])
+    run("nmcli", "connection", "add", "type", "wifi", "ifname", wlan, "con-name", TARGET_CONNECTION, "ssid", config["ssid"])
     run("nmcli", "connection", "modify", TARGET_CONNECTION, "connection.autoconnect", "yes", "connection.autoconnect-priority", "50", "ipv4.method", "auto", "ipv6.method", "auto")
     if config.get("wifi_password"):
         run("nmcli", "connection", "modify", TARGET_CONNECTION, "wifi-sec.key-mgmt", "wpa-psk")
@@ -277,7 +282,9 @@ def main() -> int:
         system_credential = config["new_password"]
         if config["mode"] == "wifi":
             configure_wifi(config)
-        network_device = "wlan0" if config["mode"] == "wifi" else "eth0"
+        network_device = wifi_interface() if config["mode"] == "wifi" else ethernet_interface()
+        if not network_device:
+            raise RuntimeError("Die gewählte Netzwerkschnittstelle wurde nicht erkannt.")
         network_address = verify_network(network_device)
         run("hostnamectl", "set-hostname", config["hostname"])
         update_hosts(config["hostname"])
@@ -293,12 +300,14 @@ def main() -> int:
         run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes" if keep_access_point else "no", check=False)
         if not keep_access_point:
             run("nmcli", "connection", "down", AP_CONNECTION, check=False)
-        run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "80", "proto", "tcp", check=False)
-        run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "443", "proto", "tcp", check=False)
-        if not keep_access_point:
-            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "67", "proto", "udp", check=False)
-            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "udp", check=False)
-            run("ufw", "--force", "delete", "allow", "in", "on", "wlan0", "to", "any", "port", "53", "proto", "tcp", check=False)
+        wlan = wifi_interface()
+        if wlan:
+            run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "80", "proto", "tcp", check=False)
+            run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "443", "proto", "tcp", check=False)
+            if not keep_access_point:
+                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "67", "proto", "udp", check=False)
+                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "53", "proto", "udp", check=False)
+                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "53", "proto", "tcp", check=False)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
         verify_runtime(network_address)

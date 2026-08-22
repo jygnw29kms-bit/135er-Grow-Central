@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CONNECTION="grow-central-setup-ap"
-WLAN="wlan0"
+WLAN=""
 ADDRESS="10.42.0.1/24"
 DHCP_RANGE="10.42.0.10,10.42.0.250"
 STATE_DIR="/var/lib/135er-grow-central"
@@ -46,18 +46,14 @@ fi
 
 MODEL="$(tr -d '\000' </proc/device-tree/model 2>/dev/null || true)"
 case "$MODEL" in
-  *"Raspberry Pi 4 Model B"*)
-    PLATFORM="pi4"
-    EXPECTED_SOC="BCM2711"
-    ;;
-  *"Raspberry Pi 3 Model B"*)
-    PLATFORM="pi3b"
-    EXPECTED_SOC="BCM2837"
-    ;;
-  *"Raspberry Pi 5 Model B"*)
-    PLATFORM="pi5"
-    EXPECTED_SOC="BCM2712"
-    ;;
+  *"Raspberry Pi 3 Model B Plus"*) PLATFORM="pi3b+"; EXPECTED_SOC="BCM2837B0" ;;
+  *"Raspberry Pi 3 Model B"*) PLATFORM="pi3b"; EXPECTED_SOC="BCM2837" ;;
+  *"Raspberry Pi 400"*) PLATFORM="pi400"; EXPECTED_SOC="BCM2711" ;;
+  *"Raspberry Pi 4 Model B"*) PLATFORM="pi4b"; EXPECTED_SOC="BCM2711" ;;
+  *"Raspberry Pi 5 Model B"*) PLATFORM="pi5"; EXPECTED_SOC="BCM2712" ;;
+  *"Raspberry Pi Compute Module 5"*) PLATFORM="cm5"; EXPECTED_SOC="BCM2712" ;;
+  *"Raspberry Pi Compute Module 4"*) PLATFORM="cm4"; EXPECTED_SOC="BCM2711" ;;
+  *"Raspberry Pi Compute Module 3"*) PLATFORM="cm3"; EXPECTED_SOC="BCM2837" ;;
   *"Raspberry Pi"*)
     PLATFORM="raspberrypi"
     EXPECTED_SOC="unknown"
@@ -67,6 +63,19 @@ case "$MODEL" in
     EXPECTED_SOC="unknown"
     ;;
 esac
+
+systemctl is-active --quiet NetworkManager.service || systemctl start NetworkManager.service
+
+# Keep wlan0 when present (the confirmed Pi 3B/4 path), otherwise accept the
+# first Wi-Fi device NetworkManager actually manages (USB/CM carrier boards).
+for _ in $(seq 1 40); do
+  WIFI_DEVICES="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1}')"
+  if printf '%s\n' "$WIFI_DEVICES" | grep -Fxq wlan0; then WLAN=wlan0; break; fi
+  WLAN="$(printf '%s\n' "$WIFI_DEVICES" | awk 'NF {print; exit}')"
+  [ -n "$WLAN" ] && break
+  sleep 1
+done
+[ -n "$WLAN" ] || fail "no NetworkManager Wi-Fi device appeared within 40 seconds"
 
 log "Hardware model=${MODEL:-unknown} profile=${PLATFORM} expected_soc=${EXPECTED_SOC} wlan=${WLAN}"
 printf '%s\n' "${MODEL:-unknown}" >"${STATE_DIR}/hardware-model"
@@ -79,11 +88,7 @@ chmod 0640 "$STATE_DIR/hardware-model" "$STATE_DIR/hardware-profile" "$STATE_DIR
 # Bluetooth 5.0/BLE and Gigabit Ethernet. The first-boot AP intentionally stays
 # on 2.4 GHz channel 1 for maximum client compatibility and preserves wlan0,
 # which was the interface used by the last hardware-confirmed setup build.
-if [ "$PLATFORM" = "pi4" ]; then
-  log "Applying Raspberry Pi 4 WLAN profile: wlan0, 2.4 GHz, channel 1, AP mode."
-fi
-
-systemctl is-active --quiet NetworkManager.service || systemctl start NetworkManager.service
+log "Applying conservative AP profile: ${WLAN}, 2.4 GHz, channel 1, AP mode."
 
 # If the configured home WLAN is already active, do not steal wlan0 back for AP use.
 if nmcli -t -f NAME,DEVICE connection show --active | grep -Fxq "grow-central-uplink:${WLAN}"; then
@@ -95,7 +100,7 @@ rfkill unblock wifi || true
 nmcli radio wifi on
 iw reg set "$REGDOMAIN" || true
 
-# Preserve the Raspberry Pi OS wlan0 interface naming used by the confirmed Pi 4 build.
+# Preserve wlan0 where available, while supporting predictable or USB Wi-Fi names.
 for _ in $(seq 1 40); do
   [ -e "/sys/class/net/${WLAN}" ] && break
   sleep 1
@@ -158,7 +163,7 @@ nmcli -f connection.interface-name,802-11-wireless.mode,802-11-wireless.band,802
   || fail "NetworkManager rejected the setup AP profile"
 
 if ! nmcli --wait 40 connection up "$CONNECTION"; then
-  log "First AP activation failed; performing one controlled wlan0 retry."
+  log "First AP activation failed; performing one controlled ${WLAN} retry."
   nmcli connection down "$CONNECTION" >/dev/null 2>&1 || true
   rfkill unblock wifi || true
   nmcli radio wifi off || true

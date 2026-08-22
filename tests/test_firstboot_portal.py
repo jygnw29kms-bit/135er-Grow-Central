@@ -65,7 +65,7 @@ def test_wifi_password_is_not_exposed_in_process_arguments(monkeypatch):
         return real_mkstemp(prefix="grow-central-test-", dir="/tmp", text=True)
 
     config = valid_form()
-    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
+    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup, "wifi_interface", lambda: "wlan0"), patch.object(apply_setup.tempfile, "mkstemp", temporary_runtime_file):
         apply_setup.configure_wifi(config)
 
     flattened = [str(argument) for call in calls for argument in call]
