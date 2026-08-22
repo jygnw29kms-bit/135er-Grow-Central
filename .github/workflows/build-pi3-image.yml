@@ -26,7 +26,7 @@ jobs:
       IMAGE_NAME: 135er_Grow_Central_RPi3Plus_Universal
     steps:
       - name: Checkout 135er-Grow Central
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install image build tools
         run: |
