@@ -26,6 +26,16 @@ fail() {
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
+# The image workflow boots the finished userspace in systemd-nspawn to verify
+# the web service before publishing. That container intentionally has no Pi
+# radio hardware, so waiting for wlan0 would block the application smoke test.
+# Real Raspberry Pi boots are unaffected because systemd-detect-virt returns
+# false on bare metal.
+if systemd-detect-virt --quiet --container; then
+  log "Container smoke boot detected; skipping physical radio/AP setup."
+  exit 0
+fi
+
 MODEL="$(tr -d '\000' </proc/device-tree/model 2>/dev/null || true)"
 case "$MODEL" in
   *"Raspberry Pi 3 Model B"*) PLATFORM="pi3b" ;;
@@ -126,6 +136,8 @@ nmcli connection modify "$CONNECTION" \
   802-11-wireless-security.psk grow-central-test \
   ipv4.method shared \
   ipv4.addresses "$ADDRESS" \
+  ipv4.shared-dhcp-range 10.42.0.10,10.42.0.250 \
+  ipv4.shared-dhcp-lease-time 3600 \
   ipv4.never-default yes \
   ipv4.ignore-auto-dns yes \
   ipv6.method disabled
