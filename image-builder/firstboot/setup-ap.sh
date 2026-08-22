@@ -153,3 +153,5 @@ for _ in $(seq 1 25); do
 done
 
 fail "Setup AP did not acquire ${ADDRESS} with an active DHCP listener"
+
+# CI trigger: universal Raspberry Pi 3B/4/5 compatibility image.
