@@ -1,0 +1,79 @@
+name: Force Raspberry Pi Image Build via PR
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/force-image-build-pr.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-and-forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_WORKFLOW: build-pi3-image.yml
+    steps:
+      - name: Dispatch universal image build on master
+        run: |
+          set -euo pipefail
+          START_TS="$(date -u +%s)"
+          gh workflow run "$TARGET_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref master
+          echo "START_TS=$START_TS" >> "$GITHUB_ENV"
+
+      - name: Find dispatched run
+        id: find
+        run: |
+          set -euo pipefail
+          RUN_ID=""
+          for _ in $(seq 1 30); do
+            while IFS=$'\t' read -r id created event status; do
+              [ "$event" = "workflow_dispatch" ] || continue
+              CREATED_TS="$(date -u -d "$created" +%s)"
+              if [ "$CREATED_TS" -ge "$START_TS" ]; then
+                RUN_ID="$id"
+                break
+              fi
+            done < <(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$TARGET_WORKFLOW" --branch master --limit 10 --json databaseId,createdAt,event,status --jq '.[] | [.databaseId,.createdAt,.event,.status] | @tsv')
+            [ -n "$RUN_ID" ] && break
+            sleep 4
+          done
+          [ -n "$RUN_ID" ] || { echo "Unable to locate dispatched image run" >&2; exit 1; }
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Dispatched image run: $RUN_ID"
+
+      - name: Wait for image build
+        run: |
+          set -euo pipefail
+          RUN_ID='${{ steps.find.outputs.run_id }}'
+          for _ in $(seq 1 220); do
+            STATUS="$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json status --jq .status)"
+            if [ "$STATUS" = "completed" ]; then
+              CONCLUSION="$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion --jq .conclusion)"
+              echo "Image build conclusion: $CONCLUSION"
+              [ "$CONCLUSION" = "success" ] || exit 1
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Timed out waiting for image build" >&2
+          exit 1
+
+      - name: Download image artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p forwarded-artifacts
+          gh run download '${{ steps.find.outputs.run_id }}' --repo "$GITHUB_REPOSITORY" --dir forwarded-artifacts
+          find forwarded-artifacts -maxdepth 3 -type f -print
+
+      - name: Re-upload image artifacts on PR run
+        uses: actions/upload-artifact@v4
+        with:
+          name: grow-central-image-forwarded
+          path: forwarded-artifacts/**
+          if-no-files-found: error
+          retention-days: 7
