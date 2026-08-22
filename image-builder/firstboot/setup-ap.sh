@@ -137,6 +137,7 @@ create_ap_profile() {
     802-11-wireless.powersave 2 \
     wifi-sec.key-mgmt wpa-psk \
     wifi-sec.psk grow-central-test \
+    802-11-wireless-security.pmf 1 \
     ipv4.method shared \
     ipv4.addresses "$ADDRESS" \
     ipv4.shared-dhcp-range "$DHCP_RANGE" \
