@@ -41,7 +41,7 @@ jobs:
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: GrowCentral-Mobile-v0.1-Android-debug
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
@@ -89,7 +89,7 @@ jobs:
           mkdir Payload
           cp -R "$APP_PATH" Payload/
           zip -qry GrowCentral-Mobile-v0.1-unsigned.ipa Payload
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: GrowCentral-Mobile-v0.1-iOS-unsigned
           path: mobile/GrowCentral-Mobile-v0.1-unsigned.ipa
