@@ -26,6 +26,7 @@ def valid_form():
         "gui_username": "GrowCentral",
         "gui_password": "ein-neues-gui-passwort",
         "gui_password_confirm": "ein-neues-gui-passwort",
+        "maintenance_activation_code": "GC-ABCDEF-GHJKLM",
         "fritz_enabled": "0",
     }
 
