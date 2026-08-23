@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05090c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GrowCentral">
+<title>135er GrowCentral Mobile</title>
+<link rel="manifest" href="/mobile.webmanifest">
+<link rel="icon" type="image/png" href="/static/brand-mark.png">
+<link rel="apple-touch-icon" href="/static/brand-mark.png">
+<style>
+:root{color-scheme:dark;--bg:#03070a;--panel:#091119;--panel2:#0c1720;--line:#1a2a35;--text:#effaff;--muted:#7f96a6;--cyan:#2ad8ff;--blue:#4aa2ff;--green:#62ef9a;--amber:#ffc85d;--red:#ff6c78;--violet:#aa78ff;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 80% -10%,#0b2937 0,transparent 35%),var(--bg);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}body{padding-top:var(--safe-t)}button,a,input{font:inherit}.app{max-width:720px;margin:auto;padding:12px 12px calc(88px + var(--safe-b))}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:2px 0 14px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(42,216,255,.25))}.brand strong{display:block;font-size:17px;white-space:nowrap}.eyebrow{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.online{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:7px 9px;background:#071017;font-size:10px;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}.banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #15354a;border-radius:14px;background:linear-gradient(90deg,#07141d,#0a1a25);margin-bottom:10px}.banner strong{font-size:12px}.banner span{font-size:10px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.card{background:linear-gradient(180deg,rgba(14,24,32,.98),rgba(7,13,18,.98));border:1px solid var(--line);border-radius:16px;padding:12px;min-width:0;box-shadow:inset 0 1px rgba(255,255,255,.02)}.metric b{display:block;font-size:26px;letter-spacing:-.04em;margin:5px 0 1px}.metric small{color:var(--muted);font-size:11px}.cyan{color:var(--cyan)}.blue{color:var(--blue)}.green{color:var(--green)}.amber{color:var(--amber)}.full{grid-column:1/-1}.head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.head h2{font-size:15px;margin:0}.pill{font-size:9px;border:1px solid var(--line);padding:4px 7px;border-radius:999px;color:var(--muted)}.devices{display:grid;gap:7px}.device{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;border:1px solid #162631;background:#081116;border-radius:12px;padding:10px}.device strong{display:block;font-size:13px}.device span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.state{font-size:9px;color:var(--green)}.state.ready{color:var(--cyan)}.state.off{color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.stat{border:1px solid #14242e;background:#081116;border-radius:11px;padding:9px}.stat span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase}.stat b{display:block;margin-top:4px;font-size:14px}.periods{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}.periods button{border:1px solid var(--line);background:#08131a;color:var(--muted);padding:8px 4px;border-radius:9px;font-size:10px}.periods button.active{background:#0c2431;color:var(--cyan);border-color:#1b4a61}.history-note{font-size:10px;color:var(--muted);padding-top:8px;border-top:1px solid #14242e}.install{display:none;margin-top:8px;border:1px solid #214252;background:#07151d;border-radius:12px;padding:10px}.install.show{display:block}.install button{margin-top:7px;width:100%;border:1px solid #21576b;background:#0d2835;border-radius:10px;padding:9px;color:var(--cyan);font-weight:700}.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.quick a{text-decoration:none;text-align:center;color:var(--muted);background:#08131a;border:1px solid var(--line);border-radius:11px;padding:10px 5px;font-size:10px}.quick b{display:block;color:var(--text);font-size:11px;margin-top:4px}.bottom{position:fixed;z-index:20;left:50%;transform:translateX(-50%);bottom:calc(8px + var(--safe-b));width:min(696px,calc(100% - 16px));display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:rgba(4,9,13,.92);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:16px;padding:7px}.bottom a{text-decoration:none;text-align:center;color:var(--muted);padding:8px 2px;border-radius:10px;font-size:9px}.bottom a.active{background:#0d1d27;color:var(--cyan)}.bottom i{font-style:normal;display:block;font-size:16px;margin-bottom:2px}.offline .dot{background:var(--red);box-shadow:0 0 10px var(--red)}.offline #onlineText{color:var(--red)}
+@media(min-width:600px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.metric{grid-column:span 1}.full{grid-column:1/-1}.device-list-card{grid-column:span 3}.quick-card{grid-column:span 1}}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+<header class="top">
+  <div class="brand"><img src="/static/brand-mark.png" alt="135er GrowCentral"><div><strong>135er GrowCentral</strong><div class="eyebrow">Mobile · LAN Edition</div></div></div>
+  <div class="online"><i class="dot"></i><span id="onlineText">LOCAL ONLINE</span></div>
+</header>
+<div class="banner"><div><strong id="hostName">135er-Grow-Central.local</strong><br><span id="modeText">Lokale Verbindung wird geprüft…</span></div><span id="buildText">Build --</span></div>
+<section class="grid">
+  <article class="card metric"><div class="eyebrow">Temperatur</div><b class="cyan" id="temp">--.- °C</b><small>Sensorwert</small></article>
+  <article class="card metric"><div class="eyebrow">Feuchte</div><b class="blue" id="rh">-- %</b><small>Relativ</small></article>
+  <article class="card metric"><div class="eyebrow">Live-Leistung</div><b class="green" id="power">-- W</b><small>Gesamtanlage</small></article>
+  <article class="card metric"><div class="eyebrow">Energie</div><b class="amber" id="energy">-- kWh</b><small>Gesamtzähler</small></article>
+
+  <article class="card full device-list-card"><div class="head"><h2>Geräte & Integrationen</h2><span class="pill" id="deviceCount">0 aktiv</span></div><div class="devices" id="devices"><div class="device"><div><strong>GrowCentral lädt Geräte…</strong><span>LAN API</span></div><b class="state off">WAIT</b></div></div></article>
+
+  <article class="card full quick-card"><div class="head"><h2>Schnellzugriff</h2><span class="pill">LOCAL</span></div><div class="quick"><a href="/#power">⚡<b>Strom</b></a><a href="/#devices">◇<b>Geräte</b></a><a href="/#history">≋<b>Historie</b></a><a href="/#camera">◉<b>Kamera</b></a></div></article>
+
+  <article class="card full"><div class="head"><h2>Verbrauch & Historie</h2><span class="pill">BUILD 71</span></div><div class="periods"><button data-period="hour">Stunde</button><button class="active" data-period="24h">24 Stunden</button><button data-period="31d">31 Tage</button><button data-period="12m">12 Monate</button></div><div class="stats"><div class="stat"><span>Online</span><b id="onlinePlugs">0/0</b></div><div class="stat"><span>Aktiv</span><b id="onPlugs">0</b></div><div class="stat"><span>Kosten*</span><b id="cost">-- €</b></div></div><div class="history-note">* Kostenbasis: lokal gespeicherter Stromtarif. Die History beginnt erst mit Build 71; frühere Zeiträume sind nicht rückwirkend verfügbar.</div></article>
+
+  <article class="card full"><div class="head"><h2>Installation</h2><span class="pill" id="installState">LAN APP</span></div><div class="eyebrow">Kein Developer Account erforderlich</div><div id="installText" style="margin-top:6px;color:var(--muted);font-size:11px">iPhone: Safari → Teilen → Zum Home-Bildschirm. Android: Browser-Menü → App installieren / Zum Startbildschirm.</div><div class="install" id="installBox"><strong>GrowCentral als App installieren</strong><button id="installBtn">APP INSTALLIEREN</button></div></article>
+</section>
+</main>
+<nav class="bottom"><a class="active" href="/mobile"><i>⌂</i>Home</a><a href="/#power"><i>⚡</i>Energie</a><a href="/#devices"><i>◇</i>Geräte</a><a href="/#history"><i>≋</i>Historie</a><a href="/#system"><i>⚙</i>System</a></nav>
+<script>
+const $=id=>document.getElementById(id);const app=$('app');let deferredInstall=null;let tariff=Number(localStorage.getItem('gcEnergyPrice')||0.35);
+const fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'--';
+async function get(url){const c=new AbortController();const t=setTimeout(()=>c.abort(),5000);try{const r=await fetch(url,{cache:'no-store',signal:c.signal,headers:{Accept:'application/json'}});if(!r.ok)throw new Error(String(r.status));return await r.json()}finally{clearTimeout(t)}}
+function setOnline(ok){app.classList.toggle('offline',!ok);$('onlineText').textContent=ok?'LOCAL ONLINE':'PI OFFLINE'}
+function firstTemp(rows){const r=rows.find(x=>Number.isFinite(Number(x.state?.temperature_c)));return r?Number(r.state.temperature_c):null}
+function renderDevices(vendors,rows){const esp=vendors?.esp32?.devices||[];const data=[
+ {n:'Spider Farmer GGS',d:'GGS Controller · PS5 · PS10 · Light Controller',on:!!vendors?.spider_farmer?.enabled,ready:true},
+ {n:'Mars Hydro / iConnect',d:'DF100/DF100M · BLE Diagnose/Bridge',on:!!vendors?.mars_hydro?.enabled,ready:true},
+ ...esp.map(x=>({n:x.device_id||'ESP32 Node',d:`${x.vendor||'ESP32'} · ${x.model||'Bridge'}`,on:!!x.online,ready:true})),
+ {n:'FRITZ! / Tapo',d:`${rows.length} Smart-Home-Geräte erkannt`,on:rows.some(x=>x.online),ready:true}
+ ];
+ $('devices').innerHTML=data.map(x=>`<div class="device"><div><strong>${escapeHtml(x.n)}</strong><span>${escapeHtml(x.d)}</span></div><b class="state ${x.on?'':x.ready?'ready':'off'}">${x.on?'ONLINE':x.ready?'READY':'OFFLINE'}</b></div>`).join('');
+ $('deviceCount').textContent=data.filter(x=>x.on).length+' aktiv';
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function refresh(){try{const [cfg,health,vendors,power]=await Promise.all([get('/api/mobile/config'),get('/api/health'),get('/api/vendors/status').catch(()=>({})),get('/api/v1/smarthome/overview').catch(()=>({devices:[]}))]);setOnline(true);$('hostName').textContent=cfg.hostname;$('modeText').textContent='LAN ONLY · keine Cloud-Verbindung';$('buildText').textContent='Build '+(health.build||health.version||'71+');const rows=power.devices||[];const online=rows.filter(x=>x.online).length;const on=rows.filter(x=>x.state?.on===true).length;const watts=rows.reduce((s,x)=>s+(Number(x.state?.power_w)||0),0);const wh=rows.reduce((s,x)=>s+(Number(x.state?.energy_wh)||0),0);const temp=firstTemp(rows);$('power').textContent=fmt(watts,0)+' W';$('energy').textContent=fmt(wh/1000,2)+' kWh';$('onlinePlugs').textContent=online+'/'+rows.length;$('onPlugs').textContent=on;$('cost').textContent=fmt((wh/1000)*tariff,2)+' €';$('temp').textContent=temp==null?'--.- °C':fmt(temp,1)+' °C';renderDevices(vendors,rows)}catch(e){setOnline(false);$('modeText').textContent='Raspberry Pi im LAN nicht erreichbar'}}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('installBox').classList.add('show')});
+$('installBtn').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('installBox').classList.remove('show')});
+window.addEventListener('appinstalled',()=>{$('installState').textContent='INSTALLIERT';$('installBox').classList.remove('show')});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/mobile-sw.js',{scope:'/'}).catch(()=>{$('installState').textContent='HOME-SCREEN';});}
+document.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-period]').forEach(x=>x.classList.remove('active'));b.classList.add('active');location.href='/#history'}));
+refresh();setInterval(refresh,10000);
+</script>
+</body>
+</html>
