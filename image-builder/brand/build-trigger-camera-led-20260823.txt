@@ -1,0 +1,2 @@
+2026-08-23 consolidated image trigger
+Includes firmware/model/USB-ID aware camera LED capability detection, conditional V4L2/Logitech control exposure, current master GUI/network/FRITZ/Tapo/C920/Elecrow state, and automatic BUILD metadata.
