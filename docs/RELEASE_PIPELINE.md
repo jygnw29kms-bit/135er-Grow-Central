@@ -1,84 +1,108 @@
 # Release-Pipeline – 135er-Grow Central
 
-**Stand:** 2026-08-23
+**Stand:** 2026-08-23  
+**Kanonische Quelle:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
 ## Grundsatz
 
-Die frühere Build-70/71/72-Roadmap ist abgeschlossen und für den heutigen Projektstand nicht mehr maßgeblich. Ab jetzt wird zwischen drei Zuständen sauber unterschieden:
+Es wird strikt zwischen vier Zuständen unterschieden:
 
-1. **Repository-Stand** – aktueller `master` mit den neuesten integrierten Änderungen.
-2. **Image-Build** – durch GitHub Actions erzeugter Raspberry-Pi-Image-Lauf.
-3. **Validierte Basis** – ein Image-Stand, der zusätzlich auf realer Hardware geprüft wurde.
+1. **Repository-Stand** – aktueller `master`.
+2. **Build/Artefakt** – durch GitHub Actions erzeugtes Paket.
+3. **Hardware-Testkandidat** – Build, der als nächstes real geprüft werden soll.
+4. **Hardwarevalidierte Basis** – Kandidat, der den realen Zieltest bestanden hat.
 
-Eine neue Commit- oder Workflow-Nummer wird deshalb nicht automatisch als neue validierte Hardwarebasis bezeichnet.
+Eine Commit-, Run- oder Buildnummer ist deshalb nicht automatisch hardwarevalidiert.
 
 ## Aktueller Stand
 
-- Repository-Version: **alpha-0.7.5**
-- Dokumentierte validierte Raspberry-Pi-Basis: **Build 85**
-- Aktueller `master`: enthält weitere Integrations-, Test-, APT-, Cloud- und Build-Pipeline-Änderungen nach der Build-85-Basis
-- Aktueller Image-Build: erneut explizit aus dem aktuellen `master` ausgelöst
-- Stable-Freigabe: **noch nicht erfolgt**; Projekt bleibt in Alpha-/Hardwarevalidierung
+- Version: **alpha-0.7.5**
+- aktueller Master-Anker: **`e339602`**
+- Build 117: vorheriger erfolgreicher Hardwaretest, inzwischen überholt
+- nächster Raspberry-Pi-Testkandidat: **Build 118**
+- Kandidaten-Tag: **`pi-universal-alpha-0.7.5-118`**
+- Build 118: **CANDIDATE**, noch nicht `VALIDATED`
+- Stable: noch nicht freigegeben
 
-## Seit der alten 70→71→72-Roadmap integriert
+## Inhalt des konsolidierten Kandidaten
 
-- persistente Geräte-Registry über Browser- und Pi-Neustarts;
-- verschlüsselte, wiederverwendbare FRITZ!Box-Zugangsdaten mit restriktiven Dateirechten;
-- FRITZ!-Livewerte, Schalten, Routinen und Templates über gespeicherte Zugangsdaten;
-- Stromkostenberechnung aus der erhaltenen Gesamtenergie, sodass historische Kosten auch bei ausgeschalteter Steckdose sichtbar bleiben;
-- No-Cache-Liveprüfung bei Navigation und explizite Offline-Ansicht bei Pi-Ausfall;
-- authentifiziertes lokales Tapo-Onboarding über aktive IPv4-Netze mit dauerhafter Geräteübernahme;
-- Cloud-/Server-Installer V6;
-- signiertes APT-Repository unter `https://repo.dezender.de/apt`;
-- dedizierter `Signed-By`-Keyring und Bereinigung alter Grow-Central-APT-Quellen;
-- Veröffentlichung der Server- und APT-Installationsskripte über den dezender.de-Website-Workflow;
-- zusätzliche Release-/Integrationsprüfungen im Repository.
+Build 118 basiert auf dem zusammengeführten aktuellen Stand einschließlich:
+
+- aktueller GUI-/Netzwerk-/First-Boot-/Persistenzpfade;
+- FRITZ! Smart Home und Tapo;
+- Logitech C920/UVC;
+- firmware-/modell-/USB-ID-bewusster Kamera-LED-Fähigkeitserkennung;
+- bedingter V4L2-/Logitech-LED-Steuerung und Tests;
+- Elecrow 7-Zoll Touch-Kiosk samt systemd-Service;
+- Räume/Grow/Pflanzen/Automation;
+- Energie-/Kostenlogik;
+- GrowCentral Nexus UI;
+- Mobile Nexus Clients;
+- Cloud V6 und signiertem APT-Pfad.
 
 ## Verbindliche Release-Gates
 
-Für jeden neuen Raspberry-Pi-Stand gilt:
+1. Quellstand konsistent auf `master` zusammenführen.
+2. Python-, Security-, Integrations- und Release-Guards ausführen.
+3. Pi-Image exakt aus dem vorgesehenen Kandidatenstand verwenden.
+4. Boot und Reboot auf realer Raspberry-Pi-Hardware prüfen.
+5. First Boot, Setup-AP, LAN/WLAN, GUI und Persistenz prüfen.
+6. C920 einschließlich LED-Fähigkeitserkennung/Steuerung auf realer Hardware prüfen.
+7. Bei betroffenen Änderungen FRITZ!, Tapo, Mars Hydro und Elecrow-Kiosk prüfen.
+8. Bei Fehlern Support-Paket erzeugen und auswerten.
+9. Kandidaten erst nach erfolgreichem Realtest als `VALIDATED` kennzeichnen.
+10. README, Website, Mobile-/Cloud-/APT-Doku und Downloads synchronisieren.
 
-1. **Quellstand integrieren** – Änderungen auf `master` konsistent zusammenführen.
-2. **Automatische Tests** – Python-, Security-, Integrations- und Build-Guards müssen erfolgreich sein.
-3. **Image erzeugen** – das Universal-Raspberry-Pi-Image aus exakt diesem Stand bauen.
-4. **Boot-/Reboot-Test** – First Boot, GUI, Netzwerk, Persistenz und Dienste auf realer Hardware prüfen.
-5. **Gerätepfade prüfen** – je nach Änderung FRITZ!, Tapo, Kamera und Mars-Hydro-Pfade testen.
-6. **Support-Datei prüfen** – bei Abweichungen `Grow-Central-Support-latest.tar.gz` auswerten.
-7. **Validierte Basis anheben** – erst nach erfolgreicher Hardwareprüfung wird die neue Buildnummer öffentlich als validiert bezeichnet.
-8. **Veröffentlichen** – Website, README, Changelog/Release-Doku und Downloadpfade auf denselben Stand bringen.
+## Build-118-Regel
+
+Build 118 wird nicht durch einen rein dokumentarischen Folgecommit künstlich ersetzt. Ein neuer Pi-Build >118 wird erst erzeugt, wenn sich der tatsächlich im Image enthaltene Laufzeitstand ändert oder Build 118 im Hardwaretest einen Fix erfordert. So bleibt der Hardwaretest reproduzierbar auf genau dem vorgesehenen Kandidaten.
 
 ## Distribution
 
 ### Raspberry Pi
 
-Das Image wird über `.github/workflows/build-pi3-image.yml` erzeugt. Die Buildnummer im Image stammt aus dem GitHub-Workflow-Lauf und wird im System/Support-Kontext sichtbar gemacht.
+Workflow: `.github/workflows/build-pi3-image.yml`
 
-### Cloud / Server
-
-Der aktuelle Serverpfad verwendet:
-
-- `scripts/install-135ercloud-v6.sh`
-- `scripts/setup-135ercloud-apt-repo-v1.sh`
-- signiertes Repository: `https://repo.dezender.de/apt`
-
-Der Website-Deploy kopiert die kanonischen Skripte als:
-
-- `https://dezender.de/135ercloud-server-install.sh`
-- `https://dezender.de/setup-135ercloud-apt-repo.sh`
-
-Die APT-Einrichtung verwendet einen eigenen Keyring und entfernt vorher alte Grow-Central-Quellen, die zu widersprüchlichen `Signed-By`-Definitionen führen könnten.
+- Ziel: Raspberry Pi 3B+ / kompatible 64-bit Plattformbasis
+- BUILD-Metadaten stammen aus GitHub Actions
+- aktueller Testkandidat: Build 118
+- Tag: `pi-universal-alpha-0.7.5-118`
 
 ### Mobile
 
-Die Mobile-App bleibt ein Client für die bestehende Grow-Central-WebGUI und übernimmt keine Raspberry-Pi-Funktionen.
+Workflow: `.github/workflows/mobile-build.yml`
 
-- gemeinsame Basis: Capacitor-WebGUI-Client in `mobile/`
-- iOS: Client-/Sideload-Pfad
-- Android: Client-/APK-Pfad
-- lokal: `http://135er-Grow-Central.local/` bzw. beim First Boot `http://10.42.0.1/`
-- remote: ausschließlich über einen abgesicherten HTTPS-Serverpfad
-- keine hartcodierten FRITZ!-, Tapo- oder sonstigen Gerätezugangsdaten in der App
+- Android: `GrowCentral-Nexus-Android-APK`
+- iOS: `GrowCentral-Nexus-iOS-Sideload-IPA`
+- iOS wird als unsigned Device-IPA erzeugt und erst beim Sideloading für das konkrete Gerät signiert
+- Mobile bleibt WebGUI-Client; der Pi bleibt Geräteautorität
+- lokale HTTP-Ziele: `.local` und private Netze
+- Remote: HTTPS erforderlich
+
+### Cloud / Server
+
+Kanonische Installer:
+
+- `scripts/install-135ercloud-v6.sh`
+- `scripts/setup-135ercloud-apt-repo-v1.sh`
+
+Die Website-Pipeline kopiert diese bei jedem Release-Abgleich erneut in den öffentlichen Webroot und veröffentlicht zusätzlich Release-Metadaten/Prüfsummen.
+
+### APT
+
+- Repository: `https://repo.dezender.de/apt`
+- dedizierter `Signed-By`-Keyring
+- alte Grow-Central-Quellen werden vor der kanonischen Einrichtung bereinigt
+- APT-/Cloud-Installer bleiben inhaltlich an denselben Release-State gekoppelt
+
+### Website
+
+`dezender.de` ist eine öffentliche read-only Project Console im GrowCentral Nexus UI. Sie zeigt Kandidaten- und Validierungsstatus, darf aber keinen Testkandidaten als hardwarevalidiert ausgeben.
+
+## Historische Dokumente
+
+Dateien wie `BUILD_71_CHECKPOINT.md`, `BUILD_72_MOBILE_V0.1.md` und Build-85-spezifische Testnotizen bleiben als historische Nachweise erhalten. Sie definieren **nicht** mehr den aktuellen Release-Stand. Der aktuelle Status steht ausschließlich in `RELEASE_STATE.md`, dieser Pipeline und den darauf verweisenden Oberflächen.
 
 ## Release-Regel
 
-Ein Build, Image oder Mobile-Paket gilt nur dann als **validiert/veröffentlicht**, wenn der dazugehörige Quellstand reproduzierbar ist, die relevanten automatischen Prüfungen bestanden wurden, der reale Zieltest abgeschlossen ist und der genannte Download tatsächlich bereitsteht. Laufende oder lediglich ausgelöste Builds werden nicht als validierte Hardwarebasis ausgegeben.
+Ein Paket gilt nur dann als **veröffentlicht/validiert**, wenn Quellstand, Artefakt, Prüfsummen und reale Zieltests eindeutig zueinander gehören. `CANDIDATE` und `VALIDATED` dürfen nicht synonym verwendet werden.
