@@ -1,0 +1,4 @@
+Build-85 follow-up validation trigger.
+Camera: dynamic UVC controls + 720p policy.
+Boot: branded console status + Elecrow 7-inch HDMI detection.
+AP regression guard: Build-85 PMF/network path retained.
