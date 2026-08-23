@@ -14,7 +14,6 @@ LED_CONTROL_CANDIDATES = (
     "led1_mode",
     "led_mode",
     "privacy_led",
-    "privacy",
 )
 
 
@@ -48,12 +47,9 @@ def install(camera_module: Any) -> None:
         controls = payload.get("controls") or []
         led = next((row for row in controls if row.get("name") in LED_CONTROL_CANDIDATES), None)
         if led is not None:
-            # Normalize the user-facing control without inventing support. The
-            # underlying source control remains recorded for guarded writes.
             source_name = str(led.get("name"))
             led["source_name"] = source_name
             led["name"] = "status_led"
-            led["type"] = "bool" if led.get("type") in {"bool", "boolean"} else led.get("type")
             payload["status_led_available"] = True
             payload["status_led_source"] = source_name
         else:
@@ -64,19 +60,47 @@ def install(camera_module: Any) -> None:
     def set_control_with_led(request):
         if request.control != "status_led":
             return original_set_control(request)
+
         raw = original_controls(request.camera_id)
-        source = next(
-            (row.get("name") for row in raw.get("controls") or [] if row.get("name") in LED_CONTROL_CANDIDATES),
+        control = next(
+            (row for row in raw.get("controls") or [] if row.get("name") in LED_CONTROL_CANDIDATES),
             None,
         )
-        if not source:
+        if not control:
             raise ValueError("camera does not expose a software-controllable status LED")
-        mapped = request.model_copy(update={"control": source})
-        result = original_set_control(mapped)
-        if result.get("control"):
-            result["control"]["source_name"] = source
-            result["control"]["name"] = "status_led"
-        return result
+        if not control.get("writable"):
+            raise PermissionError("camera status LED control is read-only or inactive")
+
+        value = int(request.value)
+        minimum, maximum = control.get("min"), control.get("max")
+        if minimum is not None and value < minimum:
+            raise ValueError(f"value below minimum {minimum}")
+        if maximum is not None and value > maximum:
+            raise ValueError(f"value above maximum {maximum}")
+        menu = control.get("menu") or []
+        if menu and value not in {item.get("value") for item in menu}:
+            raise ValueError("invalid LED menu value")
+
+        source = str(control["name"])
+        result = camera_module._run(
+            ["v4l2-ctl", "--device", raw["device"], "--set-ctrl", f"{source}={value}"],
+            timeout=8,
+        )
+        text = (result.stdout + b"\n" + result.stderr).decode("utf-8", errors="replace")
+        if result.returncode != 0:
+            raise RuntimeError(text.strip()[:300] or "camera status LED write failed")
+
+        refreshed = original_controls(request.camera_id)
+        updated = next((row for row in refreshed.get("controls") or [] if row.get("name") == source), None)
+        if updated:
+            updated["source_name"] = source
+            updated["name"] = "status_led"
+        return {
+            "ok": True,
+            "camera_id": request.camera_id,
+            "control": updated,
+            "auto_focus_disabled": False,
+        }
 
     camera_module._parse_mjpeg_modes = parse_modes_720p
     camera_module._resolve_capture_mode = resolve_mode_720p
