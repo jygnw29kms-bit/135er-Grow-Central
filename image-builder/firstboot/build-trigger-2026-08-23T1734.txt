@@ -1,0 +1,3 @@
+Manual image build trigger
+Requested: 2026-08-23 17:34 Europe/Berlin
+Purpose: build current master on confirmed Build-85 AP/first-boot baseline.
