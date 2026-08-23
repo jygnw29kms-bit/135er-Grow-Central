@@ -31,7 +31,7 @@ jobs:
           grep -Fq 'e339602476f3a716ae28abd5334cb6f96447a646' RELEASE_STATE.md
           grep -Fq 'Build 118' RELEASE_STATE.md
           grep -Fq 'pi-universal-alpha-0.7.5-118' RELEASE_STATE.md
-          grep -Fq 'CANDIDATE' RELEASE_STATE.md
+          grep -Fq 'Status: CANDIDATE' RELEASE_STATE.md
 
       - name: Verify active entry points use Build 118 candidate
         shell: bash
@@ -42,15 +42,25 @@ jobs:
           done
           grep -Fq 'BUILD 118' website/index.html
           grep -Fq 'CANDIDATE' website/index.html
-          grep -Fq '0.2.1' mobile/VERSION
-          grep -Fq '0.2.1' mobile/package.json
+          grep -Fxq '0.2.1' mobile/VERSION
+          grep -Fq '"version": "0.2.1"' mobile/package.json
 
-      - name: Guard validation language
+      - name: Guard explicit validation state
         shell: bash
         run: |
           set -euo pipefail
-          if grep -Eiq 'Build 118.{0,40}(validated|validiert)|validated.{0,40}Build 118|validiert.{0,40}Build 118' RELEASE_STATE.md README.md docs/PROJECT_STATUS.md website/index.html; then
+          if grep -Eiq 'Build 118[^\n]*(status[ :]+VALIDATED|·[[:space:]]*VALIDATED|=[[:space:]]*VALIDATED)|status[ :]+VALIDATED[^\n]*Build 118' RELEASE_STATE.md README.md docs/PROJECT_STATUS.md website/index.html; then
             echo 'Build 118 must remain CANDIDATE until real hardware validation.'
+            exit 1
+          fi
+
+      - name: Verify runtime-anchor terminology
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'Runtime-/Image-Anker' RELEASE_STATE.md
+          if grep -Fq 'Current master anchor' RELEASE_STATE.md; then
+            echo 'e339602 is the Build 118 runtime/image anchor, not the current master HEAD.'
             exit 1
           fi
 
