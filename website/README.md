@@ -4,32 +4,46 @@ Die statische Projektseite unter `website/` ist die öffentliche Präsentationsf
 
 **Website-Version:** `alpha-0.7.5`
 
-**Öffentlicher Raspberry-Pi-Teststand:** `Build 70`
+**Dokumentierte validierte Raspberry-Pi-Basis:** `Build 85`
 
-> **Status: ALPHA / HARDWAREVALIDIERUNG** – geplante Builds und Mobile-Pakete werden ausdrücklich von veröffentlichten Downloads getrennt dargestellt.
+> **Status: ALPHA / HARDWAREVALIDIERUNG** – ein neuer Workflow-Lauf oder ein neuer Commit gilt nicht automatisch als neuer validierter Hardwarestand.
 
-## Aktuelle Release-Pipeline
+## Aktueller Stand – 23.08.2026
 
-Die öffentliche Seite bildet ab 2026-08-16 die verbindliche Reihenfolge ab:
+Die frühere öffentliche Build-70/71/72-Roadmap ist überholt. Der aktuelle `master` enthält inzwischen:
 
-1. Build 71 sichern;
-2. Build 72 ausschließlich auf Build 71 aufsetzen;
-3. Mobile v0.1 auf iPhone und Android testen;
-4. Prüfen → Probieren/Testen → Optimieren → Absichern → Abschlussprüfung;
-5. Build 72 und Mobile v0.1 veröffentlichen;
-6. Installationslinks und QR-Codes für iPhone und Android bereitstellen.
+- die nach Build 85 validierte Grow-Central-Basis;
+- die weiterentwickelte Geräte-Persistenz sowie verschlüsselte wiederverwendbare FRITZ!-Zugangsdaten;
+- Stromkosten aus der erhaltenen Gesamtenergie, sodass historische Kosten auch bei ausgeschalteter Steckdose sichtbar bleiben;
+- No-Cache-Liveprüfung und Offline-Ansicht bei Menüwechseln;
+- lokales authentifiziertes Tapo-Onboarding mit dauerhafter Geräteübernahme;
+- Cloud-/Server-Installer V6;
+- ein signiertes APT-Repository unter `https://repo.dezender.de/apt`;
+- Bereinigung alter/konfligierender Grow-Central-APT-Quellen im Bootstrap;
+- einen erneut ausgelösten aktuellen Raspberry-Pi-Image-Build.
+
+Neue Buildnummern werden auf der Website erst dann als **validiert** bezeichnet, wenn der zugehörige Image- und Hardwaretest tatsächlich abgeschlossen ist.
 
 Details: [`docs/RELEASE_PIPELINE.md`](../docs/RELEASE_PIPELINE.md)
 
+## Distribution
+
+Die Website veröffentlicht über den Deploy-Workflow zusätzlich die aktuellen Server-Hilfsskripte:
+
+- `135ercloud-server-install.sh` – aktueller Cloud-/Server-Installer V6;
+- `setup-135ercloud-apt-repo.sh` – Einrichtung des signierten dezender.de-APT-Repositories.
+
+Der APT-Client verwendet einen dedizierten `Signed-By`-Keyring. Legacy-Quellen werden vor dem Einrichten der kanonischen Quelle bereinigt, damit keine widersprüchlichen `Signed-By`-Definitionen bestehen bleiben.
+
 ## Mobile-Architektur
 
-Mobile v0.1 ist ein WebGUI-Client und **kein Ersatz für den Raspberry Pi**. Der Raspberry Pi bleibt die autoritative lokale Instanz für Gerätezugriff, Policy und Automation. Optional kann die Server-Version später einen abgesicherten Remote-Zugriff bereitstellen.
+Mobile bleibt ein WebGUI-Client und **kein Ersatz für den Raspberry Pi**. Der Raspberry Pi bleibt die autoritative lokale Instanz für Gerätezugriff, Policy und Automation. Optional kann die Server-Version einen abgesicherten Remote-Zugriff bereitstellen.
 
 ## Design
 
-Die Website orientiert sich direkt an der lokalen Grow-Central-Ziel-GUI: technische Statuskarten, HUD-Panels, grün-cyanfarbene Zustände sowie responsive Ansichten für Desktop, iPad und Smartphone.
+Die Website orientiert sich direkt am verbindlichen Show- und Test-Design der Grow-Central-GUI: technische Statuskarten, HUD-Panels, grün-cyanfarbene Zustände sowie responsive Ansichten für Desktop, Tablet und Smartphone.
 
-Die öffentliche Website bleibt technisch und sicherheitlich vollständig von der lokalen Steueroberfläche getrennt. Sie enthält keine Zugangsdaten, keine lokalen Steuerendpunkte und keine direkte Verbindung zum Raspberry Pi.
+Die öffentliche Website bleibt technisch und sicherheitlich von der lokalen Steueroberfläche getrennt. Sie enthält keine lokalen Gerätezugangsdaten und keine direkten lokalen Steuerendpunkte.
 
 ## Branding und GUI-Vorschau
 
@@ -48,15 +62,15 @@ GUI-Vorschauen:
 
 ## Produktions-Deployment auf dezender.de
 
-Der bestätigte Plesk-Webroot lautet:
+Bestätigter Plesk-Webroot:
 
 ```text
 /var/www/vhosts/dezender.de/httpdocs
 ```
 
-Das Repository enthält `.github/workflows/deploy-website-sftp.yml`. Jeder Push auf `master`, der `website/**` verändert, veröffentlicht den Inhalt des Website-Verzeichnisses automatisch per SFTP nach dezender.de.
+`.github/workflows/deploy-website-sftp.yml` veröffentlicht bei Änderungen an `website/**` sowie an den veröffentlichten Installationsskripten automatisch nach dezender.de. Vor dem Upload werden die kanonischen Skripte aus `scripts/` in den Website-Root kopiert.
 
-Die Zugangsdaten liegen ausschließlich als GitHub Actions Secrets vor und werden nicht in Website oder Repository geschrieben.
+Die SFTP-Zugangsdaten liegen ausschließlich als GitHub Actions Secrets vor und werden nicht in Website oder Repository geschrieben.
 
 ## Lokale Vorschau
 
