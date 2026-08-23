@@ -77,7 +77,8 @@ EOF
   # Install the local kiosk unit only for a supported 7-inch panel. The kiosk
   # script itself waits for networking and installs its graphical dependencies
   # when needed, so first-boot AP functionality never depends on display setup.
-  if [ -r "$KIOSK_UNIT_SOURCE" ] && [ -x "$KIOSK_SCRIPT" ]; then
+  if [ -r "$KIOSK_UNIT_SOURCE" ] && [ -r "$KIOSK_SCRIPT" ]; then
+    chmod 0755 "$KIOSK_SCRIPT" 2>/dev/null || true
     install -o root -g root -m 0644 "$KIOSK_UNIT_SOURCE" "$KIOSK_UNIT" || true
     systemctl daemon-reload || true
     systemctl enable grow-central-display-kiosk.service >/dev/null 2>&1 || true
