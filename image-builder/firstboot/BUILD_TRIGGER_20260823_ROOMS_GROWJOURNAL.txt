@@ -1,0 +1,4 @@
+135er-Grow Central image build trigger
+Date: 2026-08-23
+Scope: rooms, device-to-room assignment, room sensor history, room journal, plants and per-plant grow journal.
+Baseline protection: Build-85 setup AP / first-boot network code unchanged.
