@@ -1,0 +1,24 @@
+name: Force current GrowCentral image build
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/force-current-image-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch-image-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch current universal image workflow on master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run build-pi3-image.yml --repo "${GITHUB_REPOSITORY}" --ref master
+          echo "Image workflow dispatch requested for master ${GITHUB_SHA}"
