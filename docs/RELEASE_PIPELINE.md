@@ -1,51 +1,84 @@
 # Release-Pipeline – 135er-Grow Central
 
-**Stand:** 2026-08-16
+**Stand:** 2026-08-23
 
-## Verbindliche Reihenfolge
+## Grundsatz
 
-1. **Build 71 sichern** – der reproduzierbare Quellstand wird vor Build 72 festgehalten.
-2. **Build 72 auf Build 71 aufsetzen** – Build 72 wird ausschließlich aus dem gesicherten Build-71-Stand weiterentwickelt.
-3. **Mobile v0.1 bauen und testen** – iPhone- und Android-Client bleiben reine WebGUI-Clients. Sie ersetzen den Raspberry Pi nicht.
-4. **Abschlussprüfung** – Prüfen → Probieren/Testen → Optimieren → Absichern → Abschlussprüfung.
-5. **Veröffentlichen** – erst nach erfolgreicher Prüfung werden Build 72 und Mobile v0.1 als Release gekennzeichnet.
-6. **Installationsseite** – anschließend werden getrennte Installationslinks und QR-Codes für iPhone und Android bereitgestellt.
+Die frühere Build-70/71/72-Roadmap ist abgeschlossen und für den heutigen Projektstand nicht mehr maßgeblich. Ab jetzt wird zwischen drei Zuständen sauber unterschieden:
+
+1. **Repository-Stand** – aktueller `master` mit den neuesten integrierten Änderungen.
+2. **Image-Build** – durch GitHub Actions erzeugter Raspberry-Pi-Image-Lauf.
+3. **Validierte Basis** – ein Image-Stand, der zusätzlich auf realer Hardware geprüft wurde.
+
+Eine neue Commit- oder Workflow-Nummer wird deshalb nicht automatisch als neue validierte Hardwarebasis bezeichnet.
 
 ## Aktueller Stand
 
 - Repository-Version: **alpha-0.7.5**
-- Letzter vollständig veröffentlichter Raspberry-Pi-Testbuild: **Build 70**
-- Build 70 Commit: `ddc59b289b051c29bdc6032a9db7698f7ec93336`
-- Build 71: **Checkpoint angelegt und Pi-Workflow ausgelöst**
-- Build-71-Checkpoint: `6547857e9a4f7431218399591a3fef8435115cb6`
-- Build 72: **Kandidat auf Basis des Build-71-Checkpoints angelegt und Pi-Workflow ausgelöst**
-- Build-72-Trigger: `eb5f8342b10b01f383eb4fd666f8c3e80127bacc`
-- Mobile v0.1: **Quellbasis und CI für iOS/Android implementiert; Realgerätetest noch Pflicht**
-- Installationslinks / QR-Code: **erst nach erfolgreicher Mobile-Abschlussprüfung**
+- Dokumentierte validierte Raspberry-Pi-Basis: **Build 85**
+- Aktueller `master`: enthält weitere Integrations-, Test-, APT-, Cloud- und Build-Pipeline-Änderungen nach der Build-85-Basis
+- Aktueller Image-Build: erneut explizit aus dem aktuellen `master` ausgelöst
+- Stable-Freigabe: **noch nicht erfolgt**; Projekt bleibt in Alpha-/Hardwarevalidierung
 
-## Mobile-Zielbild
+## Seit der alten 70→71→72-Roadmap integriert
 
-Die Mobile-App ist ein Client für die bestehende 135er-Grow-Central-WebGUI. Sie übernimmt keine Raspberry-Pi-Funktionen und führt keine lokale Geräteautomation selbstständig aus.
+- persistente Geräte-Registry über Browser- und Pi-Neustarts;
+- verschlüsselte, wiederverwendbare FRITZ!Box-Zugangsdaten mit restriktiven Dateirechten;
+- FRITZ!-Livewerte, Schalten, Routinen und Templates über gespeicherte Zugangsdaten;
+- Stromkostenberechnung aus der erhaltenen Gesamtenergie, sodass historische Kosten auch bei ausgeschalteter Steckdose sichtbar bleiben;
+- No-Cache-Liveprüfung bei Navigation und explizite Offline-Ansicht bei Pi-Ausfall;
+- authentifiziertes lokales Tapo-Onboarding über aktive IPv4-Netze mit dauerhafter Geräteübernahme;
+- Cloud-/Server-Installer V6;
+- signiertes APT-Repository unter `https://repo.dezender.de/apt`;
+- dedizierter `Signed-By`-Keyring und Bereinigung alter Grow-Central-APT-Quellen;
+- Veröffentlichung der Server- und APT-Installationsskripte über den dezender.de-Website-Workflow;
+- zusätzliche Release-/Integrationsprüfungen im Repository.
 
-- **Gemeinsame Basis:** Capacitor-WebGUI-Client in `mobile/`
-- **iPhone/iOS:** unsigned IPA-Testartefakt über GitHub Actions; für reale Installation passend signieren/sideloaden
-- **Android:** Debug-APK-Testartefakt über GitHub Actions
-- **Lokal:** `http://135er-Grow-Central.local/` oder beim First Boot `http://10.42.0.1/`
-- **Remote:** nur über eine abgesicherte HTTPS-Serveradresse
-- **Sicherheit:** keine hartcodierten FRITZ!Box-, Tapo-, Smart-Home- oder Gerätezugänge in der App; Zugangsdaten sind in Ziel-URLs verboten
+## Verbindliche Release-Gates
 
-## Relevante Dateien
+Für jeden neuen Raspberry-Pi-Stand gilt:
 
-- `mobile/package.json`
-- `mobile/capacitor.config.json`
-- `mobile/www/`
-- `mobile/README.md`
-- `mobile/INSTALLATION.md`
-- `mobile/TEST_PLAN.md`
-- `.github/workflows/mobile-build.yml`
-- `docs/BUILD_71_CHECKPOINT.md`
-- `docs/BUILD_72_MOBILE_V0.1.md`
+1. **Quellstand integrieren** – Änderungen auf `master` konsistent zusammenführen.
+2. **Automatische Tests** – Python-, Security-, Integrations- und Build-Guards müssen erfolgreich sein.
+3. **Image erzeugen** – das Universal-Raspberry-Pi-Image aus exakt diesem Stand bauen.
+4. **Boot-/Reboot-Test** – First Boot, GUI, Netzwerk, Persistenz und Dienste auf realer Hardware prüfen.
+5. **Gerätepfade prüfen** – je nach Änderung FRITZ!, Tapo, Kamera und Mars-Hydro-Pfade testen.
+6. **Support-Datei prüfen** – bei Abweichungen `Grow-Central-Support-latest.tar.gz` auswerten.
+7. **Validierte Basis anheben** – erst nach erfolgreicher Hardwareprüfung wird die neue Buildnummer öffentlich als validiert bezeichnet.
+8. **Veröffentlichen** – Website, README, Changelog/Release-Doku und Downloadpfade auf denselben Stand bringen.
 
-## Release-Gate
+## Distribution
 
-Ein Build oder Mobile-Paket gilt erst dann als veröffentlicht, wenn der zugehörige Stand reproduzierbar ist, die relevanten CI- und Realgerätetests abgeschlossen sind und der öffentliche Download tatsächlich bereitsteht. Geplante, laufende oder vorbereitete Stände werden auf Website und Dokumentation ausdrücklich als solche gekennzeichnet.
+### Raspberry Pi
+
+Das Image wird über `.github/workflows/build-pi3-image.yml` erzeugt. Die Buildnummer im Image stammt aus dem GitHub-Workflow-Lauf und wird im System/Support-Kontext sichtbar gemacht.
+
+### Cloud / Server
+
+Der aktuelle Serverpfad verwendet:
+
+- `scripts/install-135ercloud-v6.sh`
+- `scripts/setup-135ercloud-apt-repo-v1.sh`
+- signiertes Repository: `https://repo.dezender.de/apt`
+
+Der Website-Deploy kopiert die kanonischen Skripte als:
+
+- `https://dezender.de/135ercloud-server-install.sh`
+- `https://dezender.de/setup-135ercloud-apt-repo.sh`
+
+Die APT-Einrichtung verwendet einen eigenen Keyring und entfernt vorher alte Grow-Central-Quellen, die zu widersprüchlichen `Signed-By`-Definitionen führen könnten.
+
+### Mobile
+
+Die Mobile-App bleibt ein Client für die bestehende Grow-Central-WebGUI und übernimmt keine Raspberry-Pi-Funktionen.
+
+- gemeinsame Basis: Capacitor-WebGUI-Client in `mobile/`
+- iOS: Client-/Sideload-Pfad
+- Android: Client-/APK-Pfad
+- lokal: `http://135er-Grow-Central.local/` bzw. beim First Boot `http://10.42.0.1/`
+- remote: ausschließlich über einen abgesicherten HTTPS-Serverpfad
+- keine hartcodierten FRITZ!-, Tapo- oder sonstigen Gerätezugangsdaten in der App
+
+## Release-Regel
+
+Ein Build, Image oder Mobile-Paket gilt nur dann als **validiert/veröffentlicht**, wenn der dazugehörige Quellstand reproduzierbar ist, die relevanten automatischen Prüfungen bestanden wurden, der reale Zieltest abgeschlossen ist und der genannte Download tatsächlich bereitsteht. Laufende oder lediglich ausgelöste Builds werden nicht als validierte Hardwarebasis ausgegeben.
