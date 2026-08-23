@@ -1,51 +1,63 @@
-# Roadmap
+# Roadmap – 135er-Grow Central
 
-## v0.3 – Early Test Platform
+**Stand:** 2026-08-23  
+**Kanonischer Release-Status:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-- Raspberry-Pi-Plattform
-- Future HUD
-- BLE Discovery
-- GATT Inspection
-- DF100M Adapter Skeleton
-- Dokumentation
-- Quellenverzeichnis
-- Git-Projektstruktur
+Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; Build 118 ist der nächste Raspberry-Pi-Hardwaretest-Kandidat.
 
-## v0.4 – DF100M Protocol
+## Jetzt · Build 118 Hardwarevalidierung
 
-- echte UUID-Zuordnung
-- Notify Capture
-- Speed Frame
-- Statusdecoder
-- Reconnect
+- frischer Boot / Reboot;
+- First Boot, Setup AP, DHCP/DNS;
+- LAN/WLAN/mDNS und GUI-Persistenz;
+- FRITZ! Smart Home / Tapo auf verfügbarer Zielhardware;
+- Logitech C920/UVC;
+- firmware-/modell-/USB-ID-bewusste LED-Fähigkeitserkennung;
+- LED-Steuerung nur bei erkannter Unterstützung;
+- Elecrow 7-Zoll Touch-Kiosk;
+- Support-Bundle bei Abweichungen.
 
-## v0.5 – Telemetry
+## Nächste Alpha-Ziele
 
-- WebSockets
-- Live-Historie
-- SQLite-Messdaten
-- Charts
-- Device Health
+### Geräte & Grow
 
-## v0.6 – Automation
+- reale iConnect-Validierung für Mars Hydro FC3000 2024 und iFresh/DF100;
+- DF100M BLE weiterhin als Diagnose-/Fallback-Pfad;
+- Räume, Pflanzen und Growtagebuch weiter mit realen Sensordaten verbinden;
+- Automationsregeln und Fail-safe-Verhalten auf realer Hardware absichern.
 
-- Temperaturregeln
-- Feuchteregeln
-- Hysterese
-- Mindestlaufzeiten
-- Zeitpläne
-- Fail-safe
+### Energie & Historie
 
-## v0.7+
+- belastbare Zeitreihen für Stunde/Tag/Woche/Monat/Jahr;
+- Kosten- und Verbrauchscharts;
+- Datenretention und Export;
+- Plausibilitätsprüfungen gegen reale Smart-Plug-Zähler.
 
-- FC3000 Adapter
-- externe Sensoren
-- MQTT
-- Home Assistant
-- Konfigurationsbackup
-- Benutzerverwaltung
-- Update-System
+### Mobile
 
-## Quellen
+- Nexus Mobile Android und iOS auf Realgeräten gegen den aktuellen Pi-Kandidaten testen;
+- iOS-Sideload-Prozess reproduzierbar dokumentieren;
+- sichere Serverzielverwaltung weiter verbessern;
+- keine doppelte Geräteimplementierung in den Apps einführen.
 
-Die funktionalen Ideen für Dashboard, Sensorik und Automatisierung orientieren sich unter anderem an KillerInk/GrowFanController. Siehe [SOURCES.md](SOURCES.md).
+### Cloud / Server / APT
+
+- Cloud V6 auf Produktivserver reproduzierbar installieren/aktualisieren;
+- Remotezugriff nur über TLS/HTTPS bzw. abgesicherten Tunnel;
+- signierten APT-Pfad und Upgrade-/Rollback-Prozess weiter testen;
+- Release-State und Prüfsummen bei allen öffentlichen Installerpfaden veröffentlichen.
+
+### Security / Betrieb
+
+- Rechte und Audit weiter härten;
+- Backup/Restore real validieren;
+- Update-/Rollback-Gates vervollständigen;
+- Stable erst nach wiederholbaren Zieltests.
+
+## Design
+
+Alle neuen Pi-, Kiosk-, Mobile-, Website-, Repo- und Release-Oberflächen folgen dem [`GrowCentral Nexus UI`](DESIGN_SYSTEM_NEXUS.md). Logo und Branding bleiben unverändert.
+
+## Stable-Gate
+
+Eine Stable-/Beta-Hochstufung erfolgt erst, wenn die Kernpfade reproduzierbar auf Zielhardware getestet sind. Ein CI-erfolgreicher Build allein genügt nicht.
