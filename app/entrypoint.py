@@ -5,6 +5,7 @@ from app.automation import router as automation_router
 from app.gui_auth import GuiAuthMiddleware, router as gui_auth_router
 from app.firstboot import router as firstboot_router
 from app.gui_shell import router as gui_shell_router
+from app.mdns_alias import install as install_mdns_alias
 
 app.add_middleware(GuiAuthMiddleware)
 app.include_router(gui_auth_router)
@@ -12,3 +13,4 @@ app.include_router(gui_shell_router)
 app.include_router(camera_router)
 app.include_router(automation_router)
 app.include_router(firstboot_router)
+install_mdns_alias(app)
