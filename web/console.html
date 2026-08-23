@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#02070a">
 <title>135er-Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/console.css?v=0.12.0">
+<link rel="stylesheet" href="/static/console.css?v=0.13.0">
 </head>
 <body>
 <div class="gc-shell">
@@ -15,6 +15,7 @@
     <div class="nav-scroll">
       <div class="nav-group"><span>ÜBERSICHT</span><button class="nav-link active" data-target="legacy:dashboard">◈ Dashboard</button></div>
       <div class="nav-group"><span>KLIMA & ENERGIE</span><button class="nav-link" data-target="legacy:dashboard">◌ Klima</button><button class="nav-link" data-target="legacy:power">⚡ Energie & Steckdosen</button><button class="nav-link" data-target="legacy:history">≋ Historie & Kosten</button></div>
+      <div class="nav-group"><span>RÄUME & GROW</span><button class="nav-link" data-target="rooms:overview">▦ Raumübersicht</button><button class="nav-link sub" data-target="rooms:manage">Räume verwalten</button><button class="nav-link sub" data-target="rooms:devices">Geräte zuordnen</button><button class="nav-link sub" data-target="rooms:sensors">Sensordaten</button><button class="nav-link sub" data-target="rooms:journal">Growtagebuch</button><button class="nav-link sub" data-target="rooms:plants">Pflanzen</button></div>
       <div class="nav-group"><span>GERÄTE</span><button class="nav-link" data-target="legacy:devices">◇ Geräteübersicht</button><button class="nav-link sub" data-target="legacy:devices">FRITZ! Smart Home</button><button class="nav-link sub" data-target="legacy:devices">TP-Link Tapo</button><button class="nav-link sub" data-target="legacy:dashboard">Mars Hydro / iFresh</button><button class="nav-link sub" data-target="legacy:camera">Logitech C920 / Kamera</button></div>
       <div class="nav-group"><span>AUTOMATION</span><button class="nav-link" data-target="legacy:automation">⟲ Regeln & Zeitpläne</button></div>
       <div class="nav-group"><span>SYSTEM</span><button class="nav-link" data-target="system:host">⚙ Hostsystem</button><button class="nav-link sub" data-target="system:network">Netzwerk</button><button class="nav-link sub" data-target="system:build">Build & Version</button><button class="nav-link sub" data-target="legacy:system">Diagnose & Wartung</button></div>
@@ -28,30 +29,35 @@
       <div class="top-actions"><div class="build-pill" id="topBuild">BUILD --</div><div class="clock" id="clock">--:--:--</div><button id="syncBtn">SYNC</button><button id="logoutBtn">LOGOUT</button></div>
     </header>
 
-    <section id="legacyPanel" class="content-panel active">
-      <iframe id="legacyFrame" src="/legacy" title="Grow Central Gerätesteuerung"></iframe>
+    <section id="legacyPanel" class="content-panel active"><iframe id="legacyFrame" src="/legacy" title="Grow Central Gerätesteuerung"></iframe></section>
+
+    <section id="roomsPanel" class="content-panel rooms-panel">
+      <div class="rooms-hero"><div><div class="eyebrow">ROOM CONTROL · GROW JOURNAL</div><h2>Räume & Pflanzen</h2><p>Geräte, Sensorwerte und Growtagebuch logisch nach Räumen organisieren.</p></div><button class="primary-action" id="newRoomBtn">+ RAUM ANLEGEN</button></div>
+      <div id="roomCards" class="room-grid"><div class="empty-room">Noch keine Räume angelegt.</div></div>
+      <div class="room-workspace">
+        <aside class="room-selector"><div class="card-head"><span>RÄUME</span><b>AUSWAHL</b></div><div id="roomList" class="room-list"></div></aside>
+        <section class="room-detail">
+          <div id="roomEmpty" class="empty-room">Raum auswählen oder neu anlegen.</div>
+          <div id="roomContent" hidden>
+            <div class="room-titlebar"><div><div class="eyebrow" id="roomKind">RAUM</div><h2 id="roomName">--</h2><p id="roomDescription"></p></div><div class="room-actions"><button id="editRoomBtn">BEARBEITEN</button><button id="captureRoomBtn">MESSWERTE JETZT</button></div></div>
+            <div class="room-tabs"><button class="room-tab active" data-room-tab="overview">Übersicht</button><button class="room-tab" data-room-tab="devices">Geräte</button><button class="room-tab" data-room-tab="sensors">Sensordaten</button><button class="room-tab" data-room-tab="journal">Raumtagebuch</button><button class="room-tab" data-room-tab="plants">Pflanzen</button></div>
+            <div class="room-tabpage active" data-room-page="overview"><div class="metric-grid room-metrics"><article><span>TEMPERATUR</span><strong id="roomTemp">--</strong><small>letzter Wert</small></article><article><span>LUFTFEUCHTE</span><strong id="roomHumidity">--</strong><small>letzter Wert</small></article><article><span>VPD</span><strong id="roomVpd">--</strong><small>kPa</small></article><article><span>GERÄTE / PFLANZEN</span><strong id="roomCounts">--</strong><small>zugeordnet</small></article></div><div class="system-grid"><article class="system-card"><div class="card-head"><span>SOLLWERTE</span><b>RAUMPROFIL</b></div><dl id="roomTargets"></dl></article><article class="system-card"><div class="card-head"><span>LETZTER EINTRAG</span><b>TAGEBUCH</b></div><div id="roomLastJournal" class="journal-list"></div></article></div></div>
+            <div class="room-tabpage" data-room-page="devices"><div class="section-head"><div><div class="eyebrow">DEVICE ASSIGNMENT</div><h3>Geräte diesem Raum zuordnen</h3></div></div><div id="roomDevices" class="assignment-grid"></div></div>
+            <div class="room-tabpage" data-room-page="sensors"><div class="section-head"><div><div class="eyebrow">ROOM TELEMETRY</div><h3>Sensor- & Verbrauchshistorie</h3></div></div><div id="sensorSummary" class="metric-grid room-metrics"></div><div class="table-wrap"><table><thead><tr><th>Zeit</th><th>Temperatur</th><th>Feuchte</th><th>VPD</th><th>Leistung</th><th>Energie</th><th>Quelle</th></tr></thead><tbody id="sensorRows"></tbody></table></div></div>
+            <div class="room-tabpage" data-room-page="journal"><div class="section-head"><div><div class="eyebrow">ROOM JOURNAL</div><h3>Growtagebuch des Raums</h3></div><button id="addRoomJournalBtn">+ EINTRAG</button></div><div id="roomJournal" class="journal-list"></div></div>
+            <div class="room-tabpage" data-room-page="plants"><div class="section-head"><div><div class="eyebrow">PLANT JOURNAL</div><h3>Pflanzen im Raum</h3></div><button id="addPlantBtn">+ PFLANZE</button></div><div id="plantGrid" class="plant-grid"></div></div>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section id="systemPanel" class="content-panel">
-      <div class="system-hero">
-        <div><div class="eyebrow">HOST SYSTEM · LIVE</div><h2 id="hostTitle">Raspberry Pi</h2><p>Alle wichtigen Daten des Grow-Central-Hosts auf einer Seite.</p></div>
-        <div class="status-chip" id="hostState">ONLINE</div>
-      </div>
-      <div class="metric-grid">
-        <article><span>CPU</span><strong id="cpuLoad">--</strong><small id="cpuTemp">-- °C</small></article>
-        <article><span>RAM</span><strong id="memoryUsage">--</strong><small id="memoryDetail">--</small></article>
-        <article><span>SPEICHER</span><strong id="diskUsage">--</strong><small id="diskDetail">--</small></article>
-        <article><span>UPTIME</span><strong id="uptime">--</strong><small id="loadAverage">Load --</small></article>
-      </div>
-      <div class="system-grid">
-        <article class="system-card" data-system-tab="host"><div class="card-head"><span>HOST</span><b>LIVE IDENTITY</b></div><dl id="hostData"></dl></article>
-        <article class="system-card" data-system-tab="network"><div class="card-head"><span>NETZWERK</span><b>LOCAL ACCESS</b></div><div class="domain-card"><small>Feste Adresse</small><strong>135er-GrowCentral.local</strong></div><div id="networkData" class="interface-list"></div></article>
-        <article class="system-card" data-system-tab="build"><div class="card-head"><span>SOFTWARE</span><b>BUILD STATUS</b></div><dl id="buildData"></dl><div class="build-status" id="buildStatus">Buildinformationen werden geladen…</div></article>
-        <article class="system-card"><div class="card-head"><span>HARDWARE</span><b>RASPBERRY PI</b></div><dl id="hardwareData"></dl></article>
-      </div>
+      <div class="system-hero"><div><div class="eyebrow">HOST SYSTEM · LIVE</div><h2 id="hostTitle">Raspberry Pi</h2><p>Alle wichtigen Daten des Grow-Central-Hosts auf einer Seite.</p></div><div class="status-chip" id="hostState">ONLINE</div></div>
+      <div class="metric-grid"><article><span>CPU</span><strong id="cpuLoad">--</strong><small id="cpuTemp">-- °C</small></article><article><span>RAM</span><strong id="memoryUsage">--</strong><small id="memoryDetail">--</small></article><article><span>SPEICHER</span><strong id="diskUsage">--</strong><small id="diskDetail">--</small></article><article><span>UPTIME</span><strong id="uptime">--</strong><small id="loadAverage">Load --</small></article></div>
+      <div class="system-grid"><article class="system-card" data-system-tab="host"><div class="card-head"><span>HOST</span><b>LIVE IDENTITY</b></div><dl id="hostData"></dl></article><article class="system-card" data-system-tab="network"><div class="card-head"><span>NETZWERK</span><b>LOCAL ACCESS</b></div><div class="domain-card"><small>Feste Adresse</small><strong>135er-GrowCentral.local</strong></div><div id="networkData" class="interface-list"></div></article><article class="system-card" data-system-tab="build"><div class="card-head"><span>SOFTWARE</span><b>BUILD STATUS</b></div><dl id="buildData"></dl><div class="build-status" id="buildStatus">Buildinformationen werden geladen…</div></article><article class="system-card"><div class="card-head"><span>HARDWARE</span><b>RASPBERRY PI</b></div><dl id="hardwareData"></dl></article></div>
     </section>
   </main>
 </div>
-<script src="/static/console.js?v=0.12.0"></script>
+<script src="/static/console.js?v=0.13.0"></script>
 </body>
 </html>
