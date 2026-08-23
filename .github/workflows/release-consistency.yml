@@ -1,0 +1,63 @@
+name: Validate GrowCentral Release Consistency
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'RELEASE_STATE.md'
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'website/**'
+      - 'mobile/**'
+      - '.github/workflows/release-consistency.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Verify canonical release markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
+          grep -Fq 'e339602476f3a716ae28abd5334cb6f96447a646' RELEASE_STATE.md
+          grep -Fq 'Build 118' RELEASE_STATE.md
+          grep -Fq 'pi-universal-alpha-0.7.5-118' RELEASE_STATE.md
+          grep -Fq 'CANDIDATE' RELEASE_STATE.md
+
+      - name: Verify active entry points use Build 118 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in README.md docs/PROJECT_STATUS.md docs/RELEASE_PIPELINE.md docs/README.md website/README.md wiki/Home.md wiki/de/PROJEKTSTATUS.md wiki/en/PROJECT_STATUS.md mobile/README.md; do
+            grep -Fq '118' "$file" || { echo "missing Build 118 marker in $file"; exit 1; }
+          done
+          grep -Fq 'BUILD 118' website/index.html
+          grep -Fq 'CANDIDATE' website/index.html
+          grep -Fq '0.2.1' mobile/VERSION
+          grep -Fq '0.2.1' mobile/package.json
+
+      - name: Guard validation language
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Eiq 'Build 118.{0,40}(validated|validiert)|validated.{0,40}Build 118|validiert.{0,40}Build 118' RELEASE_STATE.md README.md docs/PROJECT_STATUS.md website/index.html; then
+            echo 'Build 118 must remain CANDIDATE until real hardware validation.'
+            exit 1
+          fi
+
+      - name: Verify Nexus design binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s docs/DESIGN_SYSTEM_NEXUS.md
+          grep -Fq 'GrowCentral Nexus UI' BRANDING.md
+          grep -Fq 'GrowCentral Nexus UI' docs/DESIGN_SYSTEM_NEXUS.md
