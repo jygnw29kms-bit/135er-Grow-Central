@@ -1,85 +1,63 @@
 # Project Status – 135er-Grow Central
 
-**Stand:** 2026-08-12
+**Stand:** 2026-08-23  
+**Version:** `alpha-0.7.5`  
+**Master-Anker:** `e339602476f3a716ae28abd5334cb6f96447a646`  
+**Pi-Hardwaretest-Kandidat:** **Build 118** (`pi-universal-alpha-0.7.5-118`)  
+**Kanonische Quelle:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-**Version:** alpha-0.7.4
+## Einordnung
 
-**Phase:** platform consolidation + Raspberry Pi 3B first-boot validation + Mars Hydro/iConnect architecture alignment
+Build 117 wurde erfolgreich getestet, ist durch den zusammengeführten aktuellen Masterstand aber überholt. Build 118 ist deshalb der nächste reale Hardwaretest-Kandidat. Bis dieser Test abgeschlossen ist, bleibt Build 118 **CANDIDATE** und wird nicht als `VALIDATED` bezeichnet.
 
-A documented capability is not considered hardware-validated until it has been tested against the target device. Software integration can nevertheless be complete and CI-tested independently.
+## Aktueller Funktionsstand
 
-## Current hardware baseline
-
-- **Mars Hydro FC3000, model year 2024, USB port, iConnect support**
-- **Mars Hydro iFresh / DF100 series using iConnect**
-- **DF100M / MZ_MZF002 BLE** retained as experimental diagnostics/reverse-engineering/fallback
-- Raspberry Pi 3B as authoritative local master
-- no ESP32 in the target architecture
-- Logitech C920 as camera target
-- Tapo, FRITZ!SmartHome, Shelly and Home Assistant as smart-home/power integration targets
-
-## Current image result
-
-The current Raspberry Pi image is reported by the project owner to be in a good state for its **first basic functions from first boot**. This is recorded as a positive alpha smoke-test result, not as full release validation.
-
-Still requiring real target-hardware validation:
-
-- repeatable fresh first boot and reboot behavior
-- setup AP / DHCP / DNS reliability on physical Raspberry Pi networking
-- provisioning transition and post-provisioning GUI availability
-- Bluetooth initialization and device-name quality
-- Logitech C920 capture path
-- Mars Hydro FC3000 2024 iConnect communication
-- Mars Hydro iFresh/DF100 iConnect communication
-- DF100M BLE diagnostics and any write replay
-- Tapo / FRITZ! / Shelly live device behavior
-- power telemetry/history accuracy and cost calculations
-- actuator failure modes and recovery
-
-| Capability | Status | Notes |
+| Bereich | Status | Hinweise |
 |---|---|---|
-| Local FastAPI | Implemented baseline | existing local service |
-| First-boot AP/portal | Alpha smoke test positive | further repeatability/hardware validation required |
-| GUI startup/recovery watchdog | Implemented baseline | image includes recovery path; repeated hardware test required |
-| BLE discovery/connect/GATT | Implemented baseline | real-device validation ongoing |
-| Bluetooth friendly naming | Implemented baseline | real-device quality check pending |
-| Mars Hydro shared iConnect abstraction | Architecture baseline | FC3000 2024 + iFresh/DF100 are authoritative target family |
-| FC3000 2024 iConnect control | Not validated | no guessed write path allowed |
-| iFresh/DF100 iConnect control | Not validated | no guessed write path allowed |
-| DF100M notification capture | Experimental | diagnostics/fallback only |
-| DF100M speed protocol | Not validated | payload hypotheses only; writes deny-by-default |
-| Local HUD | Implemented | responsive climate/device/power dashboard |
-| Smart-home normalized models | Implemented | explicit inventory and adapter boundary |
-| Smart-home device registry | Implemented | file-backed explicit inventory |
-| Smart-home deny-by-default policy | Implemented | global + per-device gates |
-| Local write-token helper | Implemented | fail-closed when unconfigured |
-| Smart-home audit JSONL | Implemented baseline | DB migration future |
-| Smart-plug overview API | Implemented | normalized safe-read telemetry |
-| Smart-plug HUD | Implemented | ON/OFF, W, kWh, V, A, Hz and per-device status |
-| Shelly Gen2+ | Implemented baseline | native local RPC; hardware test required |
-| Home Assistant | Implemented baseline | connector hardware test required |
-| Tapo | Bridge/discovery architecture | login/search/import hardware validation pending |
-| FRITZ!SmartHome | Bridge architecture | real hardware validation pending |
-| Apple Home / Siri | Bridge architecture | Home Assistant HomeKit Bridge |
-| Logitech C920 | Image baseline | ffmpeg/v4l-utils + video group; capture test pending |
-| Local SQLite | Baseline | persistent power time-series remains future work |
-| Cloud FastAPI | Alpha | telemetry/history/commands baseline |
-| Cloud PostgreSQL | Architecture baseline | runtime migration incomplete |
-| Full RBAC/user sessions | Not complete | high-priority security work |
-| Public project website | Implemented | static; deliberately has no local device API access |
+| Local FastAPI / GUI | implemented | lokale autoritative Steuerinstanz |
+| GrowCentral Nexus UI | implemented baseline | verbindliche Designsprache für Pi/Web/Mobile/Repo |
+| First Boot / Setup AP | implemented + früher positiv getestet | mit Build 118 erneut prüfen |
+| LAN/WLAN / mDNS | implemented | Realtest Build 118 erforderlich |
+| Geräte-Persistenz | implemented | Registry bleibt über Neustarts erhalten |
+| FRITZ! Smart Home | implemented baseline | Livehardware weiter prüfen |
+| TP-Link Tapo | implemented local onboarding | lokale Gerätepfade weiter prüfen |
+| Räume / Pflanzen / Growtagebuch | implemented | aktuelle Console integriert |
+| Automation | implemented baseline | Regeln/Zeitpläne im Realbetrieb prüfen |
+| Energie / Kosten | implemented baseline | Gesamtenergie bleibt Basis für historische Kosten |
+| Logitech C920 / UVC | implemented baseline | Snapshot/MJPEG/V4L2 vorhanden |
+| Kamera-LED-Erkennung | implemented + tests | firmware-/modell-/USB-ID-bewusst |
+| Kamera-LED-Steuerung | guarded implementation | nur bei erkannter Fähigkeit; Realtest Build 118 |
+| Elecrow 7" Touch-Kiosk | implemented baseline | systemd-Service + gehärtete Rechte |
+| Mars Hydro iConnect | architecture / experimental integration | keine unbestätigten Writes |
+| DF100M BLE | diagnostics / fallback | Reverse Engineering, deny-by-default für Writes |
+| Support Bundle | implemented | bevorzugte Fehleranalysebasis |
+| Mobile Android | Nexus client | APK über Actions |
+| Mobile iOS | Nexus client | unsigned Sideload-IPA über Actions |
+| Cloud Server | V6 | optionaler abgesicherter Remote-Pfad |
+| APT | signed repository | `https://repo.dezender.de/apt` |
+| dezender.de | public read-only console | Nexus UI, keine lokalen Steuerendpunkte |
 
-## Security boundary
+## Build 118 – Pflichtprüfungen
 
-The public website never receives local device credentials, iConnect-related credentials, smart-plug credentials, local API tokens, or direct LAN endpoints. Live device data is served only by the local Raspberry Pi API or through explicitly approved server-side cloud synchronization. Every write path must remain authenticated, approved, writable, and audited.
+1. frischer Boot und Reboot;
+2. Setup-AP, DHCP/DNS und Übergang ins Heimnetz;
+3. lokale GUI via `135er-Grow-Central.local` und Kompatibilitätspfad `:8080`;
+4. Persistenz von Setup, Geräten und relevanten Einstellungen;
+5. C920-Erkennung, Snapshot, Stream und V4L2-Regler;
+6. Kamera-LED-Fähigkeitserkennung und nur bei echter Unterstützung ausgeführte LED-Steuerung;
+7. Elecrow-7"-Kioskstart und Touch-Bedienbarkeit, sofern Display angeschlossen;
+8. FRITZ!/Tapo-Livepfade, sofern Geräte verfügbar;
+9. Mars-Hydro-/BLE-Diagnosepfade ohne unbestätigte Schreibtelegramme;
+10. Support-Paket bei jeder unerwarteten Abweichung.
 
-## Immediate next milestones
+## Sicherheitsgrenze
 
-1. repeat physical Raspberry Pi fresh-boot and reboot smoke tests;
-2. verify AP/DHCP/provisioning-to-GUI transition without manual repair;
-3. validate Logitech C920 enumeration and capture;
-4. document the observable iConnect communication path for FC3000 2024 and iFresh/DF100 without guessing commands;
-5. keep DF100M BLE tooling as diagnostics/fallback and capture real traffic only when needed;
-6. hardware-test Shelly/Tapo/FRITZ!/Home Assistant paths;
-7. persist power time-series and validate hour/day/week/month/year cost calculations;
-8. complete user/session authentication and RBAC runtime;
-9. continue image hardening and recovery testing before any beta designation.
+- Schreibpfade bleiben deny-by-default.
+- Mobile Clients enthalten keine Gerätezugangsdaten.
+- Remote-Zugriff benötigt HTTPS/VPN/abgesicherten Reverse Proxy.
+- Öffentliche Website enthält keine LAN-Steuerendpunkte oder Smart-Home-Credentials.
+- LED-/V4L2-Steuerung wird nur für erkannte, erlaubte Controls exponiert.
+
+## Nächster Meilenstein
+
+**Build 118 auf realer Hardware testen.** Erst nach erfolgreichem Test wird `RELEASE_STATE.md` von `CANDIDATE` auf `VALIDATED` angehoben. Ein neuer Pi-Build wird vorher nur erzeugt, wenn ein tatsächlicher Laufzeitfix nötig wird.
