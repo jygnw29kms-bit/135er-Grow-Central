@@ -42,6 +42,12 @@ done
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 
+# Display/boot tuning is deliberately best-effort and isolated from AP startup.
+# A display failure must never regress the Build-85 provisioning network path.
+if [ -x /opt/135er-grow-central/image-builder/firstboot/display-setup.sh ]; then
+  /opt/135er-grow-central/image-builder/firstboot/display-setup.sh || log "Display setup skipped after a non-fatal error."
+fi
+
 # The CI image smoke test runs in a container without Raspberry Pi radio hardware.
 if systemd-detect-virt --quiet --container; then
   log "Container smoke boot detected; skipping physical Wi-Fi setup."
