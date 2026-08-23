@@ -1,109 +1,65 @@
-# 135er-Grow Central Cloud
+# 135er-Grow Central Cloud / Server V6
+
+**Plattformstand:** `alpha-0.7.5` · Master `e339602` · Pi-Testkandidat **Build 118**  
+**Kanonische Quelle:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
 ## Rolle
 
-Die Cloud ist **optional**. Der Raspberry Pi bleibt lokale Steuerinstanz.
+Cloud/Server ist **optional**. Der Raspberry Pi bleibt die lokale Geräteautorität und darf bei Internet- oder Serverausfall seine lokalen Kernfunktionen nicht verlieren.
 
 ```text
-Internet / Mobilgerät
-        |
-      HTTPS
-        |
-     VServer
-  Grow Central Cloud
-        ^
-        |
- ausgehende HTTPS-Verbindung
-        |
- Raspberry Pi
- Grow Central Local
-        |
-       BLE
-        |
-     DF100M
+Mobile / Browser
+      |
+    HTTPS
+      |
+Grow Central Server V6
+      ^
+      | abgesicherter Remote-/Sync-Pfad
+      |
+135er-Grow Central Local
+    Raspberry Pi
+      |
+FRITZ! / Tapo / C920 / Mars Hydro / Räume
 ```
+
+## Kanonische Installation
+
+- Server-Installer: `scripts/install-135ercloud-v6.sh`
+- APT-Bootstrap: `scripts/setup-135ercloud-apt-repo-v1.sh`
+- signiertes Repository: `https://repo.dezender.de/apt`
+- öffentliche Kopien: `https://dezender.de/135ercloud-server-install.sh` und `https://dezender.de/setup-135ercloud-apt-repo.sh`
+
+Der dezender.de-Deploy veröffentlicht zusätzlich `RELEASE_STATE.md`, `release-state.txt` und `SHA256SUMS.txt`, damit Installer und sichtbarer Release-Stand eindeutig zusammengehören.
+
+## APT-Sicherheit
+
+- dedizierter `Signed-By`-Keyring;
+- alte Grow-Central-Quellen werden vor der kanonischen Einrichtung bereinigt;
+- keine widersprüchlichen Legacy-`Signed-By`-Definitionen;
+- Installations-/Updatepfad muss reproduzierbar bleiben.
 
 ## Ausfallverhalten
 
-Wenn der VServer oder das Internet ausfällt:
+Bei Server-/Internetausfall:
 
-- DF100M-Adapter lokal: bleibt verfügbar
-- lokale Web-GUI: bleibt verfügbar
-- lokale Automationen: sollen weiterlaufen
-- Zeitpläne: sollen weiterlaufen
-- Cloud-Historie: pausiert
-- Remote-Zugriff: nicht verfügbar
+- lokale GUI: verfügbar;
+- lokale Gerätepfade: verfügbar;
+- lokale Automationen/Zeitpläne: sollen weiterarbeiten;
+- Remotezugriff/Cloud-Sync: nicht verfügbar bzw. pausiert;
+- der Pi bleibt Master.
 
-## Cloud v0.4 Funktionen
+## Remote-Sicherheit
 
-- `/api/health`
-- Telemetrie vom Pi empfangen
-- letzte Werte je Standort
-- einfache Historie über SQLite
-- Remote-Dashboard
-- Command Queue vorbereitet
-- Remote Commands doppelt abgesichert:
-  - Server: `CLOUD_ALLOW_COMMANDS`
-  - Pi: `GC_REMOTE_COMMANDS`
+- öffentliche Remotezugriffe nur über TLS/HTTPS oder einen anderweitig abgesicherten Transport;
+- GUI-Login allein ersetzt keine Transportverschlüsselung;
+- Remote Commands bleiben lokal und serverseitig explizit freizugeben;
+- Credentials und lokale LAN-Endpunkte gehören nicht auf die öffentliche Website oder in Mobile-Pakete;
+- deny-by-default bleibt die Grundlage für Schreiboperationen.
 
-Standardmäßig sind Remote Commands **aus**.
+## Release-Abgleich Build 118
 
-## VServer Schnellstart mit Docker
+Cloud V6 und APT werden zusammen mit der Nexus-Website erneut veröffentlicht, ohne Build 118 künstlich zu Build 119 zu machen: diese Publishing-/Dokumentationsänderungen verändern nicht den vorgesehenen Pi-Laufzeitkandidaten. Ein neuer Pi-Build ist erst bei einem Runtime-Fix erforderlich.
 
-```bash
-cp cloud/.env.example cloud/.env
-nano cloud/.env
+## Validierung
 
-docker compose -f docker-compose.cloud.yml up -d --build
-```
-
-Danach lokal auf dem VServer:
-
-```bash
-curl http://127.0.0.1:8090/api/health
-```
-
-## Nginx
-
-Beispiel:
-
-`deploy/nginx/grow-central-cloud.conf.example`
-
-Für produktiven Betrieb HTTPS über Let's Encrypt/Certbot aktivieren.
-
-## Pi Cloud-Link
-
-```bash
-cd local/cloud_link
-cp .env.example .env
-nano .env
-```
-
-Minimal:
-
-```text
-GC_CLOUD_ENABLED=true
-GC_CLOUD_URL=https://grow.example.de
-GC_CLOUD_TOKEN=<derselbe Token wie am Server>
-GC_SITE_ID=garage
-GC_REMOTE_COMMANDS=false
-```
-
-## Sicherheit
-
-v0.4 nutzt einen statischen API-Token und ist ein **Alpha-Cloud-Layer**.
-
-Für spätere Releases vorgesehen:
-
-- per-device credentials
-- Token Rotation
-- Benutzerlogin
-- Rollen
-- TLS pinning optional
-- Audit Log
-- rate limiting
-- command signatures/nonces
-- PostgreSQL
-- MQTT over TLS
-
-Die Cloud-Weboberfläche sollte nicht ohne vorgeschaltete Authentifizierung öffentlich betrieben werden.
+Vor einer Produktionsfreigabe des Serverpfads müssen Installation/Upgrade, TLS, Authentifizierung, Backup/Restore, APT-Upgrade/Rollback und der Remotezugriff auf einer realen Serverinstanz geprüft werden. Das Vorhandensein des Installers allein ist keine Produktionsvalidierung.
