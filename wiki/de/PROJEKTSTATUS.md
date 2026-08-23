@@ -1,46 +1,41 @@
 # Projektstatus
 
-**Phase:** v0.5.x Hardware Validation
+**Version:** `alpha-0.7.5`  
+**Master:** `e339602`  
+**Nächster Raspberry-Pi-Hardwaretest:** **Build 118**  
+**Tag:** `pi-universal-alpha-0.7.5-118`  
+**Status:** `CANDIDATE` – noch nicht hardwarevalidiert
 
-## Fertig bzw. nachweisbar vorhanden
+Build 117 wurde erfolgreich getestet, ist durch den danach zusammengeführten e339-Stand jedoch überholt.
 
-- FastAPI lokale Basis
-- BLE Discovery
-- Connect / Disconnect
-- GATT Inspection
-- GitHub-/CI-Imagebuilder-Basis
-- Cloud-Telemetrie-/Historien-Alpha
-- Responsive GUI-Zielbild
-- SQLite-/PostgreSQL-Schema- und Plattformbaseline
-- RBAC-/Rollenmodell
+## Aktuell integriert
 
-## Experimentell
+- Local-First FastAPI / GrowCentral GUI
+- GrowCentral Nexus UI
+- First Boot, Setup AP, LAN/WLAN und mDNS
+- Geräte-Persistenz
+- FRITZ! Smart Home
+- lokales Tapo-Onboarding
+- Räume, Pflanzen, Growtagebuch und Automation
+- Energie-/Kostenlogik
+- Logitech C920 / UVC, Snapshot, MJPEG und V4L2
+- firmware-/modell-/USB-ID-bewusste Kamera-LED-Fähigkeitserkennung
+- bedingte LED-Steuerung bei erkannter Unterstützung
+- Elecrow 7-Zoll Touch-Kiosk
+- Mobile Nexus Android + iOS Sideload Client
+- Cloud Server V6
+- signiertes APT Repository `https://repo.dezender.de/apt`
 
-- Notifications im DF100M-Kontext
-- Raw BLE writes
-- Speed-Payloads
-- Cloud Command Flow
+## Experimentell / weiter zu validieren
 
-## Noch nicht als Runtime vollständig
-
-- validiertes DF100M-Speed-Protokoll
-- vollständige Benutzer-/Session-Authentisierung
-- vollständige RBAC-Durchsetzung
-- PostgreSQL-Produktivverdrahtung/Migrationsstack
-- vollständiger Sensor-/Historienservice
-- Schedule-/Automation-Engine
-- Audit-Middleware
-- WebSockets
-- vollständiger Backup-/Restore-Betrieb
-
-## Sichere Standards
-
-```text
-DF100M_ALLOW_WRITES=false
-GC_REMOTE_COMMANDS=false
-GC_CLOUD_ENABLED=false
-```
+- reale Gerätepfade je verfügbarer FRITZ!/Tapo-Hardware
+- Mars Hydro iConnect
+- DF100M BLE Diagnose/Reverse Engineering
+- Kamera-LED-Funktion auf realer Zielkamera/Firmware
+- Elecrow Kiosk auf Zielhardware
 
 ## Nächster Meilenstein
 
-Pi-Testimage erfolgreich bauen, flashen und reale DF100M-Discovery/GATT/Notification-Daten erfassen.
+Build 118 booten und real prüfen: First Boot, Netzwerk, GUI, Persistenz, C920 inklusive LED-Fähigkeiten sowie relevante Geräte-/Displaypfade. Erst danach darf der Kandidat als `VALIDATED` markiert werden.
+
+Kanonisch: [Release State](../../RELEASE_STATE.md) · [Build 118 Notes](../../docs/RELEASE_NOTES_BUILD_118.md) · [Release Pipeline](../../docs/RELEASE_PIPELINE.md)
