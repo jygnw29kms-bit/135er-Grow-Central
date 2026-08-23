@@ -1,8 +1,8 @@
 {
-  "name": "135er-grow-central-mobile",
-  "version": "0.1.0",
+  "name": "135er-grow-central-nexus-mobile",
+  "version": "0.2.0",
   "private": true,
-  "description": "135er-Grow Central Mobile WebGUI client for iOS and Android",
+  "description": "135er-Grow Central Nexus Mobile client for iOS sideloading and Android",
   "scripts": {
     "native:android": "npx cap add android || npx cap sync android",
     "native:ios": "npx cap add ios || npx cap sync ios",
