@@ -191,6 +191,16 @@ jobs:
           mkdir -p /opt/135er-grow-central/data
           chown growcentral:growcentral /opt/135er-grow-central/data
 
+          install -o root -g root -m 0755 \
+            /opt/135er-grow-central/image-builder/firstboot/cloud-smoke-test.sh \
+            /usr/local/sbin/grow-central-cloud-smoke-test
+          install -o root -g root -m 0755 \
+            /opt/135er-grow-central/image-builder/firstboot/remote-maintenance.sh \
+            /usr/local/sbin/grow-central-remote-maintenance
+          install -o root -g root -m 0644 \
+            /opt/135er-grow-central/image-builder/firstboot/grow-central-remote-maintenance.service \
+            /etc/systemd/system/grow-central-remote-maintenance.service
+
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
           Description=135er-Grow Central Local
@@ -508,6 +518,12 @@ jobs:
           grep -q '^SupplementaryGroups=systemd-journal video netdev$' /etc/systemd/system/135er-grow-central.service
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
+          /bin/bash -n /usr/local/sbin/grow-central-cloud-smoke-test
+          /bin/bash -n /usr/local/sbin/grow-central-remote-maintenance
+          grep -qx 'GC_CLOUD_ENABLED=false' /opt/135er-grow-central/.env
+          grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/.env
+          test "$(systemctl is-enabled grow-central-remote-maintenance.service 2>/dev/null || true)" != enabled
+          systemd-analyze verify /etc/systemd/system/grow-central-remote-maintenance.service
           systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
@@ -557,6 +573,8 @@ jobs:
             exit 1
           fi
 
+          /usr/local/sbin/grow-central-cloud-smoke-test
+
           cat >/etc/motd <<'EOF'
           135er-Grow Central - Raspberry Pi 3B TEST IMAGE alpha-0.7.5
           Hostname: 135er-grow-central
@@ -571,6 +589,8 @@ jobs:
           Camera: Logitech C920 / UVC test panel in GUI
           Temporary API token for test clients: test
           DF100M BLE writes and remote cloud commands are disabled by default.
+          Cloud test: sudo /usr/local/sbin/grow-central-cloud-smoke-test
+          Test-only remote maintenance: sudo /usr/local/sbin/grow-central-remote-maintenance
           EOF
           truncate -s 0 /etc/machine-id
           rm -f /var/lib/dbus/machine-id
@@ -682,6 +702,8 @@ jobs:
           Temporary API token for test clients: test
           BLE device writes: disabled
           Remote cloud commands: disabled
+          Cloud test: sudo /usr/local/sbin/grow-central-cloud-smoke-test
+          Test-only remote maintenance: sudo /usr/local/sbin/grow-central-remote-maintenance
           EOF
 
       - name: Upload workflow artifact

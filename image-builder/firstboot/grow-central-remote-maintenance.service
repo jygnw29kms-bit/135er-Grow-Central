@@ -1,0 +1,23 @@
+[Unit]
+Description=135er GrowCentral test-image reverse SSH maintenance tunnel
+Documentation=file:/opt/135er-grow-central/docs/NEXT_IMAGE_CLOUD_ROOMS_VALIDATION.md
+After=network-online.target ssh.service
+Wants=network-online.target
+ConditionPathExists=/etc/135er-grow-central/remote-maintenance.conf
+
+[Service]
+Type=simple
+User=growcentral
+Group=growcentral
+EnvironmentFile=/etc/135er-grow-central/remote-maintenance.conf
+ExecStart=/usr/bin/ssh -NT -i /var/lib/135er-grow-central/remote-maintenance/id_ed25519 -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/135er-grow-central/remote-maintenance/known_hosts -R 127.0.0.1:${GC_REMOTE_MAINTENANCE_PORT}:127.0.0.1:22 ${GC_REMOTE_MAINTENANCE_USER}@${GC_REMOTE_MAINTENANCE_HOST}
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/135er-grow-central/remote-maintenance /etc/135er-grow-central/remote-maintenance.conf
+
+[Install]
+WantedBy=multi-user.target
