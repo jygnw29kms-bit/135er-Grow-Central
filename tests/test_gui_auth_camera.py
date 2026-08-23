@@ -81,7 +81,7 @@ def test_camera_control_write_checks_range(monkeypatch):
         camera._set_control_sync(request)
 
 
-def test_camera_mjpeg_modes_exclude_uncompressed_formats():
+def test_camera_mjpeg_modes_exclude_uncompressed_formats_and_modes_above_720p():
     output = """
         [0]: 'MJPG' (Motion-JPEG, compressed)
             Size: Discrete 640x480
@@ -95,7 +95,6 @@ def test_camera_mjpeg_modes_exclude_uncompressed_formats():
     """
     assert camera._parse_mjpeg_modes(output) == [
         {"width": 640, "height": 480, "fps": [10.0, 30.0], "label": "640 × 480"},
-        {"width": 1920, "height": 1080, "fps": [5.0], "label": "1920 × 1080"},
     ]
 
 
@@ -104,16 +103,16 @@ def test_camera_capture_mode_is_advertised_and_pi_friendly(monkeypatch):
         "id": "cam0", "device": "/dev/video0",
         "mjpeg_modes": [
             {"width": 640, "height": 480, "fps": [5.0, 10.0, 30.0], "label": "640 × 480"},
-            {"width": 1920, "height": 1080, "fps": [5.0, 30.0], "label": "1920 × 1080"},
+            {"width": 1280, "height": 720, "fps": [5.0, 10.0, 30.0], "label": "1280 × 720"},
         ],
     }]
     monkeypatch.setattr(camera, "_discover_devices_sync", lambda: (devices, 0))
     _, _, default_mode = camera._resolve_capture_mode("cam0", None, None)
     assert (default_mode["width"], default_mode["height"], default_mode["selected_fps"]) == (640, 480, 10.0)
-    _, _, full_hd = camera._resolve_capture_mode("cam0", 1920, 1080)
-    assert full_hd["selected_fps"] == 5.0
+    _, _, hd_mode = camera._resolve_capture_mode("cam0", 1280, 720)
+    assert (hd_mode["width"], hd_mode["height"]) == (1280, 720)
     with pytest.raises(ValueError):
-        camera._resolve_capture_mode("cam0", 1280, 720)
+        camera._resolve_capture_mode("cam0", 1920, 1080)
 
 
 def test_manual_focus_disables_autofocus_and_reads_back(monkeypatch):
