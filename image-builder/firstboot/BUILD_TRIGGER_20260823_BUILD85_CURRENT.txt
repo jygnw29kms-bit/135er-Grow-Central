@@ -1,0 +1,3 @@
+Build request: current master image based on the physically validated Build-85 AP/first-boot path.
+Requested: 2026-08-23 Europe/Berlin.
+Do not overwrite historical Build 85; publish the workflow's actual new build number and release assets.
