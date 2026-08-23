@@ -2,7 +2,9 @@
 
 Nexus Mobile ist der iOS-/Android-Client der 135er-Grow-Central-Plattform. Die App folgt dem verbindlichen GrowCentral-Nexus-Design und bleibt bewusst ein Client: Raspberry Pi bzw. ausdrücklich eingerichteter Server bleiben die autoritativen Instanzen für Geräte, Policy, Automation und Zugangsdaten.
 
-**Kanonischer Plattformstand:** `alpha-0.7.5` · Master `e339602` · Pi-Hardwaretest-Kandidat **Build 118** (`pi-universal-alpha-0.7.5-118`).
+**Kanonischer Plattformstand:** `alpha-0.7.5` · Branch `master` · Build-118-Runtime-/Image-Anker `e339602` · Pi-Hardwaretest-Kandidat **Build 118** (`pi-universal-alpha-0.7.5-118`).
+
+> `e339602` ist der Pi-Laufzeitanker des Kandidaten. Der Repository-HEAD enthält danach zusätzliche Mobile-/Doku-/Packaging-Commits, ohne den Pi-Kandidaten künstlich hochzuzählen.
 
 ## Architektur
 
@@ -50,6 +52,6 @@ Nach dem Verbinden übernimmt die lokale Grow-Central-WebGUI die Sitzung und Ger
 
 ## Release-Regel
 
-Mobile 0.2.1 wird neu aus dem konsolidierten Projektstand gebaut. Die Pakete bleiben Test-/Sideload-Artefakte, bis reale iOS-/Android-Gerätetests gegen Build 118 bzw. die dann gültige Pi-Basis abgeschlossen sind.
+Mobile 0.2.1 wird neu aus dem konsolidierten Repository-Stand gebaut. Die Pakete bleiben Test-/Sideload-Artefakte, bis reale iOS-/Android-Gerätetests gegen Build 118 bzw. die dann gültige Pi-Basis abgeschlossen sind.
 
 Siehe [INSTALLATION.md](INSTALLATION.md) und [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
