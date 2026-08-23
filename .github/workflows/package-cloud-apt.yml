@@ -1,0 +1,60 @@
+name: Package 135er-Grow Central Cloud V6 and APT
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'scripts/install-135ercloud-v6.sh'
+      - 'scripts/setup-135ercloud-apt-repo-v1.sh'
+      - 'scripts/add-135ercloud-apt-repo.sh'
+      - 'RELEASE_STATE.md'
+      - '.github/workflows/package-cloud-apt.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Validate and package Cloud/APT
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/install-135ercloud-v6.sh
+          bash -n scripts/setup-135ercloud-apt-repo-v1.sh
+          bash -n scripts/add-135ercloud-apt-repo.sh
+
+      - name: Build release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/cloud-apt
+          cp scripts/install-135ercloud-v6.sh dist/cloud-apt/135ercloud-server-install.sh
+          cp scripts/setup-135ercloud-apt-repo-v1.sh dist/cloud-apt/setup-135ercloud-apt-repo.sh
+          cp scripts/add-135ercloud-apt-repo.sh dist/cloud-apt/add-135ercloud-apt-repo.sh
+          cp RELEASE_STATE.md dist/cloud-apt/RELEASE_STATE.md
+          cat > dist/cloud-apt/release-state.txt <<'EOF'
+          version=alpha-0.7.5
+          master_anchor=e339602
+          pi_candidate=118
+          pi_tag=pi-universal-alpha-0.7.5-118
+          status=CANDIDATE
+          cloud=V6
+          apt=https://repo.dezender.de/apt
+          EOF
+          (cd dist/cloud-apt && sha256sum 135ercloud-server-install.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
+
+      - name: Upload Cloud/APT bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: GrowCentral-CloudV6-APT-Build118
+          path: dist/cloud-apt/
+          if-no-files-found: error
+          retention-days: 30
