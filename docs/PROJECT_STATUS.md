@@ -2,20 +2,21 @@
 
 **Stand:** 2026-08-23  
 **Version:** `alpha-0.7.5`  
-**Master-Anker:** `e339602476f3a716ae28abd5334cb6f96447a646`  
+**Branch:** `master`  
+**Build-118 Runtime-/Image-Anker:** `e339602476f3a716ae28abd5334cb6f96447a646`  
 **Pi-Hardwaretest-Kandidat:** **Build 118** (`pi-universal-alpha-0.7.5-118`)  
 **Kanonische Quelle:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
 ## Einordnung
 
-Build 117 wurde erfolgreich getestet, ist durch den zusammengeführten aktuellen Masterstand aber überholt. Build 118 ist deshalb der nächste reale Hardwaretest-Kandidat. Bis dieser Test abgeschlossen ist, bleibt Build 118 **CANDIDATE** und wird nicht als `VALIDATED` bezeichnet.
+Build 117 wurde erfolgreich getestet, ist durch den danach zusammengeführten e339-Laufzeitstand aber überholt. Build 118 ist deshalb der nächste reale Hardwaretest-Kandidat. Bis dieser Test abgeschlossen ist, bleibt Build 118 **CANDIDATE**. Der `master`-HEAD enthält nach e339 zusätzlich Dokumentations-, Mobile-, Design-, Packaging- und Publishing-Commits, die den vorgesehenen Pi-Laufzeitkandidaten nicht verändern.
 
 ## Aktueller Funktionsstand
 
 | Bereich | Status | Hinweise |
 |---|---|---|
 | Local FastAPI / GUI | implemented | lokale autoritative Steuerinstanz |
-| GrowCentral Nexus UI | implemented baseline | verbindliche Designsprache für Pi/Web/Mobile/Repo |
+| GrowCentral Nexus UI | implemented design baseline | verbindliche Designsprache für Pi/Web/Mobile/Repo |
 | First Boot / Setup AP | implemented + früher positiv getestet | mit Build 118 erneut prüfen |
 | LAN/WLAN / mDNS | implemented | Realtest Build 118 erforderlich |
 | Geräte-Persistenz | implemented | Registry bleibt über Neustarts erhalten |
@@ -31,8 +32,8 @@ Build 117 wurde erfolgreich getestet, ist durch den zusammengeführten aktuellen
 | Mars Hydro iConnect | architecture / experimental integration | keine unbestätigten Writes |
 | DF100M BLE | diagnostics / fallback | Reverse Engineering, deny-by-default für Writes |
 | Support Bundle | implemented | bevorzugte Fehleranalysebasis |
-| Mobile Android | Nexus client | APK über Actions |
-| Mobile iOS | Nexus client | unsigned Sideload-IPA über Actions |
+| Mobile Android | Nexus 0.2.1 client | APK über Actions |
+| Mobile iOS | Nexus 0.2.1 client | unsigned Sideload-IPA über Actions |
 | Cloud Server | V6 | optionaler abgesicherter Remote-Pfad |
 | APT | signed repository | `https://repo.dezender.de/apt` |
 | dezender.de | public read-only console | Nexus UI, keine lokalen Steuerendpunkte |
