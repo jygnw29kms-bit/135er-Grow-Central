@@ -107,6 +107,7 @@
           </div>
           <div class="setup-grid"><label>Neues System-/SSH-Passwort<input name="new_password" type="password" minlength="12" required autocomplete="new-password"></label><label>GUI-Benutzer<input name="gui_username" value="GrowCentral" minlength="3" maxlength="32" required></label></div>
           <label>Neues GUI-Passwort<input name="gui_password" type="password" minlength="12" required autocomplete="new-password"></label>
+          <label>Fernwartungs-Aktivierungscode<input name="maintenance_activation_code" maxlength="16" pattern="GC-[A-Za-z2-9]{6}-[A-Za-z2-9]{6}" placeholder="GC-XXXXXX-XXXXXX" required autocomplete="off"><span>Einmalcode vom Cloud-Server. Er wird nach erfolgreicher Aktivierung sofort verworfen.</span></label>
           <button class="primary" id="firstBootSubmitBtn" type="submit">KONFIGURATION SPEICHERN UND PRÜFEN</button>
         </form>
       </article>

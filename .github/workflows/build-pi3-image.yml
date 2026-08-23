@@ -523,6 +523,8 @@ jobs:
           grep -qx 'GC_CLOUD_ENABLED=false' /opt/135er-grow-central/.env
           grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/.env
           test "$(systemctl is-enabled grow-central-remote-maintenance.service 2>/dev/null || true)" != enabled
+          grep -Fq 'maintenance_activation_code' /opt/135er-grow-central/app/firstboot.py
+          grep -Fq '/usr/local/sbin/grow-central-remote-maintenance", "enroll", "-"' /opt/135er-grow-central/image-builder/firstboot/apply_setup.py
           systemd-analyze verify /etc/systemd/system/grow-central-remote-maintenance.service
           systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh

@@ -11,7 +11,7 @@ APT_ROOT="${DOCROOT}/apt"
 KEY_HOME="/root/.gnupg-135er-growcentral-repo"
 KEY_EMAIL="${KEY_EMAIL:-repo@dezender.de}"
 PKG_NAME="135er-growcentral-cloud"
-PKG_VERSION="${PKG_VERSION:-6.0.0}"
+PKG_VERSION="${PKG_VERSION:-6.1.0}"
 INSTALLER_URL="${INSTALLER_URL:-https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-135ercloud-v6.sh}"
 
 C_RESET='\033[0m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_CYAN='\033[1;36m'
@@ -116,7 +116,7 @@ Section: admin
 Priority: optional
 Architecture: all
 Maintainer: 135er GrowCentral <repo@dezender.de>
-Depends: ca-certificates, curl, wget, openssl, sqlite3, python3, python3-venv, python3-pip, iproute2, util-linux, gnupg
+Depends: ca-certificates, curl, wget, openssl, openssh-server, sqlite3, python3, python3-venv, python3-pip, iproute2, util-linux, gnupg
 Description: 135er GrowCentral Cloud Server
  Plesk-safe GrowCentral Cloud service with account/device pairing,
  Ed25519 device identity, HTTPS/WSS reverse proxy and remote relay.

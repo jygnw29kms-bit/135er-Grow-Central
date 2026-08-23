@@ -7,6 +7,7 @@ STATE_DIR="/var/lib/135er-grow-central/remote-maintenance"
 KEY_FILE="${STATE_DIR}/id_ed25519"
 KNOWN_HOSTS="${STATE_DIR}/known_hosts"
 CONFIG="/etc/135er-grow-central/remote-maintenance.conf"
+CLOUD_URL="${GC_MAINTENANCE_CLOUD_URL:-https://135ercloud.dezender.de}"
 
 die() { echo "FEHLER: $*" >&2; exit 1; }
 need_root() { [[ ${EUID:-$(id -u)} -eq 0 ]] || die "Bitte mit sudo ausführen."; }
@@ -60,6 +61,43 @@ enable_tunnel() {
   systemctl --no-pager -l status "$SERVICE"
 }
 
+enroll() {
+  need_root
+  local activation_code="${1:-}" request response request_id request_token status deadline
+  if [[ "$activation_code" == "-" ]]; then
+    IFS= read -r activation_code
+  fi
+  [[ "$activation_code" =~ ^GC-[A-Z2-9]{6}-[A-Z2-9]{6}$ ]] || die "Ungültiger Aktivierungscode."
+  init_key >/dev/null
+  request="$(jq -n --arg code "$activation_code" --arg key "$(cat "${KEY_FILE}.pub")" --arg name "$(hostname)" \
+    '{activation_code:$code,public_key:$key,hostname:$name}')"
+  response="$(printf '%s' "$request" | curl --fail --silent --show-error --max-time 20 -H 'Content-Type: application/json' \
+    --data-binary @- "$CLOUD_URL/api/v2/maintenance/enroll")" || die "Cloud-Enrollment nicht erreichbar."
+  activation_code=""; request=""
+  request_id="$(jq -er '.request_id' <<<"$response")" || die "Ungültige Cloud-Antwort."
+  request_token="$(jq -er '.request_token' <<<"$response")" || die "Ungültige Cloud-Antwort."
+  deadline=$((SECONDS + 90))
+  while (( SECONDS < deadline )); do
+    sleep 2
+    response="$(curl --fail --silent --show-error --max-time 15 \
+      -H "Authorization: Bearer $request_token" "$CLOUD_URL/api/v2/maintenance/enroll/$request_id")" || continue
+    status="$(jq -r '.status // ""' <<<"$response")"
+    case "$status" in
+      approved)
+        configure "$(jq -er '.host' <<<"$response")" "$(jq -er '.user' <<<"$response")" \
+          "$(jq -er '.port' <<<"$response")" "$(jq -er '.fingerprint' <<<"$response")" >/dev/null
+        request_token=""; response=""
+        systemctl enable --now "$SERVICE"
+        systemctl is-active --quiet "$SERVICE" || die "Fernwartungsdienst konnte nicht gestartet werden."
+        echo "Fernwartung sicher aktiviert."
+        return 0
+        ;;
+      rejected) die "Aktivierungscode abgelehnt oder abgelaufen." ;;
+    esac
+  done
+  die "Zeitüberschreitung beim Cloud-Enrollment."
+}
+
 disable_tunnel() {
   need_root
   systemctl disable --now "$SERVICE" 2>/dev/null || true
@@ -75,11 +113,12 @@ case "${1:-}" in
   init) init_key ;;
   show-key) [[ -f "${KEY_FILE}.pub" ]] || init_key >/dev/null; cat "${KEY_FILE}.pub" ;;
   configure) shift; configure "$@" ;;
+  enroll) shift; enroll "$@" ;;
   enable) enable_tunnel ;;
   disable) disable_tunnel ;;
   status) status_tunnel ;;
   *)
-    echo "Verwendung: sudo $0 {init|show-key|configure HOST USER REMOTE_PORT SHA256:FINGERPRINT|enable|disable|status}"
+    echo "Verwendung: sudo $0 {enroll EINMALCODE|init|show-key|configure HOST USER REMOTE_PORT SHA256:FINGERPRINT|enable|disable|status}"
     exit 2
     ;;
 esac
