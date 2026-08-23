@@ -1,83 +1,70 @@
-# Raspberry Pi 3B Test Image
+# Raspberry Pi Test Image · Build 118
 
-A reproducible Raspberry Pi 3B/3B+ test image based on Raspberry Pi OS Lite 64-bit / Debian 13 is used for the first hardware tests.
+**Version:** `alpha-0.7.5`  
+**Master anchor:** `e339602`  
+**Candidate:** **Build 118**  
+**Tag:** `pi-universal-alpha-0.7.5-118`  
+**Status:** `CANDIDATE` – not yet hardware-validated
 
-## Preinstalled
+Build 117 was successfully tested but is superseded by the consolidated e339 state. Build 118 is the next real hardware-test candidate.
 
-- 135er-Grow Central in `/opt/135er-grow-central`
-- Python venv and project dependencies
-- Bluetooth / BlueZ
-- SSH
-- UFW
-- unattended-upgrades
-- first-boot web provisioning through a temporary WLAN access point
-- systemd start via `135er-grow-central.service` after provisioning succeeds
+## Image baseline
 
-Web interface:
+`.github/workflows/build-pi3-image.yml` builds the universal Raspberry Pi image on Raspberry Pi OS Lite 64-bit / Debian 13 (trixie). The GitHub Actions run number is written into the image as BUILD metadata.
 
-```text
-http://<PI-IP>:8080
-```
+## Included in the candidate
 
-## Temporary credentials
+- Grow Central under `/opt/135er-grow-central`;
+- first boot / setup AP / NetworkManager / mDNS;
+- Bluetooth / BlueZ;
+- local GrowCentral Nexus GUI;
+- FRITZ! Smart Home and Tapo paths;
+- Logitech C920/UVC, snapshot, MJPEG and dynamic V4L2 controls;
+- firmware/model/USB-ID-aware camera LED capability detection;
+- guarded LED control only when support is detected;
+- Elecrow 7-inch touch kiosk with systemd service;
+- support and diagnostics paths;
+- SSH, firewall/hardening and update baseline.
 
-```text
-Hostname: 135er-grow-central
-Username: GrowCentral
-Password: grow-central-test
-API/application token: test
-Cloud token: test
-```
-
-**First boot only.** The main GUI requires new system and GUI passwords in its System section.
-
-## First boot
-
-1. Join `135er-GrowCentral-Setup-XXXX` with WLAN key `grow-central-test`.
-2. Open `http://10.42.0.1:8080`.
-3. Sign in to the main GUI as `GrowCentral` with `grow-central-test` and open System.
-4. Configure WLAN or LAN, timezone and new system/GUI passwords; enter the SSID manually if the active AP cannot scan.
-5. After validation, use `http://135er-Grow-Central.local:8080`.
-
-Always attach `Grow-Central-Support-latest.tar.gz` from System to a problem report.
-
-If the WLAN connection fails, the setup access point is restored automatically.
-
-## Safe test defaults
-
-- DF100M writes: disabled
-- remote cloud commands: disabled
-- cloud: disabled
-- root SSH: disabled
-- firewall: SSH (22/TCP), Grow Central (8080/TCP), plus temporary HTTP/HTTPS (80/443) from the setup subnet only
-
-## Build and publication
-
-GitHub Actions downloads the official Raspberry Pi OS image, verifies the pinned SHA256, expands the root partition/filesystem, installs Grow Central and creates:
+## Access
 
 ```text
-135er-Grow-Central_RPi3B_Test.img.xz
-135er-Grow-Central_RPi3B_Test.img.xz.sha256
-135er-Grow-Central_RPi3B_Test-CREDENTIALS.txt
+First boot: http://10.42.0.1/
+After setup: http://135er-Grow-Central.local/
+Compatibility: http://135er-Grow-Central.local:8080/
 ```
 
-The image is published as an Actions artifact/prerelease rather than committed as a large binary to normal Git history.
+Temporary image credentials are test-only and must be replaced during first boot.
 
-## Build correction
+## Safe defaults
 
-The first builder run exhausted the target root filesystem because the downloaded base image was accidentally copied into it. The corrected v2 builder excludes build files and expands the image, root partition and ext4 filesystem before installation.
+```text
+DF100M_ALLOW_WRITES=false
+GC_REMOTE_COMMANDS=false
+GC_CLOUD_ENABLED=false
+```
 
-## Test sequence
+Unverified Mars Hydro/BLE write paths remain deny-by-default.
 
-1. Flash the image to an SD card.
-2. Complete first-boot web provisioning.
-3. Determine its IP address.
-4. Test `ssh GrowCentral@<PI-IP>`.
-5. Open `http://<PI-IP>:8080`.
-6. Check `systemctl status 135er-grow-central`.
-7. Check `bluetoothctl show`.
-8. Close the Mars Legacy app.
-9. Discover/connect to DF100M, inspect GATT and capture notifications.
-10. Do not perform BLE writes until the protocol is sufficiently validated.
+## Build 118 test sequence
 
-Detailed technical documentation: `docs/en/RASPBERRY_PI_3B_TEST_IMAGE.md`.
+1. flash exactly Build 118;
+2. verify fresh boot;
+3. verify setup AP / DHCP / DNS;
+4. verify LAN/WLAN and mDNS;
+5. complete first boot and open the GUI;
+6. reboot;
+7. verify persistence;
+8. test C920 discovery, snapshot, MJPEG and V4L2;
+9. test camera LED capability detection;
+10. change LED state only if the target camera/firmware reports support;
+11. test Elecrow kiosk if connected;
+12. test FRITZ!/Tapo paths when hardware is available;
+13. test Mars Hydro/BLE diagnostics without unverified writes;
+14. generate `Grow-Central-Support-latest.tar.gz` for any unexpected deviation.
+
+## Release rule
+
+Build 118 remains `CANDIDATE` until the real hardware test passes. Documentation, website and Mobile-only changes do not justify an artificial Build 119; a new Pi build is needed only for an actual runtime fix/change.
+
+Canonical: [Release State](../../RELEASE_STATE.md) · [Build 118 Notes](../../docs/RELEASE_NOTES_BUILD_118.md) · [Release Pipeline](../../docs/RELEASE_PIPELINE.md)
