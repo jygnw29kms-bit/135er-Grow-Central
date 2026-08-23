@@ -1,18 +1,42 @@
-# GUI and Responsive Design
+# GUI and Responsive Design · GrowCentral Nexus UI
 
-![135er-Grow Central GUI Preview](../../docs/assets/gui/local-desktop-v0.9.png)
+Logo and branding remain unchanged. All current interfaces follow the binding [`GrowCentral Nexus UI`](../../docs/DESIGN_SYSTEM_NEXUS.md).
 
-The image is the authoritative visual target for the finished GUI.
+## Applies to
 
-## Branding
+- Raspberry Pi GUI and first boot;
+- Elecrow 7-inch touch kiosk;
+- dezender.de;
+- Android/iOS Nexus Mobile;
+- Cloud/server presentation;
+- repository, README and release graphics.
 
-Raster graphics are embedded as **PNG**. WebP is no longer used because it did not render reliably on the production hosting path. ICO remains allowed for favicons, and SVG remains allowed for technical vector diagrams.
+## Visual baseline
 
-The public website, local GUI and cloud GUI use the 135er-Grow Central logo in PNG form.
+- near-black / graphite foundation;
+- cyan for data, navigation and technical information;
+- lime for online/ready/active/valid;
+- amber for alpha/test/candidate/pending;
+- red for offline/failed/deny;
+- consistent cards, spacing, status chips and typography;
+- restrained glow and clear information hierarchy.
 
-- >=1400 px: fixed sidebar, 3–4 columns, full diagnostics
-- 1024–1399 px: 2–3 columns, compact navigation
-- 768–1023 px: touch-first tablet/iPad layout, 2 columns, collapsible navigation
-- <768 px: single-column mobile layout, drawer/bottom navigation, prioritized status and quick actions
+## Desktop / Pi
 
-No hover-only controls. Important touch targets should be about 44×44 CSS px or larger.
+Modular fixed sidebar, compact top bar, metric cards and system/detail panels. Technical metadata may use monospace accents.
+
+## Tablet / Elecrow
+
+Touch-first responsive Nexus layout with important targets around 44×44 CSS pixels or larger. No hover-only controls. The kiosk is not a separate visual system.
+
+## Mobile
+
+A true mobile information hierarchy rather than a scaled-down desktop. Safe-area support, large actions, and clear separation between local Pi access and remote HTTPS targets.
+
+## Preview images
+
+Current screenshots/mockups must represent Nexus UI. Historical v0.9 previews may remain only as concept/legacy references. Demo telemetry must not be presented as hardware validation.
+
+## Release state
+
+Current: `alpha-0.7.5` · master `e339602` · **Build 118 CANDIDATE**. Build/status labels are inherited from [`../../RELEASE_STATE.md`](../../RELEASE_STATE.md).
