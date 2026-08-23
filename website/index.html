@@ -1,66 +1,91 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#02070a">
-  <meta name="description" content="135er-Grow Central – aktueller Entwicklungs-, Image-, Cloud- und Release-Status.">
-  <meta property="og:title" content="135er-Grow Central · Current Status">
-  <meta property="og:description" content="alpha-0.7.5 · Build-85 validierte Basis · aktueller Image-Build ausgelöst · signiertes APT-Repository auf dezender.de.">
-  <meta property="og:image" content="assets/gui/local-mobile-v0.9.png">
-  <title>135er-Grow Central · Current Status</title>
-  <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
-  <link rel="stylesheet" href="styles.css?v=1.2.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070a">
+<meta name="description" content="135er-Grow Central – aktueller Projekt-, Image-, Cloud- und Integrationsstatus im Design der lokalen Grow-Central-GUI.">
+<meta property="og:title" content="135er-Grow Central · Project Console">
+<meta property="og:description" content="alpha-0.7.5 · Build-85 validierte Basis · signiertes APT-Repository · Cloud V6 · lokale Smart-Home- und Kamera-Integration.">
+<meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
+<title>135er-Grow Central · Project Console</title>
+<link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
+<link rel="stylesheet" href="styles.css?v=2.0.0">
 </head>
 <body>
-  <a class="skip-link" href="#workspace">Zum Inhalt</a>
-  <main class="tablet" id="workspace">
-    <header class="command-bar">
-      <a class="lockup" href="#overview" data-tab="overview" aria-label="135er-Grow Central Übersicht">
-        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L.">
-        <span>RELEASE CONTROL <i></i></span>
-      </a>
-      <nav aria-label="Bereiche">
-        <button class="active" data-tab="overview">Overview</button>
-        <button data-tab="release">Release</button>
-        <button data-tab="interfaces">Interfaces</button>
-        <button data-tab="security">Security</button>
-        <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a>
-      </nav>
-      <div class="system-time"><strong id="clock">--:--</strong><span id="date">--.--.----</span></div>
-      <div class="heartbeat" aria-label="Projekt online"><span></span><i></i><b></b><i></i><span></span></div>
+<a class="skip-link" href="#main">Zum Inhalt</a>
+<div class="gc-shell">
+  <aside class="gc-nav">
+    <div class="gc-brand"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central"><span>PUBLIC PROJECT CONSOLE</span></div>
+    <div class="nav-scroll">
+      <div class="nav-group"><span>ÜBERSICHT</span><button class="nav-link active" data-target="overview">◈ Projektstatus</button></div>
+      <div class="nav-group"><span>PLATTFORM</span><button class="nav-link" data-target="release">▣ Build & Release</button><button class="nav-link sub" data-target="release">APT & Cloud</button><button class="nav-link sub" data-target="interfaces">Interfaces</button></div>
+      <div class="nav-group"><span>INTEGRATIONEN</span><button class="nav-link" data-target="integrations">◇ Geräteübersicht</button><button class="nav-link sub" data-target="integrations">FRITZ! Smart Home</button><button class="nav-link sub" data-target="integrations">TP-Link Tapo</button><button class="nav-link sub" data-target="integrations">Mars Hydro / iFresh</button><button class="nav-link sub" data-target="integrations">Logitech C920</button></div>
+      <div class="nav-group"><span>SICHERHEIT</span><button class="nav-link" data-target="security">⚙ Security & Architektur</button></div>
+      <div class="nav-group"><span>QUELLEN</span><a class="nav-link" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">↗ GitHub Repository</a></div>
+    </div>
+    <div class="nav-footer"><span class="live-dot"></span><div><small>ÖFFENTLICHE PROJEKTSEITE</small><strong>dezender.de</strong></div></div>
+  </aside>
+
+  <main class="gc-main" id="main">
+    <header class="gc-topbar">
+      <div><div class="eyebrow">135ER GROW CENTRAL · PUBLIC READ-ONLY</div><h1 id="pageTitle">Projektstatus</h1></div>
+      <div class="top-actions"><div class="build-pill">BUILD 85 BASELINE</div><div class="clock" id="clock">--:--:--</div><a href="135ercloud-server-install.sh">CLOUD INSTALL</a><a href="setup-135ercloud-apt-repo.sh">APT SETUP</a></div>
     </header>
 
-    <section class="view active" id="overview" data-view="overview">
-      <header class="view-heading">
-        <span>GC://CURRENT/STATUS</span>
-        <h1>alpha-0.7.5 · Build-85 validierte Basis.</h1>
-        <p>Der aktuelle master enthält die nach Build 85 validierte Basis, den signierten dezender.de-APT-Pfad, Cloud-/Server-Installer und einen erneut ausgelösten aktuellen Raspberry-Pi-Image-Build. Hardwarevalidierung bleibt verbindlich vor einer Stable-Freigabe.</p>
-      </header>
-      <div class="metric-row">
-        <article class="metric"><div class="metric-icon">✓</div><div><span>Version</span><strong>0.7.5</strong><em>Alpha · Hardwarevalidierung</em></div></article>
-        <article class="metric"><div class="metric-icon">▣</div><div><span>Baseline</span><strong>85</strong><em>validierter Image-Stand</em></div></article>
-        <article class="metric"><div class="metric-icon">⇩</div><div><span>Distribution</span><strong>APT</strong><em>signiert · dezender.de</em></div></article>
-        <article class="metric power"><div class="metric-icon">↗</div><div><span>Cloud</span><strong>V6</strong><em>Server-Installer + Repository</em></div></article>
+    <section class="content-panel active" data-panel="overview">
+      <div class="hero"><div><div class="eyebrow">PROJECT STATUS · LIVE DOCUMENTATION</div><h2>135er-Grow Central</h2><p>Local-first Steuer- und Überwachungsplattform für Raspberry Pi mit Smart Home, Energieauswertung, Kamera, Automationen, Grow-Räumen und optionalem abgesichertem Cloud-/Serverpfad.</p></div><div class="status-chip">ALPHA · HARDWAREVALIDIERUNG</div></div>
+      <div class="metric-grid">
+        <article><span>VERSION</span><strong>0.7.5</strong><small>Alpha</small></article>
+        <article><span>VALIDIERTE BASIS</span><strong>BUILD 85</strong><small>Raspberry Pi</small></article>
+        <article><span>DISTRIBUTION</span><strong>APT</strong><small>signiert · dezender.de</small></article>
+        <article><span>SERVER</span><strong>V6</strong><small>Cloud Installer</small></article>
       </div>
-      <div class="dashboard-grid">
-        <div class="left-stack">
-          <article class="panel health"><h2>Aktueller Stand</h2><div class="health-body"><div class="health-ring"><strong>85</strong><span>BASE</span></div><ul><li>Repository <b>MASTER</b></li><li>Version <b>ALPHA-0.7.5</b></li><li>APT Repository <b>READY</b></li><li>Image Pipeline <b>ACTIVE</b></li></ul></div><small>Stand 23.08.2026 · Build 85 ist die dokumentierte validierte Basis; neuere Workflow-Läufe werden nicht vor erfolgreicher Prüfung als validiert bezeichnet.</small></article>
-          <article class="panel cost"><div><h2>Qualitätszyklus</h2><strong>6 Gates</strong><span>Prüfen → Testen → Optimieren → Absichern → Abschlussprüfung → Veröffentlichen</span></div><div class="wallet">✓</div></article>
-        </div>
-        <div class="center-stack"><article class="panel fan-control"><h2><b>Distribution</b> · Raspberry Pi + Cloud</h2><div style="position:relative;z-index:2;display:grid;gap:12px;max-width:760px;margin:28px auto;text-align:left"><div class="panel" style="padding:14px"><b style="color:#9cff20">01 · RASPBERRY PI IMAGE</b><br><small style="color:#80969b">Universal Raspberry-Pi-Image, First Boot, lokale GUI, Geräteverwaltung, Diagnose und Support-Paket.</small></div><div class="panel" style="padding:14px"><b style="color:#16eff1">02 · SIGNIERTES APT-REPOSITORY</b><br><small style="color:#80969b">Repository: https://repo.dezender.de/apt · dedizierter Keyring · Konfliktbereinigung alter Quellen.</small></div><div class="panel" style="padding:14px"><b style="color:#16eff1">03 · CLOUD / SERVER V6</b><br><small style="color:#80969b">Installationsskript und APT-Bootstrap werden über dezender.de bereitgestellt.</small></div><div class="panel" style="padding:14px"><b style="color:#16eff1">04 · MOBILE CLIENT</b><br><small style="color:#80969b">iOS/Android bleiben WebGUI-Clients; der Raspberry Pi bleibt lokale Geräteautorität.</small></div></div></article></div>
-        <div class="right-stack"><article class="panel schedule"><h2>◷ Validierungsstatus</h2><ul><li><span>Build 85<small>validierte Basis</small></span><b>VALID</b></li><li><span>Aktueller master<small>APT + Cloud + Build-Trigger</small></span><b>ACTIVE</b></li><li><span>Hardwaretests<small>Pi / FRITZ! / Tapo / Kamera / Mars</small></span><b>ALPHA</b></li><li><span>Stable<small>erst nach Abschlussprüfung</small></span><b>WAIT</b></li></ul></article><article class="panel devices"><h2>Integrationen</h2><ul><li>FRITZ! Smart Home <span>LOCAL <i></i></span></li><li>TP-Link Tapo <span>HYBRID <i></i></span></li><li>Logitech C920 <span>UVC <i></i></span></li><li>Mars Hydro <span>ICONNECT/BLE <i></i></span></li></ul></article></div>
+      <div class="system-grid">
+        <article class="system-card"><div class="card-head"><span>STATUS</span><b>CURRENT BASELINE</b></div><ul class="status-list"><li><span>Repository<small>öffentlicher Entwicklungsstand</small></span><b>MASTER</b></li><li><span>Image-Basis<small>zuletzt dokumentiert validiert</small></span><b>BUILD 85</b></li><li><span>APT Repository<small>repo.dezender.de/apt</small></span><b>READY</b></li><li><span>Stable Release<small>erst nach Abschlussprüfung</small></span><b>WAIT</b></li></ul></article>
+        <article class="system-card"><div class="card-head"><span>LOCAL ACCESS</span><b>RASPBERRY PI</b></div><div class="domain-card"><small>Lokale Grow-Central-Adresse</small><strong>135er-GrowCentral.local</strong></div><ul class="status-list"><li><span>First Boot</span><b>INTEGRATED</b></li><li><span>Support-Datei</span><b>INTEGRATED</b></li><li><span>Offline-Erkennung</span><b>INTEGRATED</b></li><li><span>Geräte-Persistenz</span><b>INTEGRATED</b></li></ul></article>
+      </div>
+      <div class="section-head"><div><div class="eyebrow">CURRENT SHOW / TEST DESIGN</div><h3>Website und lokale GUI aus einer Designsprache</h3></div><p>Diese öffentliche Oberfläche ist bewusst read-only und bildet keine echten lokalen Steuerzustände vor.</p></div>
+      <div class="interface-wall"><figure class="interface-card"><img src="assets/gui/local-desktop-v0.9.png" alt="Grow Central Desktop GUI"><figcaption><b>Local Desktop</b><span>Referenz für Navigation, Karten, Status und technische Informationsdichte.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-mobile-v0.9.png" alt="Grow Central Mobile GUI"><figcaption><b>Local Mobile</b><span>Responsive WebGUI-Client für Smartphone und Tablet.</span></figcaption></figure></div>
+    </section>
+
+    <section class="content-panel" data-panel="release">
+      <div class="hero"><div><div class="eyebrow">BUILD · DISTRIBUTION · CLOUD</div><h2>Release & Distribution</h2><p>Buildnummern werden nur dann als validiert dargestellt, wenn reale Prüfungen vorliegen. Neue master-Änderungen können der dokumentierten Hardwarebasis voraus sein.</p></div><div class="status-chip">BUILD 85 VALIDATED</div></div>
+      <div class="metric-grid"><article><span>IMAGE</span><strong>RPi</strong><small>Universal Image</small></article><article><span>REPOSITORY</span><strong>APT</strong><small>signed</small></article><article><span>CLOUD</span><strong>V6</strong><small>server installer</small></article><article><span>MOBILE</span><strong>WEBGUI</strong><small>client only</small></article></div>
+      <div class="system-grid">
+        <article class="system-card"><div class="card-head"><span>PIPELINE</span><b>QUALITY GATES</b></div><div class="pipeline"><article><b>01 · PRÜFEN</b><span>Quellstand, Integrationen und Konfiguration kontrollieren.</span></article><article><b>02 · TESTEN</b><span>Automatisierte Tests plus reale Raspberry-Pi-Hardware.</span></article><article><b>03 · OPTIMIEREN & ABSICHERN</b><span>Fehlerbehebung, Security und Persistenz.</span></article><article><b>04 · VERÖFFENTLICHEN</b><span>Erst nach bestandener Abschlussprüfung.</span></article></div></article>
+        <article class="system-card"><div class="card-head"><span>DOWNLOADS</span><b>DEZENDER.DE</b></div><div class="domain-card"><small>Signiertes Repository</small><strong>repo.dezender.de/apt</strong></div><p style="color:var(--muted);line-height:1.6">Server-Installer und APT-Bootstrap werden automatisch zusammen mit der Website veröffentlicht. Alte konfliktbehaftete Grow-Central-APT-Quellen werden vom aktuellen Bootstrap bereinigt.</p><div class="download-row"><a class="primary" href="135ercloud-server-install.sh">Cloud V6 Installer</a><a href="setup-135ercloud-apt-repo.sh">APT Setup</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">GitHub Releases</a></div></article>
       </div>
     </section>
 
-    <section class="view info-view" id="release" data-view="release"><header class="view-heading"><span>GC://RELEASE/CURRENT</span><h1>Validierte Basis statt veralteter Build-Roadmap.</h1><p>Buildnummern werden nur dann als validiert dargestellt, wenn reale Prüfungen vorliegen. Der aktuelle master darf neuer sein als Build 85, ohne dass daraus automatisch eine Hardwarefreigabe folgt.</p></header><div class="info-grid"><article class="panel big-card"><span>Current Rule</span><h2>Build 85 = dokumentierte validierte Basis.</h2><p>Die frühere öffentliche 70→71→72-Roadmap ist überholt. Seitdem wurden Persistenz, FRITZ!-Zugangsdaten, Stromkosten, Offline-Erkennung, Tapo-Onboarding, Cloud-Installer und das signierte APT-Repository weiterentwickelt. Neue Image-Läufe werden erst nach Test als neue validierte Basis ausgewiesen.</p><div class="core-orbit"><img src="assets/brand/135er-grow-central-mark.png" alt="135er-Grow Central Markenzeichen"><i></i><i></i></div></article><article class="panel stat-card"><span>Version</span><strong>0.7.5</strong><small>Alpha</small></article><article class="panel stat-card"><span>Baseline</span><strong>BUILD 85</strong><small>validated</small></article><article class="panel stat-card"><span>Repo</span><strong>MASTER</strong><small>current development</small></article><article class="panel runtime-card"><span>APT</span><strong>SIGNED</strong><small>repo.dezender.de/apt</small></article><article class="panel runtime-card"><span>Cloud</span><strong>V6</strong><small>installer path published</small></article></div></section>
+    <section class="content-panel" data-panel="integrations">
+      <div class="hero"><div><div class="eyebrow">DEVICE ECOSYSTEM</div><h2>Integrationen</h2><p>Die lokale Instanz bleibt Geräteautorität. Externe Konten und Zugangsdaten werden nicht auf dieser öffentlichen Website gespeichert oder verarbeitet.</p></div><div class="status-chip">LOCAL-FIRST</div></div>
+      <div class="integrations" style="margin-top:14px">
+        <article class="feature-card"><div class="kicker">SMART HOME</div><h3>FRITZ! Smart Home</h3><p>Lokale AVM/AHA-Anbindung mit Gerätestatus, Schalten, Leistung, Energie und dauerhafter Registry.</p><span class="state">LOCAL</span></article>
+        <article class="feature-card"><div class="kicker">SMART HOME</div><h3>TP-Link Tapo</h3><p>Authentifizierter lokaler Gerätepfad mit persistenter Zuordnung; Cloud-Inventar bleibt getrennt zu validieren.</p><span class="state">HYBRID</span></article>
+        <article class="feature-card"><div class="kicker">GROW HARDWARE</div><h3>Mars Hydro / iFresh</h3><p>iConnect-Zielarchitektur für FC3000 und iFresh/DF100, ergänzt um BLE-Diagnosepfade.</p><span class="state">ICONNECT / BLE</span></article>
+        <article class="feature-card"><div class="kicker">CAMERA</div><h3>Logitech C920</h3><p>UVC-Erkennung, Snapshot, MJPEG-Livebild und dynamische V4L2-Regler auf unterstützter Hardware.</p><span class="state">UVC</span></article>
+      </div>
+      <div class="section-head"><div><div class="eyebrow">GROW CONTROL</div><h3>Räume, Pflanzen, Energie und Automationen</h3></div></div>
+      <div class="system-grid"><article class="system-card"><div class="card-head"><span>RÄUME & GROW</span><b>ORGANISATION</b></div><ul class="status-list"><li><span>Raumübersicht</span><b>INTEGRATED</b></li><li><span>Geräte zuordnen</span><b>INTEGRATED</b></li><li><span>Sensordaten</span><b>INTEGRATED</b></li><li><span>Growtagebuch / Pflanzen</span><b>INTEGRATED</b></li></ul></article><article class="system-card"><div class="card-head"><span>ENERGIE</span><b>HISTORY & COSTS</b></div><ul class="status-list"><li><span>Leistung & Gesamtenergie</span><b>LIVE</b></li><li><span>Kosten aus Gesamtenergie</span><b>PERSISTENT</b></li><li><span>Offline-Status</span><b>NO-CACHE</b></li><li><span>Historische Auswertung</span><b>IN DEVELOPMENT</b></li></ul></article></div>
+    </section>
 
-    <section class="view info-view" id="interfaces" data-view="interfaces"><header class="view-heading"><span>UNIFIED INTERFACE FAMILY</span><h1>Ein System. Vier Perspektiven.</h1><p>Die Mobile-App ist eine WebGUI und ersetzt den Raspberry Pi nicht. Optionaler Remote-Zugriff läuft über einen abgesicherten Serverpfad.</p></header><div class="interface-wall"><figure class="panel featured"><img src="assets/gui/local-tablet-v0.9.png" alt="Local Tablet GUI"><figcaption><b>Local Tablet</b><span>Touch-first control surface</span></figcaption></figure><figure class="panel"><img src="assets/gui/local-desktop-v0.9.png" alt="Local Desktop GUI"><figcaption><b>Local Desktop</b><span>Full command center</span></figcaption></figure><figure class="panel mobile-shot"><img src="assets/gui/local-mobile-v0.9.png" alt="Local Mobile GUI"><figcaption><b>Mobile</b><span>iPhone + Android WebGUI client</span></figcaption></figure><figure class="panel"><img src="assets/gui/cloud-desktop-v0.9.png" alt="Cloud Desktop GUI"><figcaption><b>Server optional</b><span>Secure remote access path</span></figcaption></figure></div></section>
+    <section class="content-panel" data-panel="interfaces">
+      <div class="hero"><div><div class="eyebrow">UNIFIED INTERFACE FAMILY</div><h2>Interfaces</h2><p>Desktop, Tablet, Smartphone und optionaler Serverpfad folgen derselben technischen Designsprache. Mobile bleibt Client und ersetzt den Raspberry Pi nicht.</p></div></div>
+      <div class="interface-wall" style="margin-top:14px"><figure class="interface-card"><img src="assets/gui/local-desktop-v0.9.png" alt="Local Desktop"><figcaption><b>Local Desktop</b><span>Vollständige lokale Bedienoberfläche.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-tablet-v0.9.png" alt="Local Tablet"><figcaption><b>Local Tablet</b><span>Touch-orientierte lokale Ansicht.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-mobile-v0.9.png" alt="Local Mobile"><figcaption><b>Local Mobile</b><span>WebGUI-Client für iPhone und Android.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/cloud-desktop-v0.9.png" alt="Cloud Desktop"><figcaption><b>Server optional</b><span>Abgesicherter Remote-Zugangspfad.</span></figcaption></figure></div>
+    </section>
 
-    <section class="view info-view" id="security" data-view="security"><header class="view-heading"><span>TRUST ARCHITECTURE</span><h1>Client bedient. Grow Central entscheidet.</h1><p>Zugangsdaten bleiben auf der autoritativen lokalen bzw. ausdrücklich freigegebenen Serverinstanz. Schreibzugriffe bleiben authentifiziert, freigegeben und auditierbar.</p></header><div class="security-grid"><article class="panel gate"><b>01</b><span>Authenticated</span><small>GUI Login / Session</small></article><article class="panel gate"><b>02</b><span>Approved</span><small>Gerät freigegeben</small></article><article class="panel gate"><b>03</b><span>Writable</span><small>Write-Recht aktiv</small></article><article class="panel gate"><b>04</b><span>Audited</span><small>Aktion nachvollziehbar</small></article><article class="panel security-core"><img src="assets/brand/135er-grow-central-mark.png" alt=""><span>Security Policy</span><strong>Deny by Default</strong><small>LOCAL · SECURE · AUDITED</small></article></div></section>
+    <section class="content-panel" data-panel="security">
+      <div class="hero"><div><div class="eyebrow">TRUST ARCHITECTURE</div><h2>Security & Architektur</h2><p>Die öffentliche Projektseite enthält keine lokalen Zugangsdaten oder Steuerendpunkte. Gerätezugriffe bleiben an authentifizierte, freigegebene und auditierbare Pfade gebunden.</p></div><div class="status-chip">DENY BY DEFAULT</div></div>
+      <div class="security-grid" style="margin-top:14px"><article><b>01</b><span>Authenticated</span><small>GUI Login / Session oder explizites API-Token</small></article><article><b>02</b><span>Approved</span><small>Gerät muss bekannt und freigegeben sein</small></article><article><b>03</b><span>Writable</span><small>Schreibrecht muss explizit aktiv sein</small></article><article><b>04</b><span>Audited</span><small>Relevante Änderungen bleiben nachvollziehbar</small></article></div>
+      <div class="system-grid" style="margin-top:14px"><article class="system-card"><div class="card-head"><span>PUBLIC WEBSITE</span><b>READ ONLY</b></div><ul class="status-list"><li><span>Smart-Home-Zugangsdaten</span><b>NONE</b></li><li><span>Lokale Steuerendpunkte</span><b>NONE</b></li><li><span>Pi-Direktzugriff</span><b>NONE</b></li><li><span>Projektstatus / Downloads</span><b>PUBLIC</b></li></ul></article><article class="system-card"><div class="card-head"><span>REMOTE ACCESS</span><b>OPTIONAL</b></div><p style="color:var(--muted);line-height:1.65">Ein späterer Remote-Zugriff auf die Grow-Central-GUI benötigt zusätzlich TLS/HTTPS beziehungsweise einen abgesicherten Reverse-Proxy oder VPN. Ein GUI-Login allein ersetzt keine Transportverschlüsselung.</p></article></div>
+    </section>
 
-    <footer class="status-bar"><div><i></i><span>LOCAL-FIRST</span><b>PROJECT ONLINE</b></div><div><span>BASELINE</span><b>BUILD 85</b></div><div><span>DISTRIBUTION</span><b>SIGNED APT</b></div><div><span>VERSION</span><b>ALPHA 0.7.5</b></div><div class="footer-links"><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/RELEASE_PIPELINE.md">RELEASE STATUS</a><a href="135ercloud-server-install.sh">CLOUD INSTALLER</a><a href="setup-135ercloud-apt-repo.sh">APT SETUP</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">REPOSITORY ↗</a></div></footer>
+    <footer class="footer"><div><span class="live-dot" style="display:inline-block;margin-right:8px"></span><strong>135ER-GROW CENTRAL</strong> · PUBLIC PROJECT CONSOLE</div><div class="footer-links"><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/README.md">README</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/RELEASE_PIPELINE.md">RELEASE STATUS</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GITHUB ↗</a></div></footer>
   </main>
-  <script>(()=>{const views=[...document.querySelectorAll('[data-view]')],tabs=[...document.querySelectorAll('[data-tab]')];const activate=id=>{views.forEach(v=>v.classList.toggle('active',v.dataset.view===id));tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===id));history.replaceState(null,'',`#${id}`)};tabs.forEach(t=>t.addEventListener('click',e=>{if(t.tagName==='A')e.preventDefault();activate(t.dataset.tab)}));const initial=location.hash.slice(1);if(views.some(v=>v.dataset.view===initial))activate(initial);const clock=document.getElementById('clock'),date=document.getElementById('date');const updateTime=()=>{const now=new Date();clock.textContent=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});date.textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})};updateTime();setInterval(updateTime,1000)})();</script>
+</div>
+<script>
+(()=>{const panels=[...document.querySelectorAll('[data-panel]')],links=[...document.querySelectorAll('[data-target]')],title=document.getElementById('pageTitle');const names={overview:'Projektstatus',release:'Build & Release',integrations:'Integrationen',interfaces:'Interfaces',security:'Security & Architektur'};function activate(id){panels.forEach(p=>p.classList.toggle('active',p.dataset.panel===id));links.forEach(l=>l.classList.toggle('active',l.dataset.target===id));title.textContent=names[id]||'135er-Grow Central';history.replaceState(null,'',`#${id}`)}links.forEach(l=>l.addEventListener('click',()=>activate(l.dataset.target)));const start=location.hash.slice(1);if(names[start])activate(start);const clock=document.getElementById('clock');const tick=()=>clock.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});tick();setInterval(tick,1000)})();
+</script>
 </body>
 </html>
