@@ -7,8 +7,9 @@ hostname is not required and AP provisioning cannot regress.
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
-import socket
+import subprocess
 from contextlib import suppress
 
 ALIAS = "135er-growcentral.local"
@@ -17,15 +18,23 @@ _task: asyncio.Task | None = None
 
 
 def _primary_ipv4() -> str | None:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    """Choose a usable local IPv4 even when no Internet/default route exists."""
     try:
-        sock.connect(("1.1.1.1", 80))
-        address = sock.getsockname()[0]
-        return address if address and not address.startswith("127.") else None
-    except OSError:
+        result = subprocess.run(["ip", "-j", "address", "show"], capture_output=True, text=True, timeout=3, check=False)
+        rows = json.loads(result.stdout) if result.returncode == 0 else []
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
-    finally:
-        sock.close()
+    candidates: list[tuple[int, str]] = []
+    for row in rows if isinstance(rows, list) else []:
+        name = str(row.get("ifname") or "")
+        if name == "lo" or str(row.get("operstate") or "").upper() == "DOWN":
+            continue
+        priority = 0 if name.startswith(("eth", "en")) else 1 if name.startswith(("wlan", "wl")) else 2
+        for info in row.get("addr_info") or []:
+            address = str(info.get("local") or "")
+            if info.get("family") == "inet" and address and not address.startswith("127.") and not address.startswith("169.254."):
+                candidates.append((priority, address))
+    return sorted(candidates)[0][1] if candidates else None
 
 
 async def _stop_process() -> None:
