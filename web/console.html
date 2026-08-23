@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02070a">
+<title>135er-Grow Central</title>
+<link rel="icon" type="image/png" href="/static/brand-mark.png">
+<link rel="stylesheet" href="/static/console.css?v=0.12.0">
+</head>
+<body>
+<div class="gc-shell">
+  <aside class="gc-nav">
+    <div class="gc-brand"><img src="/static/brand-logo.png" alt="135er-Grow Central"><span>LOCAL CONTROL</span></div>
+    <div class="nav-scroll">
+      <div class="nav-group"><span>ÜBERSICHT</span><button class="nav-link active" data-target="legacy:dashboard">◈ Dashboard</button></div>
+      <div class="nav-group"><span>KLIMA & ENERGIE</span><button class="nav-link" data-target="legacy:dashboard">◌ Klima</button><button class="nav-link" data-target="legacy:power">⚡ Energie & Steckdosen</button><button class="nav-link" data-target="legacy:history">≋ Historie & Kosten</button></div>
+      <div class="nav-group"><span>GERÄTE</span><button class="nav-link" data-target="legacy:devices">◇ Geräteübersicht</button><button class="nav-link sub" data-target="legacy:devices">FRITZ! Smart Home</button><button class="nav-link sub" data-target="legacy:devices">TP-Link Tapo</button><button class="nav-link sub" data-target="legacy:dashboard">Mars Hydro / iFresh</button><button class="nav-link sub" data-target="legacy:camera">Logitech C920 / Kamera</button></div>
+      <div class="nav-group"><span>AUTOMATION</span><button class="nav-link" data-target="legacy:automation">⟲ Regeln & Zeitpläne</button></div>
+      <div class="nav-group"><span>SYSTEM</span><button class="nav-link" data-target="system:host">⚙ Hostsystem</button><button class="nav-link sub" data-target="system:network">Netzwerk</button><button class="nav-link sub" data-target="system:build">Build & Version</button><button class="nav-link sub" data-target="legacy:system">Diagnose & Wartung</button></div>
+    </div>
+    <div class="nav-footer"><span class="live-dot"></span><div><small>ERREICHBAR UNTER</small><strong>135er-GrowCentral.local</strong></div></div>
+  </aside>
+
+  <main class="gc-main">
+    <header class="gc-topbar">
+      <div><div class="eyebrow">135ER GROW CENTRAL · LOCAL-FIRST</div><h1 id="pageTitle">Dashboard</h1></div>
+      <div class="top-actions"><div class="build-pill" id="topBuild">BUILD --</div><div class="clock" id="clock">--:--:--</div><button id="syncBtn">SYNC</button><button id="logoutBtn">LOGOUT</button></div>
+    </header>
+
+    <section id="legacyPanel" class="content-panel active">
+      <iframe id="legacyFrame" src="/legacy" title="Grow Central Gerätesteuerung"></iframe>
+    </section>
+
+    <section id="systemPanel" class="content-panel">
+      <div class="system-hero">
+        <div><div class="eyebrow">HOST SYSTEM · LIVE</div><h2 id="hostTitle">Raspberry Pi</h2><p>Alle wichtigen Daten des Grow-Central-Hosts auf einer Seite.</p></div>
+        <div class="status-chip" id="hostState">ONLINE</div>
+      </div>
+      <div class="metric-grid">
+        <article><span>CPU</span><strong id="cpuLoad">--</strong><small id="cpuTemp">-- °C</small></article>
+        <article><span>RAM</span><strong id="memoryUsage">--</strong><small id="memoryDetail">--</small></article>
+        <article><span>SPEICHER</span><strong id="diskUsage">--</strong><small id="diskDetail">--</small></article>
+        <article><span>UPTIME</span><strong id="uptime">--</strong><small id="loadAverage">Load --</small></article>
+      </div>
+      <div class="system-grid">
+        <article class="system-card" data-system-tab="host"><div class="card-head"><span>HOST</span><b>LIVE IDENTITY</b></div><dl id="hostData"></dl></article>
+        <article class="system-card" data-system-tab="network"><div class="card-head"><span>NETZWERK</span><b>LOCAL ACCESS</b></div><div class="domain-card"><small>Feste Adresse</small><strong>135er-GrowCentral.local</strong></div><div id="networkData" class="interface-list"></div></article>
+        <article class="system-card" data-system-tab="build"><div class="card-head"><span>SOFTWARE</span><b>BUILD STATUS</b></div><dl id="buildData"></dl><div class="build-status" id="buildStatus">Buildinformationen werden geladen…</div></article>
+        <article class="system-card"><div class="card-head"><span>HARDWARE</span><b>RASPBERRY PI</b></div><dl id="hardwareData"></dl></article>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/static/console.js?v=0.12.0"></script>
+</body>
+</html>
