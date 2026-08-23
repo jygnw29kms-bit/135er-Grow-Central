@@ -1,36 +1,42 @@
-# GUI und Responsive Design
+# GUI und Responsive Design · GrowCentral Nexus UI
 
-![135er-Grow Central GUI Vorschau](../../docs/assets/gui/local-desktop-v0.9.png)
+Logo und Branding bleiben unverändert. Für alle aktuellen Oberflächen gilt verbindlich das [`GrowCentral Nexus UI`](../../docs/DESIGN_SYSTEM_NEXUS.md).
 
-Das Bild ist die verbindliche visuelle Zielreferenz für die fertige GUI.
+## Gültig für
 
-## Branding
+- Raspberry-Pi GUI und First Boot;
+- Elecrow 7-Zoll Touch-Kiosk;
+- dezender.de;
+- Android/iOS Nexus Mobile;
+- Cloud-/Server-Präsentation;
+- Repo-/README-/Release-Grafiken.
 
-Rastergrafiken werden im Projekt als **PNG** eingebunden. WebP wird nicht mehr verwendet, da die Darstellung auf dem produktiven Hosting nicht zuverlässig war. Favicons dürfen als ICO und technische Diagramme als SVG vorliegen.
+## Visuelle Basis
 
-Website, lokale GUI und Cloud-GUI verwenden das 135er-Grow Central-Logo in PNG-Form.
+- Near Black / Graphite als Grundfläche;
+- Cyan für Daten, Navigation und technische Information;
+- Lime für online/ready/active/valid;
+- Amber für alpha/test/candidate/pending;
+- Rot für offline/failed/deny;
+- klare Karten, geringe visuelle Unruhe, dezenter Glow;
+- gemeinsame Statuschips, Abstände und Typografie über alle Clients.
 
-## Desktop ab 1400 px
+## Desktop / Pi
 
-Feste Sidebar, 3–4 Spalten, große Charts, vollständige Diagnose- und Cloud-Karten.
+Feste modulare Sidebar, kompakte Topbar, Metric Cards, Status-/Systemkarten, klare Live- und Detailhierarchie. Technische Daten dürfen Monospace-Akzente verwenden.
 
-## Notebook 1024–1399 px
+## Tablet / Elecrow
 
-2–3 Spalten, kompaktere Sidebar, sekundäre Daten in Detailansichten.
+Touch-first, wichtige Ziele mindestens ungefähr 44×44 CSS-Pixel, Kernmetriken zuerst, keine Hover-only-Funktionen. Das Kiosk-Layout ist eine echte responsive Nexus-Ableitung, keine separate Designsprache.
 
-## Tablet/iPad 768–1023 px
+## Smartphone
 
-Touch-optimierte Controls, 2 Spalten, einklappbare Navigation, keine Hover-only-Funktionen, mindestens ungefähr 44 × 44 CSS-Pixel für wichtige Touch-Ziele.
+Eigene mobile Informationshierarchie statt verkleinerter Desktopseite. Safe-Area-Unterstützung, große Aktionen, lokale Pi-Verbindung und Remote-HTTPS-Ziel klar getrennt.
 
-## Smartphone unter 768 px
+## Vorschaubilder
 
-Einspaltiges Layout, Drawer oder Bottom Navigation, priorisierte Live-Werte/Alarme/Schnellaktionen, Tabellen als Karten.
+Aktuelle Screenshots/Mockups müssen Nexus UI zeigen. Historische v0.9-Bilder dürfen erhalten bleiben, müssen dann aber als Konzept/Legacy verstanden werden. Demo-Telemetrie ist keine Hardwarevalidierung.
 
-## Informationspriorität
+## Release-Status
 
-1. Alarm/Systemstatus
-2. Temperatur/Luftfeuchte/VPD
-3. aktive Geräte und Sollwerte
-4. Schnellaktionen/Zeitpläne
-5. Historie
-6. Cloud/Diagnose
+Aktuell: `alpha-0.7.5` · Master `e339602` · **Build 118 CANDIDATE**. Build-/Statusangaben werden aus [`../../RELEASE_STATE.md`](../../RELEASE_STATE.md) übernommen.
