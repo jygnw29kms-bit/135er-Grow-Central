@@ -6,6 +6,9 @@ BOOT_DIR=/boot/firmware
 CONFIG="$BOOT_DIR/config.txt"
 CMDLINE="$BOOT_DIR/cmdline.txt"
 BANNER=/etc/135er-grow-central/banner.txt
+KIOSK_UNIT_SOURCE=/opt/135er-grow-central/image-builder/firstboot/grow-central-display-kiosk.service
+KIOSK_UNIT=/etc/systemd/system/grow-central-display-kiosk.service
+KIOSK_SCRIPT=/opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
 
 log() { printf '[grow-central-display] %s\n' "$*"; }
 
@@ -66,11 +69,28 @@ EOF
   fi
   printf '%s\n' "$DISPLAY_NAME" > "$STATE_DIR/display-name"
   printf '%s\n' "$DISPLAY_MODE" > "$STATE_DIR/display-mode"
-  chown growcentral:growcentral "$STATE_DIR/display-name" "$STATE_DIR/display-mode" 2>/dev/null || true
-  chmod 0640 "$STATE_DIR/display-name" "$STATE_DIR/display-mode" 2>/dev/null || true
+  printf '%s\n' "$CONNECTOR" > "$STATE_DIR/display-connector"
+  chown growcentral:growcentral "$STATE_DIR/display-name" "$STATE_DIR/display-mode" "$STATE_DIR/display-connector" 2>/dev/null || true
+  chmod 0640 "$STATE_DIR/display-name" "$STATE_DIR/display-mode" "$STATE_DIR/display-connector" 2>/dev/null || true
   log "Detected ${DISPLAY_NAME} on ${CONNECTOR}; next boot mode ${DISPLAY_MODE}."
+
+  # Install the local kiosk unit only for a supported 7-inch panel. The kiosk
+  # script itself waits for networking and installs its graphical dependencies
+  # when needed, so first-boot AP functionality never depends on display setup.
+  if [ -r "$KIOSK_UNIT_SOURCE" ] && [ -x "$KIOSK_SCRIPT" ]; then
+    install -o root -g root -m 0644 "$KIOSK_UNIT_SOURCE" "$KIOSK_UNIT" || true
+    systemctl daemon-reload || true
+    systemctl enable grow-central-display-kiosk.service >/dev/null 2>&1 || true
+    systemctl start --no-block grow-central-display-kiosk.service >/dev/null 2>&1 || true
+    log 'Elecrow local GUI kiosk enabled.'
+  else
+    log 'Kiosk files missing; display remains console-only.'
+  fi
 else
-  rm -f "$STATE_DIR/display-name" "$STATE_DIR/display-mode" 2>/dev/null || true
+  rm -f "$STATE_DIR/display-name" "$STATE_DIR/display-mode" "$STATE_DIR/display-connector" 2>/dev/null || true
+  if [ -f "$KIOSK_UNIT" ]; then
+    systemctl disable --now grow-central-display-kiosk.service >/dev/null 2>&1 || true
+  fi
   log 'No Grow Central 7-inch HDMI profile detected; leaving HDMI mode on EDID/KMS automatic.'
 fi
 
@@ -82,7 +102,13 @@ if [ -w /dev/tty1 ]; then
     [ -r "$BANNER" ] && cat "$BANNER"
     printf '\n[BOOT] 135er-Grow Central hardware initialization\n'
     printf '[BOOT] Model: %s\n' "$(tr -d '\000' </proc/device-tree/model 2>/dev/null || echo unknown)"
-    if [ -n "$DISPLAY_MODE" ]; then printf '[BOOT] Display: %s · %s\n' "$DISPLAY_NAME" "$DISPLAY_MODE"; else printf '[BOOT] Display: HDMI/KMS automatic or headless\n'; fi
+    if [ -n "$DISPLAY_MODE" ]; then
+      printf '[BOOT] Display: %s · %s\n' "$DISPLAY_NAME" "$DISPLAY_MODE"
+      printf '[BOOT] Local GUI: Elecrow touch kiosk enabled\n'
+    else
+      printf '[BOOT] Display: HDMI/KMS automatic or headless\n'
+      printf '[BOOT] Local GUI: headless/network mode\n'
+    fi
     printf '[BOOT] Console status: visible · Plymouth branding: enabled\n\n'
   } > /dev/tty1 2>/dev/null || true
 fi
