@@ -1,4 +1,4 @@
-# 135er-Grow Central Branding
+# 135er-Grow Central Branding · GrowCentral Nexus UI
 
 <p align="center"><img src="website/assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="820"></p>
 
@@ -8,66 +8,83 @@
 
 ### Verbindliche Marke
 
-Die offizielle Wort-Bild-Marke ist eine untrennbare Einheit aus:
+Die offizielle Wort-Bild-Marke bleibt unverändert und besteht aus:
 
 1. Hexagon-Symbol mit Blatt- und Sensorknoten,
 2. Wortmarke `135er-Grow Central`,
 3. grafischem `J.L.`-Signet.
 
-Das kompakte Hexagon-Markenzeichen darf allein als Favicon, App-Icon oder System-Seal verwendet werden. In Kopfzeilen, Repository-Darstellung, Boot-Splash und Hauptbranding wird immer die kombinierte Wort-Bild-Marke verwendet.
+Das kompakte Markenzeichen darf allein als Favicon, App-Icon oder System-Seal verwendet werden. In Hauptbranding, Repository, Website und Boot-Splash wird die kombinierte Marke verwendet.
 
-### Farben und Stil
+### Verbindliche Designsprache
+
+**GrowCentral Nexus UI** ist der projektweite Standard für:
+
+- Raspberry-Pi GUI und First Boot;
+- Elecrow-/Kiosk-Oberflächen;
+- dezender.de;
+- Android- und iOS-Mobile-Clients;
+- Cloud-/APT-Präsentation;
+- README, Repo-Banner und Dokumentationsgrafiken;
+- Release-/Status-/Promo-Bilder.
+
+Details und Komponentenregeln: [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md).
+
+### Farben
 
 - Near Black: `#020608`
+- Background: `#02070A`
 - Panel Graphite: `#061015`
-- Neon Lime: `#71ff3b`
-- Data Cyan: `#35e8da`
-- Diagnostic Amber: `#ffb52b`
-- Primary Text: `#edf8f6`
+- Elevated Panel: `#0A1820`
+- Border: `#17414A`
+- Neon Lime: `#71FF3B`
+- Data Cyan: `#2AE5FF` / `#35E8DA`
+- Diagnostic Amber: `#FFB52B`
+- Danger: `#FF6877`
+- Primary Text: `#EDF8F6`
+- Muted Text: `#7EA1A8`
 
-Die Designsprache ist eine ruhige, professionelle Control-Room-Ästhetik: präzise Linien, klare Datenhierarchie, geringe Leuchtintensität und technische Tiefenstaffelung. Keine bunten Verläufe, kein übermäßiges Bloom und keine voneinander getrennten Logo-Bestandteile.
+Die Oberfläche ist ein ruhiges, hochwertiges Local-First-Control-Center: klare Datenhierarchie, konsistente Panels, dezente Leuchteffekte, starke Statussemantik und responsive Ableitungen statt separater Designwelten.
+
+### Statusfarben
+
+- Lime: `ONLINE`, `READY`, `VALID`, `ACTIVE`
+- Amber: `ALPHA`, `TEST`, `CANDIDATE`, `PENDING`
+- Cyan: `LOCAL`, `INFO`, `SYNC`
+- Rot: `OFFLINE`, `FAILED`, `DENY`
 
 ### Assets
 
-- Kombiniertes Logo: `website/assets/brand/135er-grow-central-lockup-v0.9.png`
-- Kompaktes Markenzeichen: `website/assets/brand/135er-grow-central-mark.png`
+- Lockup: `website/assets/brand/135er-grow-central-lockup-v0.9.png`
+- Mark: `website/assets/brand/135er-grow-central-mark.png`
 - Repository-Banner: `docs/assets/brand/repository-banner-v0.9.png`
 - Pi-Boot-Splash: `image-builder/brand/boot-splash-v0.9.png`
-- GUI-Familie: `website/assets/gui/*-v0.9.png`
+- GUI-Previews: `website/assets/gui/`
 
-WebP wird nicht verwendet. Laufzeit- und Präsentationsassets werden als PNG ausgeliefert.
+Aktuelle Vorschaubilder müssen Nexus UI zeigen. Veraltete Screenshots werden ersetzt oder eindeutig als historisch/legacy markiert. Mockup-Telemetrie darf nicht als Hardwarevalidierung erscheinen.
+
+### Release-Konsistenz
+
+Build-/Kandidatenangaben werden nicht in Grafiken oder Einzeldokumenten unabhängig gepflegt. Maßgeblich ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Aktuell: `alpha-0.7.5`, Master-Anker `e339602`, Build 118 = Hardwaretest-Kandidat.
 
 ---
 
 ## English
 
-### Binding brand system
+The official logo/lockup and project identity remain unchanged. **GrowCentral Nexus UI** is the binding visual system for Raspberry Pi, kiosk, website, Mobile clients, Cloud/APT presentation, repository/docs and release graphics.
 
-The official combined mark is a single unit consisting of:
+Core tokens:
 
-1. the hexagonal leaf and sensor-node symbol,
-2. the `135er-Grow Central` wordmark,
-3. the graphical `J.L.` signature.
+- Near Black `#020608`
+- Background `#02070A`
+- Panel Graphite `#061015`
+- Elevated Panel `#0A1820`
+- Border `#17414A`
+- Neon Lime `#71FF3B`
+- Data Cyan `#2AE5FF` / `#35E8DA`
+- Diagnostic Amber `#FFB52B`
+- Danger `#FF6877`
+- Primary Text `#EDF8F6`
+- Muted Text `#7EA1A8`
 
-The compact hexagonal mark may be used alone as a favicon, app icon, or system seal. Headers, repository presentation, boot splash, and primary branding always use the complete combined mark.
-
-### Colors and style
-
-- Near Black: `#020608`
-- Panel Graphite: `#061015`
-- Neon Lime: `#71ff3b`
-- Data Cyan: `#35e8da`
-- Diagnostic Amber: `#ffb52b`
-- Primary Text: `#edf8f6`
-
-The design language is a restrained, professional control-room aesthetic: precise lines, clear data hierarchy, subtle glow, and technical depth. Avoid colorful gradients, excessive bloom, or separating parts of the combined logo.
-
-### Assets
-
-- Combined logo: `website/assets/brand/135er-grow-central-lockup-v0.9.png`
-- Compact mark: `website/assets/brand/135er-grow-central-mark.png`
-- Repository banner: `docs/assets/brand/repository-banner-v0.9.png`
-- Raspberry Pi boot splash: `image-builder/brand/boot-splash-v0.9.png`
-- GUI family: `website/assets/gui/*-v0.9.png`
-
-WebP is not used. Runtime and presentation assets are delivered as PNG.
+All current preview images must represent Nexus UI. Historical visuals must be marked as such. Release/build labels must follow [`RELEASE_STATE.md`](RELEASE_STATE.md), not independent local copies.
