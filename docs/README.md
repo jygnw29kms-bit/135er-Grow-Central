@@ -4,34 +4,51 @@
 
 <p align="center"><a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a></p>
 
+> [!IMPORTANT]
+> Aktueller kanonischer Release-Stand: **alpha-0.7.5 · master e339602 · Build 118 = nächster Hardwaretest-Kandidat**. Build 117 war erfolgreich getestet, ist aber überholt. Maßgeblich ist [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
+
 ## Deutsch
 
-Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll neue Entwickler, Tester und Betreiber ohne vorherigen Chat-Verlauf in die Lage versetzen, Architektur, Status, Risiken und nächste Schritte zu verstehen.
+Diese Struktur ist die technische Wissensbasis des Projekts. Historische Build-Dokumente bleiben erhalten, definieren aber nicht den aktuellen Release-Status.
 
 ## Zuerst lesen
 
-1. [Projektgeschichte](../PROJECT_HISTORY.md) – Idee bis heutiger Stand
-2. [Aktueller Projektstatus](PROJECT_STATUS.md) – was ist wirklich implementiert?
-3. [Architektur-Master](ARCHITECTURE_MASTER.md) – Systemgrenzen und Datenflüsse
-4. [Hardware-Testplan](HARDWARE_TEST_PLAN.md) – nächste reale DF100M-Tests
-5. [DF100M Research Log](DF100M_RESEARCH_LOG.md) – Beobachtungen und Hypothesen
-6. [Security & Trust Model](SECURITY_AND_TRUST_MODEL.md)
-7. [Image & Release Process](RELEASE_AND_IMAGE_PROCESS.md)
-8. [Decision Log](DECISION_LOG.md)
+1. [Kanonischer Release State](../RELEASE_STATE.md)
+2. [Aktueller Projektstatus](PROJECT_STATUS.md)
+3. [Release Pipeline](RELEASE_PIPELINE.md)
+4. [GrowCentral Nexus UI Design System](DESIGN_SYSTEM_NEXUS.md)
+5. [Projektgeschichte](../PROJECT_HISTORY.md)
+6. [Architektur-Master](ARCHITECTURE_MASTER.md)
+7. [Hardware-Testplan](HARDWARE_TEST_PLAN.md)
+8. [Security & Trust Model](SECURITY_AND_TRUST_MODEL.md)
 9. [Known Limitations](KNOWN_LIMITATIONS.md)
 10. [Roadmap](ROADMAP.md)
 
-## Bestehende Fachdokumentation
+## Aktueller Testfokus
+
+- Raspberry Pi Build 118 / `pi-universal-alpha-0.7.5-118`
+- First Boot / LAN / WLAN / AP / Persistenz
+- Logitech C920 / UVC inklusive firmware-/modell-/USB-ID-bewusster LED-Fähigkeitserkennung
+- bedingte LED-Steuerung nur auf unterstützter Hardware
+- Elecrow 7-Zoll Touch-Kiosk
+- FRITZ!/Tapo-Livepfade
+- relevante Mars-Hydro-/BLE-Diagnosepfade
+
+## Plattform-Dokumentation
 
 - [API](API.md)
 - [Architecture](ARCHITECTURE.md)
+- [Architecture Master](ARCHITECTURE_MASTER.md)
 - [Cloud](CLOUD.md)
-- [DF100M Protocol](DF100M_PROTOCOL.md)
 - [Installation](INSTALLATION.md)
 - [Protocol Notes](PROTOCOL_NOTES.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
 - [Sources](SOURCES.md)
-- [Merge Audit v0.5](MERGE_AUDIT_v0.5.md)
+- [Decision Log](DECISION_LOG.md)
+
+## Historische Build-Dokumente
+
+Build-spezifische Dateien wie `BUILD_71_CHECKPOINT.md`, `BUILD_72_MOBILE_V0.1.md` und die Build-85-Testnotizen sind **historische Nachweise**. Sie bleiben zur Nachvollziehbarkeit im Repository, dürfen aber nicht als aktueller Stand interpretiert werden.
 
 ## Deutsch
 
@@ -39,59 +56,36 @@ Diese Struktur ist die technische Wissensbasis des Projekts. Sie soll neue Entwi
 - [Full Platform](de/FULL_PLATFORM.md)
 - [Datenbank & Rechte](de/DATENBANK_UND_RECHTE.md)
 - [GUI-Vorschau](de/GUI_VORSCHAU.md)
-- [Raspberry Pi 3B Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [Raspberry Pi Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
-### Englische Fachdokumentation
+## English documentation
 
 - [Overview](en/README.md)
 - [Full Platform](en/FULL_PLATFORM.md)
 - [Database & RBAC](en/DATABASE_AND_RBAC.md)
 - [GUI Preview](en/GUI_PREVIEW.md)
-- [Raspberry Pi 3B Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [Raspberry Pi Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
 
 ## Dokumentationsregeln
 
 - `implemented`: Code/Laufzeit ist nachweisbar vorhanden.
 - `experimental`: vorhanden, aber nicht ausreichend am Zielgerät validiert.
+- `candidate`: für den nächsten Zieltest vorgesehen, aber noch nicht hardwarevalidiert.
+- `validated`: relevanter realer Zieltest erfolgreich abgeschlossen.
 - `baseline/design`: Schema, Architektur oder Interface ist definiert, aber nicht zwingend komplett verdrahtet.
 - `planned`: noch nicht implementiert.
 - Reverse-Engineering-Angaben müssen als Beobachtung/Hypothese gekennzeichnet werden.
 - Herstellerangaben, Open-Source-Referenzen, APK-Beobachtungen und Experimente werden getrennt geführt.
+- Buildnummern werden aus dem kanonischen Release State übernommen, nicht lokal in einzelnen Dokumenten erfunden.
 
 ---
 
 ## English
 
-This directory is the project's technical knowledge base. It enables new developers, testers, and operators to understand the architecture, verified status, risks, and next actions without relying on previous chat history.
+The current canonical state is **alpha-0.7.5 · master e339602 · Build 118 = next hardware-test candidate**. Build 117 was successfully tested but is superseded. See [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
 
-### Read first
+Read first: [Release State](../RELEASE_STATE.md) · [Project Status](PROJECT_STATUS.md) · [Release Pipeline](RELEASE_PIPELINE.md) · [Nexus Design System](DESIGN_SYSTEM_NEXUS.md) · [Hardware Test Plan](HARDWARE_TEST_PLAN.md).
 
-1. [Project history](../PROJECT_HISTORY.md)
-2. [Current project status](PROJECT_STATUS.md)
-3. [Architecture master](ARCHITECTURE_MASTER.md)
-4. [Hardware test plan](HARDWARE_TEST_PLAN.md)
-5. [DF100M research log](DF100M_RESEARCH_LOG.md)
-6. [Security and trust model](SECURITY_AND_TRUST_MODEL.md)
-7. [Image and release process](RELEASE_AND_IMAGE_PROCESS.md)
-8. [Decision log](DECISION_LOG.md)
-9. [Known limitations](KNOWN_LIMITATIONS.md)
-10. [Roadmap](ROADMAP.md)
+Historical build documents remain available for traceability but do not define the current release state.
 
-### English documentation
-
-- [Overview](en/README.md)
-- [Full platform](en/FULL_PLATFORM.md)
-- [Architecture](en/ARCHITECTURE.md)
-- [API](en/API.md)
-- [Database and RBAC](en/DATABASE_AND_RBAC.md)
-- [GUI preview](en/GUI_PREVIEW.md)
-- [Raspberry Pi 3B test image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
-
-### Documentation rules
-
-- `implemented`: code or runtime behavior is demonstrably present.
-- `experimental`: present, but not sufficiently validated on target hardware.
-- `baseline/design`: schema, architecture, or interface is defined but may not be fully wired.
-- `planned`: not implemented yet.
-- Reverse-engineering statements must be labeled as observations or hypotheses.
-- Vendor statements, open-source references, APK observations, and experiments remain clearly separated.
+Documentation status terms are `implemented`, `experimental`, `candidate`, `validated`, `baseline/design`, and `planned`. A candidate may only become validated after the relevant real target-hardware test has passed.
