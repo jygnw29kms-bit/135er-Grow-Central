@@ -5,6 +5,8 @@ on:
     branches: [ master ]
     paths:
       - 'website/**'
+      - 'RELEASE_STATE.md'
+      - 'docs/DESIGN_SYSTEM_NEXUS.md'
       - '.github/workflows/deploy-website-sftp.yml'
       - 'scripts/install-135ercloud-v6.sh'
       - 'scripts/setup-135ercloud-apt-repo-v1.sh'
@@ -21,10 +23,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Prepare downloadable server scripts
+      - name: Prepare downloadable release files
         run: |
+          set -euo pipefail
           cp scripts/install-135ercloud-v6.sh website/135ercloud-server-install.sh
           cp scripts/setup-135ercloud-apt-repo-v1.sh website/setup-135ercloud-apt-repo.sh
+          cp RELEASE_STATE.md website/RELEASE_STATE.md
+          sha256sum \
+            website/135ercloud-server-install.sh \
+            website/setup-135ercloud-apt-repo.sh \
+            website/RELEASE_STATE.md \
+            > website/SHA256SUMS.txt
+          {
+            echo '135er-Grow Central release publication'
+            echo 'version=alpha-0.7.5'
+            echo 'master_anchor=e339602'
+            echo 'pi_candidate=118'
+            echo 'pi_tag=pi-universal-alpha-0.7.5-118'
+            echo 'status=CANDIDATE'
+            echo "published_commit=${GITHUB_SHA}"
+          } > website/release-state.txt
 
       - name: Deploy website and server scripts
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
@@ -38,5 +56,7 @@ jobs:
 
       - name: Deployment information
         run: |
-          echo "135er-Grow Central website deployed to dezender.de"
-          echo "Target: /var/www/vhosts/dezender.de/httpdocs/"
+          echo '135er-Grow Central Nexus website deployed to dezender.de'
+          echo 'Cloud V6 and APT bootstrap republished with SHA256SUMS'
+          echo 'Release state: Build 118 CANDIDATE / master e339602'
+          echo 'Target: /var/www/vhosts/dezender.de/httpdocs/'
