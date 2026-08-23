@@ -1,138 +1,164 @@
 <p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central · Local-first Raspberry Pi control" width="100%"></p>
 
 <p align="center">
-  <a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="docs/README.md">Docs</a> · <a href="docs/de/INSTALLATION.md">Installation</a> · <a href="SECURITY.md">Security</a>
+  <a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="docs/README.md">Docs</a> · <a href="docs/de/INSTALLATION.md">Installation</a> · <a href="docs/RELEASE_PIPELINE.md">Release Status</a> · <a href="SECURITY.md">Security</a>
 </p>
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Raspberry%20Pi%203B-35e8da?style=flat-square&labelColor=061015">
+  <img alt="Baseline" src="https://img.shields.io/badge/validated%20baseline-Build%2085-71ff3b?style=flat-square&labelColor=061015">
   <img alt="Status" src="https://img.shields.io/badge/status-alpha%20hardware%20validation-ffb52b?style=flat-square&labelColor=061015">
-  <img alt="Security" src="https://img.shields.io/badge/security-GUI%20login%20%2B%20deny--by--default-71ff3b?style=flat-square&labelColor=061015">
 </p>
 
-<p align="center"><code>LOCAL-FIRST</code> · <code>RASPBERRY PI</code> · <code>MARS HYDRO iCONNECT</code> · <code>FRITZ! SMART HOME</code> · <code>TAPO</code> · <code>LOGITECH C920</code></p>
+<p align="center"><code>LOCAL-FIRST</code> · <code>RASPBERRY PI</code> · <code>FRITZ! SMART HOME</code> · <code>TAPO</code> · <code>LOGITECH C920</code> · <code>MARS HYDRO iCONNECT</code> · <code>SIGNED APT</code></p>
 
 > [!WARNING]
-> **Alpha / Hardwarevalidierung.** Der aktuelle Teststand bootet und die Bluetooth-Grundfunktionen wurden auf echter Hardware positiv beobachtet. Das ersetzt noch keine vollständige Freigabe aller Netzwerk-, Smart-Home-, Kamera- und Mars-Hydro-Pfade.
+> **Alpha / Hardwarevalidierung.** Build 85 ist die aktuell dokumentierte validierte Raspberry-Pi-Basis. Der `master` enthält bereits weitere Änderungen und erneut ausgelöste Image-Builds; diese gelten erst nach realem Zieltest als neue validierte Basis.
 
 ## Deutsch
 
-**135er-Grow Central** ist eine local-first Steuer- und Überwachungsplattform. Der Raspberry Pi 3B bleibt die autoritative lokale Instanz für GUI, Gerätepolicy, Smart Home, Kamera, Diagnose und optionale Cloud-Anbindung.
+**135er-Grow Central** ist eine local-first Steuer-, Überwachungs- und Automationsplattform. Der Raspberry Pi bleibt die autoritative lokale Instanz für GUI, Gerätepolicy, Smart Home, Kamera, Diagnose und optionale Cloud-/Server-Anbindung.
 
-### alpha-0.7.5 – aktueller Zielstand
+### Aktueller Projektstand – 23.08.2026
 
-Build 70 nutzt dieselbe visuelle Sprache wie die öffentliche Referenz-GUI auf `dezender.de`. Die erste erfolgreich geprüfte FRITZ!Box- oder Tapo-Anmeldung wird lokal verschlüsselt und mit restriktiven Dateirechten gespeichert. Gerätewerte und Schaltaktionen verwenden sie danach automatisch; über die GUI kann der jeweilige Zugang gelöscht werden. Registrierte Geräte werden atomar in der dauerhaften Registry gesichert, nach Browser- oder Pi-Neustarts wieder geladen und unter **Geräte** ausdrücklich als dauerhaft registriert angezeigt. Stromkosten beruhen auf der gemeldeten Gesamtenergie und bleiben deshalb auch bei ausgeschalteter Steckdose sichtbar. Jeder Menüwechsel prüft den Pi ohne Browsercache; bei Ausfall ersetzt eine klare Offline-Ansicht die möglicherweise veralteten Messwerte.
+Repository-Version: **alpha-0.7.5**  
+Dokumentierte validierte Image-Basis: **Build 85**  
+Branch: **master**
 
-Der neue First-Boot-Ablauf findet direkt in der geschützten Haupt-GUI unter **System** statt:
+Der aktuelle Entwicklungsstand umfasst unter anderem:
 
-1. **Systempasswort ändern – Pflicht.** Das Factory-Passwort darf nicht in den normalen Betrieb übernommen werden.
-2. **Heimnetzwerk einrichten.** Aktives LAN wird automatisch erkannt. Ohne LAN zeigt das Setup eine WLAN-Liste und verlangt die Auswahl bzw. manuelle SSID.
-3. **FRITZ!Box optional anbinden.** Für Grow Central soll ein eigener FRITZ!Box-Benutzer mit den für Smart Home notwendigen Rechten verwendet werden.
-4. **Grow-Central-GUI absichern – Pflicht.** Ein separater GUI-Benutzer und ein mindestens 12 Zeichen langes GUI-Passwort werden eingerichtet. Danach schützt eine serverseitige Sitzung die lokale GUI und API.
+- dauerhafte Geräte-Registry über Browser- und Pi-Neustarts;
+- verschlüsselte wiederverwendbare FRITZ!Box- und Tapo-Zugangsdaten mit restriktiven Dateirechten;
+- FRITZ!SmartHome-Import, Livewerte, Schalten, Routinen und Templates;
+- Stromkosten auf Basis der gemeldeten Gesamtenergie, sodass historische Kosten auch bei ausgeschalteter Steckdose sichtbar bleiben;
+- No-Cache-Liveprüfung bei Menüwechseln und eine eindeutige Offline-Ansicht bei Pi-Ausfall;
+- lokales authentifiziertes Tapo-Onboarding über alle aktiven IPv4-Netze des Pi mit dauerhafter Geräteübernahme;
+- Logitech-C920/UVC-Erkennung, Snapshot, native MJPEG-Modi und dynamische V4L2-Regler;
+- Mars-Hydro/iConnect-Zielarchitektur mit BLE-Diagnose-/Fallback-Pfad;
+- First-Boot-Setup, GUI-Login/Sessions, Diagnose und geschwärzte Support-Pakete;
+- Cloud-/Server-Installer V6;
+- signiertes APT-Repository unter `https://repo.dezender.de/apt`;
+- automatische Veröffentlichung der Website und Server-Hilfsskripte nach `dezender.de`.
 
-Das Setup-WLAN verwendet `135er-GrowCentral-Setup-XXXX`. Die normale GUI ist ab dem ersten Start unter `http://10.42.0.1/` mit dem temporären Zugang `GrowCentral / grow-central-test` verfügbar. Nach Abschluss bleibt die interne Domain fest `http://135er-Grow-Central.local/`; Port `8080` bleibt als Kompatibilitätsadresse erhalten. Da der einzelne WLAN-Chip des Raspberry Pi 3B während seines aktiven APs andere Netze nicht zuverlässig scannt, bleibt die manuelle SSID-Eingabe ausdrücklich verfügbar.
+Die frühere öffentliche Build-70→71→72-Roadmap ist nicht mehr der aktuelle Projektstand. Maßgeblich ist die aktuelle Release-Dokumentation unter [`docs/RELEASE_PIPELINE.md`](docs/RELEASE_PIPELINE.md).
 
-### Dauerhafte Support-Diagnose
+### First Boot
 
-Das Image speichert systemd-Journale begrenzt und komprimiert über mehrere Boots. First Boot und Dienstfehler erzeugen automatisch ein geschwärztes Support-Paket; unter **System → Support-Datei erstellen** kann jederzeit ein aktuelles Paket angefordert und heruntergeladen werden. Bei einer Fehlermeldung wird immer `Grow-Central-Support-latest.tar.gz` benötigt. Passwörter, Tokens, Cookies, PSKs und Hashwerte werden entfernt; technische Netzwerk- und Hardwarekennungen bleiben für die Analyse enthalten.
+Der First-Boot-Ablauf liegt in der geschützten Haupt-GUI unter **System**:
 
-### Heimnetzwerk und FRITZ!SmartHome
+1. **Systempasswort ändern – Pflicht**
+2. **Heimnetz einrichten** – aktives LAN erkennen oder WLAN auswählen/manuell eintragen
+3. **FRITZ!Box optional anbinden** – eigener Benutzer mit notwendigen Smart-Home-Rechten empfohlen
+4. **Grow-Central-GUI absichern – Pflicht** – eigener GUI-Benutzer und mindestens 12 Zeichen langes Passwort
 
-Die lokale GUI besitzt einen eigenen Bereich **Netzwerk**. Dort können aktive Schnittstellen angezeigt, WLAN-Netze gesucht und der Pi nachträglich mit einem WLAN verbunden werden. Scan, kein Treffer, Timeout und Fehler werden sichtbar zurückgemeldet.
+Setup-WLAN: `135er-GrowCentral-Setup-XXXX`  
+First-Boot-Adresse: `http://10.42.0.1/`  
+Nach Einrichtung: `http://135er-Grow-Central.local/`  
+Port `8080` bleibt als Kompatibilitätsadresse erhalten.
 
-Grow Central prüft nach dem GUI-Start auf eine eindeutig erkennbare FRITZ!Box. Wird eine Box erkannt, fordert die GUI einen FRITZ!Box-Benutzer an. Nach erfolgreichem Login werden über die lokale AVM/AHA-Schnittstelle unterstützte FRITZ!SmartHome-Schaltgeräte importiert und in der gemeinsamen Strom-/Geräteansicht bereitgestellt. Der aktuelle native Adapter unterstützt bei passenden FRITZ!-Geräten:
+### Support und Diagnose
+
+Unter **System → Support-Datei erstellen** kann jederzeit `Grow-Central-Support-latest.tar.gz` erzeugt werden. Passwörter, Tokens, Cookies, PSKs und Hashwerte werden entfernt; technische Netzwerk- und Hardwarekennungen bleiben für die Fehleranalyse erhalten. Bei einem realen Problem ist dieses Paket die bevorzugte Diagnosebasis.
+
+### FRITZ! Smart Home
+
+Der lokale AVM/AHA-Pfad unterstützt bei kompatiblen Geräten unter anderem:
 
 - erreichbar / offline;
-- Schaltzustand;
-- Ein / Aus;
-- aktuelle Leistung in W;
-- Gesamtenergie in Wh/kWh;
-- Gerätename und AIN.
+- Schaltzustand und Ein/Aus;
+- Gerätename, AIN, Modell, Firmware und Funktionsklassen;
+- aktuelle Leistung;
+- Gesamtenergie;
+- Spannung;
+- Umgebungstemperatur und Temperatur-Offset, sofern vom Gerät gemeldet;
+- Routinen und Templates auf den dafür vorgesehenen Pfaden.
 
-Reale Funktion und Messwerte müssen gegen die jeweilige FRITZ!Box-/Steckdosen-Kombination bestätigt werden.
-
-Die Detailansicht liest die vollständige lokale AHA-Geräteinformation. Bei FRITZ!-Steckdosen werden dadurch das konkrete Modell, Name, AIN, Firmware, Funktionsumfang, Schaltmodus und Sperren sowie Leistung, Gesamtenergie, Spannung, Umgebungstemperatur und Temperatur-Offset angezeigt, sofern das jeweilige Gerät diese Felder liefert. Der Stromwert wird aus Leistung und Spannung berechnet und in der GUI entsprechend gekennzeichnet.
+Die erste erfolgreich geprüfte Anmeldung kann verschlüsselt lokal gespeichert und anschließend automatisch für freigegebene Aktionen wiederverwendet werden. Das Passwort wird nicht an Browser-APIs zurückgegeben.
 
 ### TP-Link Tapo
 
-Tapo bleibt als **hybride Integration** vorgesehen: lokale Gerätekommunikation wird im Heimnetz bevorzugt; der Tapo/TP-Link-Account bleibt Grundlage für authentifizierte Gerätezuordnung. Build 70 prüft die Kontoanmeldung an tatsächlich erreichbaren Geräten, speichert sie verschlüsselt, durchsucht alle aktiven IPv4-Netze des Pi und übernimmt bestätigte Geräte dauerhaft mit Alias, Modell, Typ sowie einer lokal gemeldeten Raum-/Standortangabe. Der aktuelle Grow-Central-Adapter implementiert den lokalen authentifizierten `python-kasa`-Pfad. Die offizielle Tapo-App verwendet zusätzlich private TP-Link-Cloud-Dienste; ein eigener validierter Grow-Central-WAN/Cloud-Inventarpfad wird nicht vorgetäuscht und bleibt separat zu implementieren und zu testen.
+Tapo ist als **hybride Integration** ausgelegt. Der aktuelle Adapter implementiert den authentifizierten lokalen `python-kasa`-Pfad, durchsucht aktive IPv4-Netze und übernimmt bestätigte Geräte dauerhaft mit den lokal verfügbaren Metadaten.
 
-### Logitech C920 / UVC-Kameras
+Die private TP-Link-Cloud-Inventarisierung wird nicht als implementiert dargestellt, solange dafür kein eigener validierter WAN-/Cloud-Pfad vorliegt.
 
-Die **Logitech C920 ist die Referenzkamera und für den aktuellen Hardwaretest direkt am Raspberry Pi angeschlossen**. `alpha-0.7.5` enthält einen sichtbaren Bereich **Kamera**:
+### Energie, Kosten und History
 
-- Erkennung der vorhandenen `/dev/video*`-Geräte;
-- Kennzeichnung einer erkannten Logitech C920;
-- Anzeige von Lesbarkeit und Capture-Fähigkeit;
-- echter JPEG-Test-Snapshot über `ffmpeg`;
-- Auswahl der von der Kamera tatsächlich gemeldeten nativen MJPEG-Auflösungen für Snapshot und Livebild; maximal ein Stream gleichzeitig;
-- dynamisches Bedienfeld aus den tatsächlich von der Kamera gemeldeten V4L2-Reglern;
-- Umschaltung von Autofokus auf manuellen Fokus, bevor ein manueller C920-Fokuswert gesetzt und vom Gerät zurückgelesen wird;
-- z. B. Helligkeit, Kontrast, Sättigung, Weißabgleich, Belichtung, Fokus, Zoom oder weitere Regler – **nur wenn die jeweilige Kamera sie meldet**;
-- Wertebereichs-/Menüvalidierung vor Änderungen;
-- Audit-Eintrag für Kamera-Control-Änderungen.
+Stromkosten werden aus der gemeldeten Gesamtenergie und dem konfigurierten Tarif abgeleitet. Dadurch bleibt bereits entstandener Verbrauch bzw. Kostenstand sichtbar, wenn eine Steckdose ausgeschaltet ist; nur Live-Leistungsprognosen gehen bei 0 W auf null.
 
-Die Browseroberfläche darf weder einen beliebigen `/dev/video*`-Pfad noch einen unbekannten V4L2-Controlnamen an den Server durchreichen.
+Die weitere Auswertung ist auf frei wählbare Zeiträume wie Stunde, Tag, Monat und Jahr sowie History-/Chart-Darstellung ausgerichtet.
 
-Das **Dashboard** und **System** zeigen Hostname, Raspberry-Pi-Modell (beispielsweise Pi 3B oder Pi 4), Betriebssystem, Kernel/Architektur, Laufzeit, installierte Version, exakte Image-Buildnummer sowie IPv4-/IPv6-Adressen aller Schnittstellen. Netzwerk, WLAN, Setup, Support und Diagnose liegen gesammelt unter **System**.
+### Logitech C920 / UVC
+
+Die Referenzkamera ist die Logitech C920. Unterstützt werden – soweit vom jeweiligen V4L2-Gerät tatsächlich gemeldet – Erkennung, Capture-Fähigkeit, JPEG-Snapshot, native MJPEG-Auflösungen, Livebild sowie dynamische Kamera-Regler wie Helligkeit, Kontrast, Sättigung, Weißabgleich, Belichtung, Fokus und Zoom.
+
+Browser-Eingaben dürfen keine beliebigen Device-Pfade oder unbekannte V4L2-Controlnamen direkt an den Server durchreichen.
 
 ### Mars Hydro
 
 | Gerät | Projektdefinition | Integrationsrichtung |
 |---|---|---|
-| **Mars Hydro FC3000** | Modelljahr **2024**, USB-Port, **iConnect** | gemeinsame Mars-Hydro/iConnect-Gerätefamilie |
-| **Mars Hydro DF100 / iFresh** | iFresh-Serie mit **iConnect** | gemeinsame Mars-Hydro/iConnect-Gerätefamilie |
-| **DF100M / MZ_MZF002** | beobachteter BLE-Pfad | experimentelle Diagnose / Reverse Engineering / Fallback |
+| **Mars Hydro FC3000** | Modelljahr 2024, USB, iConnect | gemeinsame iConnect-Gerätefamilie |
+| **Mars Hydro DF100 / iFresh** | iFresh-Serie mit iConnect | gemeinsame iConnect-Gerätefamilie |
+| **DF100M / MZ_MZF002** | beobachteter BLE-Pfad | Diagnose / Reverse Engineering / Fallback |
 
-Bluetooth-Discovery und Kommunikation sind im aktuellen Hardwaretest grundsätzlich funktionsfähig beobachtet worden. Unbekannte Mars-Hydro-Schreibtelegramme bleiben weiterhin gesperrt, bis sie auf realer Zielhardware reproduzierbar validiert wurden.
+Unbekannte oder nicht reproduzierbar validierte Mars-Hydro-Schreibtelegramme bleiben gesperrt.
+
+### Cloud / Server / APT
+
+Für den Serverpfad stehen aktuell bereit:
+
+- `scripts/install-135ercloud-v6.sh`
+- `scripts/setup-135ercloud-apt-repo-v1.sh`
+- APT: `https://repo.dezender.de/apt`
+
+Die APT-Einrichtung verwendet einen dedizierten `Signed-By`-Keyring und bereinigt alte Grow-Central-Quellen, bevor die kanonische Quelle eingetragen wird. Die Website-Deployment-Pipeline veröffentlicht die aktuellen Installer zusätzlich im Webroot von `dezender.de`.
 
 ### Sicherheitsmodell
 
-- Smart-Home-Code bleibt standardmäßig **deny-by-default**; das Appliance-Image aktiviert die Integration explizit.
-- Schreiboperationen benötigen eine authentifizierte Grow-Central-GUI-Sitzung oder ein explizites API-Token.
+- Smart-Home-Code bleibt standardmäßig **deny-by-default**.
+- Schreiboperationen benötigen eine authentifizierte GUI-Sitzung oder ein explizites API-Token.
 - Geräte müssen bekannt, freigegeben und beschreibbar sein.
-- GUI-Passwörter werden als PBKDF2-SHA256-Verifier gespeichert, nicht im Klartext.
-- Integrationspasswörter werden nicht über Browser-APIs zurückgegeben und nicht absichtlich geloggt.
-- Der öffentliche Webauftritt besitzt keine lokalen Gerätezugangsdaten oder direkten Steuerendpunkte.
-- Ein späterer WAN-Zugriff auf die Grow-Central-GUI muss zusätzlich über TLS/HTTPS bzw. einen abgesicherten Reverse-Proxy/VPN erfolgen; ein Login allein ersetzt keine Transportverschlüsselung.
+- GUI-Passwörter werden als PBKDF2-SHA256-Verifier gespeichert.
+- Integrationspasswörter werden nicht absichtlich geloggt oder an Browser-APIs zurückgegeben.
+- Remote-Zugriff benötigt zusätzlich TLS/HTTPS bzw. einen entsprechend abgesicherten Reverse-Proxy/VPN-Pfad.
+- Die öffentliche Website besitzt keine direkten lokalen Steuerendpunkte.
 
 ### Architektur
 
 ```text
-Clients im LAN / später abgesicherter Remote-Zugang
+Clients im LAN / optional abgesicherter Remote-Zugang
                          │
                   GUI Login / Session
                          │
                          ▼
               135er-Grow Central Local
-                    Raspberry Pi 3B
+                    Raspberry Pi
         ┌────────────────┼─────────────────┐
         │                │                 │
    Mars Hydro       Smart Home          Kamera
- FC3000/iFresh   FRITZ!/Tapo/Shelly   C920 / UVC
+ FC3000/iFresh   FRITZ! / Tapo        C920 / UVC
         │                │                 │
-  BLE/iConnect      local APIs          V4L2
+ iConnect/BLE       local APIs          V4L2
  diagnostics         + policy           ffmpeg
+                         │
+                  optional Server
+                  HTTPS / Cloud V6
 ```
 
-**ESP32 ist nicht Bestandteil der Zielarchitektur.**
-
-Weiterlesen: [Integrationen](docs/de/INTEGRATIONEN.md) · [Mars Hydro / iConnect](docs/MARS_HYDRO_ICONNECT.md) · [Hardware-Testplan](docs/HARDWARE_TEST_PLAN.md) · [Raspberry-Pi-Testimage](docs/de/RASPBERRY_PI_3B_TEST_IMAGE.md)
+Weiterlesen: [Installation](docs/de/INSTALLATION.md) · [Integrationen](docs/de/INTEGRATIONEN.md) · [Release-Status](docs/RELEASE_PIPELINE.md) · [Hardware-Testplan](docs/HARDWARE_TEST_PLAN.md) · [Mars Hydro / iConnect](docs/MARS_HYDRO_ICONNECT.md)
 
 ---
 
 ## English
 
-**135er-Grow Central alpha-0.7.5** is a local-first Raspberry Pi 3B control platform. The current release line adds a mandatory first-boot password change, LAN detection/WLAN selection, optional dedicated FRITZ!Box Smart Home credentials, mandatory GUI credentials and authenticated GUI sessions.
+**135er-Grow Central alpha-0.7.5** is a local-first Raspberry Pi control, monitoring and automation platform. **Build 85 is the currently documented validated hardware baseline**; `master` already contains newer integration, test, APT, cloud and image-pipeline changes that require hardware validation before they become the next validated baseline.
 
-The GUI now includes post-setup network management, automatic FRITZ!Box presence detection/login/import and a directly testable Logitech C920/UVC camera panel with device detection, JPEG snapshots and dynamically generated V4L2 controls. Smart-home writes remain deny-by-default in source and are explicitly enabled by the appliance image behind authentication and per-device approval/write gates.
+Current capabilities include persistent device registration, encrypted reusable FRITZ!/Tapo credentials, local FRITZ! Smart Home telemetry and control, authenticated local Tapo discovery, retained energy-cost accounting, live/offline GUI checks, C920/UVC support, Mars Hydro iConnect/BLE diagnostics, first-boot security, redacted support bundles, a V6 server installer and a signed APT repository at `https://repo.dezender.de/apt`.
 
-Tapo remains a hybrid local/WAN design goal. The current adapter implements authenticated local device access; a Grow-Central WAN transport must still be implemented and validated rather than assumed.
+Mobile remains a WebGUI client rather than a Raspberry-Pi replacement. Remote operation must use a secured HTTPS server path; local device authority and write policy remain on Grow Central.
 
-Mars Hydro targets remain **FC3000 2024 (USB + iConnect)** and **iFresh/DF100 (iConnect)** as one ecosystem, with DF100M BLE retained for diagnostics/reverse engineering/fallback.
-
-Continue with: [English documentation](docs/en/README.md) · [Integrations](docs/en/INTEGRATIONS.md) · [Hardware test plan](docs/HARDWARE_TEST_PLAN.md)
+Continue with: [English documentation](docs/en/README.md) · [Integrations](docs/en/INTEGRATIONS.md) · [Release status](docs/RELEASE_PIPELINE.md) · [Hardware test plan](docs/HARDWARE_TEST_PLAN.md)
 
 ## Interface family / Interface-Familie
 
