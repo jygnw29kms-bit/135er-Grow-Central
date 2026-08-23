@@ -6,7 +6,7 @@
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Raspberry%20Pi%203B-35e8da?style=flat-square&labelColor=061015">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Raspberry%20Pi%20%7C%20iOS-35e8da?style=flat-square&labelColor=061015">
   <img alt="Status" src="https://img.shields.io/badge/status-alpha%20hardware%20validation-ffb52b?style=flat-square&labelColor=061015">
   <img alt="Security" src="https://img.shields.io/badge/security-GUI%20login%20%2B%20deny--by--default-71ff3b?style=flat-square&labelColor=061015">
 </p>
@@ -15,6 +15,9 @@
 
 > [!WARNING]
 > **Alpha / Hardwarevalidierung.** Der aktuelle Teststand bootet und die Bluetooth-Grundfunktionen wurden auf echter Hardware positiv beobachtet. Das ersetzt noch keine vollständige Freigabe aller Netzwerk-, Smart-Home-, Kamera- und Mars-Hydro-Pfade.
+
+> [!NOTE]
+> **Native iOS-WebGUI.** Unter [`ios/`](ios/) liegt die SwiftUI/WKWebView-App für iPhone und iPad. Sie ersetzt den Raspberry Pi nicht: Im Heimnetz öffnet sie die lokale Grow-Central-GUI; mit der optionalen HTTPS-Serverversion ermöglicht sie denselben Zugriff von überall. GitHub Actions erzeugt ein unsigniertes IPA zur Installation über Windows mit der eigenen Apple-ID. Anleitung: [iOS über Windows-PC installieren](docs/de/IOS_PC_INSTALLATION.md).
 
 ## Deutsch
 
