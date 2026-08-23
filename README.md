@@ -1,179 +1,127 @@
-<p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central · Local-first Raspberry Pi control" width="100%"></p>
+<p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central · GrowCentral Nexus UI" width="100%"></p>
 
 <p align="center">
-  <a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="docs/README.md">Docs</a> · <a href="docs/de/INSTALLATION.md">Installation</a> · <a href="docs/RELEASE_PIPELINE.md">Release Status</a> · <a href="SECURITY.md">Security</a>
+  <a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="RELEASE_STATE.md"><strong>Release State</strong></a> · <a href="docs/README.md">Docs</a> · <a href="docs/RELEASE_PIPELINE.md">Pipeline</a> · <a href="SECURITY.md">Security</a>
 </p>
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Raspberry%20Pi%203B-35e8da?style=flat-square&labelColor=061015">
-  <img alt="Baseline" src="https://img.shields.io/badge/validated%20baseline-Build%2085-71ff3b?style=flat-square&labelColor=061015">
-  <img alt="Status" src="https://img.shields.io/badge/status-alpha%20hardware%20validation-ffb52b?style=flat-square&labelColor=061015">
+  <img alt="Pi Candidate" src="https://img.shields.io/badge/Pi%20candidate-Build%20118-ffb52b?style=flat-square&labelColor=061015">
+  <img alt="Master" src="https://img.shields.io/badge/master-e339602-35e8da?style=flat-square&labelColor=061015">
+  <img alt="Design" src="https://img.shields.io/badge/UI-GrowCentral%20Nexus-2ae5ff?style=flat-square&labelColor=061015">
 </p>
 
-<p align="center"><code>LOCAL-FIRST</code> · <code>RASPBERRY PI</code> · <code>FRITZ! SMART HOME</code> · <code>TAPO</code> · <code>LOGITECH C920</code> · <code>MARS HYDRO iCONNECT</code> · <code>SIGNED APT</code></p>
+<p align="center"><code>LOCAL-FIRST</code> · <code>RASPBERRY PI</code> · <code>MOBILE</code> · <code>FRITZ! SMART HOME</code> · <code>TAPO</code> · <code>C920/UVC</code> · <code>MARS HYDRO</code> · <code>SIGNED APT</code></p>
 
-> [!WARNING]
-> **Alpha / Hardwarevalidierung.** Build 85 ist die aktuell dokumentierte validierte Raspberry-Pi-Basis. Der `master` enthält bereits weitere Änderungen und erneut ausgelöste Image-Builds; diese gelten erst nach realem Zieltest als neue validierte Basis.
+> [!IMPORTANT]
+> **Kanonischer Stand:** `alpha-0.7.5`, Master-Anker `e339602`, nächster Raspberry-Pi-Hardwaretest **Build 118**, Kandidaten-Tag `pi-universal-alpha-0.7.5-118`. Build 117 war erfolgreich getestet, ist durch den zusammengeführten e339-Stand aber überholt. **Build 118 ist Kandidat, noch nicht hardwarevalidiert.** Maßgeblich ist [`RELEASE_STATE.md`](RELEASE_STATE.md).
 
 ## Deutsch
 
-**135er-Grow Central** ist eine local-first Steuer-, Überwachungs- und Automationsplattform. Der Raspberry Pi bleibt die autoritative lokale Instanz für GUI, Gerätepolicy, Smart Home, Kamera, Diagnose und optionale Cloud-/Server-Anbindung.
+**135er-Grow Central** ist eine local-first Steuer-, Überwachungs- und Automationsplattform für Raspberry Pi. Der Pi bleibt die autoritative lokale Instanz für GUI, Gerätepolicy, Smart Home, Kamera, Räume/Grow, Automation, Diagnose und optionalen abgesicherten Remotezugriff.
 
-### Aktueller Projektstand – 23.08.2026
+### Aktueller Stand · 23.08.2026
 
-Repository-Version: **alpha-0.7.5**  
-Dokumentierte validierte Image-Basis: **Build 85**  
-Branch: **master**
+| Bereich | Stand |
+|---|---|
+| Repository | `master` · Anker `e339602` |
+| Version | `alpha-0.7.5` |
+| vorheriger Teststand | Build 117 · erfolgreich getestet, jetzt überholt |
+| nächster Pi-Test | **Build 118** · `pi-universal-alpha-0.7.5-118` |
+| Stable | noch nicht freigegeben |
+| Design | **GrowCentral Nexus UI** projektweit verbindlich |
+| Mobile | Nexus WebGUI Client · Android APK + iOS Sideload IPA |
+| Cloud | Server Installer V6 |
+| APT | signiert · `https://repo.dezender.de/apt` |
 
-Der aktuelle Entwicklungsstand umfasst unter anderem:
+### In Build 118 zusammengeführt
 
-- dauerhafte Geräte-Registry über Browser- und Pi-Neustarts;
-- verschlüsselte wiederverwendbare FRITZ!Box- und Tapo-Zugangsdaten mit restriktiven Dateirechten;
-- FRITZ!SmartHome-Import, Livewerte, Schalten, Routinen und Templates;
-- Stromkosten auf Basis der gemeldeten Gesamtenergie, sodass historische Kosten auch bei ausgeschalteter Steckdose sichtbar bleiben;
-- No-Cache-Liveprüfung bei Menüwechseln und eine eindeutige Offline-Ansicht bei Pi-Ausfall;
-- lokales authentifiziertes Tapo-Onboarding über alle aktiven IPv4-Netze des Pi mit dauerhafter Geräteübernahme;
-- Logitech-C920/UVC-Erkennung, Snapshot, native MJPEG-Modi und dynamische V4L2-Regler;
-- Mars-Hydro/iConnect-Zielarchitektur mit BLE-Diagnose-/Fallback-Pfad;
-- First-Boot-Setup, GUI-Login/Sessions, Diagnose und geschwärzte Support-Pakete;
-- Cloud-/Server-Installer V6;
-- signiertes APT-Repository unter `https://repo.dezender.de/apt`;
-- automatische Veröffentlichung der Website und Server-Hilfsskripte nach `dezender.de`.
+- aktuelle Local-First GUI, First Boot, Netzwerk- und Persistenzpfade;
+- FRITZ! Smart Home und authentifiziertes lokales Tapo-Onboarding;
+- Logitech C920/UVC mit Snapshot, MJPEG und dynamischen V4L2-Reglern;
+- **firmware-/modell-/USB-ID-bewusste Kamera-LED-Fähigkeitserkennung**;
+- bedingte Logitech/V4L2-LED-Steuerung statt blindem Schreiben;
+- automatisierte Tests für LED-Fähigkeit und Steuersemantik;
+- Elecrow 7-Zoll Touch-Kiosk inklusive systemd-Service und gehärteten Rechten;
+- Räume, Growtagebuch, Pflanzen, Automationen und System-/Supportansichten;
+- Energie-/Kostenlogik mit erhaltener Gesamtenergie;
+- GrowCentral Nexus UI als gemeinsame Designsprache;
+- Mobile Nexus Clients, Cloud V6 und signierter APT-Pfad.
 
-Die frühere öffentliche Build-70→71→72-Roadmap ist nicht mehr der aktuelle Projektstand. Maßgeblich ist die aktuelle Release-Dokumentation unter [`docs/RELEASE_PIPELINE.md`](docs/RELEASE_PIPELINE.md).
+### Hardwaretest Build 118
 
-### First Boot
+Build 118 ist der nächste reale Testkandidat. Vor einer Kennzeichnung als **VALIDATED** müssen mindestens Boot/Reboot, First Boot, LAN/WLAN/AP, GUI, Persistenz, C920 inkl. LED-Fähigkeiten und die jeweils betroffenen Gerätepfade geprüft werden. Bei Abweichungen ist `Grow-Central-Support-latest.tar.gz` die bevorzugte Diagnosebasis.
 
-Der First-Boot-Ablauf liegt in der geschützten Haupt-GUI unter **System**:
+### Zugriff
 
-1. **Systempasswort ändern – Pflicht**
-2. **Heimnetz einrichten** – aktives LAN erkennen oder WLAN auswählen/manuell eintragen
-3. **FRITZ!Box optional anbinden** – eigener Benutzer mit notwendigen Smart-Home-Rechten empfohlen
-4. **Grow-Central-GUI absichern – Pflicht** – eigener GUI-Benutzer und mindestens 12 Zeichen langes Passwort
+- First Boot: `http://10.42.0.1/`
+- lokal nach Einrichtung: `http://135er-Grow-Central.local/`
+- Port `8080`: Kompatibilitätspfad
+- Remote: nur über einen abgesicherten HTTPS-/VPN-/Reverse-Proxy-Pfad
 
-Setup-WLAN: `135er-GrowCentral-Setup-XXXX`  
-First-Boot-Adresse: `http://10.42.0.1/`  
-Nach Einrichtung: `http://135er-Grow-Central.local/`  
-Port `8080` bleibt als Kompatibilitätsadresse erhalten.
+### Mobile Apps
 
-### Support und Diagnose
+`mobile/` ist ein Capacitor-WebGUI-Client und ersetzt den Raspberry Pi nicht.
 
-Unter **System → Support-Datei erstellen** kann jederzeit `Grow-Central-Support-latest.tar.gz` erzeugt werden. Passwörter, Tokens, Cookies, PSKs und Hashwerte werden entfernt; technische Netzwerk- und Hardwarekennungen bleiben für die Fehleranalyse erhalten. Bei einem realen Problem ist dieses Paket die bevorzugte Diagnosebasis.
+- Android: GitHub-Actions-Artefakt `GrowCentral-Nexus-Android-APK`
+- iOS: `GrowCentral-Nexus-iOS-Sideload-IPA`
+- iOS-IPA wird ohne persönliche Apple-Signatur gebaut und beim Sideloading gerätebezogen signiert.
+- keine FRITZ!-, Tapo- oder sonstigen Geräte-Credentials im Mobile-Paket.
 
-### FRITZ! Smart Home
+### Cloud / APT
 
-Der lokale AVM/AHA-Pfad unterstützt bei kompatiblen Geräten unter anderem:
-
-- erreichbar / offline;
-- Schaltzustand und Ein/Aus;
-- Gerätename, AIN, Modell, Firmware und Funktionsklassen;
-- aktuelle Leistung;
-- Gesamtenergie;
-- Spannung;
-- Umgebungstemperatur und Temperatur-Offset, sofern vom Gerät gemeldet;
-- Routinen und Templates auf den dafür vorgesehenen Pfaden.
-
-Die erste erfolgreich geprüfte Anmeldung kann verschlüsselt lokal gespeichert und anschließend automatisch für freigegebene Aktionen wiederverwendet werden. Das Passwort wird nicht an Browser-APIs zurückgegeben.
-
-### TP-Link Tapo
-
-Tapo ist als **hybride Integration** ausgelegt. Der aktuelle Adapter implementiert den authentifizierten lokalen `python-kasa`-Pfad, durchsucht aktive IPv4-Netze und übernimmt bestätigte Geräte dauerhaft mit den lokal verfügbaren Metadaten.
-
-Die private TP-Link-Cloud-Inventarisierung wird nicht als implementiert dargestellt, solange dafür kein eigener validierter WAN-/Cloud-Pfad vorliegt.
-
-### Energie, Kosten und History
-
-Stromkosten werden aus der gemeldeten Gesamtenergie und dem konfigurierten Tarif abgeleitet. Dadurch bleibt bereits entstandener Verbrauch bzw. Kostenstand sichtbar, wenn eine Steckdose ausgeschaltet ist; nur Live-Leistungsprognosen gehen bei 0 W auf null.
-
-Die weitere Auswertung ist auf frei wählbare Zeiträume wie Stunde, Tag, Monat und Jahr sowie History-/Chart-Darstellung ausgerichtet.
-
-### Logitech C920 / UVC
-
-Die Referenzkamera ist die Logitech C920. Unterstützt werden – soweit vom jeweiligen V4L2-Gerät tatsächlich gemeldet – Erkennung, Capture-Fähigkeit, JPEG-Snapshot, native MJPEG-Auflösungen, Livebild sowie dynamische Kamera-Regler wie Helligkeit, Kontrast, Sättigung, Weißabgleich, Belichtung, Fokus und Zoom.
-
-Browser-Eingaben dürfen keine beliebigen Device-Pfade oder unbekannte V4L2-Controlnamen direkt an den Server durchreichen.
-
-### Mars Hydro
-
-| Gerät | Projektdefinition | Integrationsrichtung |
-|---|---|---|
-| **Mars Hydro FC3000** | Modelljahr 2024, USB, iConnect | gemeinsame iConnect-Gerätefamilie |
-| **Mars Hydro DF100 / iFresh** | iFresh-Serie mit iConnect | gemeinsame iConnect-Gerätefamilie |
-| **DF100M / MZ_MZF002** | beobachteter BLE-Pfad | Diagnose / Reverse Engineering / Fallback |
-
-Unbekannte oder nicht reproduzierbar validierte Mars-Hydro-Schreibtelegramme bleiben gesperrt.
-
-### Cloud / Server / APT
-
-Für den Serverpfad stehen aktuell bereit:
+Kanonische Serverpfade:
 
 - `scripts/install-135ercloud-v6.sh`
 - `scripts/setup-135ercloud-apt-repo-v1.sh`
-- APT: `https://repo.dezender.de/apt`
+- `https://repo.dezender.de/apt`
+- öffentliche Project Console: `https://dezender.de`
 
-Die APT-Einrichtung verwendet einen dedizierten `Signed-By`-Keyring und bereinigt alte Grow-Central-Quellen, bevor die kanonische Quelle eingetragen wird. Die Website-Deployment-Pipeline veröffentlicht die aktuellen Installer zusätzlich im Webroot von `dezender.de`.
+APT nutzt einen dedizierten `Signed-By`-Keyring und bereinigt alte widersprüchliche Grow-Central-Quellen vor dem Einrichten der kanonischen Quelle.
 
-### Sicherheitsmodell
+### Design
 
-- Smart-Home-Code bleibt standardmäßig **deny-by-default**.
-- Schreiboperationen benötigen eine authentifizierte GUI-Sitzung oder ein explizites API-Token.
-- Geräte müssen bekannt, freigegeben und beschreibbar sein.
-- GUI-Passwörter werden als PBKDF2-SHA256-Verifier gespeichert.
-- Integrationspasswörter werden nicht absichtlich geloggt oder an Browser-APIs zurückgegeben.
-- Remote-Zugriff benötigt zusätzlich TLS/HTTPS bzw. einen entsprechend abgesicherten Reverse-Proxy/VPN-Pfad.
-- Die öffentliche Website besitzt keine direkten lokalen Steuerendpunkte.
+Logo und Branding bleiben unverändert. Alle Pi-, Web-, Mobile-, Repo-, Boot-, Kiosk- und Release-Oberflächen folgen dem **GrowCentral Nexus UI**. Verbindliche Tokens und Komponentenregeln stehen in [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md).
 
-### Architektur
+### Sicherheit
 
-```text
-Clients im LAN / optional abgesicherter Remote-Zugang
-                         │
-                  GUI Login / Session
-                         │
-                         ▼
-              135er-Grow Central Local
-                    Raspberry Pi
-        ┌────────────────┼─────────────────┐
-        │                │                 │
-   Mars Hydro       Smart Home          Kamera
- FC3000/iFresh   FRITZ! / Tapo        C920 / UVC
-        │                │                 │
- iConnect/BLE       local APIs          V4L2
- diagnostics         + policy           ffmpeg
-                         │
-                  optional Server
-                  HTTPS / Cloud V6
-```
+- deny-by-default für Schreibpfade;
+- authentifizierte GUI-Sitzung oder explizites API-Token für Writes;
+- Geräte müssen bekannt, freigegeben und beschreibbar sein;
+- Integrationspasswörter werden nicht an Browser-APIs zurückgegeben;
+- öffentliche Website besitzt keine lokalen Steuerendpunkte;
+- Mobile Remote-Ziele benötigen HTTPS.
 
-Weiterlesen: [Installation](docs/de/INSTALLATION.md) · [Integrationen](docs/de/INTEGRATIONEN.md) · [Release-Status](docs/RELEASE_PIPELINE.md) · [Hardware-Testplan](docs/HARDWARE_TEST_PLAN.md) · [Mars Hydro / iConnect](docs/MARS_HYDRO_ICONNECT.md)
+### Dokumentation
+
+[Release State](RELEASE_STATE.md) · [Docs Hub](docs/README.md) · [Release Pipeline](docs/RELEASE_PIPELINE.md) · [Design System](docs/DESIGN_SYSTEM_NEXUS.md) · [Hardware Testplan](docs/HARDWARE_TEST_PLAN.md) · [Security](SECURITY.md)
 
 ---
 
 ## English
 
-**135er-Grow Central alpha-0.7.5** is a local-first Raspberry Pi control, monitoring and automation platform. **Build 85 is the currently documented validated hardware baseline**; `master` already contains newer integration, test, APT, cloud and image-pipeline changes that require hardware validation before they become the next validated baseline.
+**135er-Grow Central alpha-0.7.5** is a local-first Raspberry Pi control, monitoring and automation platform. The current consolidated master anchor is `e339602`. **Build 117 was successfully tested but is now superseded; Build 118 (`pi-universal-alpha-0.7.5-118`) is the next hardware-test candidate and must not be called hardware-validated before the real target test passes.**
 
-Current capabilities include persistent device registration, encrypted reusable FRITZ!/Tapo credentials, local FRITZ! Smart Home telemetry and control, authenticated local Tapo discovery, retained energy-cost accounting, live/offline GUI checks, C920/UVC support, Mars Hydro iConnect/BLE diagnostics, first-boot security, redacted support bundles, a V6 server installer and a signed APT repository at `https://repo.dezender.de/apt`.
+Build 118 combines the current GUI/network/FRITZ/Tapo/C920 state, firmware/model/USB-ID-aware camera LED capability detection and guarded LED controls, Elecrow 7-inch kiosk support, Grow/room features, Nexus UI, Mobile clients, Cloud V6 and the signed APT path.
 
-Mobile remains a WebGUI client rather than a Raspberry-Pi replacement. Remote operation must use a secured HTTPS server path; local device authority and write policy remain on Grow Central.
+Mobile remains a WebGUI client. Android is delivered as an APK artifact; iOS is delivered as an unsigned sideload IPA that is signed for the target device during installation. Remote access requires HTTPS or another secured transport path.
 
-Continue with: [English documentation](docs/en/README.md) · [Integrations](docs/en/INTEGRATIONS.md) · [Release status](docs/RELEASE_PIPELINE.md) · [Hardware test plan](docs/HARDWARE_TEST_PLAN.md)
+Canonical references: [Release State](RELEASE_STATE.md) · [Documentation](docs/README.md) · [Release Pipeline](docs/RELEASE_PIPELINE.md) · [Nexus Design System](docs/DESIGN_SYSTEM_NEXUS.md).
 
 ## Interface family / Interface-Familie
 
 <table>
   <tr>
-    <td width="50%"><img src="website/assets/gui/local-desktop-v0.9.png" alt="135er-Grow Central local desktop interface"><br><strong>Local Desktop</strong></td>
-    <td width="50%"><img src="website/assets/gui/local-tablet-v0.9.png" alt="135er-Grow Central local tablet interface"><br><strong>Local Tablet</strong></td>
+    <td width="50%"><img src="website/assets/gui/local-desktop-v0.9.png" alt="GrowCentral Nexus local desktop"><br><strong>Local Desktop</strong></td>
+    <td width="50%"><img src="website/assets/gui/local-tablet-v0.9.png" alt="GrowCentral Nexus local tablet"><br><strong>Local Tablet / Kiosk</strong></td>
   </tr>
   <tr>
-    <td width="50%"><img src="website/assets/gui/local-mobile-v0.9.png" alt="135er-Grow Central local mobile interface"><br><strong>Local Mobile</strong></td>
-    <td width="50%"><img src="website/assets/gui/cloud-desktop-v0.9.png" alt="135er-Grow Central optional cloud interface"><br><strong>Cloud Desktop</strong></td>
+    <td width="50%"><img src="website/assets/gui/local-mobile-v0.9.png" alt="GrowCentral Nexus mobile"><br><strong>Mobile Client</strong></td>
+    <td width="50%"><img src="website/assets/gui/cloud-desktop-v0.9.png" alt="GrowCentral Nexus cloud"><br><strong>Optional Server</strong></td>
   </tr>
 </table>
 
 > [!NOTE]
-> GUI preview values are concept telemetry unless explicitly marked as hardware-validated.
+> Preview telemetry is concept/demo data unless explicitly marked as hardware-validated.
 
 <p align="center"><img src="website/assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
