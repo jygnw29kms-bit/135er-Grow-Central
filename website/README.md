@@ -1,7 +1,8 @@
-# 135er-Grow Central – Project Website
+# 135er-Grow Central – Product Website
 
-Die statische Projektseite unter `website/` ist die öffentliche **GrowCentral Nexus Project Console**.
+Die statische Projektseite unter `website/` ist die öffentliche Produkt- und Marketingseite von **135er-Grow Central**.
 
+**Öffentliche URL:** `https://dezender.de/GC/`  
 **Version:** `alpha-0.7.5`  
 **Master-Anker:** `e339602`  
 **Pi-Testkandidat:** `Build 118` / `pi-universal-alpha-0.7.5-118`  
@@ -9,7 +10,20 @@ Die statische Projektseite unter `website/` ist die öffentliche **GrowCentral N
 
 Kanonische Quelle: [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-## Aktueller Stand – 23.08.2026
+## Ziel der Website
+
+Die Seite vermarktet und erklärt Grow Central als Local-First Steuerungs- und Automationsplattform für Grow-Umgebungen. Sie ist bewusst keine reine Entwicklerkonsole mehr, sondern eine professionelle Produktpräsentation mit:
+
+- Produktnutzen und Plattformidee;
+- Feature-Übersicht;
+- Geräte- und Herstellerintegrationen;
+- GrowCentral Nexus UI für Desktop, Touch/Kiosk und Mobile;
+- Local-First Architektur und optionaler Cloud-Ebene;
+- Sicherheits- und Capability-Modell;
+- aktuellem Release- und Hardwareteststatus;
+- FAQ, GitHub- und Release-Einstiegspunkten.
+
+## Aktueller Stand – 24.08.2026
 
 Build 117 war ein erfolgreicher Teststand, ist durch den konsolidierten e339-Master inzwischen überholt. Die Website zeigt deshalb Build 118 als nächsten Hardwaretest-Kandidaten und vermeidet die falsche Aussage, er sei bereits validiert.
 
@@ -21,7 +35,7 @@ Build 118 umfasst unter anderem:
 - firmware-/modell-/USB-ID-bewusste Kamera-LED-Fähigkeitserkennung;
 - bedingte V4L2-/Logitech-LED-Steuerung;
 - Elecrow 7-Zoll Touch-Kiosk;
-- Räume, Pflanzen, Growtagebuch und Automationen;
+- Räume/Grow-Bereiche, Automationen, Diagnose und Supportpfade;
 - GrowCentral Nexus UI;
 - Mobile Nexus Clients;
 - Cloud V6 und signierten APT-Pfad.
@@ -32,7 +46,9 @@ Der Deploy-Workflow veröffentlicht zusätzlich:
 
 - `135ercloud-server-install.sh` – Cloud-/Server-Installer V6;
 - `setup-135ercloud-apt-repo.sh` – signierter APT-Bootstrap;
-- Release-State/Prüfsummen, soweit vom Workflow erzeugt.
+- `RELEASE_STATE.md` – kanonischer Release-Stand;
+- `SHA256SUMS.txt` – Prüfsummen der veröffentlichten Dateien;
+- `release-state.txt` – maschinenlesbare Veröffentlichungsinformationen.
 
 APT Repository: `https://repo.dezender.de/apt`
 
@@ -79,13 +95,17 @@ Aktuelle Vorschaubilder müssen Nexus UI zeigen. Veraltete Screenshots werden er
 
 ## Produktions-Deployment
 
-Plesk-Webroot:
+Plesk-Webroot der Grow-Central-Seite:
 
 ```text
-/var/www/vhosts/dezender.de/httpdocs
+/var/www/vhosts/dezender.de/httpdocs/GC/
 ```
 
-`.github/workflows/deploy-website-sftp.yml` veröffentlicht Änderungen an `website/**` und den kanonischen Server-/APT-Skripten automatisch nach dezender.de.
+`.github/workflows/deploy-website-sftp.yml` veröffentlicht Änderungen an `website/**` und den kanonischen Server-/APT-Skripten automatisch nach:
+
+```text
+https://dezender.de/GC/
+```
 
 ## Lokale Vorschau
 
