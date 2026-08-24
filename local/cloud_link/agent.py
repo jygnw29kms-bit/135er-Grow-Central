@@ -1,18 +1,21 @@
 """135er-Grow Central Pi-to-Cloud Agent.
 
 DE:
-    Sendet Status über ausgehendes HTTPS an den VServer. Remote-Befehle
-    benötigen eine zusätzliche lokale Freigabe.
+    Sendet Status über ausgehendes HTTPS an den VServer. Im expliziten
+    Closed-Test-Modus kann Telemetrie ohne Cloud-Zugangsdaten getestet werden.
+    Remote-Befehle benötigen weiterhin eine separate lokale Freigabe.
 
 EN:
-    Sends state to the VPS over outbound HTTPS. Remote commands require a
-    separate local opt-in.
+    Sends state to the VPS over outbound HTTPS. Explicit closed-test mode can
+    exercise telemetry without cloud credentials. Remote commands still require
+    a separate local opt-in.
 """
 import asyncio
 from datetime import datetime, timezone
 import json
 import logging
 import os
+from pathlib import Path
 import re
 from urllib.parse import urlparse
 
@@ -20,13 +23,26 @@ import httpx
 
 CLOUD_ENABLED = os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true"
 CLOUD_URL = os.getenv("GC_CLOUD_URL", "").rstrip("/")
-TOKEN = os.getenv("GC_CLOUD_TOKEN", "")
-SITE = os.getenv("GC_SITE_ID", "garage")
+CLOSED_TEST = os.getenv("GC_CLOUD_TEST_MODE", "false").lower() == "true"
+TOKEN = os.getenv("GC_CLOUD_TOKEN", "").strip()
+SITE = os.getenv("GC_SITE_ID", "closed-test")
 SYNC = min(max(int(os.getenv("GC_SYNC_SECONDS", "30")), 10), 3600)
 REMOTE = os.getenv("GC_REMOTE_COMMANDS", "false").lower() == "true"
 LOCAL_API = os.getenv("GC_LOCAL_API", "http://127.0.0.1:8080").rstrip("/")
 LOCAL_TOKEN = os.getenv("GC_LOCAL_API_TOKEN", "").strip()
 logger = logging.getLogger(__name__)
+
+
+def device_id() -> str:
+    configured = os.getenv("GC_DEVICE_ID", "").strip()
+    if configured:
+        return configured
+    try:
+        machine_id = Path("/etc/machine-id").read_text(encoding="utf-8").strip()
+    except OSError:
+        machine_id = ""
+    suffix = re.sub(r"[^a-fA-F0-9]", "", machine_id)[-12:]
+    return f"raspberry-pi-{suffix}" if suffix else "raspberry-pi-test"
 
 
 def validate_configuration() -> None:
@@ -36,12 +52,14 @@ def validate_configuration() -> None:
         raise RuntimeError("GC_CLOUD_URL must be a plain HTTPS origin")
     if local.scheme != "http" or local.hostname not in {"127.0.0.1", "localhost", "::1"}:
         raise RuntimeError("GC_LOCAL_API must use loopback HTTP")
-    if len(TOKEN) < 32 or TOKEN.startswith("CHANGE_ME"):
-        raise RuntimeError("GC_CLOUD_TOKEN must contain at least 32 non-placeholder characters")
+    if not CLOSED_TEST and (len(TOKEN) < 32 or TOKEN.startswith("CHANGE_ME")):
+        raise RuntimeError("GC_CLOUD_TOKEN must contain at least 32 non-placeholder characters outside closed-test mode")
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", SITE):
         raise RuntimeError("GC_SITE_ID contains unsupported characters")
     if REMOTE and not LOCAL_TOKEN:
         raise RuntimeError("GC_LOCAL_API_TOKEN is required when remote commands are enabled")
+    if CLOSED_TEST and REMOTE:
+        raise RuntimeError("remote commands must remain disabled in credential-free closed-test mode")
 
 
 async def local_status(client: httpx.AsyncClient) -> dict:
@@ -52,20 +70,18 @@ async def local_status(client: httpx.AsyncClient) -> dict:
         if response.is_success:
             local = response.json()
     except Exception as exc:
-        # DE: Cloud-Probleme dürfen den lokalen Betrieb nie stoppen.
-        # EN: Cloud issues must never stop local operation.
         logger.warning("Local status unavailable: %s", type(exc).__name__)
 
     return {
         "site_id": SITE,
-        "device_id": "raspberry-pi",
+        "device_id": device_id(),
         "ts": datetime.now(timezone.utc).isoformat(),
         "temperature_c": None,
         "humidity_pct": None,
         "vpd_kpa": None,
         "fan_speed_pct": None,
         "device_online": bool(local.get("connected", False)),
-        "extra": {"df100m": local},
+        "extra": {"df100m": local, "closed_test_mode": CLOSED_TEST},
     }
 
 
@@ -101,8 +117,7 @@ async def main():
         return
 
     validate_configuration()
-
-    headers = {"X-API-Token": TOKEN}
+    headers = {"X-API-Token": TOKEN} if TOKEN else {}
 
     async with httpx.AsyncClient() as client:
         while True:
