@@ -1,4 +1,4 @@
-name: Deploy Website to dezender.de via SFTP
+name: Deploy Website to dezender.de/GC via SFTP
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   deploy:
-    name: SFTP Deploy
+    name: SFTP Deploy /GC
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,22 +41,23 @@ jobs:
             echo 'pi_candidate=118'
             echo 'pi_tag=pi-universal-alpha-0.7.5-118'
             echo 'status=CANDIDATE'
+            echo 'public_url=https://dezender.de/GC/'
             echo "published_commit=${GITHUB_SHA}"
           } > website/release-state.txt
 
-      - name: Deploy website and server scripts
+      - name: Deploy website and server scripts to /GC
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           password: ${{ secrets.SFTP_PASSWORD }}
           local_path: './website/*'
-          remote_path: '/var/www/vhosts/dezender.de/httpdocs/'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/GC/'
           delete_remote_files: false
 
       - name: Deployment information
         run: |
-          echo '135er-Grow Central Nexus website deployed to dezender.de'
+          echo '135er-Grow Central product website deployed to https://dezender.de/GC/'
           echo 'Cloud V6 and APT bootstrap republished with SHA256SUMS'
           echo 'Release state: Build 118 CANDIDATE / master e339602'
-          echo 'Target: /var/www/vhosts/dezender.de/httpdocs/'
+          echo 'Target: /var/www/vhosts/dezender.de/httpdocs/GC/'
