@@ -1,16 +1,7 @@
-"""135er-Grow Central Pi-to-Cloud Agent.
+"""135er-Grow Central Pi-to-Cloud agent.
 
-DE:
-    Sendet Telemetrie und Diagnosezustand über ausgehendes HTTPS an den VServer.
-    Das jeweils neueste redigierte Pi-Support-Bundle wird bei Erstellung oder
-    Änderung automatisch gespiegelt. Im expliziten Closed-Test-Modus funktioniert
-    dies ohne Cloud-Zugangsdaten; Remote-Befehle bleiben dabei verboten.
-
-EN:
-    Sends telemetry and diagnostic state to the VPS over outbound HTTPS. The
-    latest redacted Pi support bundle is mirrored whenever it is created or
-    changed. Explicit closed-test mode works without cloud credentials while
-    remote commands remain forbidden.
+Closed-test mode may sync telemetry and diagnostics without cloud credentials.
+Remote commands remain forbidden in credential-free closed-test mode.
 """
 import asyncio
 from datetime import datetime, timezone
@@ -33,6 +24,8 @@ CLOSED_TEST = os.getenv("GC_CLOUD_TEST_MODE", "false").lower() == "true"
 TOKEN = os.getenv("GC_CLOUD_TOKEN", "").strip()
 SITE = os.getenv("GC_SITE_ID", "closed-test")
 SYNC = min(max(int(os.getenv("GC_SYNC_SECONDS", "30")), 10), 3600)
+DIAG_SYNC = min(max(int(os.getenv("GC_DIAGNOSTIC_SYNC_SECONDS", "120")), 30), 3600)
+BUNDLE_REFRESH = min(max(int(os.getenv("GC_DIAGNOSTIC_BUNDLE_SECONDS", "300")), 120), 21600)
 REMOTE = os.getenv("GC_REMOTE_COMMANDS", "false").lower() == "true"
 LOCAL_API = os.getenv("GC_LOCAL_API", "http://127.0.0.1:8080").rstrip("/")
 LOCAL_TOKEN = os.getenv("GC_LOCAL_API_TOKEN", "").strip()
@@ -79,16 +72,50 @@ def validate_configuration() -> None:
         raise RuntimeError("remote commands must remain disabled in credential-free closed-test mode")
 
 
+def local_headers() -> dict[str, str]:
+    return {"X-API-Token": LOCAL_TOKEN} if LOCAL_TOKEN else {}
+
+
 async def local_status(client: httpx.AsyncClient) -> dict:
-    """DE: Lokalen Status lesen. EN: Read local status."""
-    local = {}
     try:
         response = await client.get(f"{LOCAL_API}/api/status", timeout=5)
         if response.is_success:
-            local = response.json()
+            return response.json()
     except Exception as exc:
         logger.warning("Local status unavailable: %s", type(exc).__name__)
-    return local
+    return {}
+
+
+async def full_local_diagnostics(client: httpx.AsyncClient) -> dict:
+    """Read the allowlisted full local snapshot; failures are themselves diagnosable."""
+    try:
+        response = await client.get(
+            f"{LOCAL_API}/api/v1/diagnostics/snapshot?lines=120",
+            headers=local_headers(),
+            timeout=35,
+        )
+        if response.is_success:
+            return response.json()
+        return {"available": False, "http_status": response.status_code}
+    except Exception as exc:
+        return {"available": False, "error": type(exc).__name__}
+
+
+async def request_fresh_bundle(client: httpx.AsyncClient) -> None:
+    """Ask the local path unit to create a fresh redacted support bundle."""
+    try:
+        status = await client.get(f"{LOCAL_API}/api/v1/diagnostics/bundle/status", timeout=5)
+        if status.is_success and status.json().get("pending"):
+            return
+        response = await client.post(
+            f"{LOCAL_API}/api/v1/diagnostics/bundle",
+            headers=local_headers(),
+            timeout=5,
+        )
+        if response.status_code not in {200, 409}:
+            logger.warning("Bundle refresh request returned HTTP %s", response.status_code)
+    except Exception as exc:
+        logger.warning("Bundle refresh request failed: %s", type(exc).__name__)
 
 
 def bundle_metadata() -> dict:
@@ -108,7 +135,7 @@ def bundle_metadata() -> dict:
 
 async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
     local = await local_status(client)
-    payload = {
+    return {
         "site_id": SITE,
         "device_id": device_id(),
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -118,11 +145,10 @@ async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
         "fan_speed_pct": None,
         "device_online": bool(local.get("connected", False)),
         "extra": {"df100m": local, "closed_test_mode": CLOSED_TEST},
-    }
-    return payload, local
+    }, local
 
 
-def diagnostic_payload(local: dict) -> dict:
+def diagnostic_payload(local: dict, full_diagnostics: dict) -> dict:
     try:
         uptime = max(0.0, time.clock_gettime(time.CLOCK_BOOTTIME))
     except (AttributeError, OSError):
@@ -137,12 +163,17 @@ def diagnostic_payload(local: dict) -> dict:
         "kernel": platform.release(),
         "boot_id": _read_text(BOOT_ID_FILE),
         "uptime_seconds": uptime,
-        "local_status": local,
+        "local_status": {
+            "device": local,
+            "diagnostics": full_diagnostics,
+        },
         "support_bundle": bundle_metadata(),
         "cloud_link": {
             "closed_test_mode": CLOSED_TEST,
             "remote_commands": REMOTE,
-            "sync_seconds": SYNC,
+            "telemetry_sync_seconds": SYNC,
+            "diagnostic_sync_seconds": DIAG_SYNC,
+            "bundle_refresh_seconds": BUNDLE_REFRESH,
             "cloud_origin": CLOUD_URL,
         },
     }
@@ -154,7 +185,7 @@ async def mirror_bundle_if_changed(
     last_signature: tuple[int, int] | None,
 ) -> tuple[int, int] | None:
     if not SUPPORT_BUNDLE.is_file():
-        return None
+        return last_signature
     try:
         stat = SUPPORT_BUNDLE.stat()
         signature = (stat.st_size, stat.st_mtime_ns)
@@ -163,13 +194,17 @@ async def mirror_bundle_if_changed(
     if signature == last_signature:
         return last_signature
 
+    # Avoid unbounded memory consumption if a future collector becomes too large.
+    if stat.st_size > 32 * 1024 * 1024:
+        logger.warning("Support bundle too large to mirror: %d bytes", stat.st_size)
+        return last_signature
     body = SUPPORT_BUNDLE.read_bytes()
     digest = hashlib.sha256(body).hexdigest()
     response = await client.put(
         f"{CLOUD_URL}/api/v1/diagnostics/bundle/{SITE}/{device_id()}",
         content=body,
         headers={**headers, "Content-Type": "application/gzip", "X-Content-SHA256": digest},
-        timeout=60,
+        timeout=90,
     )
     response.raise_for_status()
     logger.info("Mirrored support bundle sha256=%s size=%d", digest, len(body))
@@ -177,10 +212,8 @@ async def mirror_bundle_if_changed(
 
 
 async def apply_command(client: httpx.AsyncClient, command: dict) -> tuple[bool, str]:
-    """DE: Remote-Anforderung lokal validieren. EN: Validate a remote request locally."""
     if not REMOTE:
         return False, "remote commands disabled locally"
-
     if command.get("target") == "df100m" and command.get("action") == "set_speed":
         try:
             value = int(json.loads(command.get("value_json", "0")))
@@ -191,16 +224,14 @@ async def apply_command(client: httpx.AsyncClient, command: dict) -> tuple[bool,
         response = await client.post(
             f"{LOCAL_API}/api/speed",
             json={"percent": value},
-            headers={"X-API-Token": LOCAL_TOKEN},
+            headers=local_headers(),
             timeout=8,
         )
         return response.is_success, response.text[:500]
-
     return False, "unsupported command"
 
 
 async def main():
-    """DE: Periodische Sync-Schleife. EN: Periodic synchronization loop."""
     if not CLOUD_ENABLED:
         print("Grow Central Cloud Link disabled / Cloud-Link deaktiviert")
         return
@@ -208,26 +239,33 @@ async def main():
     validate_configuration()
     headers = {"X-API-Token": TOKEN} if TOKEN else {}
     last_bundle_signature: tuple[int, int] | None = None
+    next_diag = 0.0
+    next_bundle_refresh = 0.0
 
     async with httpx.AsyncClient() as client:
         while True:
+            now = time.monotonic()
             try:
                 telemetry, local = await telemetry_payload(client)
-                telemetry_response = await client.post(
-                    f"{CLOUD_URL}/api/v1/telemetry",
-                    json=telemetry,
-                    headers=headers,
-                    timeout=10,
+                response = await client.post(
+                    f"{CLOUD_URL}/api/v1/telemetry", json=telemetry, headers=headers, timeout=10
                 )
-                telemetry_response.raise_for_status()
+                response.raise_for_status()
 
-                diagnostic_response = await client.post(
-                    f"{CLOUD_URL}/api/v1/diagnostics/snapshot",
-                    json=diagnostic_payload(local),
-                    headers=headers,
-                    timeout=15,
-                )
-                diagnostic_response.raise_for_status()
+                if now >= next_bundle_refresh:
+                    await request_fresh_bundle(client)
+                    next_bundle_refresh = now + BUNDLE_REFRESH
+
+                if now >= next_diag:
+                    full_diag = await full_local_diagnostics(client)
+                    response = await client.post(
+                        f"{CLOUD_URL}/api/v1/diagnostics/snapshot",
+                        json=diagnostic_payload(local, full_diag),
+                        headers=headers,
+                        timeout=30,
+                    )
+                    response.raise_for_status()
+                    next_diag = now + DIAG_SYNC
 
                 last_bundle_signature = await mirror_bundle_if_changed(
                     client, headers, last_bundle_signature
@@ -244,19 +282,16 @@ async def main():
                             ok, message = await apply_command(client, command)
                             await client.post(
                                 f"{CLOUD_URL}/api/v1/commands/{command['id']}/result",
-                                json={
-                                    "ok": ok,
-                                    "message": message,
-                                    "ts": datetime.now(timezone.utc).isoformat(),
-                                },
+                                json={"ok": ok, "message": message, "ts": datetime.now(timezone.utc).isoformat()},
                                 headers=headers,
                                 timeout=10,
                             )
             except Exception as exc:
-                print("cloud sync / Cloud-Sync:", exc)
+                logger.warning("cloud sync failed: %s", type(exc).__name__)
 
             await asyncio.sleep(SYNC)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     asyncio.run(main())
