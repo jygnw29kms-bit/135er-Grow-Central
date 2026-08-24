@@ -1,4 +1,4 @@
-"""Token-protected, allowlisted development diagnostics for the Raspberry Pi."""
+"""Allowlisted diagnostics for the Raspberry Pi appliance."""
 from __future__ import annotations
 
 import asyncio
@@ -17,17 +17,20 @@ from app.security import require_write_auth
 
 router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 
-# Keep this allowlist explicit: these services determine whether the Pi can boot,
-# display the GUI, provision networking, expose the local API and reach the cloud.
 UNITS = (
     "135er-grow-central.service",
     "135er-grow-central-cloud-link.service",
     "grow-central-display-kiosk.service",
     "grow-central-setup-ap.service",
+    "grow-central-apply-setup.path",
     "grow-central-apply-setup.service",
     "grow-central-headless-firstboot.service",
     "grow-central-firstboot-firewall.service",
     "grow-central-healthcheck.service",
+    "grow-central-healthcheck.timer",
+    "grow-central-firstboot-debug.service",
+    "grow-central-support-bundle.path",
+    "grow-central-support-bundle.service",
     "NetworkManager.service",
     "avahi-daemon.service",
     "ssh.service",
@@ -41,11 +44,19 @@ STATE_DIR = Path("/var/lib/135er-grow-central")
 SUPPORT_DIR = STATE_DIR / "support"
 SUPPORT_REQUEST = STATE_DIR / "support-bundle-request"
 SUPPORT_LATEST = SUPPORT_DIR / "Grow-Central-Support-latest.tar.gz"
+APP_DIR = Path("/opt/135er-grow-central")
 SECRET_PATTERN = re.compile(r"(?i)(authorization|password|passwd|secret|token)(\s*[:=]\s*)([^\s,;]+)")
 
 
 def redact(text: str) -> str:
     return SECRET_PATTERN.sub(lambda match: f"{match.group(1)}{match.group(2)}[REDACTED]", text)
+
+
+def _read(path: Path, limit: int = 4096) -> str:
+    try:
+        return redact(path.read_text(encoding="utf-8", errors="replace")[:limit].strip())
+    except OSError:
+        return ""
 
 
 async def _command(*args: str, timeout: float = 8.0) -> tuple[int, str]:
@@ -92,23 +103,46 @@ async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
     _, addresses = await _command("ip", "-brief", "address")
     _, routes = await _command("ip", "route")
     _, nm_state = await _command("nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device")
+    _, nm_general = await _command("nmcli", "general", "status")
     _, rfkill_state = await _command("rfkill", "list")
     _, uptime = await _command("uptime", "-p")
+    _, failed_units = await _command("systemctl", "--failed", "--no-pager", "--plain")
+    _, disk = await _command("df", "-h", "/", "/var/lib/135er-grow-central")
+    _, memory = await _command("free", "-m")
+
+    display = {
+        "name": _read(STATE_DIR / "display-name"),
+        "mode": _read(STATE_DIR / "display-mode"),
+        "connector": _read(STATE_DIR / "display-connector"),
+        "kiosk_started": _read(STATE_DIR / "display-kiosk-started"),
+        "packages_missing": _read(STATE_DIR / "display-kiosk-packages-missing"),
+        "api_not_ready": _read(STATE_DIR / "display-api-not-ready"),
+        "kiosk_files_missing": (STATE_DIR / "display-kiosk-files-missing").exists(),
+    }
 
     result = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "host": socket.gethostname(),
         "kernel": platform.release(),
         "platform": platform.platform(),
+        "build": _read(APP_DIR / "BUILD"),
+        "version": _read(APP_DIR / "VERSION"),
         "uptime": uptime,
+        "system": {"failed_units": failed_units, "disk": disk, "memory": memory},
         "services": services,
         "network": {
             "addresses": addresses,
             "routes": routes,
             "network_manager": nm_state,
+            "network_manager_general": nm_general,
             "tcp_listeners": listeners,
         },
+        "display": display,
         "radios": {"rfkill": rfkill_state},
+        "setup": {
+            "last_error": _read(STATE_DIR / "setup-last-error"),
+            "last_warning": _read(STATE_DIR / "setup-last-warning"),
+        },
         "markers": {
             "provisioned": (STATE_DIR / ".provisioned").exists(),
             "headless_firstboot_ready": (STATE_DIR / ".headless-firstboot-ready").exists(),
@@ -153,8 +187,4 @@ async def download_support_bundle():
     if not SUPPORT_LATEST.is_file():
         raise HTTPException(404, "Noch kein Support-Paket vorhanden")
     append_audit("diagnostics.bundle.downloaded")
-    return FileResponse(
-        SUPPORT_LATEST,
-        media_type="application/gzip",
-        filename="Grow-Central-Support.tar.gz",
-    )
+    return FileResponse(SUPPORT_LATEST, media_type="application/gzip", filename="Grow-Central-Support.tar.gz")
