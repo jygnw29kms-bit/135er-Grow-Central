@@ -24,6 +24,9 @@ async def init_db():
                 device_online INTEGER NOT NULL,
                 extra_json TEXT
             );
+            CREATE INDEX IF NOT EXISTS idx_telemetry_site_device_id
+                ON telemetry(site_id, device_id, id DESC);
+
             CREATE TABLE IF NOT EXISTS commands (
                 id TEXT PRIMARY KEY,
                 site_id TEXT NOT NULL,
@@ -34,6 +37,17 @@ async def init_db():
                 status TEXT NOT NULL DEFAULT 'pending',
                 result_json TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS diagnostic_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TEXT NOT NULL,
+                site_id TEXT NOT NULL,
+                device_id TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                summary_json TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_diagnostic_events_site_device_id
+                ON diagnostic_events(site_id, device_id, id DESC);
             """
         )
         await db.commit()
