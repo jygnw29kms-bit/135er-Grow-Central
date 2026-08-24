@@ -1,14 +1,15 @@
 [Unit]
-Description=135er-Grow Central Elecrow 7-inch local touch GUI
-After=network-online.target 135er-grow-central.service
-Wants=network-online.target 135er-grow-central.service
+Description=135er-Grow Central local touch GUI
+After=135er-grow-central.service systemd-user-sessions.service
+Wants=135er-grow-central.service
 ConditionPathExists=/var/lib/135er-grow-central/display-mode
+Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
 ExecStart=/opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
 Restart=always
-RestartSec=8
+RestartSec=5
 TimeoutStartSec=0
 TimeoutStopSec=20
 StandardOutput=journal
