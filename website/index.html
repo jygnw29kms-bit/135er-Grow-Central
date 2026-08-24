@@ -4,82 +4,179 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#02070a">
-<meta name="description" content="135er-Grow Central · alpha-0.7.5 · Build 118 Hardwaretest-Kandidat · Runtime-Anker e339602 · GrowCentral Nexus UI · Cloud V6 · Signed APT.">
-<meta property="og:title" content="135er-Grow Central · Nexus Project Console">
-<meta property="og:description" content="Build 118 CANDIDATE · Runtime/Image e339602 · Nexus Mobile 0.2.1 · Cloud V6 · signiertes APT-Repository.">
+<meta name="description" content="135er-Grow Central ist eine Local-First Steuerungs- und Automationsplattform für Grow-Umgebungen auf Raspberry Pi – mit Geräteintegration, Kamera, Automationen, Mobile Client und optionaler Cloud-Anbindung.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:title" content="135er-Grow Central · Local-First Grow Automation">
+<meta property="og:description" content="Eine zentrale Plattform für Steuerung, Überwachung, Geräteintegration, Automationen und Diagnose – entwickelt rund um Raspberry Pi und GrowCentral Nexus UI.">
 <meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
-<title>135er-Grow Central · Nexus Project Console</title>
+<meta property="og:url" content="https://dezender.de/GC/">
+<title>135er-Grow Central · Local-First Grow Automation</title>
 <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
-<link rel="stylesheet" href="styles.css?v=2.1.0">
+<link rel="stylesheet" href="styles.css?v=3.0.0">
 </head>
 <body>
-<a class="skip-link" href="#main">Zum Inhalt</a>
-<div class="gc-shell">
-  <aside class="gc-nav">
-    <div class="gc-brand"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central"><span>GROWCENTRAL NEXUS · PUBLIC CONSOLE</span></div>
-    <div class="nav-scroll">
-      <div class="nav-group"><span>ÜBERSICHT</span><button class="nav-link active" data-target="overview">◈ Projektstatus</button></div>
-      <div class="nav-group"><span>RELEASE</span><button class="nav-link" data-target="release">▣ Build 118</button><button class="nav-link sub" data-target="release">Cloud & APT</button><button class="nav-link sub" data-target="mobile">Mobile Apps</button></div>
-      <div class="nav-group"><span>INTEGRATIONEN</span><button class="nav-link" data-target="integrations">◇ Geräte & Kamera</button><button class="nav-link sub" data-target="integrations">FRITZ! / Tapo</button><button class="nav-link sub" data-target="integrations">C920 / LED</button><button class="nav-link sub" data-target="integrations">Mars Hydro</button></div>
-      <div class="nav-group"><span>INTERFACES</span><button class="nav-link" data-target="interfaces">▦ Nexus UI</button><button class="nav-link sub" data-target="interfaces">Pi / Kiosk / Mobile</button></div>
-      <div class="nav-group"><span>SICHERHEIT</span><button class="nav-link" data-target="security">⚙ Trust & Architektur</button></div>
-      <div class="nav-group"><span>QUELLEN</span><a class="nav-link" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">↗ GitHub Repository</a></div>
+<a class="skip-link" href="#main">Zum Inhalt springen</a>
+<div class="noise" aria-hidden="true"></div>
+<header class="site-header">
+  <div class="wrap nav-wrap">
+    <a class="brand" href="#top" aria-label="135er-Grow Central Startseite">
+      <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central">
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Navigation öffnen" aria-expanded="false">☰</button>
+    <nav class="site-nav" id="siteNav">
+      <a href="#produkt">Produkt</a>
+      <a href="#features">Features</a>
+      <a href="#integrationen">Integrationen</a>
+      <a href="#interfaces">Interfaces</a>
+      <a href="#technik">Technik</a>
+      <a href="#faq">FAQ</a>
+      <a class="nav-cta" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top">
+  <div class="hero-grid wrap">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="dot"></span> GROWCENTRAL NEXUS · LOCAL-FIRST CONTROL PLATFORM</div>
+      <h1>Dein Grow.<br><span>Eine Zentrale.</span></h1>
+      <p class="lead">135er-Grow Central verbindet Steuerung, Überwachung, Geräteintegration, Kamera, Automationen und Diagnose in einer einzigen Plattform – lokal auf dem Raspberry Pi, mobil erreichbar und auf Wunsch mit abgesicherter Cloud-Erweiterung.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#produkt">Plattform entdecken</a>
+        <a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">Releases ansehen ↗</a>
+      </div>
+      <div class="trust-row">
+        <span>LOCAL-FIRST</span><span>RASPBERRY PI</span><span>OPEN DEVELOPMENT</span><span>MODULAR</span>
+      </div>
     </div>
-    <div class="nav-footer"><span class="live-dot"></span><div><small>PUBLIC READ-ONLY</small><strong>dezender.de</strong></div></div>
-  </aside>
-
-  <main class="gc-main" id="main">
-    <header class="gc-topbar">
-      <div><div class="eyebrow">135ER GROW CENTRAL · CANONICAL RELEASE VIEW</div><h1 id="pageTitle">Projektstatus</h1></div>
-      <div class="top-actions"><div class="build-pill">BUILD 118 · CANDIDATE</div><div class="clock" id="clock">--:--:--</div><a href="135ercloud-server-install.sh">CLOUD V6</a><a href="setup-135ercloud-apt-repo.sh">APT SETUP</a></div>
-    </header>
-
-    <section class="content-panel active" data-panel="overview">
-      <div class="hero"><div><div class="eyebrow">RUNTIME e339602 · BRANCH MASTER · ALPHA-0.7.5</div><h2>Ein konsolidierter Stand für Pi, Mobile, Cloud und Website.</h2><p>Build 117 war erfolgreich getestet, ist durch den e339-Laufzeitstand aber überholt. Build 118 ist der nächste Raspberry-Pi-Hardwaretest-Kandidat. Der Branch master enthält danach zusätzliche Dokumentations-, Mobile-, Design-, Packaging- und Publishing-Commits, ohne den Pi-Kandidaten künstlich hochzuzählen.</p></div><div class="status-chip">BUILD 118 · CANDIDATE</div></div>
-      <div class="metric-grid">
-        <article><span>VERSION</span><strong>0.7.5</strong><small>Alpha</small></article>
-        <article><span>PI CANDIDATE</span><strong>118</strong><small>Hardwaretest als nächstes</small></article>
-        <article><span>RUNTIME</span><strong>e339</strong><small>Image-Anker</small></article>
-        <article><span>DESIGN</span><strong>NEXUS</strong><small>projektweit verbindlich</small></article>
+    <div class="hero-visual">
+      <div class="status-orbit orbit-a"></div><div class="status-orbit orbit-b"></div>
+      <div class="screen-frame">
+        <div class="screen-top"><span>GROWCENTRAL NEXUS</span><span class="live">● SYSTEM ONLINE</span></div>
+        <img src="assets/gui/local-desktop-v0.9.png" alt="GrowCentral Nexus Benutzeroberfläche">
       </div>
-      <div class="system-grid">
-        <article class="system-card"><div class="card-head"><span>RELEASE STATE</span><b>CANONICAL</b></div><ul class="status-list"><li><span>Build 117<small>vorheriger erfolgreicher Teststand</small></span><b>SUPERSEDED</b></li><li><span>Build 118<small>pi-universal-alpha-0.7.5-118</small></span><b>CANDIDATE</b></li><li><span>Runtime-Anker<small>Build-118-Codebasis</small></span><b>e339602</b></li><li><span>Stable<small>erst nach Abschlussprüfung</small></span><b>WAIT</b></li></ul></article>
-        <article class="system-card"><div class="card-head"><span>BUILD 118 RUNTIME</span><b>LED-AWARE</b></div><ul class="status-list"><li><span>C920/UVC<small>Snapshot, MJPEG, V4L2</small></span><b>INTEGRATED</b></li><li><span>Kamera-LED<small>Firmware/Modell/USB-ID aware</small></span><b>GUARDED</b></li><li><span>Elecrow 7"<small>Touch-Kiosk + systemd</small></span><b>INTEGRATED</b></li><li><span>FRITZ! / Tapo<small>lokale Gerätepfade</small></span><b>INTEGRATED</b></li></ul></article>
-      </div>
-      <div class="section-head"><div><div class="eyebrow">GROWCENTRAL NEXUS UI</div><h3>Eine Designsprache für das gesamte Projekt</h3></div><p>Pi-GUI, Kiosk, dezender.de, Mobile, Repo und Release-Grafiken folgen denselben Komponenten- und Statusregeln.</p></div>
-      <div class="interface-wall"><figure class="interface-card"><img src="assets/gui/local-desktop-v0.9.png" alt="Grow Central Desktop Konzept"><figcaption><b>Local Desktop</b><span>Bestehendes Konzeptasset; finale aktuelle Screenshots folgen Nexus UI.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-mobile-v0.9.png" alt="Grow Central Mobile Konzept"><figcaption><b>Mobile Client</b><span>iOS/Android WebGUI-Client; Pi bleibt Geräteautorität.</span></figcaption></figure></div>
-    </section>
+      <div class="floating-card fc-one"><small>PLATFORM</small><strong>LOCAL-FIRST</strong><span>Pi bleibt Geräteautorität</span></div>
+      <div class="floating-card fc-two"><small>RELEASE</small><strong>BUILD 118</strong><span>CANDIDATE · alpha-0.7.5</span></div>
+    </div>
+  </div>
+</section>
 
-    <section class="content-panel" data-panel="release">
-      <div class="hero"><div><div class="eyebrow">RELEASE · DISTRIBUTION · QUALITY GATES</div><h2>Build 118 ist der nächste reale Pi-Test.</h2><p>Ein neuer Pi-Build wird erst nötig, wenn der Runtime-Stand geändert wird oder Build 118 im Hardwaretest einen Fix verlangt. Doku-, Website- oder Mobile-Änderungen allein erzeugen bewusst keinen Build 119.</p></div><div class="status-chip">CANDIDATE ≠ VALIDATED</div></div>
-      <div class="metric-grid"><article><span>PI IMAGE</span><strong>118</strong><small>Runtime e339602</small></article><article><span>CLOUD</span><strong>V6</strong><small>Release bundle</small></article><article><span>APT</span><strong>SIGNED</strong><small>repo.dezender.de/apt</small></article><article><span>STATE</span><strong>SYNC</strong><small>Repo + Web + Mobile</small></article></div>
-      <div class="system-grid"><article class="system-card"><div class="card-head"><span>QUALITY GATES</span><b>BUILD 118</b></div><div class="pipeline"><article><b>01 · BOOT / REBOOT</b><span>Exaktes Build-118-Image auf Zielhardware.</span></article><article><b>02 · NETWORK / FIRST BOOT</b><span>AP, LAN/WLAN, mDNS, GUI und Persistenz.</span></article><article><b>03 · CAMERA / LED</b><span>C920, Stream, V4L2 und erkannte LED-Fähigkeiten.</span></article><article><b>04 · DEVICES / KIOSK</b><span>FRITZ!, Tapo, Mars-Diagnose und Elecrow soweit vorhanden.</span></article></div></article><article class="system-card"><div class="card-head"><span>DISTRIBUTION</span><b>DEZENDER.DE</b></div><div class="domain-card"><small>APT Repository</small><strong>repo.dezender.de/apt</strong></div><p style="color:var(--muted);line-height:1.6">Cloud- und APT-Installer werden mit Release-State und SHA-256-Summen veröffentlicht. Das separate Cloud/APT-Actions-Paket validiert zusätzlich die Shell-Syntax.</p><div class="download-row"><a class="primary" href="135ercloud-server-install.sh">Cloud V6 Installer</a><a href="setup-135ercloud-apt-repo.sh">APT Setup</a><a href="SHA256SUMS.txt">SHA256</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">Pi Releases</a></div></article></div>
-    </section>
+<section class="signal-bar">
+  <div class="wrap signal-grid">
+    <div><small>AKTUELLER STAND</small><strong>alpha-0.7.5</strong></div>
+    <div><small>PI-KANDIDAT</small><strong>Build 118</strong></div>
+    <div><small>DESIGNSYSTEM</small><strong>GrowCentral Nexus</strong></div>
+    <div><small>BETRIEBSMODELL</small><strong>Local First + optional Cloud</strong></div>
+  </div>
+</section>
 
-    <section class="content-panel" data-panel="mobile">
-      <div class="hero"><div><div class="eyebrow">NEXUS MOBILE 0.2.1 · WEBGUI CLIENT</div><h2>Android APK + iOS Sideload IPA</h2><p>Die Apps bedienen Grow Central, übernehmen aber keine Raspberry-Pi-Funktion. Lokal darf die App private HTTP-Ziele öffnen; Remote-Ziele müssen HTTPS verwenden.</p></div><div class="status-chip">CLIENT ONLY</div></div>
-      <div class="metric-grid"><article><span>ANDROID</span><strong>APK</strong><small>Actions artifact</small></article><article><span>iOS</span><strong>IPA</strong><small>Sideload package</small></article><article><span>LOCAL</span><strong>.local</strong><small>Pi direkt erreichbar</small></article><article><span>REMOTE</span><strong>HTTPS</strong><small>Transport abgesichert</small></article></div>
-      <div class="system-grid"><article class="system-card"><div class="card-head"><span>iOS SIDELOAD</span><b>SECURE BUILD</b></div><ul class="status-list"><li><span>IPA<small>ohne persönliche Apple-Signatur</small></span><b>UNSIGNED</b></li><li><span>Installation<small>Signierung für das Zielgerät</small></span><b>SIDELOAD</b></li><li><span>Local Network<small>iOS Usage Description</small></span><b>DECLARED</b></li><li><span>Credentials<small>keine Gerätepasswörter im Paket</small></span><b>NONE</b></li></ul></article><article class="system-card"><div class="card-head"><span>ENDPOINTS</span><b>LOCAL-FIRST</b></div><div class="domain-card"><small>Lokaler Standard</small><strong>135er-Grow-Central.local</strong></div><ul class="status-list"><li><span>First Boot</span><b>10.42.0.1</b></li><li><span>Private IPv4</span><b>HTTP OK</b></li><li><span>Remote Host</span><b>HTTPS ONLY</b></li></ul></article></div>
-    </section>
+<section class="section intro" id="produkt">
+  <div class="wrap split-head">
+    <div><div class="eyebrow">DIE PLATTFORM</div><h2>Gebaut für Kontrolle statt App-Chaos.</h2></div>
+    <p>Grow-Setups bestehen schnell aus mehreren Herstellern, Apps, Funkstandards und Einzelgeräten. Grow Central legt darüber eine gemeinsame Steuerungs-, Status- und Automationsschicht. Das Ziel: ein konsistenter Blick auf das System – von Sensorik und Steckdosen bis Kamera, Netzwerk und Routinen.</p>
+  </div>
+  <div class="value-grid wrap">
+    <article class="value-card featured"><div class="icon">◈</div><h3>Eine Oberfläche</h3><p>Geräte, Räume, Grow-Status, Automationen und Diagnose an einem Ort – optimiert für Desktop, Touchdisplay und Mobile.</p><span>CONTROL CENTER</span></article>
+    <article class="value-card"><div class="icon">⌁</div><h3>Lokal funktionsfähig</h3><p>Die zentrale Logik läuft auf dem Raspberry Pi. Lokale Geräte bleiben auch ohne externen Cloud-Dienst steuerbar, sofern ihre Schnittstellen dies zulassen.</p><span>LOCAL-FIRST</span></article>
+    <article class="value-card"><div class="icon">⚙</div><h3>Automatisierbar</h3><p>Schaltlogik, Zeitpläne, Zustände und Geräteaktionen werden in einer Plattform zusammengeführt und nachvollziehbar dargestellt.</p><span>AUTOMATION</span></article>
+    <article class="value-card"><div class="icon">◎</div><h3>Diagnosefähig</h3><p>Netzwerk-, Geräte- und Systempfade werden nicht nur gesteuert, sondern auch für Tests, Fehlersuche und Support strukturiert.</p><span>DIAGNOSTICS</span></article>
+  </div>
+</section>
 
-    <section class="content-panel" data-panel="integrations">
-      <div class="hero"><div><div class="eyebrow">DEVICE ECOSYSTEM · BUILD 118</div><h2>Lokale Integration mit kontrollierten Schreibpfaden.</h2><p>Smart-Home- und Kamera-Funktionen bleiben an bekannte, erlaubte Fähigkeiten gebunden. Unbestätigte Mars-Hydro-/BLE-Schreibtelegramme bleiben gesperrt.</p></div><div class="status-chip">LOCAL-FIRST</div></div>
-      <div class="integrations" style="margin-top:14px"><article class="feature-card"><div class="kicker">SMART HOME</div><h3>FRITZ! Smart Home</h3><p>Lokale AVM/AHA-Anbindung mit Registry, Status, Schalten, Leistung, Energie und Routinen.</p><span class="state">LOCAL</span></article><article class="feature-card"><div class="kicker">SMART HOME</div><h3>TP-Link Tapo</h3><p>Authentifiziertes lokales Onboarding über aktive IPv4-Netze mit dauerhafter Geräteübernahme.</p><span class="state">LOCAL / HYBRID</span></article><article class="feature-card"><div class="kicker">CAMERA</div><h3>Logitech C920 / LED</h3><p>UVC, Snapshot, MJPEG, V4L2 und capability-aware LED-Logik. LED-Writes nur bei erkannter Unterstützung.</p><span class="state">GUARDED</span></article><article class="feature-card"><div class="kicker">GROW HARDWARE</div><h3>Mars Hydro / iFresh</h3><p>iConnect-Zielarchitektur plus BLE-Diagnose-/Fallback-Pfad; keine geratenen Writes.</p><span class="state">ICONNECT / BLE</span></article></div>
-    </section>
+<section class="section dark-section" id="features">
+  <div class="wrap">
+    <div class="section-title"><div><div class="eyebrow">FEATURES</div><h2>Vom First Boot bis zur laufenden Automation.</h2></div><p>Grow Central ist nicht nur ein Dashboard. Die Plattform deckt Einrichtung, Betrieb, Integrationen und Wartung ab.</p></div>
+    <div class="feature-grid">
+      <article><div class="num">01</div><h3>First-Boot Setup</h3><p>Geführte Erstkonfiguration mit Netzwerkpfaden, WLAN-Auswahl, lokalem Access Point und Übergang in den normalen Betriebsmodus.</p><span class="tag cyan">SETUP</span></article>
+      <article><div class="num">02</div><h3>Geräteübersicht</h3><p>Zentrale Registry für verbundene Geräte, Fähigkeiten und Status. Funktionen werden nur angeboten, wenn sie tatsächlich unterstützt werden.</p><span class="tag lime">DEVICES</span></article>
+      <article><div class="num">03</div><h3>Räume & Grow-Zonen</h3><p>Strukturierung von Geräten und Funktionen nach Raum, Zelt oder Grow-Bereich für eine verständliche Bedienung.</p><span class="tag cyan">ZONES</span></article>
+      <article><div class="num">04</div><h3>Automationen</h3><p>Zeit- und zustandsbasierte Steuerung für angeschlossene Geräte, Routinen und wiederkehrende Abläufe.</p><span class="tag lime">RULES</span></article>
+      <article><div class="num">05</div><h3>Kamera & Monitoring</h3><p>Logitech C920/UVC mit Snapshot, MJPEG und V4L2-Pfaden. Kamerafunktionen werden capability-aware freigegeben.</p><span class="tag amber">CAMERA</span></article>
+      <article><div class="num">06</div><h3>Netzwerk & Discovery</h3><p>Lokale Netzwerkerkennung, mDNS, WLAN/LAN-Pfade sowie Gerätediscovery als Grundlage für einfaches Onboarding.</p><span class="tag cyan">NETWORK</span></article>
+      <article><div class="num">07</div><h3>Diagnose & Support</h3><p>Systemzustände, Logs und Supportpfade helfen, reale Hardwareprobleme nachvollziehbar zu prüfen statt Fehler nur zu verstecken.</p><span class="tag amber">SUPPORT</span></article>
+      <article><div class="num">08</div><h3>Mobile Zugriffsebene</h3><p>Android und iOS dienen als Clients der GrowCentral-WebGUI. Die Geräteautorität bleibt beim Pi.</p><span class="tag lime">MOBILE</span></article>
+      <article><div class="num">09</div><h3>Optionale Cloud</h3><p>Für Remote-Szenarien existiert eine separate Cloud-/APT-Struktur. Lokal und Remote bleiben bewusst voneinander getrennt.</p><span class="tag cyan">CLOUD</span></article>
+    </div>
+  </div>
+</section>
 
-    <section class="content-panel" data-panel="interfaces">
-      <div class="hero"><div><div class="eyebrow">UNIFIED INTERFACE FAMILY</div><h2>GrowCentral Nexus UI</h2><p>Logo und Branding bleiben unverändert. Layout, Panels, Statusfarben, Typografie und Responsive-Regeln sind projektweit vereinheitlicht.</p></div><div class="status-chip">ONE DESIGN SYSTEM</div></div>
-      <div class="interface-wall" style="margin-top:14px"><figure class="interface-card"><img src="assets/gui/local-desktop-v0.9.png" alt="Local Desktop Konzept"><figcaption><b>Pi Desktop</b><span>Konzeptasset / Nexus-Zielrichtung.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-tablet-v0.9.png" alt="Local Tablet Konzept"><figcaption><b>Tablet / Elecrow</b><span>Touch-orientierte Ableitung.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/local-mobile-v0.9.png" alt="Local Mobile Konzept"><figcaption><b>Mobile</b><span>iPhone und Android Nexus Client.</span></figcaption></figure><figure class="interface-card"><img src="assets/gui/cloud-desktop-v0.9.png" alt="Cloud Desktop Konzept"><figcaption><b>Server optional</b><span>Abgesicherter Remote-Pfad.</span></figcaption></figure></div>
-    </section>
+<section class="section integrations-section" id="integrationen">
+  <div class="wrap">
+    <div class="split-head"><div><div class="eyebrow">GERÄTEÖKOSYSTEM</div><h2>Ein System. Mehrere Hersteller.</h2></div><p>Integrationen werden nicht als lose Plugins dargestellt, sondern in ein gemeinsames Modell aus Gerät, Fähigkeit, Status und erlaubter Aktion überführt.</p></div>
+    <div class="integration-grid">
+      <article class="integration-card"><div class="integration-head"><div class="logo-token">AVM</div><span class="state local">LOCAL</span></div><h3>FRITZ! Smart Home</h3><p>Lokale AVM/AHA-Anbindung für unterstützte Smart-Home-Geräte. Status, Schalten, Leistung, Energie und Routinen können zentral verarbeitet werden.</p><ul><li>Lokale Steuerung</li><li>Status & Leistungswerte</li><li>Geräte-Registry</li></ul></article>
+      <article class="integration-card"><div class="integration-head"><div class="logo-token">TAPO</div><span class="state hybrid">LOCAL / HYBRID</span></div><h3>TP-Link Tapo</h3><p>Onboarding und lokale Gerätepfade für kompatible Tapo-Komponenten mit authentifizierter Übernahme in Grow Central.</p><ul><li>Discovery im lokalen Netz</li><li>Authentifiziertes Onboarding</li><li>Dauerhafte Geräteübernahme</li></ul></article>
+      <article class="integration-card"><div class="integration-head"><div class="logo-token">C920</div><span class="state guarded">GUARDED</span></div><h3>Logitech Kamera</h3><p>UVC-basierte Kameraeinbindung mit kontrollierter Freigabe von V4L2- und LED-Funktionen abhängig von Modell und erkannter Fähigkeit.</p><ul><li>Snapshot</li><li>MJPEG Stream</li><li>Capability-aware LED</li></ul></article>
+      <article class="integration-card"><div class="integration-head"><div class="logo-token">MH</div><span class="state research">ICONNECT / BLE</span></div><h3>Mars Hydro / iFresh</h3><p>Zielarchitektur für iConnect sowie BLE-Diagnose- und Fallback-Pfade. Unbestätigte Schreibtelegramme bleiben bewusst gesperrt.</p><ul><li>iConnect-Zielpfad</li><li>BLE Diagnose</li><li>Deny-by-default Writes</li></ul></article>
+    </div>
+  </div>
+</section>
 
-    <section class="content-panel" data-panel="security">
-      <div class="hero"><div><div class="eyebrow">TRUST ARCHITECTURE</div><h2>Deny by default. Expose only known capabilities.</h2><p>Das gilt für Smart-Home-Writes, Kamera-/LED-Controls, Mobile-Remoteziele und die öffentliche Website gleichermaßen.</p></div><div class="status-chip">DENY BY DEFAULT</div></div>
-      <div class="security-grid" style="margin-top:14px"><article><b>01</b><span>Authenticated</span><small>Session oder explizites API-Token</small></article><article><b>02</b><span>Approved</span><small>Gerät/Fähigkeit bekannt</small></article><article><b>03</b><span>Writable</span><small>Write explizit erlaubt</small></article><article><b>04</b><span>Audited</span><small>relevante Aktion nachvollziehbar</small></article></div>
-    </section>
+<section class="section interface-section" id="interfaces">
+  <div class="wrap">
+    <div class="section-title"><div><div class="eyebrow">GROWCENTRAL NEXUS UI</div><h2>Eine Designsprache für jede Bildschirmgröße.</h2></div><p>Logo und Branding bleiben unverändert. Navigation, Panels, Statusfarben und Informationshierarchie folgen projektweit derselben Nexus-Logik.</p></div>
+    <div class="showcase desktop-showcase"><div class="showcase-copy"><span class="tag lime">LOCAL DESKTOP</span><h3>Die Zentrale auf dem Raspberry Pi.</h3><p>Das Hauptinterface bildet Geräte, Bereiche, Status und Steuerung als technische, aber schnell erfassbare Control-Center-Oberfläche ab.</p><div class="mini-points"><span>Responsive UI</span><span>Touch-ready</span><span>Status semantics</span></div></div><figure><img src="assets/gui/local-desktop-v0.9.png" alt="GrowCentral Desktop Oberfläche"></figure></div>
+    <div class="showcase-grid">
+      <figure><img src="assets/gui/local-tablet-v0.9.png" alt="GrowCentral Tablet Oberfläche"><figcaption><strong>Touch / Kiosk</strong><span>Für Elecrow-Display und stationäre Bedienung.</span></figcaption></figure>
+      <figure><img src="assets/gui/local-mobile-v0.9.png" alt="GrowCentral Mobile Oberfläche"><figcaption><strong>Mobile Client</strong><span>iOS und Android als WebGUI-Clients.</span></figcaption></figure>
+      <figure><img src="assets/gui/cloud-desktop-v0.9.png" alt="GrowCentral Cloud Oberfläche"><figcaption><strong>Remote optional</strong><span>Separate, abgesicherte Zugriffsebene.</span></figcaption></figure>
+    </div>
+  </div>
+</section>
 
-    <footer class="footer"><div><span class="live-dot" style="display:inline-block;margin-right:8px"></span><strong>135ER-GROW CENTRAL</strong> · NEXUS PROJECT CONSOLE</div><div class="footer-links"><a href="RELEASE_STATE.md">RELEASE STATE</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/README.md">README</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">REPOSITORY ↗</a></div></footer>
-  </main>
-</div>
-<script>(()=>{const panels=[...document.querySelectorAll('[data-panel]')],links=[...document.querySelectorAll('[data-target]')],title=document.getElementById('pageTitle');const names={overview:'Projektstatus',release:'Build & Release',mobile:'Mobile Apps',integrations:'Integrationen',interfaces:'Nexus UI',security:'Security & Architektur'};function activate(id){panels.forEach(p=>p.classList.toggle('active',p.dataset.panel===id));links.forEach(l=>l.classList.toggle('active',l.dataset.target===id));if(title)title.textContent=names[id]||'135er-Grow Central';history.replaceState(null,'','#'+id)}links.forEach(l=>l.addEventListener('click',()=>activate(l.dataset.target)));const initial=location.hash.slice(1);if(names[initial])activate(initial);const clock=document.getElementById('clock');const tick=()=>{if(clock)clock.textContent=new Date().toLocaleTimeString('de-DE')};tick();setInterval(tick,1000)})();</script>
+<section class="section architecture-section" id="technik">
+  <div class="wrap architecture-grid">
+    <div class="architecture-copy"><div class="eyebrow">ARCHITEKTUR</div><h2>Der Raspberry Pi bleibt die Geräteautorität.</h2><p>Grow Central verfolgt eine klare Trennung: Die lokale Instanz kennt Geräte und Fähigkeiten. Mobile Apps sind Clients. Cloud-Funktionen sind optional. Schreibende Hardwareaktionen werden nur ausgeführt, wenn der Pfad bekannt und erlaubt ist.</p><div class="principles"><div><b>01</b><span><strong>Local First</strong><small>Kernfunktionen nah an der Hardware.</small></span></div><div><b>02</b><span><strong>Capability Aware</strong><small>Nur erkannte Funktionen werden angeboten.</small></span></div><div><b>03</b><span><strong>Deny by Default</strong><small>Keine geratenen oder ungeprüften Writes.</small></span></div><div><b>04</b><span><strong>Modular</strong><small>Integrationen bleiben austauschbar und prüfbar.</small></span></div></div></div>
+    <div class="architecture-visual"><img src="assets/architecture.svg" alt="Architektur von 135er-Grow Central"></div>
+  </div>
+</section>
+
+<section class="section security-section">
+  <div class="wrap">
+    <div class="split-head"><div><div class="eyebrow">TRUST & SAFETY</div><h2>Kontrollierte Aktionen statt blindem Gerätezugriff.</h2></div><p>Die Architektur trennt Lesen, Erkennen, Freigeben und Schreiben. Besonders bei Kamera-, BLE- und Smart-Home-Pfaden wird nur mit bekannten Fähigkeiten gearbeitet.</p></div>
+    <div class="security-flow"><article><b>1</b><h3>Erkennen</h3><p>Gerät, Modell und verfügbare Schnittstelle bestimmen.</p></article><div class="arrow">→</div><article><b>2</b><h3>Validieren</h3><p>Fähigkeiten und freigegebene Aktionen prüfen.</p></article><div class="arrow">→</div><article><b>3</b><h3>Autorisieren</h3><p>Nur erlaubte Pfade an die Steuerung übergeben.</p></article><div class="arrow">→</div><article><b>4</b><h3>Ausführen</h3><p>Aktion durchführen und Ergebnis nachvollziehbar machen.</p></article></div>
+  </div>
+</section>
+
+<section class="section release-section" id="status">
+  <div class="wrap release-panel">
+    <div><div class="eyebrow">ENTWICKLUNGSSTATUS</div><h2>Build 118 ist Hardwaretest-Kandidat.</h2><p>Der aktuelle Repository-Stand ist <strong>alpha-0.7.5</strong>. Build 118 basiert auf dem Runtime-/Image-Anker <code>e339602</code> und bleibt bis zum bestandenen realen Raspberry-Pi-Test ausdrücklich <strong>CANDIDATE</strong> – nicht VALIDATED.</p><div class="release-actions"><a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">GitHub Releases ↗</a><a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Repository ↗</a></div></div>
+    <div class="release-stack"><div><small>VERSION</small><strong>alpha-0.7.5</strong></div><div><small>PI IMAGE</small><strong>Build 118</strong></div><div><small>STATUS</small><strong class="amber-text">CANDIDATE</strong></div><div><small>RUNTIME</small><strong>e339602</strong></div></div>
+  </div>
+</section>
+
+<section class="section faq-section" id="faq">
+  <div class="wrap faq-wrap">
+    <div><div class="eyebrow">FAQ</div><h2>Häufige Fragen.</h2><p class="faq-intro">Die wichtigsten Punkte zur Plattform, zum aktuellen Entwicklungsstand und zum Betriebsmodell.</p></div>
+    <div class="faq-list">
+      <details open><summary>Was ist 135er-Grow Central?</summary><p>Eine lokale Steuerungs- und Automationsplattform für Grow-Umgebungen. Sie bündelt Geräte, Kamera, Netzwerk, Automationen, Diagnose und Bedienoberflächen rund um eine Raspberry-Pi-Instanz.</p></details>
+      <details><summary>Braucht Grow Central zwingend eine Cloud?</summary><p>Nein. Das Grundprinzip ist Local First. Eine Cloud-/Remote-Ebene ist als optionale Erweiterung vorgesehen und wird getrennt von der lokalen Geräteautorität behandelt.</p></details>
+      <details><summary>Welche Hardware wird aktuell unterstützt?</summary><p>Der aktuelle Entwicklungsstand enthält unter anderem lokale Pfade für FRITZ! Smart Home und Tapo sowie Logitech-C920/UVC-Kamera-Unterstützung. Mars-Hydro/iFresh befindet sich in einer kontrollierten iConnect-/BLE-Integrationsarchitektur.</p></details>
+      <details><summary>Ist Build 118 bereits als stabil freigegeben?</summary><p>Nein. Build 118 ist aktuell CANDIDATE. Erst nach bestandenem realen Hardwaretest auf dem Raspberry Pi darf der Status auf VALIDATED wechseln. Stable ist noch nicht freigegeben.</p></details>
+      <details><summary>Gibt es eine mobile App?</summary><p>Es existieren Android- und iOS-Clientpfade. Die Apps bedienen die GrowCentral-WebGUI; sie ersetzen nicht die lokale Raspberry-Pi-Instanz.</p></details>
+      <details><summary>Ist das Projekt öffentlich einsehbar?</summary><p>Ja. Entwicklung, Releases und Dokumentation werden im öffentlichen GitHub-Repository bereitgestellt.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="wrap cta-panel"><div><div class="eyebrow">135ER-GROW CENTRAL</div><h2>Ein Control Center für das gesamte Grow-Setup.</h2><p>Local First. Modular. Diagnosefähig. Entwickelt für reale Hardware statt nur für Mockups.</p></div><div class="cta-actions"><a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Projekt auf GitHub ↗</a><a class="btn ghost" href="#top">Nach oben ↑</a></div></div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-grid"><div><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central"><p>GrowCentral Nexus · Local-First Control Platform</p></div><div><strong>Projekt</strong><a href="#features">Features</a><a href="#integrationen">Integrationen</a><a href="#status">Release-Status</a></div><div><strong>Technik</strong><a href="#technik">Architektur</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a><a href="https://repo.dezender.de/apt">APT Repository</a></div><div><strong>Status</strong><span><i class="status-dot"></i> alpha-0.7.5</span><span>Build 118 · CANDIDATE</span><span>© 135er-Grow Central</span></div></div>
+</footer>
+
+<script>
+const toggle=document.getElementById('menuToggle');
+const nav=document.getElementById('siteNav');
+toggle?.addEventListener('click',()=>{const open=nav.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'✕':'☰';});
+document.querySelectorAll('#siteNav a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');toggle?.setAttribute('aria-expanded','false');if(toggle)toggle.textContent='☰';}));
+const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('reveal');}),{threshold:.08});
+document.querySelectorAll('.value-card,.feature-grid article,.integration-card,.showcase,.showcase-grid figure,.principles>div,.security-flow article,.release-panel,.faq-list details').forEach(el=>observer.observe(el));
+</script>
 </body>
 </html>
