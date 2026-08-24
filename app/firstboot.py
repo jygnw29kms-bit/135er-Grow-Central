@@ -29,7 +29,6 @@ class SetupBody(BaseModel):
     new_password: SecretStr
     gui_username: str
     gui_password: SecretStr
-    maintenance_activation_code: SecretStr
     fritz_enabled: bool = False
     fritz_host: str = ""
     fritz_username: str = ""
@@ -142,15 +141,11 @@ async def apply(body: SetupBody):
         raise HTTPException(422, "WLAN-Daten ungültig")
     if body.fritz_enabled and not (body.fritz_host and body.fritz_username and body.fritz_password.get_secret_value()):
         raise HTTPException(422, "FRITZ!-Zugangsdaten unvollständig")
-    activation_code = body.maintenance_activation_code.get_secret_value().strip().upper()
-    if not re.fullmatch(r"GC-[A-Z2-9]{6}-[A-Z2-9]{6}", activation_code):
-        raise HTTPException(422, "Fernwartungs-Aktivierungscode ungültig")
     config = {
         "mode": body.mode, "hostname": FIXED_HOSTNAME, "timezone": body.timezone,
         "ssid": body.ssid, "wifi_password": body.wifi_password.get_secret_value(),
         "new_password": body.new_password.get_secret_value(), "gui_username": body.gui_username,
         "gui_password": body.gui_password.get_secret_value(), "fritz_enabled": "1" if body.fritz_enabled else "0",
-        "maintenance_activation_code": activation_code,
         "fritz_host": body.fritz_host, "fritz_username": body.fritz_username,
         "fritz_password": body.fritz_password.get_secret_value(),
     }
