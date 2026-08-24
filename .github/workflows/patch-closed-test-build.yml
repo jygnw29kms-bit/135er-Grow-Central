@@ -2,6 +2,10 @@ name: Patch closed-test image builder
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.ci/trigger-image-patch.txt'
 
 permissions:
   contents: write
@@ -25,6 +29,23 @@ jobs:
           path = Path('.github/workflows/build-pi3-image.yml')
           text = path.read_text(encoding='utf-8')
 
+          # Future Pi/cloud/deploy changes must produce a fresh appliance image.
+          anchor = "      - 'shared/**'\n"
+          additions = "      - 'shared/**'\n      - 'local/**'\n      - 'cloud/**'\n      - 'deploy/**'\n"
+          if "      - 'local/**'" not in text:
+              if anchor not in text:
+                  raise SystemExit('workflow path anchor not found')
+              text = text.replace(anchor, additions, 1)
+
+          # The graphical stack is a release dependency, not something a Pi may
+          # need to download after boot before Wi-Fi has even been provisioned.
+          apt_anchor = 'ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata'
+          graphical = 'ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata xserver-xorg-core xserver-xorg-input-libinput xinit openbox chromium unclutter x11-xserver-utils'
+          if 'xserver-xorg-core xserver-xorg-input-libinput xinit openbox chromium' not in text:
+              if apt_anchor not in text:
+                  raise SystemExit('apt package anchor not found')
+              text = text.replace(apt_anchor, graphical, 1)
+
           old_env = '''          GC_LOCAL_API_TOKEN=test
           GC_CLOUD_TOKEN=test
           GC_REMOTE_COMMANDS=false
@@ -37,6 +58,8 @@ jobs:
           GC_CLOUD_TEST_MODE=true
           GC_CLOUD_URL=https://135ercloud.dezender.de
           GC_CLOUD_TOKEN=
+          GC_DIAGNOSTIC_SYNC_SECONDS=120
+          GC_DIAGNOSTIC_BUNDLE_SECONDS=300
           GC_SMARTHOME_ENABLED=true
 '''
           if old_env in text:
@@ -61,9 +84,11 @@ jobs:
           GC_CLOUD_TOKEN=
           GC_SITE_ID=closed-test
           GC_SYNC_SECONDS=30
+          GC_DIAGNOSTIC_SYNC_SECONDS=120
+          GC_DIAGNOSTIC_BUNDLE_SECONDS=300
           GC_REMOTE_COMMANDS=false
           GC_LOCAL_API=http://127.0.0.1:8080
-          GC_LOCAL_API_TOKEN=
+          GC_LOCAL_API_TOKEN=test
           EOF
           chown root:growcentral /opt/135er-grow-central/local/cloud_link/.env
           chmod 0640 /opt/135er-grow-central/local/cloud_link/.env
@@ -96,12 +121,29 @@ jobs:
           grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/local/cloud_link/.env
           grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/local/cloud_link/.env
           grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/local/cloud_link/.env
+          grep -qx 'GC_LOCAL_API_TOKEN=test' /opt/135er-grow-central/local/cloud_link/.env
+          command -v startx
+          command -v chromium
+          command -v openbox
+          test -x /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/entrypoint.py
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/diagnostics.py
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
 '''
           if old_checks in text:
               text = text.replace(old_checks, new_checks, 1)
-          elif 'systemctl is-enabled 135er-grow-central-cloud-link.service' not in text:
-              raise SystemExit('closed-test verification anchor not found')
+          else:
+              # Upgrade an earlier closed-test patch in-place.
+              marker = "          /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py\n"
+              if 'command -v chromium' not in text and marker in text:
+                  text = text.replace(marker, '''          grep -qx 'GC_LOCAL_API_TOKEN=test' /opt/135er-grow-central/local/cloud_link/.env
+          command -v startx
+          command -v chromium
+          command -v openbox
+          test -x /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/entrypoint.py
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/diagnostics.py
+''' + marker, 1)
 
           old_artifact = '          name: 135er-Grow-Central-RPi3Plus-Universal-Image\n'
           artifact_expr = '$' + '{{ github.run_number }}'
@@ -120,7 +162,7 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add .github/workflows/build-pi3-image.yml
-            git commit -m 'test(image): enable credential-free closed cloud test'
+            git commit -m 'test(image): harden closed-test appliance build'
             git push origin master
           else
             echo 'Image workflow already patched.'
