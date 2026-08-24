@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from .config import settings
 from .db import init_db
+from .diagnostics import router as diagnostics_router
 
 BASE = Path(__file__).resolve().parents[1]
 WEB = BASE / "web"
@@ -37,6 +38,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="135er-Grow Central Cloud", version="0.7.1", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
+app.include_router(diagnostics_router)
 
 
 class TelemetryPayload(BaseModel):
