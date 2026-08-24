@@ -72,8 +72,6 @@ def validate(config: dict[str, str]) -> None:
         raise ValueError("invalid GUI username")
     if len(config.get("gui_password", "")) < 12:
         raise ValueError("invalid GUI password")
-    if not re.fullmatch(r"GC-[A-Z2-9]{6}-[A-Z2-9]{6}", config.get("maintenance_activation_code", "")):
-        raise ValueError("invalid maintenance activation code")
     fritz_enabled = config.get("fritz_enabled") == "1"
     if fritz_enabled and not all((config.get("fritz_host", "").strip(), config.get("fritz_username", "").strip(), config.get("fritz_password", ""))):
         raise ValueError("incomplete FRITZ credentials")
@@ -295,14 +293,6 @@ def main() -> int:
         persist_runtime_settings(config)
         runtime_settings_changed = True
         install_runtime_policy()
-        activation_code = config.pop("maintenance_activation_code")
-        enrollment = run(
-            "/usr/local/sbin/grow-central-remote-maintenance", "enroll", "-",
-            check=False, input_text=activation_code + "\n",
-        )
-        activation_code = ""
-        if enrollment.returncode != 0:
-            raise RuntimeError("Die sichere Fernwartung konnte nicht aktiviert werden. Bitte Aktivierungscode und Cloud-Verbindung prüfen.")
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
