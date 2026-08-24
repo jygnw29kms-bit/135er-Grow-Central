@@ -1,13 +1,4 @@
-"""135er-Grow Central Cloud API.
-
-DE:
-    Optionaler VServer-Dienst für Telemetrie, Historie und eine vorbereitete
-    Remote-Command-Queue. Er ersetzt niemals die lokale Raspberry-Pi-Steuerung.
-
-EN:
-    Optional VPS service for telemetry, history and a prepared remote-command
-    queue. It never replaces the local Raspberry Pi control node.
-"""
+"""135er-Grow Central Cloud API."""
 from datetime import datetime, timezone
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -66,27 +57,36 @@ class CommandResultPayload(BaseModel):
     ts: datetime
 
 
-def check_token(x_api_token: str | None, *, allow_closed_test: bool = False):
-    """Authenticate normal operation; allow token-free data paths only in explicit closed-test mode."""
-    if allow_closed_test and settings.cloud_closed_test_mode:
-        return
+def _normal_token_ok(token: str | None) -> bool:
     expected = settings.cloud_api_token.strip()
-    if len(expected) < 32 or expected.startswith("CHANGE_ME"):
+    candidate = (token or "").strip()
+    return len(expected) >= 32 and not expected.startswith("CHANGE_ME") and bool(candidate) and secrets.compare_digest(candidate, expected)
+
+
+def check_token(x_api_token: str | None) -> None:
+    if _normal_token_ok(x_api_token):
+        return
+    if len(settings.cloud_api_token.strip()) < 32:
         raise HTTPException(503, "cloud authentication is not configured")
-    candidate = (x_api_token or "").strip()
-    if not candidate or not secrets.compare_digest(candidate, expected):
-        raise HTTPException(401, "invalid api token", headers={"WWW-Authenticate": "Bearer"})
+    raise HTTPException(401, "invalid api token", headers={"WWW-Authenticate": "Bearer"})
+
+
+def allow_closed_test_data(x_api_token: str | None, site_id: str, device_id: str | None = None) -> None:
+    if _normal_token_ok(x_api_token):
+        return
+    if settings.cloud_closed_test_mode and site_id == settings.cloud_closed_test_site:
+        if device_id is None or device_id.startswith("raspberry-pi-"):
+            return
+    raise HTTPException(403, "credential-free access is limited to the configured closed-test site")
 
 
 @app.get("/")
 async def index():
-    """DE: Cloud-UI ausliefern. EN: Serve the cloud UI."""
     return FileResponse(WEB / "index.html")
 
 
 @app.get("/api/health")
 async def health():
-    """DE: Öffentlicher Healthcheck. EN: Public health check."""
     return {
         "ok": True,
         "service": "135er-Grow Central Cloud",
@@ -98,11 +98,11 @@ async def health():
 
 @app.post("/api/v1/telemetry")
 async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(default=None)):
-    """DE: Telemetrie vom Pi speichern. EN: Store telemetry received from a Pi."""
-    check_token(x_api_token, allow_closed_test=True)
+    allow_closed_test_data(x_api_token, payload.site_id, payload.device_id)
     extra_json = json.dumps(payload.extra, separators=(",", ":"))
     if len(extra_json.encode("utf-8")) > 16_384:
         raise HTTPException(413, "telemetry extra payload too large")
+    retention = max(1000, int(settings.cloud_telemetry_retention_rows))
     async with aiosqlite.connect(settings.cloud_db) as db:
         await db.execute(
             """INSERT INTO telemetry
@@ -110,11 +110,14 @@ async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(
             VALUES(?,?,?,?,?,?,?,?,?)""",
             (
                 payload.ts.isoformat(), payload.site_id, payload.device_id,
-                payload.temperature_c, payload.humidity_pct,
-                payload.vpd_kpa, payload.fan_speed_pct,
-                1 if payload.device_online else 0,
-                extra_json,
+                payload.temperature_c, payload.humidity_pct, payload.vpd_kpa,
+                payload.fan_speed_pct, 1 if payload.device_online else 0, extra_json,
             ),
+        )
+        # Keep public test traffic bounded even if the endpoint is discovered.
+        await db.execute(
+            "DELETE FROM telemetry WHERE id NOT IN (SELECT id FROM telemetry ORDER BY id DESC LIMIT ?)",
+            (retention,),
         )
         await db.commit()
     return {"ok": True, "closed_test_mode": settings.cloud_closed_test_mode}
@@ -125,14 +128,10 @@ async def latest(
     site_id: str = ApiPath(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
     x_api_token: str | None = Header(default=None),
 ):
-    """DE: Letzten Standortwert liefern. EN: Return latest telemetry for a site."""
-    check_token(x_api_token, allow_closed_test=True)
+    allow_closed_test_data(x_api_token, site_id)
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT * FROM telemetry WHERE site_id=? ORDER BY id DESC LIMIT 1",
-            (site_id,),
-        )
+        cursor = await db.execute("SELECT * FROM telemetry WHERE site_id=? ORDER BY id DESC LIMIT 1", (site_id,))
         row = await cursor.fetchone()
     if not row:
         raise HTTPException(404, "no telemetry")
@@ -145,23 +144,16 @@ async def history(
     limit: int = Query(default=200, ge=1, le=2000),
     x_api_token: str | None = Header(default=None),
 ):
-    """DE: Begrenzte Historie liefern. EN: Return bounded telemetry history."""
-    check_token(x_api_token, allow_closed_test=True)
+    allow_closed_test_data(x_api_token, site_id)
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT * FROM telemetry WHERE site_id=? ORDER BY id DESC LIMIT ?",
-            (site_id, limit),
-        )
+        cursor = await db.execute("SELECT * FROM telemetry WHERE site_id=? ORDER BY id DESC LIMIT ?", (site_id, limit))
         rows = await cursor.fetchall()
     return [dict(row) for row in rows]
 
 
 @app.post("/api/v1/commands")
 async def create_command(payload: CommandPayload, x_api_token: str | None = Header(default=None)):
-    """DE: Remote-Befehl nur bei Server-Freigabe anlegen.
-    EN: Queue a remote command only when server-side commands are enabled.
-    """
     check_token(x_api_token)
     if not settings.cloud_allow_commands:
         raise HTTPException(403, "remote commands are disabled")
@@ -169,12 +161,8 @@ async def create_command(payload: CommandPayload, x_api_token: str | None = Head
     created = datetime.now(timezone.utc).isoformat()
     async with aiosqlite.connect(settings.cloud_db) as db:
         await db.execute(
-            """INSERT INTO commands(id,site_id,target,action,value_json,created_at,status)
-               VALUES(?,?,?,?,?,?,?)""",
-            (
-                command_id, payload.site_id, payload.target, payload.action,
-                json.dumps(payload.value), created, "pending",
-            ),
+            "INSERT INTO commands(id,site_id,target,action,value_json,created_at,status) VALUES(?,?,?,?,?,?,?)",
+            (command_id, payload.site_id, payload.target, payload.action, json.dumps(payload.value), created, "pending"),
         )
         await db.commit()
     return {"id": command_id, "status": "pending"}
@@ -185,32 +173,27 @@ async def pending(
     site_id: str = ApiPath(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
     x_api_token: str | None = Header(default=None),
 ):
-    """DE: Offene Befehle für einen Standort liefern.
-    EN: Return pending commands for a site.
-    """
     check_token(x_api_token)
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
-            "SELECT * FROM commands WHERE site_id=? AND status='pending' ORDER BY created_at LIMIT 20",
-            (site_id,),
+            "SELECT * FROM commands WHERE site_id=? AND status='pending' ORDER BY created_at LIMIT 20", (site_id,)
         )
         rows = await cursor.fetchall()
     return [dict(row) for row in rows]
 
 
 @app.post("/api/v1/commands/{command_id}/result")
-async def command_result(command_id: uuid.UUID, payload: CommandResultPayload, x_api_token: str | None = Header(default=None)):
-    """DE: Ergebnis der lokalen Prüfung speichern. EN: Store local command result."""
+async def command_result(
+    command_id: uuid.UUID,
+    payload: CommandResultPayload,
+    x_api_token: str | None = Header(default=None),
+):
     check_token(x_api_token)
     async with aiosqlite.connect(settings.cloud_db) as db:
         cursor = await db.execute(
             "UPDATE commands SET status=?, result_json=? WHERE id=?",
-            (
-                "done" if payload.ok else "failed",
-                payload.model_dump_json(),
-                str(command_id),
-            ),
+            ("done" if payload.ok else "failed", payload.model_dump_json(), str(command_id)),
         )
         if cursor.rowcount == 0:
             raise HTTPException(404, "unknown command")
