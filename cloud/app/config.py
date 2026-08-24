@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     cloud_db: str = "./data/cloud.db"
     cloud_api_token: str = ""
     cloud_allow_commands: bool = False
+    cloud_closed_test_mode: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
