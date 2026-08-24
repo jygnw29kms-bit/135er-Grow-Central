@@ -1,4 +1,4 @@
-"""Central diagnostic mirror for 135er-Grow Central closed-test and production use."""
+"""Central diagnostic mirror for Grow Central closed-test and production use."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -18,20 +18,38 @@ from pydantic import BaseModel, Field
 from .config import settings
 
 router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
-
 _SAFE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
-_MAX_BUNDLE_BYTES = 12 * 1024 * 1024
+_MAX_BUNDLE_BYTES = 32 * 1024 * 1024
+_MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024
 
 
-def _auth(token: str | None, *, allow_closed_test: bool = False) -> None:
-    if allow_closed_test and settings.cloud_closed_test_mode:
-        return
+def _normal_token_ok(token: str | None) -> bool:
     expected = settings.cloud_api_token.strip()
-    if len(expected) < 32 or expected.startswith("CHANGE_ME"):
-        raise HTTPException(503, "cloud authentication is not configured")
     candidate = (token or "").strip()
-    if not candidate or not secrets.compare_digest(candidate, expected):
-        raise HTTPException(401, "invalid api token")
+    return len(expected) >= 32 and not expected.startswith("CHANGE_ME") and bool(candidate) and secrets.compare_digest(candidate, expected)
+
+
+def _allow_upload(token: str | None, site_id: str, device_id: str) -> None:
+    if _normal_token_ok(token):
+        return
+    if settings.cloud_closed_test_mode:
+        if site_id != settings.cloud_closed_test_site:
+            raise HTTPException(403, "closed-test site is not allowed")
+        if not device_id.startswith("raspberry-pi-"):
+            raise HTTPException(403, "closed-test device id is not allowed")
+        return
+    raise HTTPException(401, "invalid api token")
+
+
+def _require_read_token(token: str | None) -> None:
+    """Diagnostic reads are never anonymous, including in closed-test mode."""
+    candidate = (token or "").strip()
+    expected = settings.cloud_diagnostic_read_token.strip()
+    if len(expected) >= 32 and candidate and secrets.compare_digest(candidate, expected):
+        return
+    if _normal_token_ok(token):
+        return
+    raise HTTPException(401, "diagnostic read access requires an operator token")
 
 
 def _root() -> Path:
@@ -84,16 +102,28 @@ async def _latest_telemetry(site_id: str, device_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+async def _record_event(ts: str, site_id: str, device_id: str, event_type: str, summary: dict) -> None:
+    retention = max(100, int(settings.cloud_diagnostic_event_retention_rows))
+    async with aiosqlite.connect(settings.cloud_db) as db:
+        await db.execute(
+            "INSERT INTO diagnostic_events(ts,site_id,device_id,event_type,summary_json) VALUES(?,?,?,?,?)",
+            (ts, site_id, device_id, event_type, json.dumps(summary, separators=(",", ":"))),
+        )
+        await db.execute(
+            "DELETE FROM diagnostic_events WHERE id NOT IN (SELECT id FROM diagnostic_events ORDER BY id DESC LIMIT ?)",
+            (retention,),
+        )
+        await db.commit()
+
+
 async def _refresh_server_report(site_id: str, device_id: str) -> dict:
     directory = _device_dir(site_id, device_id)
     snapshot_path = directory / "latest-pi-diagnostic.json"
     bundle_path = directory / "latest-pi-diagnostic.tar.gz"
     bundle_meta_path = directory / "latest-pi-diagnostic.meta.json"
-
     snapshot = json.loads(snapshot_path.read_text("utf-8")) if snapshot_path.exists() else None
     bundle_meta = json.loads(bundle_meta_path.read_text("utf-8")) if bundle_meta_path.exists() else None
     telemetry = await _latest_telemetry(site_id, device_id)
-
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "server": {
@@ -107,35 +137,35 @@ async def _refresh_server_report(site_id: str, device_id: str) -> dict:
         "identity": {"site_id": site_id, "device_id": device_id},
         "pi_snapshot": snapshot,
         "latest_telemetry": telemetry,
-        "mirrored_bundle": {
-            "available": bundle_path.is_file(),
-            **(bundle_meta or {}),
-        },
+        "mirrored_bundle": {"available": bundle_path.is_file(), **(bundle_meta or {})},
     }
     _json_write(directory / "server-diagnostic.json", report)
     return report
 
 
 @router.post("/snapshot")
-async def receive_snapshot(payload: DiagnosticSnapshot, x_api_token: str | None = Header(default=None)):
-    """Receive the latest redacted Pi diagnostic state and regenerate the server report."""
-    _auth(x_api_token, allow_closed_test=True)
-    directory = _device_dir(payload.site_id, payload.device_id)
+async def receive_snapshot(
+    payload: DiagnosticSnapshot,
+    request: Request,
+    x_api_token: str | None = Header(default=None),
+):
+    _allow_upload(x_api_token, payload.site_id, payload.device_id)
     data = payload.model_dump(mode="json")
-    _json_write(directory / "latest-pi-diagnostic.json", data)
-
-    async with aiosqlite.connect(settings.cloud_db) as db:
-        await db.execute(
-            """INSERT INTO diagnostic_events(ts,site_id,device_id,event_type,summary_json)
-               VALUES(?,?,?,?,?)""",
-            (payload.ts.isoformat(), payload.site_id, payload.device_id, "snapshot", json.dumps({
-                "build": payload.build,
-                "version": payload.version,
-                "hostname": payload.hostname,
-                "bundle": payload.support_bundle,
-            }, separators=(",", ":"))),
-        )
-        await db.commit()
+    encoded = json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if len(encoded) > _MAX_SNAPSHOT_BYTES:
+        raise HTTPException(413, "diagnostic snapshot too large")
+    directory = _device_dir(payload.site_id, payload.device_id)
+    _atomic_write(directory / "latest-pi-diagnostic.json", encoded + b"\n")
+    await _record_event(
+        payload.ts.isoformat(), payload.site_id, payload.device_id, "snapshot",
+        {
+            "build": payload.build,
+            "version": payload.version,
+            "hostname": payload.hostname,
+            "bundle": payload.support_bundle,
+            "source": request.client.host if request.client else "unknown",
+        },
+    )
     await _refresh_server_report(payload.site_id, payload.device_id)
     return {"ok": True, "mirrored": True}
 
@@ -146,17 +176,19 @@ async def receive_bundle(
     site_id: str = ApiPath(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
     device_id: str = ApiPath(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_.-]+$"),
     x_api_token: str | None = Header(default=None),
+    x_content_sha256: str | None = Header(default=None),
 ):
-    """Mirror the newest redacted Pi support bundle. Uploads are capped and atomically replaced."""
-    _auth(x_api_token, allow_closed_test=True)
+    _allow_upload(x_api_token, site_id, device_id)
     body = await request.body()
     if not body or len(body) > _MAX_BUNDLE_BYTES:
         raise HTTPException(413, "diagnostic bundle is empty or too large")
     if body[:2] != b"\x1f\x8b":
         raise HTTPException(415, "expected gzip support bundle")
+    digest = hashlib.sha256(body).hexdigest()
+    if x_content_sha256 and not secrets.compare_digest(x_content_sha256.lower(), digest):
+        raise HTTPException(400, "diagnostic bundle checksum mismatch")
 
     directory = _device_dir(site_id, device_id)
-    digest = hashlib.sha256(body).hexdigest()
     bundle_path = directory / "latest-pi-diagnostic.tar.gz"
     _atomic_write(bundle_path, body)
     meta = {
@@ -164,16 +196,10 @@ async def receive_bundle(
         "size": len(body),
         "sha256": digest,
         "filename": bundle_path.name,
+        "source": request.client.host if request.client else "unknown",
     }
     _json_write(directory / "latest-pi-diagnostic.meta.json", meta)
-
-    async with aiosqlite.connect(settings.cloud_db) as db:
-        await db.execute(
-            """INSERT INTO diagnostic_events(ts,site_id,device_id,event_type,summary_json)
-               VALUES(?,?,?,?,?)""",
-            (meta["updated_at"], site_id, device_id, "bundle", json.dumps(meta, separators=(",", ":"))),
-        )
-        await db.commit()
+    await _record_event(meta["updated_at"], site_id, device_id, "bundle", meta)
     await _refresh_server_report(site_id, device_id)
     return {"ok": True, **meta}
 
@@ -184,6 +210,5 @@ async def diagnostic_report(
     device_id: str = ApiPath(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_.-]+$"),
     x_api_token: str | None = Header(default=None),
 ):
-    """Return the server-generated diagnostic report. Protected outside explicit closed-test mode."""
-    _auth(x_api_token, allow_closed_test=True)
+    _require_read_token(x_api_token)
     return await _refresh_server_report(site_id, device_id)
