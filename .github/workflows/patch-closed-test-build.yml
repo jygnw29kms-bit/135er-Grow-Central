@@ -1,0 +1,130 @@
+name: Patch closed-test image builder
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/patch-closed-test-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+
+      - name: Patch image workflow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/build-pi3-image.yml')
+          text = path.read_text(encoding='utf-8')
+
+          old_env = '''          GC_LOCAL_API_TOKEN=test
+          GC_CLOUD_TOKEN=test
+          GC_REMOTE_COMMANDS=false
+          GC_CLOUD_ENABLED=false
+          GC_SMARTHOME_ENABLED=true
+'''
+          new_env = '''          GC_LOCAL_API_TOKEN=test
+          GC_REMOTE_COMMANDS=false
+          GC_CLOUD_ENABLED=true
+          GC_CLOUD_TEST_MODE=true
+          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_TOKEN=
+          GC_SMARTHOME_ENABLED=true
+'''
+          if old_env in text:
+              text = text.replace(old_env, new_env, 1)
+          elif 'GC_CLOUD_TEST_MODE=true' not in text:
+              raise SystemExit('main closed-test env anchor not found')
+
+          old_install = '''          install -o root -g root -m 0755 \\
+            /opt/135er-grow-central/image-builder/firstboot/cloud-smoke-test.sh \\
+            /usr/local/sbin/grow-central-cloud-smoke-test
+
+          cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
+'''
+          new_install = '''          install -o root -g root -m 0755 \\
+            /opt/135er-grow-central/image-builder/firstboot/cloud-smoke-test.sh \\
+            /usr/local/sbin/grow-central-cloud-smoke-test
+
+          cat >/opt/135er-grow-central/local/cloud_link/.env <<'EOF'
+          GC_CLOUD_ENABLED=true
+          GC_CLOUD_TEST_MODE=true
+          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_TOKEN=
+          GC_SITE_ID=closed-test
+          GC_SYNC_SECONDS=30
+          GC_REMOTE_COMMANDS=false
+          GC_LOCAL_API=http://127.0.0.1:8080
+          GC_LOCAL_API_TOKEN=
+          EOF
+          chown root:growcentral /opt/135er-grow-central/local/cloud_link/.env
+          chmod 0640 /opt/135er-grow-central/local/cloud_link/.env
+          install -o root -g root -m 0644 \\
+            /opt/135er-grow-central/deploy/systemd/135er-grow-central-cloud-link.service \\
+            /etc/systemd/system/135er-grow-central-cloud-link.service
+
+          cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
+'''
+          if old_install in text:
+              text = text.replace(old_install, new_install, 1)
+          elif 'GC_SITE_ID=closed-test' not in text:
+              raise SystemExit('cloud-link install anchor not found')
+
+          old_enable = 'grow-central-support-bundle.path 135er-grow-central.service grow-central-http.socket grow-central-healthcheck.timer'
+          new_enable = 'grow-central-support-bundle.path 135er-grow-central.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer'
+          if old_enable in text:
+              text = text.replace(old_enable, new_enable, 1)
+          elif '135er-grow-central-cloud-link.service grow-central-http.socket' not in text:
+              raise SystemExit('systemctl enable anchor not found')
+
+          old_checks = '''          grep -qx 'GC_CLOUD_ENABLED=false' /opt/135er-grow-central/.env
+          grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/.env
+'''
+          new_checks = '''          grep -qx 'GC_CLOUD_ENABLED=true' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/.env
+          grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/.env
+          test "$(systemctl is-enabled 135er-grow-central-cloud-link.service)" = enabled
+          grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/local/cloud_link/.env
+          grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/local/cloud_link/.env
+          grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/local/cloud_link/.env
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
+'''
+          if old_checks in text:
+              text = text.replace(old_checks, new_checks, 1)
+          elif 'systemctl is-enabled 135er-grow-central-cloud-link.service' not in text:
+              raise SystemExit('closed-test verification anchor not found')
+
+          old_artifact = '          name: 135er-Grow-Central-RPi3Plus-Universal-Image\n'
+          artifact_expr = '$' + '{{ github.run_number }}'
+          new_artifact = f'          name: 135er-Grow-Central-RPi3Plus-Universal-Image-build-{artifact_expr}\n'
+          if old_artifact in text:
+              text = text.replace(old_artifact, new_artifact, 1)
+          elif '135er-Grow-Central-RPi3Plus-Universal-Image-build-' not in text:
+              raise SystemExit('artifact name anchor not found')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo 'Image workflow already patched.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/build-pi3-image.yml
+          git commit -m 'test(image): enable credential-free closed cloud test'
+          git push origin master
