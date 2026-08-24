@@ -17,10 +17,19 @@ from app.security import require_write_auth
 
 router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 
+# Keep this allowlist explicit: these services determine whether the Pi can boot,
+# display the GUI, provision networking, expose the local API and reach the cloud.
 UNITS = (
     "135er-grow-central.service",
+    "135er-grow-central-cloud-link.service",
+    "grow-central-display-kiosk.service",
+    "grow-central-setup-ap.service",
+    "grow-central-apply-setup.service",
     "grow-central-headless-firstboot.service",
     "grow-central-firstboot-firewall.service",
+    "grow-central-healthcheck.service",
+    "NetworkManager.service",
+    "avahi-daemon.service",
     "ssh.service",
     "bluetooth.service",
 )
@@ -59,7 +68,7 @@ async def _command(*args: str, timeout: float = 8.0) -> tuple[int, str]:
 
 
 @router.get("/snapshot", dependencies=[Depends(require_write_auth)])
-async def diagnostic_snapshot(lines: int = Query(default=80, ge=10, le=300)):
+async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
     services = {}
     for unit in UNITS:
         status_code, status = await _command("systemctl", "is-active", unit)
@@ -78,13 +87,34 @@ async def diagnostic_snapshot(lines: int = Query(default=80, ge=10, le=300)):
             "journal_exit_code": journal_code,
             "journal": journal,
         }
+
     _, listeners = await _command("ss", "--listening", "--tcp", "--numeric", "--processes")
+    _, addresses = await _command("ip", "-brief", "address")
+    _, routes = await _command("ip", "route")
+    _, nm_state = await _command("nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device")
+    _, rfkill_state = await _command("rfkill", "list")
+    _, uptime = await _command("uptime", "-p")
+
     result = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "host": socket.gethostname(),
         "kernel": platform.release(),
+        "platform": platform.platform(),
+        "uptime": uptime,
         "services": services,
-        "tcp_listeners": listeners,
+        "network": {
+            "addresses": addresses,
+            "routes": routes,
+            "network_manager": nm_state,
+            "tcp_listeners": listeners,
+        },
+        "radios": {"rfkill": rfkill_state},
+        "markers": {
+            "provisioned": (STATE_DIR / ".provisioned").exists(),
+            "headless_firstboot_ready": (STATE_DIR / ".headless-firstboot-ready").exists(),
+            "firewall_initialized": (STATE_DIR / ".firewall-initialized").exists(),
+            "firstboot_debug_complete": (STATE_DIR / ".firstboot-debug-complete").exists(),
+        },
     }
     append_audit("diagnostics.snapshot.read", lines=lines, units=list(UNITS))
     return result
