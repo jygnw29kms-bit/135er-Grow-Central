@@ -28,6 +28,7 @@ from .db import init_db
 BASE = Path(__file__).resolve().parents[1]
 WEB = BASE / "web"
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await init_db()
@@ -63,8 +64,10 @@ class CommandResultPayload(BaseModel):
     ts: datetime
 
 
-def check_token(x_api_token: str | None):
-    """Fail closed until a sufficiently strong cloud token is configured."""
+def check_token(x_api_token: str | None, *, allow_closed_test: bool = False):
+    """Authenticate normal operation; allow token-free data paths only in explicit closed-test mode."""
+    if allow_closed_test and settings.cloud_closed_test_mode:
+        return
     expected = settings.cloud_api_token.strip()
     if len(expected) < 32 or expected.startswith("CHANGE_ME"):
         raise HTTPException(503, "cloud authentication is not configured")
@@ -82,13 +85,19 @@ async def index():
 @app.get("/api/health")
 async def health():
     """DE: Öffentlicher Healthcheck. EN: Public health check."""
-    return {"ok": True, "service": "135er-Grow Central Cloud", "version": "0.7.1"}
+    return {
+        "ok": True,
+        "service": "135er-Grow Central Cloud",
+        "version": "0.7.1",
+        "closed_test_mode": settings.cloud_closed_test_mode,
+        "remote_commands": settings.cloud_allow_commands,
+    }
 
 
 @app.post("/api/v1/telemetry")
 async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(default=None)):
     """DE: Telemetrie vom Pi speichern. EN: Store telemetry received from a Pi."""
-    check_token(x_api_token)
+    check_token(x_api_token, allow_closed_test=True)
     extra_json = json.dumps(payload.extra, separators=(",", ":"))
     if len(extra_json.encode("utf-8")) > 16_384:
         raise HTTPException(413, "telemetry extra payload too large")
@@ -106,7 +115,7 @@ async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(
             ),
         )
         await db.commit()
-    return {"ok": True}
+    return {"ok": True, "closed_test_mode": settings.cloud_closed_test_mode}
 
 
 @app.get("/api/v1/sites/{site_id}/latest")
@@ -115,7 +124,7 @@ async def latest(
     x_api_token: str | None = Header(default=None),
 ):
     """DE: Letzten Standortwert liefern. EN: Return latest telemetry for a site."""
-    check_token(x_api_token)
+    check_token(x_api_token, allow_closed_test=True)
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -135,7 +144,7 @@ async def history(
     x_api_token: str | None = Header(default=None),
 ):
     """DE: Begrenzte Historie liefern. EN: Return bounded telemetry history."""
-    check_token(x_api_token)
+    check_token(x_api_token, allow_closed_test=True)
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
