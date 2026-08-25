@@ -9,9 +9,14 @@ from app.gui_shell import router as gui_shell_router
 from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
+from app.setup_portal import SetupPortalMiddleware
 
 install_camera_led()
 app.add_middleware(GuiAuthMiddleware)
+# Added after auth on purpose: Starlette makes this the outer layer, so an
+# unprovisioned device can answer captive-portal probes and setup requests
+# before normal GUI authentication exists.
+app.add_middleware(SetupPortalMiddleware)
 app.include_router(gui_auth_router)
 app.include_router(gui_shell_router)
 app.include_router(camera_router)
