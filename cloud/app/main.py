@@ -57,17 +57,27 @@ class CommandResultPayload(BaseModel):
     ts: datetime
 
 
+def _configured_token() -> str:
+    return settings.cloud_api_token.strip()
+
+
 def _normal_token_ok(token: str | None) -> bool:
-    expected = settings.cloud_api_token.strip()
+    expected = _configured_token()
     candidate = (token or "").strip()
-    return len(expected) >= 32 and not expected.startswith("CHANGE_ME") and bool(candidate) and secrets.compare_digest(candidate, expected)
+    return (
+        len(expected) >= 32
+        and not expected.startswith("CHANGE_ME")
+        and bool(candidate)
+        and secrets.compare_digest(candidate, expected)
+    )
 
 
 def check_token(x_api_token: str | None) -> None:
+    expected = _configured_token()
+    if len(expected) < 32 or expected.startswith("CHANGE_ME"):
+        raise HTTPException(503, "cloud authentication is not configured")
     if _normal_token_ok(x_api_token):
         return
-    if len(settings.cloud_api_token.strip()) < 32:
-        raise HTTPException(503, "cloud authentication is not configured")
     raise HTTPException(401, "invalid api token", headers={"WWW-Authenticate": "Bearer"})
 
 
@@ -114,7 +124,6 @@ async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(
                 payload.fan_speed_pct, 1 if payload.device_online else 0, extra_json,
             ),
         )
-        # Keep public test traffic bounded even if the endpoint is discovered.
         await db.execute(
             "DELETE FROM telemetry WHERE id NOT IN (SELECT id FROM telemetry ORDER BY id DESC LIMIT ?)",
             (retention,),
