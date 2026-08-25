@@ -8,6 +8,7 @@ from app.firstboot import router as firstboot_router
 from app.gui_shell import router as gui_shell_router
 from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
+from app.cloud_status import router as cloud_status_router
 
 install_camera_led()
 app.add_middleware(GuiAuthMiddleware)
@@ -17,5 +18,6 @@ app.include_router(camera_router)
 app.include_router(automation_router)
 app.include_router(firstboot_router)
 app.include_router(rooms_router)
+app.include_router(cloud_status_router)
 install_mdns_alias(app)
 install_rooms(app)
