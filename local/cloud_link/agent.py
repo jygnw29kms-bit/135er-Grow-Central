@@ -33,6 +33,10 @@ SUPPORT_BUNDLE = Path(os.getenv(
     "GC_SUPPORT_BUNDLE",
     "/var/lib/135er-grow-central/support/Grow-Central-Support-latest.tar.gz",
 ))
+CONTACT_ACK = Path(os.getenv(
+    "GC_CLOUD_CONTACT_STATE",
+    "/var/lib/135er-grow-central/cloud-link-contact.json",
+))
 BUILD_FILE = Path("/opt/135er-grow-central/BUILD")
 VERSION_FILE = Path("/opt/135er-grow-central/VERSION")
 BOOT_ID_FILE = Path("/proc/sys/kernel/random/boot_id")
@@ -44,6 +48,17 @@ def _read_text(path: Path, default: str = "") -> str:
         return path.read_text(encoding="utf-8").strip()
     except OSError:
         return default
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        os.chmod(temporary, 0o640)
+        os.replace(temporary, path)
+    except OSError as exc:
+        logger.warning("Could not persist cloud contact state: %s", type(exc).__name__)
 
 
 def device_id() -> str:
@@ -179,6 +194,37 @@ def diagnostic_payload(local: dict, full_diagnostics: dict) -> dict:
     }
 
 
+async def contact_handshake(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    local: dict,
+    reason: str,
+) -> dict:
+    """Push a diagnostic snapshot on first/re-established contact and retain server acknowledgement."""
+    full_diag = await full_local_diagnostics(client)
+    payload = diagnostic_payload(local, full_diag)
+    payload["reason"] = reason
+    response = await client.post(
+        f"{CLOUD_URL}/api/v1/diagnostics/contact",
+        json=payload,
+        headers=headers,
+        timeout=35,
+    )
+    response.raise_for_status()
+    acknowledgement = response.json()
+    _write_json(CONTACT_ACK, {
+        "received_at": datetime.now(timezone.utc).isoformat(),
+        "cloud_origin": CLOUD_URL,
+        "site_id": SITE,
+        "device_id": device_id(),
+        "reason": reason,
+        "server": acknowledgement,
+    })
+    await request_fresh_bundle(client)
+    logger.info("Cloud diagnostic handshake accepted reason=%s host=%s", reason, urlparse(CLOUD_URL).hostname)
+    return acknowledgement
+
+
 async def mirror_bundle_if_changed(
     client: httpx.AsyncClient,
     headers: dict[str, str],
@@ -194,7 +240,6 @@ async def mirror_bundle_if_changed(
     if signature == last_signature:
         return last_signature
 
-    # Avoid unbounded memory consumption if a future collector becomes too large.
     if stat.st_size > 32 * 1024 * 1024:
         logger.warning("Support bundle too large to mirror: %d bytes", stat.st_size)
         return last_signature
@@ -241,6 +286,8 @@ async def main():
     last_bundle_signature: tuple[int, int] | None = None
     next_diag = 0.0
     next_bundle_refresh = 0.0
+    connected = False
+    ever_connected = False
 
     async with httpx.AsyncClient() as client:
         while True:
@@ -251,6 +298,15 @@ async def main():
                     f"{CLOUD_URL}/api/v1/telemetry", json=telemetry, headers=headers, timeout=10
                 )
                 response.raise_for_status()
+
+                if not connected:
+                    reason = "reconnect" if ever_connected else "startup"
+                    await contact_handshake(client, headers, local, reason)
+                    connected = True
+                    ever_connected = True
+                    last_bundle_signature = None
+                    next_diag = now + DIAG_SYNC
+                    next_bundle_refresh = now + BUNDLE_REFRESH
 
                 if now >= next_bundle_refresh:
                     await request_fresh_bundle(client)
@@ -287,7 +343,11 @@ async def main():
                                 timeout=10,
                             )
             except Exception as exc:
-                logger.warning("cloud sync failed: %s", type(exc).__name__)
+                if connected:
+                    logger.warning("Cloud contact lost: %s", type(exc).__name__)
+                else:
+                    logger.warning("cloud sync failed: %s", type(exc).__name__)
+                connected = False
 
             await asyncio.sleep(SYNC)
 
