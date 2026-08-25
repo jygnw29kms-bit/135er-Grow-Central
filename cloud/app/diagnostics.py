@@ -91,6 +91,10 @@ class DiagnosticSnapshot(BaseModel):
     cloud_link: dict = Field(default_factory=dict)
 
 
+class ContactPayload(DiagnosticSnapshot):
+    reason: str = Field(default="connect", max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")
+
+
 async def _latest_telemetry(site_id: str, device_id: str) -> dict | None:
     async with aiosqlite.connect(settings.cloud_db) as db:
         db.row_factory = aiosqlite.Row
@@ -119,9 +123,11 @@ async def _record_event(ts: str, site_id: str, device_id: str, event_type: str, 
 async def _refresh_server_report(site_id: str, device_id: str) -> dict:
     directory = _device_dir(site_id, device_id)
     snapshot_path = directory / "latest-pi-diagnostic.json"
+    contact_path = directory / "latest-contact.json"
     bundle_path = directory / "latest-pi-diagnostic.tar.gz"
     bundle_meta_path = directory / "latest-pi-diagnostic.meta.json"
     snapshot = json.loads(snapshot_path.read_text("utf-8")) if snapshot_path.exists() else None
+    contact = json.loads(contact_path.read_text("utf-8")) if contact_path.exists() else None
     bundle_meta = json.loads(bundle_meta_path.read_text("utf-8")) if bundle_meta_path.exists() else None
     telemetry = await _latest_telemetry(site_id, device_id)
     report = {
@@ -133,14 +139,52 @@ async def _refresh_server_report(site_id: str, device_id: str) -> dict:
             "closed_test_mode": settings.cloud_closed_test_mode,
             "remote_commands_enabled": settings.cloud_allow_commands,
             "database": str(Path(settings.cloud_db).name),
+            "diagnostic_root": str(_root()),
+            "max_bundle_bytes": _MAX_BUNDLE_BYTES,
         },
         "identity": {"site_id": site_id, "device_id": device_id},
+        "last_contact": contact,
         "pi_snapshot": snapshot,
         "latest_telemetry": telemetry,
         "mirrored_bundle": {"available": bundle_path.is_file(), **(bundle_meta or {})},
     }
     _json_write(directory / "server-diagnostic.json", report)
     return report
+
+
+@router.post("/contact")
+async def receive_contact(
+    payload: ContactPayload,
+    request: Request,
+    x_api_token: str | None = Header(default=None),
+):
+    """Bidirectional online handshake: store the Pi state and return server state."""
+    _allow_upload(x_api_token, payload.site_id, payload.device_id)
+    directory = _device_dir(payload.site_id, payload.device_id)
+    data = payload.model_dump(mode="json")
+    data["source"] = request.client.host if request.client else "unknown"
+    encoded = json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if len(encoded) > _MAX_SNAPSHOT_BYTES:
+        raise HTTPException(413, "contact diagnostic too large")
+    _atomic_write(directory / "latest-contact.json", encoded + b"\n")
+    await _record_event(
+        payload.ts.isoformat(), payload.site_id, payload.device_id, "contact",
+        {
+            "reason": payload.reason,
+            "build": payload.build,
+            "version": payload.version,
+            "hostname": payload.hostname,
+            "source": data["source"],
+        },
+    )
+    report = await _refresh_server_report(payload.site_id, payload.device_id)
+    return {
+        "ok": True,
+        "contact_accepted": True,
+        "server_time": datetime.now(timezone.utc).isoformat(),
+        "server": report["server"],
+        "mirrored_bundle": report["mirrored_bundle"],
+    }
 
 
 @router.post("/snapshot")
