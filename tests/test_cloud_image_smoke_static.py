@@ -24,37 +24,31 @@ def test_image_workflow_installs_and_runs_cloud_smoke():
     ).read_text()
 
 
-def test_test_image_remote_maintenance_enrolls_at_first_boot_and_is_loopback_only():
-    controller = (ROOT / "image-builder/firstboot/remote-maintenance.sh").read_text()
-    unit = (
-        ROOT / "image-builder/firstboot/grow-central-remote-maintenance.service"
-    ).read_text()
+def test_closed_test_image_has_no_remote_maintenance_activation_path():
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
-    bastion = (ROOT / "scripts/setup-growcentral-maintenance-bastion.sh").read_text()
-    assert "ssh-keygen" in controller
-    assert "ssh-keyscan" in controller
-    assert "SHA256:" in controller
-    assert "StrictHostKeyChecking=yes" in unit
-    assert "BatchMode=yes" in unit
-    assert "-R 127.0.0.1:${GC_REMOTE_MAINTENANCE_PORT}:127.0.0.1:22" in unit
-    assert "systemctl enable --now" in controller
-    assert "/api/v2/maintenance/enroll" in controller
-    assert "maintenance_activation_code" in (ROOT / "app/firstboot.py").read_text()
-    assert '"/usr/local/sbin/grow-central-remote-maintenance", "enroll", "-"' in (
-        ROOT / "image-builder/firstboot/apply_setup.py"
-    ).read_text()
-    assert "input_text=activation_code" in (
-        ROOT / "image-builder/firstboot/apply_setup.py"
-    ).read_text()
-    assert "--data-binary @-" in controller
-    assert '--data "$request"' not in controller
-    assert "systemctl disable --now" in controller
-    assert "systemctl enable NetworkManager.service" in workflow
+    firstboot = (ROOT / "app/firstboot.py").read_text()
+    apply_setup = (ROOT / "image-builder/firstboot/apply_setup.py").read_text()
+
+    assert "maintenance_activation_code" not in firstboot
+    assert "maintenance_activation_code" not in apply_setup
+    assert "grow-central-remote-maintenance.service" not in workflow
     assert "systemctl enable grow-central-remote-maintenance" not in workflow
-    assert "AllowTcpForwarding remote" in bastion
-    assert "GatewayPorts no" in bastion
-    assert 'permitlisten="127.0.0.1:' in bastion
-    assert "PasswordAuthentication no" in bastion
+    assert "GC_REMOTE_COMMANDS=false" in workflow
+
+
+def test_remote_maintenance_assets_remain_dormant_if_retained_for_future_work():
+    controller_path = ROOT / "image-builder/firstboot/remote-maintenance.sh"
+    unit_path = ROOT / "image-builder/firstboot/grow-central-remote-maintenance.service"
+    if controller_path.exists() and unit_path.exists():
+        controller = controller_path.read_text()
+        unit = unit_path.read_text()
+        assert "systemctl enable --now" in controller
+        assert "StrictHostKeyChecking=yes" in unit
+        assert "BatchMode=yes" in unit
+        # Presence of future-use assets is acceptable only while the image builder
+        # does not install/enable them and firstboot exposes no activation field.
+        workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
+        assert "grow-central-remote-maintenance.service" not in workflow
 
 
 def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
