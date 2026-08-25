@@ -8,6 +8,9 @@ on:
       - '.github/workflows/build-pi3-image.yml'
       - 'app/**'
       - 'shared/**'
+      - 'local/**'
+      - 'cloud/**'
+      - 'deploy/**'
       - 'web/**'
       - 'requirements.txt'
       - 'image-builder/brand/**'
@@ -88,10 +91,8 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata xserver-xorg-core xserver-xorg-input-libinput xinit openbox chromium unclutter x11-xserver-utils
 
-          # Netplan rejects world-readable YAML because it can contain network
-          # secrets. Raspberry Pi OS ships this NetworkManager file too openly.
           find /etc/netplan /usr/lib/netplan -type f -name '*.yaml' -exec chmod 0600 {} + 2>/dev/null || true
 
           if ! id GrowCentral >/dev/null 2>&1; then
@@ -176,9 +177,13 @@ jobs:
           GC_TEST_PASSWORD=test
           GC_API_TOKEN=test
           GC_LOCAL_API_TOKEN=test
-          GC_CLOUD_TOKEN=test
           GC_REMOTE_COMMANDS=false
-          GC_CLOUD_ENABLED=false
+          GC_CLOUD_ENABLED=true
+          GC_CLOUD_TEST_MODE=true
+          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_TOKEN=
+          GC_DIAGNOSTIC_SYNC_SECONDS=120
+          GC_DIAGNOSTIC_BUNDLE_SECONDS=300
           GC_SMARTHOME_ENABLED=true
           GC_CAMERA_ENABLED=true
           GC_CAMERA_DEVICE=
@@ -194,6 +199,25 @@ jobs:
           install -o root -g root -m 0755 \
             /opt/135er-grow-central/image-builder/firstboot/cloud-smoke-test.sh \
             /usr/local/sbin/grow-central-cloud-smoke-test
+
+          cat >/opt/135er-grow-central/local/cloud_link/.env <<'EOF'
+          GC_CLOUD_ENABLED=true
+          GC_CLOUD_TEST_MODE=true
+          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_TOKEN=
+          GC_SITE_ID=closed-test
+          GC_SYNC_SECONDS=30
+          GC_DIAGNOSTIC_SYNC_SECONDS=120
+          GC_DIAGNOSTIC_BUNDLE_SECONDS=300
+          GC_REMOTE_COMMANDS=false
+          GC_LOCAL_API=http://127.0.0.1:8080
+          GC_LOCAL_API_TOKEN=test
+          EOF
+          chown root:growcentral /opt/135er-grow-central/local/cloud_link/.env
+          chmod 0640 /opt/135er-grow-central/local/cloud_link/.env
+          install -o root -g root -m 0644 \
+            /opt/135er-grow-central/deploy/systemd/135er-grow-central-cloud-link.service \
+            /etc/systemd/system/135er-grow-central-cloud-link.service
 
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
@@ -485,7 +509,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-http.socket grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
           systemctl enable unattended-upgrades.service || true
 
           id GrowCentral
@@ -505,6 +529,7 @@ jobs:
           /usr/sbin/sshd -t
           rm -f /etc/ssh/ssh_host_*
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
+          test "$(systemctl is-enabled 135er-grow-central-cloud-link.service)" = enabled
           test "$(systemctl is-enabled grow-central-http.socket)" = enabled
           grep -q '^ExecStart=.*/uvicorn app.entrypoint:app ' /etc/systemd/system/135er-grow-central.service
           grep -q '^ListenStream=80$' /etc/systemd/system/grow-central-http.socket
@@ -513,11 +538,23 @@ jobs:
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
           /bin/bash -n /usr/local/sbin/grow-central-cloud-smoke-test
-          grep -qx 'GC_CLOUD_ENABLED=false' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_ENABLED=true' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/.env
           grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/.env
+          grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/local/cloud_link/.env
+          grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/local/cloud_link/.env
+          grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/local/cloud_link/.env
+          command -v startx
+          command -v chromium
+          command -v openbox
+          test -x /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/entrypoint.py
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/diagnostics.py
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
           ! grep -Fq 'maintenance_activation_code' /opt/135er-grow-central/app/firstboot.py
           ! grep -Fq 'grow-central-remote-maintenance' /opt/135er-grow-central/image-builder/firstboot/apply_setup.py
-          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
+          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           /bin/bash -n /usr/local/sbin/grow-central-bluetooth-init.sh
@@ -700,7 +737,7 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: 135er-Grow-Central-RPi3Plus-Universal-Image
+          name: 135er-Grow-Central-RPi3Plus-Universal-Image-build-${{ github.run_number }}
           path: |
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz.sha256
