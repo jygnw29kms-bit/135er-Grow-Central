@@ -7,6 +7,9 @@ ADDRESS="10.42.0.1/24"
 DHCP_RANGE="10.42.0.10,10.42.0.250"
 STATE_DIR="/var/lib/135er-grow-central"
 CERT_DIR="/etc/135er-grow-central"
+DNSMASQ_SHARED_DIR="/etc/NetworkManager/dnsmasq-shared.d"
+CAPTIVE_IP="10.42.0.1"
+CAPTIVE_URL="http://10.42.0.1/setup"
 REGDOMAIN="DE"
 
 log() {
@@ -41,6 +44,17 @@ done
 
 install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
+install -d -o root -g root -m 0755 "$DNSMASQ_SHARED_DIR"
+
+# NetworkManager's IPv4 shared mode uses dnsmasq and explicitly supports
+# additional snippets from dnsmasq-shared.d. During first boot every DNS name
+# therefore resolves to the Pi, exactly like a hotel/guest Wi-Fi portal. DHCP
+# option 114 additionally advertises the captive portal URL to modern clients.
+cat >"${DNSMASQ_SHARED_DIR}/90-grow-central-captive.conf" <<EOF
+address=/#/${CAPTIVE_IP}
+dhcp-option=114,${CAPTIVE_URL}
+EOF
+chmod 0644 "${DNSMASQ_SHARED_DIR}/90-grow-central-captive.conf"
 
 # Display/boot tuning is deliberately best-effort and isolated from AP startup.
 # A display failure must never regress the Build-85 provisioning network path.
@@ -221,7 +235,7 @@ fi
 for _ in $(seq 1 35); do
   if ip -4 address show dev "$WLAN" | grep -Fq "$ADDRESS" \
     && ss -H -lun | awk '$4 ~ /:67$/ { found=1 } END { exit !found }'; then
-    log "READY: model=${MODEL:-unknown} profile=${PLATFORM} interface=${WLAN} SSID=${SSID} ADDRESS=${ADDRESS} DHCP=${DHCP_RANGE}"
+    log "READY: model=${MODEL:-unknown} profile=${PLATFORM} interface=${WLAN} SSID=${SSID} ADDRESS=${ADDRESS} DHCP=${DHCP_RANGE} captive=${CAPTIVE_URL}"
     exit 0
   fi
   sleep 1
