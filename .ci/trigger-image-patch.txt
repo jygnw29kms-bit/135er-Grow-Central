@@ -1,3 +1,3 @@
-Trigger hardened closed-test image workflow after autonomous preflight review.
-UTC: 2026-08-24
-Goals: baked kiosk, credential-free Pi/cloud test, diagnostics mirror, numbered artifact.
+Trigger hardened closed-test image workflow after CI/test cleanup.
+UTC: 2026-08-25
+Goals: baked kiosk, credential-free Pi/cloud test, diagnostics mirror, numbered artifact, no remote maintenance activation.
