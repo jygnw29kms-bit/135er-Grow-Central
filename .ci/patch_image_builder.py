@@ -106,6 +106,112 @@ new_checks = '''          grep -qx 'GC_CLOUD_ENABLED=true' /opt/135er-grow-centr
 if old_checks in text:
     text = text.replace(old_checks, new_checks, 1)
 
+# Harden the real boot/reboot test against systemd-machined registration races.
+# The appliance itself is still required to boot twice and expose both HTTP paths.
+old_boot = '''          check_boot() {
+            local phase="$1"
+            sudo systemd-nspawn --quiet --boot --register=yes --machine="$MACHINE" --directory="$ROOT" --private-network &
+            local nspawn_pid=$!
+            local ready=0
+            for attempt in $(seq 1 90); do
+              if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /bin/bash -c \\
+                "/usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health | /usr/bin/jq -e '.ok == true and .version == \\\"0.7.5\\\"' >/dev/null && /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1/api/health | /usr/bin/jq -e '.ok == true and .version == \\\"0.7.5\\\"' >/dev/null" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl status 135er-grow-central.service --no-pager -l || true
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/journalctl -u 135er-grow-central.service -b --no-pager -n 200 || true
+              echo "Image ${phase} boot did not expose healthy application and simple-login endpoints on ports 8080 and 80" >&2
+              exit 1
+            fi
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active 135er-grow-central.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-http.socket
+            sudo machinectl poweroff "$MACHINE"
+            wait "$nspawn_pid" || true
+          }
+'''
+new_boot = '''          sudo systemctl start systemd-machined.service
+          sudo systemctl is-active --quiet systemd-machined.service
+
+          wait_machine_gone() {
+            for attempt in $(seq 1 30); do
+              if ! sudo machinectl show "$MACHINE" >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+            done
+            sudo machinectl status "$MACHINE" --no-pager || true
+            return 1
+          }
+
+          check_boot() {
+            local phase="$1"
+            local nspawn_log="/tmp/${MACHINE}-${phase}.log"
+            local registered=0
+            local ready=0
+
+            sudo machinectl terminate "$MACHINE" >/dev/null 2>&1 || true
+            wait_machine_gone || true
+            : >"$nspawn_log"
+            sudo systemd-nspawn --boot --register=yes --machine="$MACHINE" --directory="$ROOT" --private-network >"$nspawn_log" 2>&1 &
+            local nspawn_pid=$!
+
+            for attempt in $(seq 1 45); do
+              if ! kill -0 "$nspawn_pid" 2>/dev/null; then
+                echo "systemd-nspawn exited before ${phase} registered" >&2
+                cat "$nspawn_log" >&2 || true
+                wait "$nspawn_pid" || true
+                return 1
+              fi
+              state="$(sudo machinectl show "$MACHINE" -p State --value 2>/dev/null || true)"
+              if [ "$state" = running ]; then
+                registered=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$registered" -ne 1 ]; then
+              echo "Image ${phase} boot never registered as a running nspawn machine" >&2
+              cat "$nspawn_log" >&2 || true
+              sudo machinectl list --no-pager || true
+              sudo machinectl terminate "$MACHINE" >/dev/null 2>&1 || true
+              wait "$nspawn_pid" || true
+              return 1
+            fi
+
+            for attempt in $(seq 1 120); do
+              if sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /bin/bash -c \\
+                "/usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:8080/api/health | /usr/bin/jq -e '.ok == true and .version == \\\"0.7.5\\\"' >/dev/null && /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1/api/health | /usr/bin/jq -e '.ok == true and .version == \\\"0.7.5\\\"' >/dev/null" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl status 135er-grow-central.service grow-central-http.socket grow-central-setup-ap.service grow-central-firstboot-firewall.service --no-pager -l || true
+              sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/journalctl -b --no-pager -n 300 || true
+              cat "$nspawn_log" >&2 || true
+              echo "Image ${phase} boot did not expose healthy application endpoints on ports 8080 and 80" >&2
+              sudo machinectl terminate "$MACHINE" >/dev/null 2>&1 || true
+              wait "$nspawn_pid" || true
+              return 1
+            fi
+
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active 135er-grow-central.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-http.socket
+            sudo machinectl poweroff "$MACHINE"
+            wait "$nspawn_pid" || true
+            wait_machine_gone
+          }
+'''
+if old_boot in text:
+    text = text.replace(old_boot, new_boot, 1)
+elif 'wait_machine_gone()' not in text:
+    raise SystemExit('boot smoke-test anchor missing')
+
 # Closed-test image must never install or enable remote-maintenance activation.
 for forbidden in (
     'systemctl enable grow-central-remote-maintenance',
@@ -122,6 +228,9 @@ required = (
     "xserver-xorg-core",
     "chromium",
     "135er-Grow-Central-RPi3Plus-Universal-Image-build-${{ github.run_number }}",
+    "wait_machine_gone()",
+    "systemctl start systemd-machined.service",
+    "machinectl show \"$MACHINE\" -p State --value",
 )
 missing = [item for item in required if item not in text]
 if missing:
