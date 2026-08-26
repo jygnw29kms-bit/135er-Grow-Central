@@ -1,3 +1,4 @@
 Trigger hardened closed-test image workflow after CI/test cleanup.
-UTC: 2026-08-26
+UTC: 2026-08-26T18:08:00+02:00
 Goals: fix step 14 userspace boot/reboot smoke test, wait for systemd-machined registration, clean stale nspawn state between boots, retain real health checks on ports 8080 and 80, improve failure diagnostics.
+Retrigger after patch helper path filters were fixed.
