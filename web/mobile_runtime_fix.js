@@ -3,19 +3,38 @@
   const topActions = document.querySelector('.top-actions');
   const systemGrid = document.querySelector('#systemPanel .system-grid');
 
+  function syncViewportHeight() {
+    const viewport = window.visualViewport;
+    const height = Math.max(1, Math.round(viewport ? viewport.height : window.innerHeight));
+    document.documentElement.style.setProperty('--gc-viewport-height', `${height}px`);
+  }
+
   function injectLegacyFixes() {
     try {
       const doc = frame?.contentDocument;
-      if (!doc || doc.getElementById('gc-mobile-runtime-fix')) return;
-      const link = doc.createElement('link');
-      link.id = 'gc-mobile-runtime-fix';
-      link.rel = 'stylesheet';
-      link.href = '/static/mobile_runtime_fix.css?v=1';
-      doc.head.appendChild(link);
+      if (!doc) return;
+      if (!doc.getElementById('gc-mobile-runtime-fix')) {
+        const link = doc.createElement('link');
+        link.id = 'gc-mobile-runtime-fix';
+        link.rel = 'stylesheet';
+        link.href = '/static/mobile_runtime_fix.css?v=3';
+        doc.head.appendChild(link);
+      }
       doc.documentElement.style.webkitTextSizeAdjust = '100%';
       doc.documentElement.style.textSizeAdjust = '100%';
+      doc.documentElement.style.maxWidth = '100%';
+      if (doc.body) {
+        doc.body.style.maxWidth = '100%';
+        doc.body.style.overflowX = 'hidden';
+      }
     } catch (_) {}
   }
+
+  syncViewportHeight();
+  window.addEventListener('resize', syncViewportHeight, {passive:true});
+  window.addEventListener('orientationchange', syncViewportHeight, {passive:true});
+  window.visualViewport?.addEventListener('resize', syncViewportHeight, {passive:true});
+  window.visualViewport?.addEventListener('scroll', syncViewportHeight, {passive:true});
 
   if (frame) {
     frame.addEventListener('load', injectLegacyFixes);
@@ -71,5 +90,5 @@
 
   refreshCloud();
   setInterval(refreshCloud, 30000);
-  window.addEventListener('gc:view', refreshCloud);
+  window.addEventListener('gc:view', () => { syncViewportHeight(); injectLegacyFixes(); refreshCloud(); });
 })();
