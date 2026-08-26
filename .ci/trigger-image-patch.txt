@@ -1,5 +1,6 @@
 Trigger hardened closed-test image workflow after CI/test cleanup.
-UTC: 2026-08-26T18:21:00+02:00
+UTC: 2026-08-26T19:40:00+02:00
 Goals: fix step 14 userspace boot/reboot smoke test, wait for systemd-machined registration, clean stale nspawn state between boots, retain real health checks on ports 8080 and 80, improve failure diagnostics.
 Retrigger after patch helper path filters were fixed.
-Manual retrigger requested to apply the hardened smoke-test patch to build-pi3-image.yml and start a fresh image build.
+Apply the hardened smoke-test patch to build-pi3-image.yml and start a fresh image build from current master.
+Acceptance: reliable boot/reboot, kiosk, AP/first boot, responsive GUI within viewport, cloud and diagnostics functional.
