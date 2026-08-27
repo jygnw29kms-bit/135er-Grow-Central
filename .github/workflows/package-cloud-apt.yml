@@ -14,6 +14,7 @@ on:
       - 'scripts/setup-135ercloud-apt-repo-v2.sh'
       - 'scripts/add-135ercloud-apt-repo.sh'
       - 'scripts/configure-cloud-admin-mode.sh'
+      - 'scripts/configure-v7-routing.sh'
       - 'tests/test_cloud_admin_static.py'
       - 'tests/test_cloud_v7_upgrade_static.py'
       - 'docs/CLOUD_SERVER_ADMIN.md'
@@ -43,6 +44,7 @@ jobs:
           bash -n scripts/setup-135ercloud-apt-repo-v2.sh
           bash -n scripts/add-135ercloud-apt-repo.sh
           bash -n scripts/configure-cloud-admin-mode.sh
+          bash -n scripts/configure-v7-routing.sh
 
       - name: Validate Cloud admin Python
         shell: bash
@@ -51,14 +53,18 @@ jobs:
           python -m py_compile cloud/app/config.py cloud/app/db.py cloud/app/admin.py cloud/app/main.py cloud/v7/admin_app.py
           python -m pytest -q tests/test_cloud_admin_static.py tests/test_cloud_v7_upgrade_static.py
 
-      - name: Validate V7 package metadata contract
+      - name: Validate V7 package and entitlement contract
         shell: bash
         run: |
           set -euo pipefail
           grep -q 'PKG_VERSION="${PKG_VERSION:-7.0.0}"' scripts/setup-135ercloud-apt-repo-v2.sh
           grep -q 'install-135ercloud-v7.sh --package-mode' scripts/setup-135ercloud-apt-repo-v2.sh
+          grep -q 'configure-v7-routing.sh' scripts/setup-135ercloud-apt-repo-v2.sh
           grep -q 'backup_current' scripts/install-135ercloud-v7.sh
           grep -q 'CLOUD_ADMIN_MODE' scripts/configure-cloud-admin-mode.sh
+          grep -q '/api/v7/device/entitlements/challenge' cloud/v7/admin_app.py
+          grep -q 'Ed25519PublicKey' cloud/v7/admin_app.py
+          grep -q 'location ^~ /api/v7/device/' scripts/configure-v7-routing.sh
 
       - name: Build release bundle
         shell: bash
@@ -70,6 +76,7 @@ jobs:
           cp scripts/setup-135ercloud-apt-repo-v2.sh dist/cloud-apt-v7/setup-135ercloud-apt-repo.sh
           cp scripts/add-135ercloud-apt-repo.sh dist/cloud-apt-v7/add-135ercloud-apt-repo.sh
           cp scripts/configure-cloud-admin-mode.sh dist/cloud-apt-v7/configure-cloud-admin-mode.sh
+          cp scripts/configure-v7-routing.sh dist/cloud-apt-v7/configure-v7-routing.sh
           cp cloud/v7/admin_app.py dist/cloud-apt-v7/cloud-v7/admin_app.py
           cp RELEASE_STATE.md dist/cloud-apt-v7/RELEASE_STATE.md
           cat > dist/cloud-apt-v7/release-state.txt <<'EOF'
@@ -79,10 +86,11 @@ jobs:
           upgrade_from=V6
           admin_modes=standalone,plesk,both
           device_entitlements=BASIC,PLUS,PRO,INTERNAL
+          entitlement_identity=Ed25519-GCLOUD2
           apt=https://repo.dezender.de/apt
           status=CANDIDATE
           EOF
-          (cd dist/cloud-apt-v7 && sha256sum 135ercloud-server-install.sh bootstrap-standalone-cloud-core.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh cloud-v7/admin_app.py RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
+          (cd dist/cloud-apt-v7 && sha256sum 135ercloud-server-install.sh bootstrap-standalone-cloud-core.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh configure-v7-routing.sh cloud-v7/admin_app.py RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
 
       - name: Upload Cloud/APT V7 bundle
         uses: actions/upload-artifact@v4
