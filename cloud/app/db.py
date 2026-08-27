@@ -48,6 +48,39 @@ async def init_db():
             );
             CREATE INDEX IF NOT EXISTS idx_diagnostic_events_site_device_id
                 ON diagnostic_events(site_id, device_id, id DESC);
+
+            CREATE TABLE IF NOT EXISTS managed_devices (
+                device_id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL DEFAULT '',
+                owner_name TEXT NOT NULL DEFAULT '',
+                group_name TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                plan TEXT NOT NULL DEFAULT 'BASIC',
+                valid_until TEXT,
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_seen_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_managed_devices_status
+                ON managed_devices(status);
+            CREATE INDEX IF NOT EXISTS idx_managed_devices_group
+                ON managed_devices(group_name);
+
+            CREATE TABLE IF NOT EXISTS device_features (
+                device_id TEXT NOT NULL,
+                feature TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(device_id, feature),
+                FOREIGN KEY(device_id) REFERENCES managed_devices(device_id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cloud_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             """
         )
+        await db.execute("PRAGMA foreign_keys=ON")
         await db.commit()

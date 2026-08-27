@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>135er Grow Central Cloud – Administration</title>
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">135er GROW CENTRAL CLOUD</div>
+      <h1>Server Administration</h1>
+    </div>
+    <div class="auth-box">
+      <input id="adminToken" type="password" placeholder="Admin-Token">
+      <button id="connectBtn">Verbinden</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="notice" class="notice">Admin-Token eingeben, um die Cloud-Verwaltung zu laden.</section>
+
+    <section class="stats">
+      <article><span>Geräte gesamt</span><strong id="total">–</strong></article>
+      <article><span>Aktiv</span><strong id="active">–</strong></article>
+      <article><span>Wartend</span><strong id="pending">–</strong></article>
+      <article><span>Gesperrt</span><strong id="blocked">–</strong></article>
+      <article><span>Max. Geräte</span><strong id="maxDevices">–</strong></article>
+      <article><span>Admin-Modus</span><strong id="adminMode">–</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Pis & Freischaltungen</h2><p>Neue Geräte erscheinen automatisch als „wartend“.</p></div>
+        <div class="search"><input id="search" placeholder="Gerät, Kunde oder Gruppe suchen"><button id="searchBtn">Suchen</button></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Geräte-ID</th><th>Name</th><th>Kunde</th><th>Gruppe</th><th>Status</th><th>Paket</th><th>Zuletzt gesehen</th><th></th></tr></thead>
+          <tbody id="deviceRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel editor">
+      <div><h2>Gerät bearbeiten</h2><p id="editorHint">Gerät aus der Liste wählen oder eine Geräte-ID eintragen.</p></div>
+      <div class="grid">
+        <label>Geräte-ID<input id="deviceId" maxlength="128"></label>
+        <label>Anzeigename<input id="displayName" maxlength="100"></label>
+        <label>Kunde/Besitzer<input id="ownerName" maxlength="120"></label>
+        <label>Gruppe<input id="groupName" maxlength="80"></label>
+        <label>Status<select id="status"><option value="pending">wartend</option><option value="active">aktiv</option><option value="blocked">gesperrt</option><option value="expired">abgelaufen</option></select></label>
+        <label>Paket<select id="plan"><option>BASIC</option><option>PLUS</option><option>PRO</option><option>INTERNAL</option></select></label>
+        <label>Gültig bis<input id="validUntil" type="datetime-local"></label>
+      </div>
+      <h3>Feature-Freischaltungen</h3>
+      <div id="features" class="features"></div>
+      <label class="notes">Interne Notizen<textarea id="notes" rows="4" maxlength="2000"></textarea></label>
+      <div class="actions"><button id="newBtn" class="secondary">Neu/leeren</button><button id="saveBtn">Speichern</button><button id="deleteBtn" class="danger">Löschen</button></div>
+    </section>
+  </main>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

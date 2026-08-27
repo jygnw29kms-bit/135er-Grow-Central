@@ -13,12 +13,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .admin import router as admin_router
 from .config import settings
 from .db import init_db
 from .diagnostics import router as diagnostics_router
 
 BASE = Path(__file__).resolve().parents[1]
 WEB = BASE / "web"
+VERSION = "0.8.0"
 
 
 @asynccontextmanager
@@ -27,9 +29,10 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="135er-Grow Central Cloud", version="0.7.1", lifespan=lifespan)
+app = FastAPI(title="135er-Grow Central Cloud", version=VERSION, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 app.include_router(diagnostics_router)
+app.include_router(admin_router)
 
 
 class TelemetryPayload(BaseModel):
@@ -90,9 +93,28 @@ def allow_closed_test_data(x_api_token: str | None, site_id: str, device_id: str
     raise HTTPException(403, "credential-free access is limited to the configured closed-test site")
 
 
+async def _touch_managed_device(device_id: str) -> None:
+    """Register unknown devices as pending and update their last-seen timestamp."""
+    now = datetime.now(timezone.utc).isoformat()
+    async with aiosqlite.connect(settings.cloud_db) as db:
+        await db.execute(
+            """INSERT INTO managed_devices
+               (device_id,display_name,status,plan,created_at,updated_at,last_seen_at)
+               VALUES(?,?, 'pending','BASIC',?,?,?)
+               ON CONFLICT(device_id) DO UPDATE SET last_seen_at=excluded.last_seen_at""",
+            (device_id, device_id, now, now, now),
+        )
+        await db.commit()
+
+
 @app.get("/")
 async def index():
     return FileResponse(WEB / "index.html")
+
+
+@app.get("/admin")
+async def admin_console():
+    return FileResponse(WEB / "admin.html")
 
 
 @app.get("/api/health")
@@ -100,15 +122,17 @@ async def health():
     return {
         "ok": True,
         "service": "135er-Grow Central Cloud",
-        "version": "0.7.1",
+        "version": VERSION,
         "closed_test_mode": settings.cloud_closed_test_mode,
         "remote_commands": settings.cloud_allow_commands,
+        "admin_mode": settings.cloud_admin_mode,
     }
 
 
 @app.post("/api/v1/telemetry")
 async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(default=None)):
     allow_closed_test_data(x_api_token, payload.site_id, payload.device_id)
+    await _touch_managed_device(payload.device_id)
     extra_json = json.dumps(payload.extra, separators=(",", ":"))
     if len(extra_json.encode("utf-8")) > 16_384:
         raise HTTPException(413, "telemetry extra payload too large")
@@ -130,6 +154,45 @@ async def telemetry(payload: TelemetryPayload, x_api_token: str | None = Header(
         )
         await db.commit()
     return {"ok": True, "closed_test_mode": settings.cloud_closed_test_mode}
+
+
+@app.get("/api/v1/devices/{device_id}/entitlements")
+async def device_entitlements(
+    device_id: str = ApiPath(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_.:-]+$"),
+    x_api_token: str | None = Header(default=None),
+):
+    """Return the effective server-side activation state for one Grow Central Pi."""
+    check_token(x_api_token)
+    await _touch_managed_device(device_id)
+    now = datetime.now(timezone.utc)
+    async with aiosqlite.connect(settings.cloud_db) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM managed_devices WHERE device_id=?", (device_id,))
+        row = await cur.fetchone()
+        fcur = await db.execute("SELECT feature,enabled FROM device_features WHERE device_id=?", (device_id,))
+        features = {r["feature"]: bool(r["enabled"]) for r in await fcur.fetchall()}
+        status = row["status"]
+        if row["valid_until"]:
+            try:
+                expires = datetime.fromisoformat(row["valid_until"])
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if expires <= now and status == "active":
+                    status = "expired"
+                    await db.execute(
+                        "UPDATE managed_devices SET status='expired',updated_at=? WHERE device_id=?",
+                        (now.isoformat(), device_id),
+                    )
+                    await db.commit()
+            except ValueError:
+                pass
+    return {
+        "device_id": device_id,
+        "status": status,
+        "plan": row["plan"],
+        "valid_until": row["valid_until"],
+        "features": features,
+    }
 
 
 @app.get("/api/v1/sites/{site_id}/latest")

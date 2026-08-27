@@ -5,9 +5,13 @@ on:
   push:
     branches: [ master ]
     paths:
+      - 'cloud/**'
       - 'scripts/install-135ercloud-v6.sh'
       - 'scripts/setup-135ercloud-apt-repo-v1.sh'
       - 'scripts/add-135ercloud-apt-repo.sh'
+      - 'scripts/configure-cloud-admin-mode.sh'
+      - 'tests/test_cloud_admin_static.py'
+      - 'docs/CLOUD_SERVER_ADMIN.md'
       - 'RELEASE_STATE.md'
       - '.github/workflows/package-cloud-apt.yml'
 
@@ -30,6 +34,14 @@ jobs:
           bash -n scripts/install-135ercloud-v6.sh
           bash -n scripts/setup-135ercloud-apt-repo-v1.sh
           bash -n scripts/add-135ercloud-apt-repo.sh
+          bash -n scripts/configure-cloud-admin-mode.sh
+
+      - name: Validate Cloud admin Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile cloud/app/config.py cloud/app/db.py cloud/app/admin.py cloud/app/main.py
+          python -m pytest -q tests/test_cloud_admin_static.py
 
       - name: Build release bundle
         shell: bash
@@ -39,6 +51,7 @@ jobs:
           cp scripts/install-135ercloud-v6.sh dist/cloud-apt/135ercloud-server-install.sh
           cp scripts/setup-135ercloud-apt-repo-v1.sh dist/cloud-apt/setup-135ercloud-apt-repo.sh
           cp scripts/add-135ercloud-apt-repo.sh dist/cloud-apt/add-135ercloud-apt-repo.sh
+          cp scripts/configure-cloud-admin-mode.sh dist/cloud-apt/configure-cloud-admin-mode.sh
           cp RELEASE_STATE.md dist/cloud-apt/RELEASE_STATE.md
           cat > dist/cloud-apt/release-state.txt <<'EOF'
           version=alpha-0.7.5
@@ -47,9 +60,10 @@ jobs:
           pi_tag=pi-universal-alpha-0.7.5-118
           status=CANDIDATE
           cloud=V6
+          cloud_admin_foundation=0.8.0
           apt=https://repo.dezender.de/apt
           EOF
-          (cd dist/cloud-apt && sha256sum 135ercloud-server-install.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
+          (cd dist/cloud-apt && sha256sum 135ercloud-server-install.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
 
       - name: Upload Cloud/APT bundle
         uses: actions/upload-artifact@v4
