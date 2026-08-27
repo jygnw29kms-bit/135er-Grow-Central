@@ -22,8 +22,8 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y >/dev/null
 apt-get install -y --no-install-recommends apt-utils dpkg-dev gnupg ca-certificates curl wget openssl >/dev/null
 
-# Repository hosting is currently on the project Plesk server. This requirement
-# applies only to the REPOSITORY PUBLISHER, never to installed Cloud V7 servers.
+# Only the repository publisher currently lives on the project Plesk server.
+# Installed Cloud V7 servers themselves may run with or without Plesk.
 command -v plesk >/dev/null 2>&1 || die "Repository-Publisher erwartet den bestehenden Plesk-Host."
 plesk bin domain --info "$ROOT_DOMAIN" >/dev/null 2>&1 || die "Plesk-Domain $ROOT_DOMAIN fehlt."
 
@@ -53,6 +53,7 @@ fetch "$RAW/scripts/install-135ercloud-v7.sh" "$PKG/usr/lib/$PKG_NAME/install-13
 fetch "$RAW/scripts/install-135ercloud-v6.sh" "$PKG/usr/lib/$PKG_NAME/install-135ercloud-v6.sh"
 fetch "$RAW/scripts/bootstrap-standalone-cloud-core.sh" "$PKG/usr/lib/$PKG_NAME/bootstrap-standalone-cloud-core.sh"
 fetch "$RAW/scripts/configure-cloud-admin-mode.sh" "$PKG/usr/lib/$PKG_NAME/configure-cloud-admin-mode.sh"
+fetch "$RAW/scripts/configure-v7-routing.sh" "$PKG/usr/lib/$PKG_NAME/configure-v7-routing.sh"
 fetch "$RAW/cloud/v7/admin_app.py" "$PKG/usr/lib/$PKG_NAME/v7/admin_app.py"
 chmod 0755 "$PKG/usr/lib/$PKG_NAME/"*.sh
 chmod 0644 "$PKG/usr/lib/$PKG_NAME/v7/admin_app.py"
@@ -84,6 +85,7 @@ cat > "$PKG/DEBIAN/postinst" <<'EOF'
 #!/usr/bin/env bash
 set -e
 /usr/lib/135er-growcentral-cloud/install-135ercloud-v7.sh --package-mode
+/usr/lib/135er-growcentral-cloud/configure-v7-routing.sh
 EOF
 chmod 0755 "$PKG/DEBIAN/postinst"
 
@@ -108,18 +110,27 @@ chmod 0755 "$PKG/DEBIAN/postrm"
 
 cat > "$PKG/usr/sbin/135ercloud-setup" <<'EOF'
 #!/usr/bin/env bash
-exec /usr/lib/135er-growcentral-cloud/install-135ercloud-v7.sh "$@"
+set -e
+/usr/lib/135er-growcentral-cloud/install-135ercloud-v7.sh "$@"
+exec /usr/lib/135er-growcentral-cloud/configure-v7-routing.sh
 EOF
 cat > "$PKG/usr/sbin/135ercloud-admin-mode" <<'EOF'
 #!/usr/bin/env bash
-exec /usr/lib/135er-growcentral-cloud/configure-cloud-admin-mode.sh "$@"
+set -e
+/usr/lib/135er-growcentral-cloud/configure-cloud-admin-mode.sh "$@"
+exec /usr/lib/135er-growcentral-cloud/configure-v7-routing.sh
 EOF
-chmod 0755 "$PKG/usr/sbin/135ercloud-setup" "$PKG/usr/sbin/135ercloud-admin-mode"
+cat > "$PKG/usr/sbin/135ercloud-route-refresh" <<'EOF'
+#!/usr/bin/env bash
+exec /usr/lib/135er-growcentral-cloud/configure-v7-routing.sh "$@"
+EOF
+chmod 0755 "$PKG/usr/sbin/135ercloud-setup" "$PKG/usr/sbin/135ercloud-admin-mode" "$PKG/usr/sbin/135ercloud-route-refresh"
 
 # Static validation before publishing.
 bash -n "$PKG/usr/lib/$PKG_NAME/install-135ercloud-v7.sh"
 bash -n "$PKG/usr/lib/$PKG_NAME/bootstrap-standalone-cloud-core.sh"
 bash -n "$PKG/usr/lib/$PKG_NAME/configure-cloud-admin-mode.sh"
+bash -n "$PKG/usr/lib/$PKG_NAME/configure-v7-routing.sh"
 python3 -m py_compile "$PKG/usr/lib/$PKG_NAME/v7/admin_app.py"
 
 DEB="$APT_ROOT/pool/main/g/growcentral/${PKG_NAME}_${PKG_VERSION}_all.deb"
@@ -144,7 +155,7 @@ gpg --batch --yes --local-user "$FPR" --clearsign -o dists/stable/InRelease dist
 gpg --batch --yes --local-user "$FPR" -abs -o dists/stable/Release.gpg dists/stable/Release
 
 log "Prüfe veröffentlichte Paketmetadaten"
-apt-cache show "$DEB" >/dev/null 2>&1 || dpkg-deb -I "$DEB" >/dev/null
+dpkg-deb -I "$DEB" >/dev/null
 sha256sum "$DEB" > "$DEB.sha256"
 ok "V7 APT-Repository aktualisiert: $REPO_URL"
 echo "Installierte Instanzen aktualisieren anschließend mit: apt update && apt upgrade"
