@@ -181,17 +181,45 @@ def update_device(device_id: str, body: EntitlementUpdate, x_growcentral_admin: 
         raise HTTPException(422, "invalid state")
     if plan not in PLANS:
         raise HTTPException(422, "invalid plan")
-    values = {name: 1 if body.features.get(name, False) else 0 for name in FEATURES}
-    values.update({"d": device_id, "customer": body.customer, "group": body.device_group, "state": state,
-                   "plan": plan, "valid": body.valid_until, "notes": body.notes, "updated": now()})
-    sets = ",".join(f"{name}=:{name}" for name in FEATURES)
+    values = {
+        "d": device_id,
+        "customer": body.customer,
+        "group": body.device_group,
+        "state": state,
+        "plan": plan,
+        "valid": body.valid_until,
+        "notes": body.notes,
+        "updated": now(),
+        "remote_control": 1 if body.features.get("remote_control", False) else 0,
+        "camera": 1 if body.features.get("camera", False) else 0,
+        "history_extended": 1 if body.features.get("history_extended", False) else 0,
+        "alerts": 1 if body.features.get("alerts", False) else 0,
+        "automation_pro": 1 if body.features.get("automation_pro", False) else 0,
+        "api_access": 1 if body.features.get("api_access", False) else 0,
+        "beta_features": 1 if body.features.get("beta_features", False) else 0,
+    }
+    update_sql = text("""
+        UPDATE device_entitlements
+           SET customer=:customer,
+               device_group=:group,
+               state=:state,
+               plan=:plan,
+               valid_until=:valid,
+               notes=:notes,
+               remote_control=:remote_control,
+               camera=:camera,
+               history_extended=:history_extended,
+               alerts=:alerts,
+               automation_pro=:automation_pro,
+               api_access=:api_access,
+               beta_features=:beta_features,
+               updated_at=:updated
+         WHERE device_id=:d
+    """)
     with engine.begin() as con:
         if not con.execute(text("SELECT id FROM devices WHERE id=:d"), {"d": device_id}).first():
             raise HTTPException(404, "unknown device")
-        con.execute(text(
-            f"UPDATE device_entitlements SET customer=:customer,device_group=:group,state=:state,plan=:plan,"
-            f"valid_until=:valid,notes=:notes,{sets},updated_at=:updated WHERE device_id=:d"
-        ), values)
+        con.execute(update_sql, values)
         row = dict(con.execute(text("SELECT * FROM device_entitlements WHERE device_id=:d"), {"d": device_id}).mappings().one())
     return effective(row)
 
