@@ -2,16 +2,18 @@
 
 Runs next to the proven V6 cloud core and uses the SAME DATABASE_URL.
 This makes V6 -> V7 upgrades non-destructive: accounts, devices, pairings,
-sessions and device identities stay in place while administration evolves.
+sessions and Ed25519 device identities stay in place while administration evolves.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
 import secrets
 import time
 from typing import Any
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -28,7 +30,6 @@ engine = create_engine(
     pool_pre_ping=True,
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite:") else {},
 )
-
 app = FastAPI(title="135er Grow Central Cloud Admin", version="7.0", docs_url=None, redoc_url=None)
 
 FEATURES = (
@@ -41,6 +42,10 @@ STATES = {"pending", "active", "blocked", "expired"}
 
 def now() -> int:
     return int(time.time())
+
+
+def sha256s(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def admin_auth(x_growcentral_admin: str | None) -> None:
@@ -77,7 +82,6 @@ def init_schema() -> None:
     with engine.begin() as con:
         for stmt in schema:
             con.execute(text(stmt))
-        # Import already paired V6 devices as pending without touching identity data.
         rows = con.execute(text("SELECT id FROM devices")).mappings().all()
         t = now()
         for row in rows:
@@ -102,6 +106,17 @@ class EntitlementUpdate(BaseModel):
     features: dict[str, bool] = Field(default_factory=dict)
 
 
+class DeviceIdentity(BaseModel):
+    device_id: str = Field(min_length=36, max_length=36)
+
+
+class DeviceEntitlementProof(BaseModel):
+    device_id: str = Field(min_length=36, max_length=36)
+    nonce: str = Field(min_length=16, max_length=256)
+    timestamp: int
+    signature: str = Field(min_length=40, max_length=256)
+
+
 def effective(row: dict[str, Any]) -> dict[str, Any]:
     state = row["state"]
     valid_until = row.get("valid_until")
@@ -118,8 +133,18 @@ def effective(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def entitlement_row(device_id: str) -> dict[str, Any]:
+    init_schema()
+    with engine.begin() as con:
+        row = con.execute(text("SELECT * FROM device_entitlements WHERE device_id=:d"), {"d": device_id}).mappings().first()
+    if not row:
+        raise HTTPException(404, "unknown device")
+    return dict(row)
+
+
 @app.get("/health")
 def health():
+    init_schema()
     with engine.begin() as con:
         total = con.execute(text("SELECT COUNT(*) FROM devices")).scalar_one()
         licensed = con.execute(text("SELECT COUNT(*) FROM device_entitlements WHERE state='active'")).scalar_one()
@@ -127,10 +152,7 @@ def health():
 
 
 @app.get("/api/admin/devices")
-def list_devices(
-    q: str = Query(default="", max_length=120),
-    x_growcentral_admin: str | None = Header(default=None),
-):
+def list_devices(q: str = Query(default="", max_length=120), x_growcentral_admin: str | None = Header(default=None)):
     admin_auth(x_growcentral_admin)
     init_schema()
     needle = f"%{q.strip()}%"
@@ -153,18 +175,15 @@ def list_devices(
 @app.put("/api/admin/devices/{device_id}")
 def update_device(device_id: str, body: EntitlementUpdate, x_growcentral_admin: str | None = Header(default=None)):
     admin_auth(x_growcentral_admin)
-    state = body.state.upper() if False else body.state.lower()
+    state = body.state.lower()
     plan = body.plan.upper()
     if state not in STATES:
         raise HTTPException(422, "invalid state")
     if plan not in PLANS:
         raise HTTPException(422, "invalid plan")
     values = {name: 1 if body.features.get(name, False) else 0 for name in FEATURES}
-    values.update({
-        "d": device_id, "customer": body.customer, "group": body.device_group,
-        "state": state, "plan": plan, "valid": body.valid_until,
-        "notes": body.notes, "updated": now(),
-    })
+    values.update({"d": device_id, "customer": body.customer, "group": body.device_group, "state": state,
+                   "plan": plan, "valid": body.valid_until, "notes": body.notes, "updated": now()})
     sets = ",".join(f"{name}=:{name}" for name in FEATURES)
     with engine.begin() as con:
         if not con.execute(text("SELECT id FROM devices WHERE id=:d"), {"d": device_id}).first():
@@ -189,9 +208,61 @@ def stats(x_growcentral_admin: str | None = Header(default=None)):
     return {"total": total, "pending": pending, "active": active, "blocked": blocked, "soft_limit": MAX_DEVICES}
 
 
+@app.post("/api/v7/device/entitlements/challenge")
+def entitlement_challenge(body: DeviceIdentity):
+    t = now()
+    nonce = secrets.token_urlsafe(32)
+    with engine.begin() as con:
+        row = con.execute(text(
+            "SELECT id FROM devices WHERE id=:d AND account_id IS NOT NULL AND revoked_at IS NULL"
+        ), {"d": body.device_id}).first()
+        if not row:
+            raise HTTPException(404, "device not found")
+        con.execute(text(
+            "INSERT INTO device_nonces(nonce_hash,device_id,created_at,expires_at,used_at) VALUES(:h,:d,:c,:e,NULL)"
+        ), {"h": sha256s(nonce), "d": body.device_id, "c": t, "e": t + 60})
+    return {"nonce": nonce, "expires_in": 60, "signature_format": "GCLOUD2"}
+
+
+@app.post("/api/v7/device/entitlements")
+def device_entitlements(body: DeviceEntitlementProof):
+    t = now()
+    if abs(t - body.timestamp) > 60:
+        raise HTTPException(401, "stale device proof")
+    nh = sha256s(body.nonce)
+    with engine.begin() as con:
+        nonce_row = con.execute(text(
+            "SELECT device_id FROM device_nonces WHERE nonce_hash=:h AND device_id=:d AND expires_at>:t AND used_at IS NULL"
+        ), {"h": nh, "d": body.device_id, "t": t}).mappings().first()
+        if not nonce_row:
+            raise HTTPException(401, "invalid or consumed nonce")
+        device = con.execute(text(
+            "SELECT public_key,revoked_at FROM devices WHERE id=:d AND account_id IS NOT NULL"
+        ), {"d": body.device_id}).mappings().first()
+        if not device or device["revoked_at"] is not None:
+            raise HTTPException(403, "device revoked")
+        signed = f"GCLOUD2\n{body.device_id}\n{body.nonce}\n{body.timestamp}".encode("utf-8")
+        try:
+            pub = str(device["public_key"])
+            pub_raw = base64.urlsafe_b64decode(pub + "=" * (-len(pub) % 4))
+            sig_raw = base64.urlsafe_b64decode(body.signature + "=" * (-len(body.signature) % 4))
+            Ed25519PublicKey.from_public_bytes(pub_raw).verify(sig_raw, signed)
+        except Exception as exc:
+            raise HTTPException(401, "invalid device signature") from exc
+        result = con.execute(text(
+            "UPDATE device_nonces SET used_at=:t WHERE nonce_hash=:h AND used_at IS NULL"
+        ), {"t": t, "h": nh})
+        if result.rowcount != 1:
+            raise HTTPException(409, "nonce already consumed")
+        con.execute(text("UPDATE devices SET last_seen=:t WHERE id=:d"), {"t": t, "d": body.device_id})
+    payload = effective(entitlement_row(body.device_id))
+    payload["server_time"] = t
+    payload["entitlement_version"] = 1
+    return payload
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page():
     if ADMIN_MODE not in {"standalone", "both"}:
         raise HTTPException(404)
-    return """<!doctype html><html lang='de'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>135er Grow Central Cloud</title><style>
-body{font-family:system-ui;background:#071018;color:#e8f2f5;margin:0}header{padding:24px;background:#0c1a24;border-bottom:1px solid #29404b}.wrap{max-width:1200px;margin:auto;padding:22px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card,table{background:#0d1b25;border:1px solid #29404b;border-radius:12px}.card{padding:16px}input,button,select{background:#122630;color:#e8f2f5;border:1px solid #395561;border-radius:8px;padding:9px}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{padding:10px;border-bottom:1px solid #203640;text-align:left}.muted{color:#8fa7b2}@media(max-width:800px){.cards{grid-template-columns:1fr 1fr}}</style></head><body><header><b>135er Grow Central Cloud · Administration V7</b></header><div class='wrap'><p>Standalone-Administration ist installiert. API-Zugriffe erfordern den lokalen Admin-Token aus <code>/etc/135er-growcentral-cloud/cloud.env</code>.</p><div class='cards'><div class='card'>Geräte<br><b id='total'>–</b></div><div class='card'>Pending<br><b id='pending'>–</b></div><div class='card'>Aktiv<br><b id='active'>–</b></div><div class='card'>Gesperrt<br><b id='blocked'>–</b></div></div><p class='muted'>Die vollständige editierbare Oberfläche wird über dieselbe Admin-API bedient; Plesk nutzt exakt dieselbe Datenbasis.</p></div></body></html>"""
+    return """<!doctype html><html lang='de'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>135er Grow Central Cloud</title><style>body{font-family:system-ui;background:#071018;color:#e8f2f5;margin:0}header{padding:24px;background:#0c1a24;border-bottom:1px solid #29404b}.wrap{max-width:1200px;margin:auto;padding:22px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#0d1b25;border:1px solid #29404b;border-radius:12px;padding:16px}.muted{color:#8fa7b2}@media(max-width:800px){.cards{grid-template-columns:1fr 1fr}}</style></head><body><header><b>135er Grow Central Cloud · Administration V7</b></header><div class='wrap'><p>Standalone-Administration aktiv. Geräte, Pakete und Feature-Freischaltungen werden zentral in derselben Datenbank wie der Cloud-Core verwaltet.</p><div class='cards'><div class='card'>Geräte<br><b>Cloud-Core</b></div><div class='card'>Pakete<br><b>BASIC · PLUS · PRO</b></div><div class='card'>Status<br><b>Pending · Aktiv · Gesperrt</b></div><div class='card'>Identität<br><b>Ed25519</b></div></div><p class='muted'>Administrationszugriffe sind mit CLOUD_ADMIN_TOKEN geschützt. Pis lesen ihre Freigaben über Challenge + vorhandene Ed25519-Geräteidentität.</p></div></body></html>"""
