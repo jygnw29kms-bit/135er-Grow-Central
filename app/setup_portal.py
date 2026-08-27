@@ -20,11 +20,19 @@ def _cleanup_captive_runtime() -> None:
 
     The setup AP and wildcard DNS must never survive as a normal operating
     network. This also repairs images produced before apply_setup was changed.
+    Cleanup must never break the application when the root filesystem is
+    intentionally read-only (for example during the image boot smoke test).
     """
     global _cleanup_done
     if _cleanup_done:
         return
-    CAPTIVE_DNS.unlink(missing_ok=True)
+    try:
+        CAPTIVE_DNS.unlink(missing_ok=True)
+    except OSError:
+        # The image smoke test boots the completed root filesystem read-only.
+        # Runtime cleanup is best-effort; failure here must not turn health/status
+        # endpoints into HTTP 500 responses. A real writable boot retries later.
+        pass
     for args in (
         ("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "no"),
         ("nmcli", "connection", "down", AP_CONNECTION),
