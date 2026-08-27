@@ -50,6 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install --disable-pip-version-check -q pytest
           python -m py_compile cloud/app/config.py cloud/app/db.py cloud/app/admin.py cloud/app/main.py cloud/v7/admin_app.py
           python -m pytest -q tests/test_cloud_admin_static.py tests/test_cloud_v7_upgrade_static.py
 
