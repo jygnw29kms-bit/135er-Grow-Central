@@ -1,4 +1,4 @@
-name: Package 135er-Grow Central Cloud V6 and APT
+name: Package 135er-Grow Central Cloud V7 and APT
 
 on:
   workflow_dispatch:
@@ -7,10 +7,15 @@ on:
     paths:
       - 'cloud/**'
       - 'scripts/install-135ercloud-v6.sh'
+      - 'scripts/install-135ercloud-v6.payload.sh'
+      - 'scripts/install-135ercloud-v7.sh'
+      - 'scripts/bootstrap-standalone-cloud-core.sh'
       - 'scripts/setup-135ercloud-apt-repo-v1.sh'
+      - 'scripts/setup-135ercloud-apt-repo-v2.sh'
       - 'scripts/add-135ercloud-apt-repo.sh'
       - 'scripts/configure-cloud-admin-mode.sh'
       - 'tests/test_cloud_admin_static.py'
+      - 'tests/test_cloud_v7_upgrade_static.py'
       - 'docs/CLOUD_SERVER_ADMIN.md'
       - 'RELEASE_STATE.md'
       - '.github/workflows/package-cloud-apt.yml'
@@ -20,7 +25,7 @@ permissions:
 
 jobs:
   package:
-    name: Validate and package Cloud/APT
+    name: Validate and package Cloud V7/APT
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,7 +37,10 @@ jobs:
         run: |
           set -euo pipefail
           bash -n scripts/install-135ercloud-v6.sh
+          bash -n scripts/install-135ercloud-v7.sh
+          bash -n scripts/bootstrap-standalone-cloud-core.sh
           bash -n scripts/setup-135ercloud-apt-repo-v1.sh
+          bash -n scripts/setup-135ercloud-apt-repo-v2.sh
           bash -n scripts/add-135ercloud-apt-repo.sh
           bash -n scripts/configure-cloud-admin-mode.sh
 
@@ -40,35 +48,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile cloud/app/config.py cloud/app/db.py cloud/app/admin.py cloud/app/main.py
-          python -m pytest -q tests/test_cloud_admin_static.py
+          python -m py_compile cloud/app/config.py cloud/app/db.py cloud/app/admin.py cloud/app/main.py cloud/v7/admin_app.py
+          python -m pytest -q tests/test_cloud_admin_static.py tests/test_cloud_v7_upgrade_static.py
+
+      - name: Validate V7 package metadata contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'PKG_VERSION="${PKG_VERSION:-7.0.0}"' scripts/setup-135ercloud-apt-repo-v2.sh
+          grep -q 'install-135ercloud-v7.sh --package-mode' scripts/setup-135ercloud-apt-repo-v2.sh
+          grep -q 'backup_current' scripts/install-135ercloud-v7.sh
+          grep -q 'CLOUD_ADMIN_MODE' scripts/configure-cloud-admin-mode.sh
 
       - name: Build release bundle
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist/cloud-apt
-          cp scripts/install-135ercloud-v6.sh dist/cloud-apt/135ercloud-server-install.sh
-          cp scripts/setup-135ercloud-apt-repo-v1.sh dist/cloud-apt/setup-135ercloud-apt-repo.sh
-          cp scripts/add-135ercloud-apt-repo.sh dist/cloud-apt/add-135ercloud-apt-repo.sh
-          cp scripts/configure-cloud-admin-mode.sh dist/cloud-apt/configure-cloud-admin-mode.sh
-          cp RELEASE_STATE.md dist/cloud-apt/RELEASE_STATE.md
-          cat > dist/cloud-apt/release-state.txt <<'EOF'
-          version=alpha-0.7.5
-          master_anchor=e339602
-          pi_candidate=118
-          pi_tag=pi-universal-alpha-0.7.5-118
-          status=CANDIDATE
-          cloud=V6
-          cloud_admin_foundation=0.8.0
+          mkdir -p dist/cloud-apt-v7/cloud-v7
+          cp scripts/install-135ercloud-v7.sh dist/cloud-apt-v7/135ercloud-server-install.sh
+          cp scripts/bootstrap-standalone-cloud-core.sh dist/cloud-apt-v7/bootstrap-standalone-cloud-core.sh
+          cp scripts/setup-135ercloud-apt-repo-v2.sh dist/cloud-apt-v7/setup-135ercloud-apt-repo.sh
+          cp scripts/add-135ercloud-apt-repo.sh dist/cloud-apt-v7/add-135ercloud-apt-repo.sh
+          cp scripts/configure-cloud-admin-mode.sh dist/cloud-apt-v7/configure-cloud-admin-mode.sh
+          cp cloud/v7/admin_app.py dist/cloud-apt-v7/cloud-v7/admin_app.py
+          cp RELEASE_STATE.md dist/cloud-apt-v7/RELEASE_STATE.md
+          cat > dist/cloud-apt-v7/release-state.txt <<'EOF'
+          cloud=V7
+          cloud_package=135er-growcentral-cloud
+          cloud_package_version=7.0.0
+          upgrade_from=V6
+          admin_modes=standalone,plesk,both
+          device_entitlements=BASIC,PLUS,PRO,INTERNAL
           apt=https://repo.dezender.de/apt
+          status=CANDIDATE
           EOF
-          (cd dist/cloud-apt && sha256sum 135ercloud-server-install.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
+          (cd dist/cloud-apt-v7 && sha256sum 135ercloud-server-install.sh bootstrap-standalone-cloud-core.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh cloud-v7/admin_app.py RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
 
-      - name: Upload Cloud/APT bundle
+      - name: Upload Cloud/APT V7 bundle
         uses: actions/upload-artifact@v4
         with:
-          name: GrowCentral-CloudV6-APT-Build118
-          path: dist/cloud-apt/
+          name: GrowCentral-CloudV7-APT-Candidate
+          path: dist/cloud-apt-v7/
           if-no-files-found: error
           retention-days: 30
