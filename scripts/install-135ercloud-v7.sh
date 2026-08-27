@@ -14,6 +14,7 @@ SYSTEMD_ADMIN="/etc/systemd/system/${ADMIN_SERVICE}.service"
 V7_SOURCE="${V7_SOURCE:-/usr/lib/${SERVICE}/v7/admin_app.py}"
 MODE_HELPER="${MODE_HELPER:-/usr/lib/${SERVICE}/configure-cloud-admin-mode.sh}"
 V6_INSTALLER="${V6_INSTALLER:-/usr/lib/${SERVICE}/install-135ercloud-v6.sh}"
+STANDALONE_BOOTSTRAP="${STANDALONE_BOOTSTRAP:-/usr/lib/${SERVICE}/bootstrap-standalone-cloud-core.sh}"
 GITHUB_RAW="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master"
 PACKAGE_MODE=0
 REQUESTED_MODE=""
@@ -35,6 +36,7 @@ while [[ $# -gt 0 ]]; do
   --admin-mode standalone|plesk|both explicit admin mode
 
 Existing V6 data and secrets are preserved. A backup is created before changes.
+Fresh Debian/Ubuntu installations work with or without Plesk.
 EOF
       exit 0;;
     *) die "Unbekannte Option: $1";;
@@ -61,9 +63,7 @@ backup_current(){
   stamp="$(date +%Y%m%d-%H%M%S)"
   dir="$BACKUP_DIR/v7-upgrade-$stamp"
   install -d -m 0700 "$dir"
-  if [[ -f "$ENV_FILE" ]]; then
-    cp -a "$ENV_FILE" "$dir/cloud.env"
-  fi
+  if [[ -f "$ENV_FILE" ]]; then cp -a "$ENV_FILE" "$dir/cloud.env"; fi
   if [[ -f "$MODE_FILE" ]]; then cp -a "$MODE_FILE" "$dir/admin-mode"; fi
   if [[ -f "$APP_DIR/app.py" ]]; then cp -a "$APP_DIR/app.py" "$dir/app-v6.py"; fi
   if source_env; then
@@ -80,26 +80,34 @@ backup_current(){
   ok "Backup: $dir"
 }
 
+fetch_exec(){
+  local url="$1" target="$2"
+  install -d -m 0755 "$(dirname "$target")"
+  curl -fsSL "$url" -o "$target"
+  chmod 0755 "$target"
+}
+
 ensure_v6(){
   if systemctl cat "$SERVICE" >/dev/null 2>&1 && [[ -f "$ENV_FILE" && -f "$APP_DIR/app.py" ]]; then
     ok "Bestehende V6/Cloud-Instanz erkannt"
     return 0
   fi
-  log "Keine bestehende Cloud-Instanz erkannt; installiere V6-Core als kompatible Basis."
-  if [[ ! -x "$V6_INSTALLER" ]]; then
-    install -d -m 0755 "$(dirname "$V6_INSTALLER")"
-    curl -fsSL "$GITHUB_RAW/scripts/install-135ercloud-v6.sh" -o "$V6_INSTALLER"
-    chmod 0755 "$V6_INSTALLER"
+
+  if command -v plesk >/dev/null 2>&1 || [[ -x /usr/local/psa/bin/plesk ]]; then
+    log "Frischinstallation: Plesk erkannt; installiere kompatiblen V6-Core über Plesk-Bootstrap."
+    [[ -x "$V6_INSTALLER" ]] || fetch_exec "$GITHUB_RAW/scripts/install-135ercloud-v6.sh" "$V6_INSTALLER"
+    if [[ "$PACKAGE_MODE" -eq 1 ]]; then "$V6_INSTALLER" --package-mode; else "$V6_INSTALLER"; fi
+  else
+    log "Frischinstallation: kein Plesk erkannt; installiere kompatiblen Core im Standalone-Modus."
+    [[ -x "$STANDALONE_BOOTSTRAP" ]] || fetch_exec "$GITHUB_RAW/scripts/bootstrap-standalone-cloud-core.sh" "$STANDALONE_BOOTSTRAP"
+    if [[ "$PACKAGE_MODE" -eq 1 ]]; then "$STANDALONE_BOOTSTRAP" --package-mode; else "$STANDALONE_BOOTSTRAP"; fi
   fi
-  if [[ "$PACKAGE_MODE" -eq 1 ]]; then "$V6_INSTALLER" --package-mode; else "$V6_INSTALLER"; fi
-  [[ -f "$ENV_FILE" ]] || die "V6-Basisinstallation hat keine cloud.env erzeugt"
+  [[ -f "$ENV_FILE" && -f "$APP_DIR/app.py" ]] || die "Basisinstallation hat keine vollständige Cloud-Runtime erzeugt"
 }
 
 install_mode_helper(){
   if [[ ! -x "$MODE_HELPER" ]]; then
-    install -d -m 0755 "$(dirname "$MODE_HELPER")"
-    curl -fsSL "$GITHUB_RAW/scripts/configure-cloud-admin-mode.sh" -o "$MODE_HELPER"
-    chmod 0755 "$MODE_HELPER"
+    fetch_exec "$GITHUB_RAW/scripts/configure-cloud-admin-mode.sh" "$MODE_HELPER"
   fi
   if [[ -n "$REQUESTED_MODE" ]]; then
     "$MODE_HELPER" --mode "$REQUESTED_MODE" --noninteractive
@@ -194,7 +202,8 @@ write_standalone_nginx(){
 server {
     listen 80;
     server_name ${host};
-    client_max_body_size 2m;
+    client_max_body_size 16m;
+    proxy_buffering off;
     location /admin { proxy_pass http://127.0.0.1:${admin}; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; }
     location /api/admin/ { proxy_pass http://127.0.0.1:${admin}; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; }
     location /v7/health { proxy_pass http://127.0.0.1:${admin}/health; }
@@ -203,7 +212,7 @@ server {
 EOF
   ln -sfn "$conf" /etc/nginx/sites-enabled/135er-growcentral-cloud.conf
   nginx -t && systemctl reload nginx
-  ok "Standalone-nginx konfiguriert (HTTP; TLS kann anschließend über Zertifikatsverwaltung aktiviert werden)"
+  ok "Standalone-nginx konfiguriert"
 }
 
 write_plesk_hint(){
@@ -221,7 +230,7 @@ write_plesk_hint(){
 healthcheck(){
   source_env || die "cloud.env nicht lesbar"
   curl -fsS --connect-timeout 4 "http://127.0.0.1:${V7_ADMIN_PORT}/health" >/dev/null || die "V7 Healthcheck fehlgeschlagen"
-  curl -fsS --connect-timeout 4 "http://127.0.0.1:${APP_PORT:-18765}/health" >/dev/null || warn "V6-Core-Healthcheck nicht unter /health erreichbar"
+  curl -fsS --connect-timeout 4 "http://127.0.0.1:${APP_PORT:-18765}/health" >/dev/null || warn "Core-Healthcheck nicht unter /health erreichbar"
   ok "V7 Healthcheck erfolgreich"
 }
 
@@ -245,7 +254,7 @@ main(){
   echo "  135er Grow Central Cloud V7"
   echo "=============================================================================="
   echo "  Upgrade       : erfolgreich"
-  echo "  V6-Core       : erhalten"
+  echo "  Cloud-Core    : V6-kompatibel / Daten erhalten"
   echo "  Admin-Modus   : $(cat "$MODE_FILE" 2>/dev/null || echo standalone)"
   echo "  Admin-Service : $ADMIN_SERVICE"
   echo "  APT-fähig     : ja"
