@@ -1,5 +1,7 @@
 """Production entry point for the Raspberry Pi appliance."""
 from app.main import app
+from app import camera as _camera
+from app.camera_policy import install as _install_camera_policy
 from app.camera import router as camera_router
 from app.camera_led import install as install_camera_led
 from app.automation import router as automation_router
@@ -11,6 +13,9 @@ from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
 from app.setup_portal import SetupPortalMiddleware
 from app.touch_keyboard import TouchKeyboardMiddleware
+
+_install_camera_policy(_camera)
+del _camera, _install_camera_policy
 
 install_camera_led()
 app.add_middleware(GuiAuthMiddleware)
