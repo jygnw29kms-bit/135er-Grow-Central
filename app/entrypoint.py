@@ -10,6 +10,7 @@ from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
 from app.setup_portal import SetupPortalMiddleware
+from app.touch_keyboard import TouchKeyboardMiddleware
 
 install_camera_led()
 app.add_middleware(GuiAuthMiddleware)
@@ -17,6 +18,9 @@ app.add_middleware(GuiAuthMiddleware)
 # unprovisioned device can answer captive-portal probes and setup requests
 # before normal GUI authentication exists.
 app.add_middleware(SetupPortalMiddleware)
+# Outermost HTML post-processing layer: First Boot, Login and the normal UI all
+# receive the same local touch keyboard without a desktop Onboard dependency.
+app.add_middleware(TouchKeyboardMiddleware)
 app.include_router(gui_auth_router)
 app.include_router(gui_shell_router)
 app.include_router(camera_router)
