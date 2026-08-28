@@ -17,7 +17,7 @@
         const link = doc.createElement('link');
         link.id = 'gc-mobile-runtime-fix';
         link.rel = 'stylesheet';
-        link.href = '/static/mobile_runtime_fix.css?v=3';
+        link.href = '/static/mobile_runtime_fix.css?v=4';
         doc.head.appendChild(link);
       }
       doc.documentElement.style.webkitTextSizeAdjust = '100%';
@@ -63,32 +63,53 @@
 
   async function refreshCloud() {
     try {
-      const response = await fetch('/api/cloud/status?ts=' + Date.now(), {cache:'no-store', headers:{Accept:'application/json'}});
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const x = await response.json();
-      const state = !x.enabled ? 'DEAKTIVIERT' : x.connected ? 'VERBUNDEN' : x.service_active ? 'GETRENNT' : 'DIENST AUS';
-      if (pill) {
-        pill.textContent = x.connected ? `CLOUD ✓ ${x.host || 'ONLINE'}` : `CLOUD ${state}`;
-        pill.classList.toggle('online', !!x.connected);
-        pill.classList.toggle('offline', !!x.enabled && !x.connected);
-        pill.title = x.detail || '';
+      const response = await fetch('/api/cloud/status?ts=' + Date.now(), {
+        cache:'no-store',
+        credentials:'same-origin',
+        headers:{Accept:'application/json'}
+      });
+      if (response.redirected && new URL(response.url).pathname === '/login') {
+        throw new Error('GUI-Sitzung abgelaufen');
       }
-      setText('cloudState', state);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) throw new Error('Ungültige Cloud-Status-Antwort');
+      const x = await response.json();
+
+      let state = 'DEAKTIVIERT';
+      if (x.enabled && x.service_active && x.connected) state = 'VERBUNDEN';
+      else if (x.enabled && x.service_active) state = 'AKTIV';
+      else if (x.enabled) state = 'DIENST AUS';
+
+      if (pill) {
+        if (x.connected) pill.textContent = `CLOUD ✓ ${x.host || 'ONLINE'}`;
+        else if (x.service_active) pill.textContent = 'CLOUD LINK AKTIV';
+        else pill.textContent = `CLOUD ${state}`;
+        pill.classList.toggle('online', !!x.service_active);
+        pill.classList.toggle('offline', !!x.enabled && !x.service_active);
+        pill.title = x.connected ? (x.detail || 'Cloud verbunden') : `${x.detail || 'Cloud-Verbindung noch nicht bestätigt'} · Dienst ${x.service_active ? 'aktiv' : 'inaktiv'}`;
+      }
+
+      const stateDetail = x.service_active && !x.connected ? `${state} · CLOUD GETRENNT` : state;
+      setText('cloudState', stateDetail);
       setText('cloudHost', x.host || '--');
       setText('cloudOrigin', x.origin || '--');
       setText('cloudSite', x.site_id || '--');
       setText('cloudLatency', Number.isFinite(x.latency_ms) ? `${x.latency_ms} ms` : '--');
     } catch (error) {
       if (pill) {
-        pill.textContent = 'CLOUD STATUS FEHLER';
+        pill.textContent = 'CLOUD STATUS NICHT VERFÜGBAR';
         pill.classList.remove('online');
         pill.classList.add('offline');
+        pill.title = error?.message || 'Cloud-Status konnte nicht gelesen werden';
       }
-      setText('cloudState', 'STATUS FEHLER');
+      setText('cloudState', 'STATUS NICHT VERFÜGBAR');
     }
   }
 
   refreshCloud();
-  setInterval(refreshCloud, 30000);
+  setInterval(refreshCloud, 15000);
   window.addEventListener('gc:view', () => { syncViewportHeight(); injectLegacyFixes(); refreshCloud(); });
+  window.addEventListener('online', refreshCloud);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshCloud(); });
 })();
