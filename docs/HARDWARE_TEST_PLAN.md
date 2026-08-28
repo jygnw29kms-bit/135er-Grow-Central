@@ -11,6 +11,13 @@ Reproduzierbare reale Validierung des aktuellen Raspberry-Pi-Images **Build 159*
 - SHA-256: `136ebc324595ccf732b4e48292b3cbf6a09e362846c53f2070190c44a3953f3b`
 - Status vor Test: **CANDIDATE**
 
+## Verbindliche Zugangsdaten- und Hostname-Semantik
+
+- Hostname nach abgeschlossener Einrichtung: **`135er-GrowCentral.local`**
+- **GUI-Zugangsdaten und System/SSH-Zugangsdaten sind getrennte Credentials.**
+- Ein funktionierender GUI-Login beweist deshalb nicht automatisch einen funktionierenden SSH-/System-Login und umgekehrt.
+- Beide Zugangspfade werden im Test getrennt geprüft und dokumentiert.
+
 ## Phase 1 – First Boot
 
 1. Build 159 frisch flashen.
@@ -20,7 +27,7 @@ Reproduzierbare reale Validierung des aktuellen Raspberry-Pi-Images **Build 159*
 5. `http://10.42.0.1/` öffnen.
 6. First-Boot-Assistent vollständig durchlaufen.
 7. Heim-WLAN auswählen oder SSID manuell eingeben.
-8. System-/GUI-Zugangsdaten wie vorgesehen setzen.
+8. System-/SSH-Zugangsdaten und GUI-Zugangsdaten getrennt wie vorgesehen setzen.
 9. Setup abschließen.
 
 ### Muss funktionieren
@@ -29,6 +36,7 @@ Reproduzierbare reale Validierung des aktuellen Raspberry-Pi-Images **Build 159*
 - DHCP funktioniert;
 - Portal erreichbar;
 - WLAN-Konfiguration speicherbar;
+- GUI- und System/SSH-Zugangsdaten werden getrennt behandelt;
 - kein ungeschützter Normalbetrieb während First Boot;
 - verständliche Fehleranzeige bei Problemen.
 
@@ -37,18 +45,21 @@ Reproduzierbare reale Validierung des aktuellen Raspberry-Pi-Images **Build 159*
 1. Pi sauber rebooten.
 2. Prüfen, ob Setup-AP verschwindet bzw. First Boot als abgeschlossen gilt.
 3. Prüfen, ob der Pi im Heimnetz eine Adresse erhält.
-4. `http://135er-Grow-Central.local/` testen.
+4. `http://135er-GrowCentral.local/` testen.
 5. Falls mDNS nicht greift, IP-Adresse im Router ermitteln und direkt testen.
-6. GUI-Login durchführen.
-7. Prüfen, ob First-Boot-Einstellungen nach Reboot erhalten bleiben.
-8. Netzwerkstatus in der GUI kontrollieren.
+6. GUI-Login mit den **GUI-Zugangsdaten** durchführen.
+7. System/SSH-Zugang separat mit den **System/SSH-Zugangsdaten** prüfen.
+8. Prüfen, ob First-Boot-Einstellungen nach Reboot erhalten bleiben.
+9. Netzwerkstatus in der GUI kontrollieren.
 
 ### Muss funktionieren
 
 - Boot ohne manuelle Reparatur;
 - Heimnetzverbindung automatisch;
+- Hostname `135er-GrowCentral.local` erreichbar, sofern mDNS im Netz funktioniert;
 - GUI erreichbar;
-- Login erforderlich;
+- GUI-Login erforderlich;
+- GUI- und System/SSH-Credentials voneinander getrennt;
 - Einstellungen persistent.
 
 ## Phase 3 – Cloud-Anbindung
@@ -129,11 +140,13 @@ Wenn First Boot, Heimnetz und Cloud funktionieren, folgen die Gerätepfade:
 |---|---|---|---|
 | B159-01 | Flash/Boot | Image startet | TBD |
 | B159-02 | Setup-AP | AP + DHCP vorhanden | TBD |
-| B159-03 | First Boot | Setup vollständig möglich | TBD |
+| B159-03 | First Boot | Setup vollständig möglich | in Prüfung |
 | B159-04 | WLAN | Heimnetz gespeichert | TBD |
 | B159-05 | Reboot | Pi startet im Heimnetz | TBD |
-| B159-06 | GUI | Login + Persistenz funktionieren | TBD |
-| B159-07 | Cloud | Verbindung nachvollziehbar | TBD |
+| B159-06 | Hostname | `135er-GrowCentral.local` erreichbar | TBD |
+| B159-07 | GUI Auth | GUI-Credentials funktionieren | TBD |
+| B159-08 | System/SSH Auth | separate System/SSH-Credentials funktionieren | TBD |
+| B159-09 | Cloud | Verbindung nachvollziehbar | TBD |
 | SRV-01 | APT Update | Server aktualisiert fehlerfrei | TBD |
 | SRV-02 | Reboot/Plesk | Plesk danach gesund | TBD |
 | V7-01 | Plugin | Installation/Setup erfolgreich | TBD |
@@ -147,7 +160,9 @@ Build 159 wird erst auf **VALIDATED** gesetzt, wenn mindestens folgende Punkte r
 - First Boot;
 - WLAN-Übernahme;
 - Reboot ins Heimnetz;
+- Hostname `135er-GrowCentral.local` bzw. direkter IP-Zugriff;
 - lokale GUI/Auth/Persistenz;
+- separater System/SSH-Zugang;
 - Cloud-Anbindung;
 - nachvollziehbarer Cloud-V7-Gerätepfad.
 
