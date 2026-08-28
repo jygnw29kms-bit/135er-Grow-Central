@@ -1,163 +1,154 @@
-# Hardware Test Plan – alpha-0.7.5
+# Hardware Test Plan – Build 159 / alpha-0.7.5
 
 ## Ziel
 
-Reproduzierbare Prüfung des aktuellen Raspberry-Pi-3B-Images auf realer Zielhardware. Ein Software-/CI-Test wird getrennt von einer echten Hardwarevalidierung dokumentiert.
+Reproduzierbare reale Validierung des aktuellen Raspberry-Pi-Images **Build 159**. CI-Erfolg und echter Hardwaretest werden strikt getrennt dokumentiert.
 
-## Zielhardware
+## Aktueller Testkandidat
 
-- Raspberry Pi 3B / 3B+
-- **Mars Hydro FC3000, Modelljahr 2024, USB + iConnect**
-- **Mars Hydro iFresh / DF100 mit iConnect**
-- DF100M / `MZ_MZF002` nur BLE-Diagnose/Reverse Engineering/Fallback
-- **Logitech C920 direkt per USB am Raspberry Pi**
-- FRITZ!Box mit FRITZ!SmartHome-Steckdose
-- TP-Link Tapo-Geräte / Tapo-Account
-- optional Shelly / Home Assistant
-- kein ESP32 in der Zielarchitektur
+- Release: `pi-universal-alpha-0.7.5-159`
+- Image: `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-159.img.xz`
+- SHA-256: `136ebc324595ccf732b4e48292b3cbf6a09e362846c53f2070190c44a3953f3b`
+- Status vor Test: **CANDIDATE**
 
-## Bereits beobachtet
+## Phase 1 – First Boot
 
-Am bisherigen Image wurden die ersten Boot-/Grundfunktionen als gut gemeldet. Bluetooth reagiert, sucht Geräte, findet Geräte und kommuniziert mit Bluetooth-Geräten. Diese Punkte bleiben im neuen `alpha-0.7.5` erneut zu prüfen, gelten aber als positiver Ausgangsstand.
+1. Build 159 frisch flashen.
+2. Keine manuellen Änderungen auf der Karte vornehmen.
+3. Raspberry Pi starten.
+4. Setup-AP `135er-GrowCentral-Setup-XXXX` verbinden.
+5. `http://10.42.0.1/` öffnen.
+6. First-Boot-Assistent vollständig durchlaufen.
+7. Heim-WLAN auswählen oder SSID manuell eingeben.
+8. System-/GUI-Zugangsdaten wie vorgesehen setzen.
+9. Setup abschließen.
 
-## A – Neuer First Boot
+### Muss funktionieren
 
-1. Image frisch flashen; keine Dateien manuell ändern.
-2. Setup-AP `135er-GrowCentral-Setup-XXXX` verbinden.
-3. `http://10.42.0.1/` öffnen (`:8080` bleibt als Kompatibilitätsadresse testbar).
-4. Mit temporärem Benutzer `GrowCentral` und Factory-Passwort an der normalen GUI anmelden und System öffnen.
-5. **Systempasswort zwingend ändern.**
-6. Bei aktivem Ethernet muss LAN automatisch erkannt werden.
-7. Ohne LAN WLAN wählen; während des aktiven Pi-3B-APs muss die SSID manuell eingebbar sein.
-8. Optional FRITZ!Box aktivieren und den dafür angelegten FRITZ!-Benutzer eingeben.
-9. **Separaten GUI-Benutzer und GUI-Passwort zwingend anlegen.**
-10. Setup abschließen.
-11. Prüfen, dass die normale GUI danach nur mit dem neu angelegten GUI-Login erreichbar ist.
-12. Reboot durchführen und Login erneut prüfen.
-13. Unter System `Grow-Central-Support-latest.tar.gz` erzeugen, herunterladen und auf vollständige Schwärzung prüfen.
+- Setup-AP sichtbar;
+- DHCP funktioniert;
+- Portal erreichbar;
+- WLAN-Konfiguration speicherbar;
+- kein ungeschützter Normalbetrieb während First Boot;
+- verständliche Fehleranzeige bei Problemen.
 
-### Akzeptanz
+## Phase 2 – Reboot ins Heimnetz
 
-- Setup-AP + DHCP funktionieren ohne manuelle Reparatur.
-- Setup-Clients erhalten weder auf Port 80 noch auf Port 8080 einen ungeschützten normalen GUI-Zugriff.
-- LAN wird erkannt oder WLAN-Auswahl funktioniert.
-- Factory-Systempasswort wird nicht in den Normalbetrieb übernommen.
-- GUI-Login ist nach Abschluss Pflicht.
-- `/api/health` bleibt lokal für Healthchecks verfügbar; normale GUI/API verlangt Authentifizierung.
-- GUI-Passwort liegt nicht im Klartext in `.env`.
+1. Pi sauber rebooten.
+2. Prüfen, ob Setup-AP verschwindet bzw. First Boot als abgeschlossen gilt.
+3. Prüfen, ob der Pi im Heimnetz eine Adresse erhält.
+4. `http://135er-Grow-Central.local/` testen.
+5. Falls mDNS nicht greift, IP-Adresse im Router ermitteln und direkt testen.
+6. GUI-Login durchführen.
+7. Prüfen, ob First-Boot-Einstellungen nach Reboot erhalten bleiben.
+8. Netzwerkstatus in der GUI kontrollieren.
 
-## B – Netzwerkbereich der GUI
+### Muss funktionieren
 
-Nach GUI-Login:
+- Boot ohne manuelle Reparatur;
+- Heimnetzverbindung automatisch;
+- GUI erreichbar;
+- Login erforderlich;
+- Einstellungen persistent.
 
-1. **Netzwerk** öffnen.
-2. Schnittstellen-/Verbindungsstatus prüfen.
-3. `WLAN SCANNEN` ausführen.
-4. Prüfen, dass sichtbar `SCAN LÄUFT`, Trefferzahl, `0 Netze`, Timeout oder Fehler erscheint.
-5. Test-WLAN auswählen bzw. SSID manuell eingeben.
-6. WLAN beitreten.
-7. Prüfen, dass das Passwort nicht in Diagnoseausgaben oder Prozessargumenten erscheint.
-8. Verbindung nach Reboot erneut prüfen.
+## Phase 3 – Cloud-Anbindung
 
-## C – FRITZ!Box / FRITZ!SmartHome
+Nach erfolgreichem lokalen Reboot:
 
-Voraussetzung: eigener FRITZ!Box-Benutzer für Grow Central mit nur den benötigten Smart-Home-Rechten.
+1. Cloud-Verbindungsstatus prüfen.
+2. Prüfen, ob sich der Pi eindeutig mit seiner Geräteidentität meldet.
+3. Verhalten ohne vorhandene Freischaltung dokumentieren.
+4. Prüfen, ob Cloud V7 den Pi sehen bzw. dessen Status verarbeiten kann.
+5. Nach Installation des Serverplugins später Entitlements für genau dieses Testgerät setzen.
+6. Pi-Abruf der effektiven Entitlements prüfen.
+7. Sicherstellen, dass lokale Grundfunktionen bei nicht verfügbarer Cloud weiter funktionieren.
 
-1. GUI starten.
-2. Prüfen, ob die vorhandene FRITZ!Box eindeutig erkannt wird.
-3. Erwartung: Grow Central öffnet den FRITZ!-Login-Dialog.
-4. Zugangsdaten eingeben.
-5. Smart-Home-Geräteliste importieren.
-6. FRITZ!-Steckdose in **Geräte/Strom** prüfen.
-7. Gegen das FRITZ!Box-Portal vergleichen:
-   - Gerätename / AIN
-   - erreichbar / offline
-   - Ein / Aus
-   - aktuelle Leistung W
-   - Gesamtenergie Wh/kWh
-8. Steckdose über Grow Central ein- und ausschalten.
-9. Physisches Ergebnis und anschließend zurückgelesenen Zustand prüfen.
-10. Falsches FRITZ!-Passwort testen: verständlicher Auth-Fehler, kein Import.
-11. FRITZ!Box kurz trennen: Gerät muss offline/Fehler anzeigen statt falscher Werte.
+## Phase 4 – Plesk-Server vorbereiten
 
-## D – Tapo
-
-1. Tapo-Gerät und Pi im selben LAN betreiben.
-2. Tapo-Account für Discovery/Auth verwenden.
-3. Gerät lokal finden und authentifizieren.
-4. Name, Modell, Zustand und – falls vom Modell unterstützt – Leistungs-/Energiewerte vergleichen.
-5. Ein/Aus testen und realen Zustand zurücklesen.
-6. Internet trennen: lokalen Pfad erneut testen.
-7. WAN-Zugriff separat prüfen, sobald ein eigener Grow-Central-WAN-Transport implementiert ist. Die bestehende WAN-Fähigkeit der Tapo-App darf nicht fälschlich als bereits implementierter Grow-Central-Cloudpfad dokumentiert werden.
-
-## E – Logitech C920 direkt am Pi
-
-Die C920 ist für diesen Test physisch direkt mit dem Raspberry Pi verbunden.
-
-### GUI-Test
-
-1. **Kamera** öffnen.
-2. `NEU ERKENNEN` ausführen.
-3. Erwartung: mindestens ein `/dev/video*`-Gerät erscheint und die Logitech C920 wird nach Möglichkeit namentlich markiert.
-4. Status `READ OK` und `CAPTURE` prüfen.
-5. `SNAPSHOT` ausführen – ein echtes Bild muss in der GUI erscheinen.
-6. Das Bedienfeld muss die **tatsächlich von der C920 gemeldeten V4L2-Controls** auflisten.
-7. Verfügbare, risikoarme Regler nacheinander testen, beispielsweise Helligkeit/Kontrast/Sättigung oder Fokus, soweit sie gemeldet werden.
-8. Nach jeder Änderung Snapshot aktualisieren und sichtbaren Effekt/aktuellen Wert prüfen.
-9. Automatik-Regler wie Autofokus/Auto-Belichtung nur über ihre tatsächlich gemeldeten Menü-/Bool-Werte bedienen.
-10. C920 abziehen: GUI muss Nicht-erkannt/Fehler anzeigen und darf nicht hängen.
-11. Wieder einstecken und `NEU ERKENNEN` ausführen.
-
-### CLI-Gegencheck
+**Noch vor Installation des Grow-Central-Plesk-Plugins:**
 
 ```bash
-v4l2-ctl --list-devices
-v4l2-ctl --device /dev/video0 --all
-v4l2-ctl --device /dev/video0 --list-ctrls-menus
-ffmpeg -hide_banner -f v4l2 -i /dev/video0 -frames:v 1 /tmp/c920-test.jpg
+sudo apt update
+sudo apt upgrade
+sudo apt --fix-broken install
+sudo systemctl --failed
 ```
 
-Gerätenummer kann abweichen. Die GUI verwendet deshalb intern `cam0`, `cam1`, … und löst diese IDs ausschließlich serverseitig auf.
+Danach prüfen:
 
-## F – Bluetooth / Mars Hydro
+- Plesk Panel erreichbar;
+- Webserver/Reverse Proxy läuft;
+- PHP/Python-Abhängigkeiten unauffällig;
+- Datenbank läuft;
+- keine fehlgeschlagenen systemd-Dienste, die für Plesk relevant sind.
 
-Bluetooth-Baseline erneut prüfen:
+Wenn Kernel, libc, systemd oder andere zentrale Komponenten aktualisiert wurden: kontrollierter Reboot und danach Plesk erneut prüfen.
 
-- Scan startet sichtbar;
-- Geräte werden mit Namen/Typ-Hinweisen angezeigt;
-- Verbindung/GATT kann gelesen werden;
-- generische Geräte werden nicht als Mars Hydro ausgegeben;
-- MZ_MZF002/iFresh-Kandidaten werden nur als Diagnosekandidaten markiert.
+## Phase 5 – Plesk-Plugin / Cloud V7
 
-FC3000 2024 und iFresh/DF100 bleiben iConnect-Zielgeräte. Unbekannte BLE/iConnect-Writes nicht aktivieren, bevor reale Telegramme beobachtet, korreliert und reproduzierbar validiert wurden.
+Erst wenn Phase 4 sauber ist:
 
-## G – Security / Fehlerfälle
+1. Grow-Central-Plesk-Plugin installieren.
+2. Plugin-Menü und Setup öffnen.
+3. Cloud-V7-Dienste prüfen.
+4. Test-Pi in der Geräteverwaltung prüfen.
+5. Kunde/Gruppe/Status/Plan setzen.
+6. einzelne Features manuell freischalten.
+7. Pi die effektiven Entitlements abrufen lassen.
+8. Änderung zurücknehmen und erneuten Abruf prüfen.
+9. Fehlerfall testen: unbekanntes Gerät / gesperrtes Gerät / abgelaufene Freischaltung.
 
-- ohne GUI-Login normale GUI/API nicht verwendbar;
-- falscher GUI-Login wird abgewiesen;
-- Smart-Home-Sourcecode bleibt deny-by-default;
-- Appliance aktiviert Smart Home explizit hinter Auth + Device Approval + Writable Gate;
-- unbekannte Kamera-Control-Namen und Werte außerhalb des Gerätebereichs werden abgewiesen;
-- Integrationspasswörter werden nicht an Browser-Read-APIs zurückgegeben;
-- DF100M-Raw-/Speed-Writes bleiben standardmäßig deaktiviert;
-- `GC_REMOTE_COMMANDS=false` und `GC_CLOUD_ENABLED=false` bleiben Default des Images.
+## Cloud-V7-Entitlements
+
+Der aktuelle Stand sieht folgende schaltbare Features vor:
+
+- `remote_control`
+- `camera`
+- `history_extended`
+- `alerts`
+- `automation_pro`
+- `api_access`
+- `beta_features`
+
+## Erweiterter Hardwaretest nach Baseline
+
+Wenn First Boot, Heimnetz und Cloud funktionieren, folgen die Gerätepfade:
+
+- FRITZ! Smart Home;
+- TP-Link Tapo;
+- Logitech C920/UVC;
+- Bluetooth-Scan;
+- Mars Hydro / iConnect Diagnose;
+- Elecrow Touch/Kiosk;
+- Räume/Grow/Automationen;
+- Supportdatei und Schwärzung sensibler Daten.
 
 ## Testprotokoll
 
-| ID | Pfad | Aktion | Erwartung | Ergebnis |
-|---|---|---|---|---|
-| A01 | First Boot | Factory-Start | Setup-Assistent | TBD |
-| A02 | WLAN | Scan + Join | Netzliste + Verbindung | TBD |
-| A03 | GUI Auth | Logout/Login | Zugriff nur authentifiziert | TBD |
-| F01 | FRITZ! | Erkennung/Login | Box + Geräte importiert | TBD |
-| F02 | FRITZ!-Steckdose | ON/OFF + Telemetrie | physisch + Rücklesen korrekt | TBD |
-| T01 | Tapo | lokale Discovery/Auth | Gerät erreichbar | TBD |
-| C01 | C920 | Erkennung | C920 / capture-capable | TBD |
-| C02 | C920 | Snapshot | echtes JPEG sichtbar | TBD |
-| C03 | C920 | Control ändern | Wert + Bild reagieren | TBD |
-| B01 | Bluetooth | Scan | Geräte sichtbar | bereits positiv / erneut prüfen |
-| M01 | Mars Hydro | Diagnose | kein unvalidierter Write | TBD |
+| ID | Bereich | Erwartung | Ergebnis |
+|---|---|---|---|
+| B159-01 | Flash/Boot | Image startet | TBD |
+| B159-02 | Setup-AP | AP + DHCP vorhanden | TBD |
+| B159-03 | First Boot | Setup vollständig möglich | TBD |
+| B159-04 | WLAN | Heimnetz gespeichert | TBD |
+| B159-05 | Reboot | Pi startet im Heimnetz | TBD |
+| B159-06 | GUI | Login + Persistenz funktionieren | TBD |
+| B159-07 | Cloud | Verbindung nachvollziehbar | TBD |
+| SRV-01 | APT Update | Server aktualisiert fehlerfrei | TBD |
+| SRV-02 | Reboot/Plesk | Plesk danach gesund | TBD |
+| V7-01 | Plugin | Installation/Setup erfolgreich | TBD |
+| V7-02 | Geräteverwaltung | Test-Pi sichtbar | TBD |
+| V7-03 | Entitlement | Freischaltung kommt am Pi an | TBD |
 
-## Beta-Grenze
+## VALIDATED-Gate
 
-Beta erst nach wiederholbaren First-Boot-/Reboot-Tests sowie realer Prüfung von Netzwerk, GUI-Login, FRITZ!-Steckdose, C920 und den vorgesehenen Geräte-/Fehlerpfaden. Ein erfolgreicher Build allein reicht nicht.
+Build 159 wird erst auf **VALIDATED** gesetzt, wenn mindestens folgende Punkte real bestätigt sind:
+
+- First Boot;
+- WLAN-Übernahme;
+- Reboot ins Heimnetz;
+- lokale GUI/Auth/Persistenz;
+- Cloud-Anbindung;
+- nachvollziehbarer Cloud-V7-Gerätepfad.
+
+Weitere Geräteintegrationen können anschließend einzeln validiert werden; ein erfolgreicher Build allein ist keine Hardwarevalidierung.
