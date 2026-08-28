@@ -10,9 +10,19 @@ import os
 import re
 import secrets
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
+
+APP_ROOT = Path("/opt/135er-grow-central")
+VENV_PYTHON = APP_ROOT / ".venv/bin/python"
+if VENV_PYTHON.is_file() and Path(sys.executable).resolve() != VENV_PYTHON.resolve():
+    os.chdir(APP_ROOT)
+    os.environ["PYTHONPATH"] = str(APP_ROOT)
+    os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), __file__, *sys.argv[1:]])
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 
 from app.hardware import ethernet_interface, wifi_interface
 
