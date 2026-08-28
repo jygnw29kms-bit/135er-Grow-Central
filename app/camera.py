@@ -155,27 +155,17 @@ def _device_info(camera_id: str, device: str) -> dict[str, Any]:
             formats_text = (formats.stdout + b"\n" + formats.stderr).decode("utf-8", errors="replace")
             row["pixel_formats"] = list(dict.fromkeys(re.findall(r"'([A-Z0-9]{4})'", formats_text)))
             row["mjpeg_modes"] = _parse_mjpeg_modes(formats_text)
-            # The live endpoint copies MJPEG without transcoding. Hiding nodes
-            # without native MJPEG avoids advertising devices that can only fail
-            # (or would require expensive real-time transcoding on a Pi 3B).
             row["stream_capable"] = formats.returncode == 0 and "MJPG" in row["pixel_formats"]
     return row
 
 
 def _discover_devices_sync(*, force: bool = False) -> tuple[list[dict[str, Any]], int]:
-    """Return only real capture nodes; hide Pi codec/ISP and metadata nodes."""
     global _DISCOVERY_CACHE
     configured = os.getenv("GC_CAMERA_DEVICE", "").strip()
     now = time.monotonic()
     with _DISCOVERY_LOCK:
-        if (
-            not force
-            and _DISCOVERY_CACHE
-            and _DISCOVERY_CACHE[1] == configured
-            and now - _DISCOVERY_CACHE[0] < DISCOVERY_CACHE_SECONDS
-        ):
+        if not force and _DISCOVERY_CACHE and _DISCOVERY_CACHE[1] == configured and now - _DISCOVERY_CACHE[0] < DISCOVERY_CACHE_SECONDS:
             return _DISCOVERY_CACHE[2], _DISCOVERY_CACHE[3]
-
         discovered: list[dict[str, Any]] = []
         ignored = 0
         for device in _candidate_devices():
@@ -183,12 +173,7 @@ def _discover_devices_sync(*, force: bool = False) -> tuple[list[dict[str, Any]]
             bus_info = str(row.get("bus_info") or "").lower()
             driver = str(row.get("driver") or "").lower()
             is_usb_uvc = "usb" in bus_info or driver == "uvcvideo"
-            allowed = bool(
-                row["capture_capable"]
-                and row["stream_capable"]
-                and row["readable"]
-                and (configured or is_usb_uvc)
-            )
+            allowed = bool(row["capture_capable"] and row["stream_capable"] and row["readable"] and (configured or is_usb_uvc))
             if not allowed:
                 ignored += 1
                 continue
@@ -205,18 +190,7 @@ def _status_sync(*, force: bool = False) -> dict[str, Any]:
     enabled = os.getenv("GC_CAMERA_ENABLED", "true").lower() == "true"
     devices, ignored = _discover_devices_sync(force=force)
     preferred = devices[0] if devices else None
-    return {
-        "enabled": enabled,
-        "reference_model": "Logitech C920",
-        "connected_directly_to_pi": True,
-        "count": len(devices),
-        "ignored_video_nodes": ignored,
-        "devices": devices,
-        "selected_camera_id": preferred["id"] if preferred else None,
-        "selected_device": preferred["device"] if preferred else None,
-        "selected_is_c920": bool(preferred and preferred["c920_match"]),
-        "ready": bool(enabled and preferred and preferred["stream_capable"]),
-    }
+    return {"enabled": enabled, "reference_model": "Logitech C920", "connected_directly_to_pi": True, "count": len(devices), "ignored_video_nodes": ignored, "devices": devices, "selected_camera_id": preferred["id"] if preferred else None, "selected_device": preferred["device"] if preferred else None, "selected_is_c920": bool(preferred and preferred["c920_match"]), "ready": bool(enabled and preferred and preferred["stream_capable"])}
 
 
 def _controls_sync(camera_id: str | None) -> dict[str, Any]:
@@ -240,18 +214,7 @@ def _controls_sync(camera_id: str | None) -> dict[str, Any]:
             flags = []
             if "flags=" in rest:
                 flags = [item.strip() for item in rest.split("flags=", 1)[1].split(",") if item.strip()]
-            current = {
-                "name": name,
-                "type": kind.strip(),
-                "min": pairs.get("min"),
-                "max": pairs.get("max"),
-                "step": pairs.get("step", 1),
-                "default": pairs.get("default"),
-                "value": pairs.get("value"),
-                "flags": flags,
-                "menu": [],
-                "writable": not any(flag in {"read-only", "inactive", "disabled"} for flag in flags),
-            }
+            current = {"name": name, "type": kind.strip(), "min": pairs.get("min"), "max": pairs.get("max"), "step": pairs.get("step", 1), "default": pairs.get("default"), "value": pairs.get("value"), "flags": flags, "menu": [], "writable": not any(flag in {"read-only", "inactive", "disabled"} for flag in flags)}
             controls.append(current)
             continue
         if current and current["type"] in {"menu", "integer menu"}:
@@ -331,12 +294,7 @@ def _snapshot_sync(camera_id: str | None, width: int | None = None, height: int 
     if not os.access(device, os.R_OK):
         raise PermissionError(f"camera device is not readable: {device}")
     try:
-        result = _run([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}',
-            "-framerate", str(mode["selected_fps"]), "-i", device,
-            "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1",
-        ], timeout=12)
+        result = _run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}', "-framerate", str(mode["selected_fps"]), "-i", device, "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1"], timeout=12)
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError("camera capture timeout") from exc
     except OSError as exc:
@@ -389,11 +347,7 @@ async def camera_snapshot(camera_id: str | None = None, width: int | None = None
         raise HTTPException(504, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
-    return Response(
-        content=data,
-        media_type="image/jpeg",
-        headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'},
-    )
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'})
 
 
 async def _terminate_process(process: asyncio.subprocess.Process | None) -> None:
@@ -460,13 +414,7 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
     stderr_task: asyncio.Task[bytes] | None = None
     await _claim_stream(token)
     try:
-        process = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}', "-framerate", str(mode["selected_fps"]),
-            "-i", device, "-an", "-c:v", "copy", "-f", "mpjpeg", "pipe:1",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        process = await asyncio.create_subprocess_exec("ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}', "-framerate", str(mode["selected_fps"]), "-i", device, "-an", "-c:v", "copy", "-f", "mpjpeg", "pipe:1", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         if not await _register_stream_process(token, process):
             await _terminate_process(process)
             return
@@ -485,12 +433,7 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
                 detail = (await asyncio.wait_for(stderr_task, timeout=1)).decode("utf-8", errors="replace").strip()[:240]
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 stderr_task.cancel()
-        append_audit(
-            "camera.stream.closed",
-            camera_id=resolved_id,
-            result="ffmpeg_error" if detail else "closed",
-            detail=detail,
-        )
+        append_audit("camera.stream.closed", camera_id=resolved_id, result="ffmpeg_error" if detail else "closed", detail=detail)
 
 
 @router.get("/stream")
@@ -506,14 +449,18 @@ async def camera_stream(camera_id: str | None = None, width: int | None = None, 
     if not os.access(device, os.R_OK):
         raise HTTPException(403, f"camera device is not readable: {device}")
     append_audit("camera.stream.opened", camera_id=resolved_id, width=mode["width"], height=mode["height"], fps=mode["selected_fps"])
-    return StreamingResponse(
-        _mjpeg_stream(resolved_id, device, mode),
-        media_type="multipart/x-mixed-replace; boundary=ffmpeg",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'},
-    )
+    return StreamingResponse(_mjpeg_stream(resolved_id, device, mode), media_type="multipart/x-mixed-replace; boundary=ffmpeg", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'})
 
 
 @router.post("/stream/stop", dependencies=[Depends(require_write_auth)])
 async def camera_stream_stop():
     stopped = await _stop_active_stream("browser_request")
     return {"ok": True, "stopped": stopped}
+
+
+# Apply the Raspberry-Pi camera safety policy on direct imports as well as via
+# the production entrypoint. This keeps tests, CLI diagnostics and the web app
+# on the same <=720p policy without importing FastAPI from app.__init__.
+from app.camera_policy import install as _install_camera_policy
+_install_camera_policy(__import__(__name__, fromlist=["*"]))
+del _install_camera_policy
