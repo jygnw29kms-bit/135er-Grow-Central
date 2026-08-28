@@ -113,6 +113,8 @@ chmod 0755 "$SESSION"
 chown "$USER:$USER" "$SESSION" 2>/dev/null || true
 
 systemctl stop getty@tty1.service 2>/dev/null || true
+chown "$USER:tty" /dev/tty1 2>/dev/null || true
+chmod 0620 /dev/tty1 2>/dev/null || true
 install -d -o "$USER" -g "$USER" -m 0750 "$HOME_DIR/.config" "$HOME_DIR/.cache"
 chown -R "$USER:$USER" "$HOME_DIR/.config" "$HOME_DIR/.cache" 2>/dev/null || true
 
