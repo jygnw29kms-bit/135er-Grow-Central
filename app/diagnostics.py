@@ -39,6 +39,7 @@ UNITS = (
 COMPLETION_MARKERS = {
     "grow-central-headless-firstboot.service": Path("/var/lib/135er-grow-central/.headless-firstboot-ready"),
     "grow-central-firstboot-firewall.service": Path("/var/lib/135er-grow-central/.firewall-initialized"),
+    "grow-central-setup-ap.service": Path("/var/lib/135er-grow-central/.provisioned"),
 }
 STATE_DIR = Path("/var/lib/135er-grow-central")
 SUPPORT_DIR = STATE_DIR / "support"
@@ -83,17 +84,23 @@ async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
     services = {}
     for unit in UNITS:
         status_code, status = await _command("systemctl", "is-active", unit)
+        _, failed_state = await _command("systemctl", "is-failed", unit)
         journal_code, journal = await _command(
             "journalctl", "--no-pager", "--output=short-iso", f"--lines={lines}", "--unit", unit
         )
         marker = COMPLETION_MARKERS.get(unit)
         completed = marker.exists() if marker else False
         active = status == "active"
+        failed = failed_state == "failed"
+        if completed and not active:
+            display_status = "completed"
+        else:
+            display_status = status or ("failed" if failed else "unknown")
         services[unit] = {
             "active": active,
-            "healthy": active or completed,
+            "healthy": not failed,
             "completed": completed,
-            "status": "completed" if completed and not active else status or "unknown",
+            "status": display_status,
             "status_exit_code": status_code,
             "journal_exit_code": journal_code,
             "journal": journal,
