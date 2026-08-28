@@ -1,8 +1,9 @@
 """Publish the stable 135er-GrowCentral.local alias through Avahi.
 
-The OS hostname remains compatible with the proven Build-85 first-boot flow. The
-application publishes an additional mDNS address record, so changing the setup
-hostname is not required and AP provisioning cannot regress.
+The OS hostname stays ``135er-grow-central`` while the application publishes an
+additional address record. Do not request a reverse record for the alias: the
+native avahi-daemon already owns the reverse mapping for the interface address,
+and a second reverse mapping can make Avahi rename the host to ``-2.local``.
 """
 from __future__ import annotations
 
@@ -61,7 +62,7 @@ async def _publisher() -> None:
             if address:
                 try:
                     _process = await asyncio.create_subprocess_exec(
-                        "avahi-publish-address", "-R", ALIAS, address,
+                        "avahi-publish-address", ALIAS, address,
                         stdout=asyncio.subprocess.DEVNULL,
                         stderr=asyncio.subprocess.DEVNULL,
                     )
