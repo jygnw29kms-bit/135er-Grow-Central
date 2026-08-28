@@ -39,7 +39,6 @@ UNITS = (
 COMPLETION_MARKERS = {
     "grow-central-headless-firstboot.service": Path("/var/lib/135er-grow-central/.headless-firstboot-ready"),
     "grow-central-firstboot-firewall.service": Path("/var/lib/135er-grow-central/.firewall-initialized"),
-    "grow-central-setup-ap.service": Path("/var/lib/135er-grow-central/.provisioned"),
 }
 STATE_DIR = Path("/var/lib/135er-grow-central")
 SUPPORT_DIR = STATE_DIR / "support"
