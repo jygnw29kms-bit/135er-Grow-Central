@@ -1,63 +1,110 @@
 # 135er-Grow Central · Canonical Release State
 
-**Stand:** 2026-08-23  
+**Stand:** 2026-08-28  
 **Repository-Version:** `alpha-0.7.5`  
 **Branch:** `master`  
-**Build-118 Runtime-/Image-Anker:** `e339602476f3a716ae28abd5334cb6f96447a646`  
-**Next Raspberry-Pi hardware-test candidate:** **Build 118**  
-**Candidate tag:** `pi-universal-alpha-0.7.5-118`
+**Current clean master:** `2588886b951802741977cfc87d2e50552a3e6553`  
+**Current Raspberry-Pi hardware-test candidate:** **Build 159**  
+**Candidate tag:** `pi-universal-alpha-0.7.5-159`  
+**Status:** `CANDIDATE` – noch nicht hardware-validiert
 
-> Diese Datei ist die kanonische Referenz für README, Website, Pi-Image, Mobile, Cloud/APT und Release-Dokumentation. `e339602` bezeichnet den Laufzeit-/Image-Stand des Build-118-Kandidaten; der `master`-Branch enthält danach zusätzlich Dokumentations-, Mobile-, Packaging- und Publishing-Commits. Historische Build-Dokumente dürfen ältere Nummern enthalten, müssen aber als Historie verstanden werden.
+> Diese Datei ist die kanonische Referenz für README, Pi-Image, Mobile, Cloud/APT und Release-Dokumentation. Der reale Hardwaretest entscheidet über `VALIDATED`; ein erfolgreicher CI-Build allein reicht dafür nicht.
 
-## Statusmodell
+## Aktueller Stand
 
-- **Build 117:** vorheriger erfolgreich getesteter Image-Stand; durch den zusammengeführten `e339`-Laufzeitstand funktional überholt.
-- **Build 118:** aktueller Kandidat für den nächsten realen Hardwaretest. **Status: CANDIDATE.** Erst nach bestandenem Pi-Test darf der Status auf `VALIDATED` wechseln.
-- **Stable:** weiterhin nicht freigegeben; Projekt bleibt `alpha-0.7.5`.
+- **Pi Image:** Build 159, Universal Image für Raspberry Pi 3B/3B+, 4B/400, 5 und kompatible Compute Modules.
+- **Image-Datei:** `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-159.img.xz`
+- **Image SHA-256:** `136ebc324595ccf732b4e48292b3cbf6a09e362846c53f2070190c44a3953f3b`
+- **Release:** `pi-universal-alpha-0.7.5-159` · Prerelease/CANDIDATE.
+- **Cloud:** V7 ist auf `master` integriert.
+- **Servervarianten:** Plesk-Integration und Standalone-Webinterface sind vorgesehen.
+- **APT:** Cloud-Komponenten werden paketiert und sollen auf bestehenden Instanzen über den normalen APT-Upgradepfad aktualisierbar bleiben.
+- **Freischaltungen:** V7 verwaltet Geräte-/Kunden-Zuordnung, Gruppen, Status, Pläne und einzelne Feature-Entitlements.
+- **Pi ↔ Cloud:** Pis können ihre effektiven V7-Entitlements sicher abrufen.
 
-## In Build 118 zusammengeführt
+## Cloud V7
 
-- Raspberry-Pi Local-First GUI, First Boot, Netzwerk, FRITZ! und Tapo;
-- Logitech-C920/UVC-Pfad;
-- firmware-/modell-/USB-ID-bewusste Kamera-LED-Fähigkeitserkennung;
-- bedingte V4L2-/Logitech-LED-Steuerung statt blindem Schreiben;
-- Tests für LED-Fähigkeits- und Steuersemantik;
-- Elecrow 7-Zoll Touch-Kiosk inklusive systemd-Service und gehärteten Dateirechten;
-- Räume/Grow, Automationen, Diagnose und Supportpfade;
-- der zu diesem Zeitpunkt integrierte GUI-/Runtime-Stand.
+Aktuell integriert sind unter anderem:
 
-## Nach dem Runtime-Anker auf `master` synchronisiert
+- V7 Admin- und Entitlement-Endpunkte;
+- Routing für Plesk und Standalone-Betrieb;
+- Geräteverwaltung mit manueller Freischaltung;
+- Kunden- und Gerätegruppen;
+- Status/Plan/Validität/Notizen;
+- Feature-Entitlements für `remote_control`, `camera`, `history_extended`, `alerts`, `automation_pro`, `api_access` und `beta_features`;
+- sicherer Pi-Abruf der effektiven Freischaltungen;
+- APT-Packaging und CI-Validierung der V7-Pfade;
+- statisches SQL-Update der Entitlements als Security-Härtung.
 
-Diese Änderungen verändern den vorgesehenen Pi-Laufzeitkandidaten Build 118 nicht und erzeugen deshalb bewusst keinen künstlichen Build 119:
+## Aktueller Hardware-Test Build 159
 
-- GrowCentral Nexus UI als verbindliches Repo-/Produkt-Designsystem;
-- README, Docs, Wiki und Projektgeschichte auf Build 118 konsolidiert;
-- Nexus Mobile 0.2.1 für Android und iOS-Sideloading;
-- dezender.de Nexus Project Console;
-- Cloud-V6/APT-Release-Paket und SHA-256-Publishing;
-- Release-Consistency-Guards.
+Der nächste reale Test läuft in dieser Reihenfolge:
 
-## Release-Gates Build 118
+1. Build-159-Image frisch flashen.
+2. Setup-AP / First Boot öffnen.
+3. First-Boot-Assistent vollständig durchführen.
+4. Heim-WLAN konfigurieren.
+5. Reboot durchführen.
+6. Prüfen, dass der Pi danach sauber im Heimnetz erscheint.
+7. GUI/Login/Persistenz prüfen.
+8. Cloud-Anbindung des Pi prüfen.
+9. Erst danach den Server vorbereiten und das Plesk-Plugin installieren.
 
-1. automatisierte Python-/Security-/Integrationsprüfungen für den Runtime-Stand;
-2. exakt das Build-118-Image verwenden;
-3. Image booten und rebooten;
-4. First Boot, LAN/WLAN/AP, GUI und Persistenz prüfen;
-5. C920 inkl. LED-Fähigkeiten auf realer Hardware prüfen;
-6. relevante FRITZ!/Tapo/Mars-Hydro-/Displaypfade prüfen;
-7. Support-Datei bei Abweichungen auswerten;
-8. erst danach Status von `CANDIDATE` auf `VALIDATED` setzen.
+### Akzeptanz für die erste Teststufe
+
+- Setup-AP und DHCP funktionieren ohne manuelle Reparatur.
+- First-Boot-GUI ist erreichbar.
+- WLAN-Konfiguration wird gespeichert.
+- Reboot funktioniert.
+- Pi kommt danach zuverlässig im Heimnetz hoch.
+- lokale GUI ist erreichbar und Login/Persistenz funktionieren.
+- Cloud-Verbindung ist technisch erreichbar und liefert einen nachvollziehbaren Gerätestatus.
+
+## Plesk-Server vor Plugin-Installation
+
+Vor Installation des Grow-Central-Plesk-Plugins wird das Hostsystem zuerst regulär aktualisiert:
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+Danach prüfen:
+
+```bash
+sudo apt --fix-broken install
+sudo systemctl --failed
+```
+
+Falls Kernel, libc, systemd oder andere zentrale Komponenten aktualisiert wurden, ist vor der Plugin-Installation ein geplanter Reboot sinnvoll. Anschließend Plesk-Funktion, Webserver, PHP/Proxy und Datenbank prüfen.
+
+**Wichtig:** Das Grow-Central-Plugin erst installieren, wenn das Plesk-System nach dem Update wieder sauber läuft. So lassen sich Server-/Plesk-Probleme klar von Grow-Central-Problemen trennen.
+
+## Release-Gates Build 159
+
+1. CI-/Security-/Integrationsprüfungen erfolgreich;
+2. exakt Build 159 testen;
+3. First Boot erfolgreich;
+4. Heimnetzübernahme + Reboot erfolgreich;
+5. lokale GUI + Auth + Persistenz erfolgreich;
+6. Cloud-Verbindung erfolgreich;
+7. anschließend Plesk-Server aktualisieren;
+8. Plesk-Plugin installieren und Cloud-V7-Verwaltung prüfen;
+9. Entitlement/Freischaltung eines Test-Pi prüfen;
+10. erst danach `CANDIDATE` → `VALIDATED`.
 
 ## Distribution
 
-- Pi: GitHub Release/Artifact `pi-universal-alpha-0.7.5-118`
-- Android: `GrowCentral-Nexus-Android-APK`
-- iOS: `GrowCentral-Nexus-iOS-Sideload-IPA` (unsigned Ausgangspaket zur gerätebezogenen Signierung)
-- Cloud: `scripts/install-135ercloud-v6.sh`
-- APT Setup: `scripts/setup-135ercloud-apt-repo-v1.sh`
+- Pi: `pi-universal-alpha-0.7.5-159`
+- Android: GrowCentral Nexus Android APK
+- iOS: GrowCentral Nexus iOS Sideload IPA
 - APT Repository: `https://repo.dezender.de/apt`
 - Public Project Console: `https://dezender.de`
 
+## Projekttrennung
+
+Das Repository `135er-Grow-Central` enthält ausschließlich Grow-Central-Inhalte. Fremdprojekte und fremde Deployments gehören nicht in dieses Repository.
+
 ## Design
 
-Alle Oberflächen und Präsentationsassets folgen verbindlich dem **GrowCentral Nexus UI**. Logo und Branding bleiben unverändert. Details: [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md).
+Alle Oberflächen und Präsentationsassets folgen dem **GrowCentral Nexus UI**. Logo und Branding bleiben unverändert. Details: [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md).
