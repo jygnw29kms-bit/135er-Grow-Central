@@ -1,11 +1,7 @@
-"""135er-Grow Central application package."""
+"""135er-Grow Central application package.
 
-# Install the Grow Central camera policy once at package import. Importing the
-# camera module here is deliberate: later imports receive the already-patched
-# generic UVC backend without duplicating camera logic.
-from app import camera as _camera
-from app.camera_policy import install as _install_camera_policy
-
-_install_camera_policy(_camera)
-
-del _camera, _install_camera_policy
+Package imports intentionally have no runtime side effects. Lightweight helpers
+such as the first-boot configurator import ``app.hardware`` with system Python
+before the web stack is involved; importing this package must therefore not pull
+in FastAPI or camera dependencies.
+"""
