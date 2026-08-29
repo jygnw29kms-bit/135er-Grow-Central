@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 
-class SupportLevel(StrEnum):
+class _StringEnum(str, Enum):
+    def __str__(self) -> str:
+        return self.value
+
+
+class SupportLevel(_StringEnum):
     DETECTED = "detected"
     EXPERIMENTAL = "experimental"
     COMPATIBLE = "compatible"
@@ -13,7 +18,7 @@ class SupportLevel(StrEnum):
     CERTIFIED = "certified"
 
 
-class Transport(StrEnum):
+class Transport(_StringEnum):
     BLE = "ble"
     WIFI_LOCAL = "wifi_local"
     CLOUD = "cloud"
@@ -25,7 +30,7 @@ class Transport(StrEnum):
     BRIDGE = "bridge"
 
 
-class DeviceClass(StrEnum):
+class DeviceClass(_StringEnum):
     LIGHT = "light"
     FAN = "fan"
     SWITCH = "switch"
@@ -39,7 +44,7 @@ class DeviceClass(StrEnum):
     GATEWAY = "gateway"
 
 
-class Capability(StrEnum):
+class Capability(_StringEnum):
     POWER = "power"
     BRIGHTNESS = "brightness"
     FAN_SPEED = "fan_speed"
