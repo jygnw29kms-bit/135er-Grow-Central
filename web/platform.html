@@ -1,86 +1,121 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-mode="simple">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07100d">
-<title>135er-Grow Central</title>
+<meta name="theme-color" content="#070b0d">
+<meta name="color-scheme" content="dark">
+<title>135er Grow Central</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/platform.css?v=1">
+<link rel="stylesheet" href="/static/platform.css?v=2">
+<script>if(matchMedia('(max-width:600px) and (pointer:coarse)').matches&&!localStorage.getItem('gc.desktop'))location.replace('/mobile');</script>
 </head>
 <body>
-<div class="shell">
+<div class="app-shell">
   <aside class="sidebar">
-    <div class="brand"><img src="/static/brand-logo.png" alt="135er-Grow Central"><span>LOCAL CONTROL PLATFORM</span></div>
-    <nav id="nav">
-      <button class="active" data-view="dashboard"><b>◈</b> Übersicht</button>
-      <button data-view="grow"><b>⌁</b> Grow</button>
-      <button data-view="devices"><b>◇</b> Geräte</button>
-      <button data-view="automation"><b>⟲</b> Automation</button>
-      <button data-view="energy"><b>⚡</b> Energie</button>
-      <button data-view="camera"><b>◉</b> Kamera</button>
-      <button data-view="system"><b>⚙</b> System</button>
+    <a class="brand" href="/" aria-label="Grow Central Übersicht"><img src="/static/brand-logo.png" alt="135er Grow Central"><span>LOCAL CONTROL SYSTEM</span></a>
+    <nav id="mainNav" aria-label="Hauptnavigation">
+      <button class="active" data-view="overview"><i>⌂</i><span>Übersicht</span></button>
+      <button data-view="grow"><i>▣</i><span>Growboxen</span></button>
+      <button data-view="devices"><i>◫</i><span>Geräte</span></button>
+      <button data-view="automation"><i>⌁</i><span>Automationen</span></button>
+      <button data-view="camera"><i>◉</i><span>Kamera</span></button>
+      <button class="advanced-only" data-view="energy"><i>ϟ</i><span>Energie</span></button>
+      <button class="advanced-only" data-view="system"><i>⚙</i><span>System</span></button>
     </nav>
-    <div class="side-status"><i></i><div><small>CORE</small><strong id="sideCore">LOCAL ONLINE</strong></div></div>
+    <div class="sidebar-foot">
+      <div class="core-dot"><i id="coreDot"></i><span><small>LOCAL CORE</small><b id="coreLabel">wird geprüft</b></span></div>
+      <a href="/legacy">Legacy / Diagnose</a>
+    </div>
   </aside>
 
   <main>
-    <header>
-      <div><small>GC://LOCAL · UNIVERSAL DEVICE PLATFORM</small><h1 id="pageTitle">Grow Environment</h1></div>
-      <div class="header-actions"><span id="clock">--:--</span><span class="pill local">LOCAL-FIRST</span><button id="syncBtn">SYNC</button></div>
+    <header class="topbar">
+      <div class="page-heading"><small>135ER GROW CENTRAL</small><h1 id="pageTitle">Übersicht</h1></div>
+      <div class="top-actions">
+        <select id="growSelector" aria-label="Growbox auswählen"><option>Alle Growboxen</option></select>
+        <div class="mode-switch" role="group" aria-label="Bedienmodus"><button id="simpleMode" class="active">Einfach</button><button id="advancedMode">Advanced</button></div>
+        <span class="live"><i></i><b>LOCAL</b></span>
+        <button class="icon-btn" id="refreshBtn" title="Daten aktualisieren">↻</button>
+      </div>
     </header>
 
-    <section class="view active" id="dashboard">
-      <div class="hero">
-        <div><small>GROW CENTRAL CORE</small><h2>Eine Zentrale. Alle Geräte.</h2><p>Mars Hydro, Spider Farmer, Tuya, AC Infinity, VIVOSUN, Shelly, Zigbee, ESP32 und bestehende Smart-Home-Geräte laufen über dieselbe Entity- und Automation-Schicht.</p></div>
-        <div class="hero-state"><span id="providerCount">--</span><small>PROVIDER</small><strong id="coreState">Core wird geprüft…</strong></div>
-      </div>
+    <section id="overview" class="view active">
+      <div class="status-banner" id="statusBanner"><div><span class="status-icon">✓</span><div><small>SYSTEM STATUS</small><h2 id="headline">Grow Central wird geprüft…</h2><p id="headlineSub">Lokale Dienste und Geräte werden geladen.</p></div></div><span class="timestamp" id="lastUpdate">—</span></div>
+
       <div class="metric-grid">
-        <article><small>TEMPERATUR</small><strong><span id="temp">--.-</span> °C</strong><em>Umgebung</em></article>
-        <article><small>LUFTFEUCHTE</small><strong><span id="rh">--</span> %</strong><em>Relative Feuchte</em></article>
-        <article><small>VPD</small><strong><span id="vpd">--</span> kPa</strong><em>Berechnet / Sensor</em></article>
-        <article><small>LIVE POWER</small><strong><span id="power">--</span> W</strong><em id="onlineDevices">0 Geräte online</em></article>
+        <article class="metric"><header><span>TEMPERATUR</span><i class="temp">°</i></header><strong id="temp">—</strong><footer><span>°C</span><small id="tempHint">keine Daten</small></footer></article>
+        <article class="metric"><header><span>LUFTFEUCHTE</span><i class="humidity">◌</i></header><strong id="rh">—</strong><footer><span>%</span><small id="rhHint">keine Daten</small></footer></article>
+        <article class="metric"><header><span>VPD</span><i class="vpd">◇</i></header><strong id="vpd">—</strong><footer><span>kPa</span><small id="vpdHint">keine Daten</small></footer></article>
+        <article class="metric"><header><span>LEISTUNG</span><i class="power">ϟ</i></header><strong id="power">—</strong><footer><span>W</span><small id="powerHint">keine Daten</small></footer></article>
       </div>
-      <article class="panel"><div class="panel-head"><div><small>DEVICE FABRIC</small><h3>Provider-Status</h3></div><button data-open="devices">ALLE GERÄTE</button></div><div class="provider-strip" id="providerStrip"></div></article>
-      <div class="two-col"><article class="panel"><div class="panel-head"><div><small>CONTROL</small><h3>Aktive Geräte</h3></div></div><div id="devicePreview" class="list"><div class="empty">Geräte werden geladen…</div></div></article><article class="panel"><div class="panel-head"><div><small>PLATFORM HEALTH</small><h3>Systemzustand</h3></div></div><div id="healthGrid" class="health-grid"><div><span>API</span><strong>…</strong></div><div><span>Local</span><strong>…</strong></div><div><span>Cloud</span><strong>OPTIONAL</strong></div><div><span>Fail-safe</span><strong>ACTIVE</strong></div></div></article></div>
+
+      <div class="dashboard-grid">
+        <article class="panel grow-panel">
+          <div class="panel-title"><div><small>GROWBOXEN</small><h3>Aktueller Betrieb</h3></div><button class="text-btn" data-open="grow">Anzeigen →</button></div>
+          <div class="grow-summary" id="growSummary"><div class="empty">Noch keine Growbox-Daten vorhanden.</div></div>
+          <div class="quick-actions">
+            <button data-open="devices"><i>＋</i><span>Gerät hinzufügen</span></button>
+            <button data-open="automation"><i>⌁</i><span>Automation</span></button>
+            <button data-open="camera"><i>◉</i><span>Kamera</span></button>
+            <a href="/legacy"><i>⚙</i><span>Erweitert</span></a>
+          </div>
+        </article>
+
+        <article class="panel device-panel">
+          <div class="panel-title"><div><small>GERÄTESTATUS</small><h3>Lokale Geräte</h3></div><span class="counter" id="deviceCounter">0 / 0</span></div>
+          <div class="device-mini-list" id="devicePreview"><div class="empty">Geräte werden geladen…</div></div>
+        </article>
+
+        <article class="panel advanced-only health-panel">
+          <div class="panel-title"><div><small>DEVICE FABRIC</small><h3>Provider Runtime</h3></div><span class="counter" id="runtimeCounter">—</span></div>
+          <div class="health-list" id="runtimePreview"><div class="empty">Runtime wird geprüft…</div></div>
+        </article>
+
+        <article class="panel advanced-only energy-panel">
+          <div class="panel-title"><div><small>ENERGIE</small><h3>Aktueller Verbrauch</h3></div><button class="text-btn" data-open="energy">Details →</button></div>
+          <div class="energy-big"><strong id="energyNow">—</strong><span>W</span></div><div class="energy-meta"><span>gemeldet</span><b id="energyTotalSmall">— kWh</b></div>
+        </article>
+      </div>
     </section>
 
-    <section class="view" id="grow">
-      <div class="section-intro"><small>GROW WORKSPACE</small><h2>Growboxen & Pflanzen</h2><p>Geräte werden nicht mehr nach Hersteller bedient, sondern einer Growbox und ihrer Funktion zugeordnet.</p></div>
-      <div class="three-col"><article class="panel grow-card"><small>GROWBOX 1</small><h3>Primärer Grow</h3><p>Klima, Licht, Abluft, Bewässerung, Sensorik und Kamera als ein logischer Raum.</p><span class="pill">LOCAL</span></article><article class="panel"><small>ZIELWERTE</small><h3>Klima-Profil</h3><div class="kv"><span>Temperatur</span><b>—</b><span>RH</span><b>—</b><span>VPD</span><b>—</b></div></article><article class="panel"><small>JOURNAL</small><h3>Pflanzenverlauf</h3><p>Fotos, Bewässerung, EC/pH, Notizen und Ereignisse werden phasenbezogen zusammengeführt.</p></article></div>
+    <section id="grow" class="view">
+      <div class="section-head"><div><small>GROW WORKSPACE</small><h2>Growboxen</h2><p>Geräte und Sensoren werden nach ihrer Funktion in der Growbox dargestellt – nicht nach Hersteller.</p></div><a class="primary" href="/legacy#rooms">Growbox verwalten</a></div>
+      <div class="cards-grid" id="growCards"><article class="panel empty-state"><b>Noch keine Growbox-Konfiguration</b><p>Lege im bestehenden Raum-Manager eine Growbox an. Die neue Oberfläche übernimmt sie anschließend automatisch.</p></article></div>
     </section>
 
-    <section class="view" id="devices">
-      <div class="section-intro with-action"><div><small>UNIVERSAL DEVICE PLATFORM · GC-DEVICE-V1</small><h2>Geräte & Provider</h2><p>Discovery über BLE, LAN, MQTT, Zigbee-Gateway und herstellerspezifische Adapter. Schreibzugriffe werden erst nach Modellvalidierung freigegeben.</p></div><button class="primary" id="discoverBtn">GERÄTE SUCHEN</button></div>
-      <article class="panel"><div class="panel-head"><div><small>FIRST-CLASS PROVIDERS</small><h3>Unterstützte Ökosysteme</h3></div><span class="pill" id="platformApi">LOADING</span></div><div class="provider-grid" id="providerGrid"></div></article>
-      <article class="panel"><div class="panel-head"><div><small>REGISTERED ENTITIES</small><h3>Aktuelle Hardware</h3></div></div><div id="deviceList" class="list"><div class="empty">Geräteregistrierung wird geladen…</div></div></article>
-      <div class="notice">Supportstufen: <b>Detected</b> = erkannt/reserviert · <b>Experimental</b> = Integration in Entwicklung · <b>Compatible</b> = technisch nutzbar · <b>Validated</b> = echte Hardware geprüft · <b>Certified</b> = definierte Modell/Firmware-Kombination vollständig freigegeben.</div>
+    <section id="devices" class="view">
+      <div class="section-head"><div><small>GC-DEVICE-V1</small><h2>Geräte</h2><p>Einheitliche Geräteansicht für alle Hersteller und Protokolle.</p></div><button class="primary" id="discoverBtn">Geräte suchen</button></div>
+      <div class="filterbar"><button class="active" data-filter="all">Alle</button><button data-filter="online">Online</button><button data-filter="sensor">Sensoren</button><button data-filter="light">Licht</button><button data-filter="fan">Lüfter</button><button data-filter="switch">Schalter</button><button class="advanced-only" data-filter="provider">Provider</button></div>
+      <article class="panel"><div class="table-head"><span>GERÄT</span><span>TYP</span><span>PROVIDER</span><span>STATUS / WERTE</span></div><div id="deviceList" class="device-table"><div class="empty">Geräte werden geladen…</div></div></article>
+      <article class="panel advanced-only"><div class="panel-title"><div><small>PROVIDER</small><h3>Unterstützte Plattformen</h3></div><span class="counter" id="providerCount">—</span></div><div class="provider-grid" id="providerGrid"></div></article>
     </section>
 
-    <section class="view" id="automation">
-      <div class="section-intro"><small>VENDOR-NEUTRAL AUTOMATION</small><h2>Automation</h2><p>Regeln arbeiten mit Capabilities wie <code>fan_speed</code>, <code>brightness</code> oder <code>soil_moisture</code> – niemals mit Hersteller-Datenpunkten.</p></div>
-      <div class="three-col"><article class="panel"><small>KLIMA</small><h3>Temperatur → Abluft</h3><p>Beispiel: über 29 °C Abluft hochregeln, unabhängig davon ob das Zielgerät von Spider Farmer, AC Infinity oder VIVOSUN stammt.</p></article><article class="panel"><small>BEWÄSSERUNG</small><h3>Sensor → Pumpe</h3><p>ESP32/Zigbee Feuchte kann eine Tuya-, Shelly- oder Grow-Central-Pumpe auslösen.</p></article><article class="panel"><small>SAFETY</small><h3>Verified Commands</h3><p>Kritische Schreibvorgänge erhalten Rückmeldung, Retry und Fail-safe-Policy.</p></article></div>
-      <article class="panel"><div class="panel-head"><div><small>LOCAL RULES</small><h3>Vorhandene Automationen</h3></div></div><div id="automationList" class="list"><div class="empty">Automationen werden geladen…</div></div></article>
+    <section id="automation" class="view">
+      <div class="section-head"><div><small>LOCAL AUTOMATION</small><h2>Automationen</h2><p>Regeln arbeiten mit Funktionen wie Temperatur, Lüfterleistung oder Bodenfeuchte – herstellerneutral.</p></div><a class="primary" href="/legacy#automation">Neue Regel</a></div>
+      <div id="automationList" class="rule-list"><div class="empty">Automationen werden geladen…</div></div>
+      <article class="panel advanced-only info-panel"><small>SAFETY MODEL</small><h3>Bestätigte Schreibbefehle</h3><p>Provider dürfen nur deklarierte Capabilities schreiben. Kritische Provider bleiben read-only, bis Modell und Firmware auf realer Hardware validiert wurden.</p></article>
     </section>
 
-    <section class="view" id="energy">
-      <div class="section-intro"><small>ENERGY MATRIX</small><h2>Verbrauch</h2><p>Leistung und Energie werden über die einheitliche Capability-Schicht zusammengeführt.</p></div>
-      <div class="metric-grid"><article><small>LIVE</small><strong><span id="energyPower">--</span> W</strong><em>Gesamtleistung</em></article><article><small>ENERGIE</small><strong><span id="energyTotal">--</span> kWh</strong><em>Gemeldete Summe</em></article><article><small>ONLINE</small><strong id="energyOnline">-- / --</strong><em>Messgeräte</em></article><article><small>AKTIV</small><strong id="energyOn">--</strong><em>Schaltgeräte</em></article></div>
-      <article class="panel"><div id="energyDevices" class="list"><div class="empty">Energiedaten werden geladen…</div></div></article>
+    <section id="camera" class="view">
+      <div class="section-head"><div><small>VISION</small><h2>Kamera</h2><p>Lokale Kameras, Snapshots und Diagnose.</p></div><a class="primary" href="/legacy#camera">Kamera steuern</a></div>
+      <div id="cameraGrid" class="camera-grid"><div class="empty">Kamera wird geprüft…</div></div>
     </section>
 
-    <section class="view" id="camera">
-      <div class="section-intro"><small>VISION</small><h2>Kamera</h2><p>Lokale UVC-Kameras bleiben Teil des Device-Modells und werden später genauso über <code>stream</code> und <code>snapshot</code> angesprochen.</p></div>
-      <article class="panel camera-panel"><div id="cameraState" class="empty">Kamera wird geprüft…</div><a class="legacy-link" href="/legacy#camera">ERWEITERTE KAMERA-STEUERUNG ÖFFNEN</a></article>
+    <section id="energy" class="view advanced-only">
+      <div class="section-head"><div><small>ENERGY MATRIX</small><h2>Energie</h2><p>Zusammengefasste Leistung kompatibler Steckdosen und Geräte.</p></div></div>
+      <div class="metric-grid compact"><article class="metric"><header><span>LIVE</span></header><strong id="energyPower">—</strong><footer><span>W</span></footer></article><article class="metric"><header><span>ENERGIE</span></header><strong id="energyTotal">—</strong><footer><span>kWh</span></footer></article><article class="metric"><header><span>ONLINE</span></header><strong id="energyOnline">—</strong><footer><span>Geräte</span></footer></article><article class="metric"><header><span>AKTIV</span></header><strong id="energyOn">—</strong><footer><span>Schalter</span></footer></article></div>
+      <article class="panel"><div id="energyDevices" class="device-mini-list"><div class="empty">Keine Energiedaten.</div></div></article>
     </section>
 
-    <section class="view" id="system">
-      <div class="section-intro"><small>CORE & NETWORK</small><h2>System</h2><p>Der Raspberry Pi bleibt die autoritative lokale Instanz. Cloud ist Erweiterung, nicht Voraussetzung.</p></div>
-      <article class="panel"><div class="system-grid" id="systemGrid"><div><span>Hostname</span><b>…</b></div><div><span>IP</span><b>…</b></div><div><span>Version</span><b>…</b></div><div><span>Hardware</span><b>…</b></div><div><span>OS</span><b>…</b></div><div><span>Uptime</span><b>…</b></div></div></article>
-      <div class="notice">Die bisherige Oberfläche bleibt während der Migration unter <a href="/legacy">/legacy</a> erreichbar.</div>
+    <section id="system" class="view advanced-only">
+      <div class="section-head"><div><small>LOCAL CORE</small><h2>System</h2><p>Raspberry Pi, Netzwerk und Plattformzustand.</p></div><button class="secondary" id="systemRefresh">Aktualisieren</button></div>
+      <div class="system-grid" id="systemGrid"><div class="empty">Systemdaten werden geladen…</div></div>
+      <article class="panel"><div class="panel-title"><div><small>RUNTIME</small><h3>Provider</h3></div></div><div id="runtimeFull" class="health-list"></div></article>
     </section>
   </main>
 </div>
-<script src="/static/platform.js?v=1"></script>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/static/platform.js?v=2"></script>
 </body>
 </html>
