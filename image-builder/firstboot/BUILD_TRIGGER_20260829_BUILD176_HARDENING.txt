@@ -1,0 +1,3 @@
+Build trigger for the post-Build-176 validation hardening.
+Source state includes: robust AP rollback verification, mDNS publisher self-healing, and Cloud V7 40 MiB proxy upload limits.
+No additional runtime behavior is introduced by this marker file.
