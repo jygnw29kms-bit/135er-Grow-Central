@@ -12,7 +12,7 @@ from app.devices.runtime import ProviderRuntime
 
 def test_runtime_exposes_proven_and_native_providers():
     runtime = ProviderRuntime()
-    assert set(runtime.ids()) == {"fritz", "growcentral_esp32", "home_assistant", "shelly", "tapo"}
+    assert set(runtime.ids()) == {"fritz", "growcentral_esp32", "home_assistant", "shelly", "tapo", "zigbee"}
 
 
 def test_legacy_state_normalization_is_vendor_neutral():
