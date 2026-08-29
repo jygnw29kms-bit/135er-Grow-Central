@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .gc_esp32 import GrowCentralEsp32Provider
+from .generic_mqtt import GenericMqttProvider
 from .legacy_smarthome import LegacySmartHomeProvider
 from .provider import DeviceProvider
 from .zigbee2mqtt import Zigbee2MqttProvider
@@ -23,6 +24,7 @@ class ProviderRuntime:
         }
         self._providers["growcentral_esp32"] = GrowCentralEsp32Provider()
         self._providers["zigbee"] = Zigbee2MqttProvider()
+        self._providers["mqtt"] = GenericMqttProvider()
 
     def ids(self) -> tuple[str, ...]:
         return tuple(sorted(self._providers))
