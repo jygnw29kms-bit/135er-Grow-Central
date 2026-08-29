@@ -2,7 +2,7 @@
 
 Dieses Dokument fasst die technische Entwicklung von der ursprünglichen DF100M-Idee bis zum heutigen konsolidierten Plattformstand zusammen. Der aktuelle Release-Status selbst steht ausschließlich in [`RELEASE_STATE.md`](RELEASE_STATE.md).
 
-## 1. Ursprung: lokaler Grow-Controller
+## 1. Ursprung: lokale Grow-Zentrale
 
 Ausgangspunkt war der Wunsch, Mars-Hydro-Geräte nicht dauerhaft von einer Hersteller-App oder Cloud abhängig zu machen. Der Raspberry Pi wurde als lokale Masterplattform gewählt. Die frühe Arbeit konzentrierte sich auf DF100M-BLE-Discovery, GATT-Inspektion und Notification-Capture.
 
