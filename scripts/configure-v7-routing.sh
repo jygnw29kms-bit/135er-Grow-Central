@@ -68,7 +68,9 @@ configure_standalone(){
 server {
     listen 80;
     server_name ${HOST};
-    client_max_body_size 16m;
+    # Pi support bundles are capped at 32 MiB in the cloud-link agent. Keep
+    # nginx above that limit so valid diagnostics never fail at the proxy.
+    client_max_body_size 40m;
     proxy_buffering off;
 $(write_locations)
     location / {
@@ -100,7 +102,26 @@ configure_plesk(){
   touch "$file"
   strip_managed_block "$file"
   tmp="$(mktemp)"
-  { write_locations; cat "$file"; } > "$tmp"
+  {
+    printf '%s\n' '# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT' 'client_max_body_size 40m;' '# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT'
+    write_locations
+    cat "$file"
+  } > "$tmp"
+  # Remove both previously managed blocks before installing the new canonical
+  # variant. This keeps repeated upgrades idempotent on Plesk hosts.
+  python3 - "$tmp" <<'PY'
+from pathlib import Path
+import re,sys
+p=Path(sys.argv[1])
+s=p.read_text()
+first=s.find('# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT')
+if first >= 0:
+    prefix=s[:first]
+    managed=s[first:]
+    managed=re.sub(r'(?ms)(# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT\nclient_max_body_size 40m;\n# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT\n)(.*?)(?=# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT|\Z)', r'\1\2', managed, count=1)
+    s=prefix+managed
+p.write_text(s)
+PY
   cat "$tmp" > "$file"
   rm -f "$tmp"
   if ! plesk sbin httpdmng --reconfigure-domain "$HOST" >/dev/null; then
