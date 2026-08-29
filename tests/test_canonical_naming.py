@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGACY = re.compile(r"grow[\s_-]*control", re.IGNORECASE)
+LEGACY = re.compile("grow" + r"[\s_-]*" + "control", re.IGNORECASE)
 TEXT_SUFFIXES = {
     "", ".cfg", ".conf", ".css", ".env", ".example", ".html", ".ini", ".js",
     ".json", ".md", ".py", ".service", ".sh", ".socket", ".sql", ".svg",
@@ -21,7 +21,7 @@ def tracked_files() -> list[Path]:
     return [ROOT / item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
 
 
-def test_legacy_grow_control_branding_is_absent_from_current_tree():
+def test_legacy_branding_is_absent_from_current_tree():
     offenders: list[str] = []
     for path in tracked_files():
         relative = path.relative_to(ROOT).as_posix()
