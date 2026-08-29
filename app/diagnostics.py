@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 
 from app.audit import append_audit
 from app.security import require_write_auth
+from shared.hardware_profile import current_hardware
 
 router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 
@@ -131,6 +132,7 @@ async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
         "host": socket.gethostname(),
         "kernel": platform.release(),
         "platform": platform.platform(),
+        "hardware": current_hardware(),
         "build": _read(APP_DIR / "BUILD"),
         "version": _read(APP_DIR / "VERSION"),
         "uptime": uptime,
