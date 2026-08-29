@@ -31,6 +31,16 @@
     if (!isPrivateHost(host) && url.protocol !== 'https:') throw new Error('Remote-Adressen müssen HTTPS verwenden.');
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Nur HTTP oder HTTPS ist erlaubt.');
     url.hash = '';
+    url.search = '';
+    url.pathname = '/';
+    return url.toString();
+  }
+
+  function mobileUrl(endpoint) {
+    const url = new URL(endpoint);
+    url.pathname = '/mobile';
+    url.search = '';
+    url.hash = '';
     return url.toString();
   }
 
@@ -38,8 +48,8 @@
     try {
       const endpoint = normalize(value);
       localStorage.setItem('gc.endpoint', endpoint);
-      setStatus('Grow Central wird geöffnet …', 'success');
-      window.location.assign(endpoint);
+      setStatus('Mobile Grow Central wird geöffnet …', 'success');
+      window.location.assign(mobileUrl(endpoint));
     } catch (error) {
       setStatus(error.message || 'Ungültige Adresse.', 'error');
     }
