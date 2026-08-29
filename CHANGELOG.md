@@ -1,5 +1,20 @@
 # Changelog
 
+## alpha-0.7.5 – Post-176 universal hardware-profile architecture (2026-08-29)
+
+- keep one universal Raspberry Pi image as the canonical distribution strategy
+- classify Raspberry Pi 3B/3B+ as `LEGACY_LITE`, Raspberry Pi 4B/400/CM4 as Full-Support Standard and Raspberry Pi 5/CM5 as Full-Support Performance
+- retain Pi 3 support without allowing its resource ceiling to constrain new Pi 4/5 Full-Support features
+- add `shared/hardware_profile.py` as the single runtime source of truth for model classification and resource profiles
+- expose detected Raspberry Pi model and active support profile through diagnostics
+- make the GrowCentral camera policy hardware-aware: Pi 3/unknown stays conservative at up to 1280×720, while Full-Support Pi 4/5 profiles may use advertised modes up to 1920×1080
+- add CI coverage for Pi 3, Pi 4/400, Pi 5, CM4, CM5 and unknown-hardware fallback classification
+- replace the obsolete Build-118/e339 release-consistency guard with checks for Build 176 as the last published candidate plus the new universal-image hardware-class semantics
+- synchronize README, Release State, project status, release pipeline, architecture, known limitations, hardware test plan, DE/EN image documentation, image-builder documentation, project metadata and public `/GC/` website
+- publish `HARDWARE_SUPPORT_POLICY.md` alongside release metadata through the `/GC/` SFTP deployment
+- keep Build 176 as the last published `CANDIDATE` until the post-176 hardware-profile runtime produces a new successful Universal Image release
+- validate hardware release state per support class so a Pi-3 Legacy/Lite-specific regression does not automatically invalidate Pi-4/5 Full Support
+
 ## alpha-0.7.5 – Build 70 live-state, durable costs and Tapo onboarding (2026-08-14)
 
 - keep accumulated electricity costs visible while a smart plug is switched off by calculating them from the plug's retained total-energy counter and the configured tariff
