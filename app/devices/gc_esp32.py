@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 import uuid
@@ -122,10 +123,7 @@ class GrowCentralEsp32Provider(DeviceProvider):
                     except ValueError:
                         # ACK for an older/different command; keep waiting.
                         continue
-                    normalized = normalize_state(
-                        __import__("json").dumps(dict(ack_state)),
-                        announce.capabilities,
-                    )
+                    normalized = normalize_state(json.dumps(dict(ack_state)), announce.capabilities)
                     normalized.setdefault(capability.value, value)
                     normalized["online"] = True
                     return normalized
