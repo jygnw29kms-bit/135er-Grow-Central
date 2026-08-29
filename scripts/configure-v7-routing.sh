@@ -56,6 +56,7 @@ from pathlib import Path
 import sys,re
 p=Path(sys.argv[1])
 s=p.read_text() if p.exists() else ""
+s=re.sub(r"(?ms)^# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT\n.*?^# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT\n?", "", s)
 s=re.sub(r"(?ms)^# BEGIN 135ER-GROWCENTRAL-V7\n.*?^# END 135ER-GROWCENTRAL-V7\n?", "", s)
 p.write_text(s)
 PY
@@ -107,21 +108,6 @@ configure_plesk(){
     write_locations
     cat "$file"
   } > "$tmp"
-  # Remove both previously managed blocks before installing the new canonical
-  # variant. This keeps repeated upgrades idempotent on Plesk hosts.
-  python3 - "$tmp" <<'PY'
-from pathlib import Path
-import re,sys
-p=Path(sys.argv[1])
-s=p.read_text()
-first=s.find('# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT')
-if first >= 0:
-    prefix=s[:first]
-    managed=s[first:]
-    managed=re.sub(r'(?ms)(# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT\nclient_max_body_size 40m;\n# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT\n)(.*?)(?=# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT|\Z)', r'\1\2', managed, count=1)
-    s=prefix+managed
-p.write_text(s)
-PY
   cat "$tmp" > "$file"
   rm -f "$tmp"
   if ! plesk sbin httpdmng --reconfigure-domain "$HOST" >/dev/null; then
