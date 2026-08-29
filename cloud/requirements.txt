@@ -3,4 +3,4 @@ uvicorn[standard]>=0.34,<1
 pydantic>=2.7,<3
 pydantic-settings>=2.7,<3
 aiosqlite>=0.20,<1
-python-dotenv>=1.0,<2
+python-dotenv>=1.2.2,<2
