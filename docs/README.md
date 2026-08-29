@@ -2,37 +2,44 @@
 
 <p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
 
-<p align="center"><a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a></p>
-
 > [!IMPORTANT]
-> Aktueller kanonischer Release-Stand: **alpha-0.7.5 · master e339602 · Build 118 = nächster Hardwaretest-Kandidat**. Build 117 war erfolgreich getestet, ist aber überholt. Maßgeblich ist [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
-
-## Deutsch
-
-Diese Struktur ist die technische Wissensbasis des Projekts. Historische Build-Dokumente bleiben erhalten, definieren aber nicht den aktuellen Release-Status.
+> GrowCentral verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Der letzte veröffentlichte Candidate ist Build 176; aktueller `master` enthält bereits Post-176-Hardwareprofil-Runtime und benötigt einen neuen Image-Build.
 
 ## Zuerst lesen
 
 1. [Kanonischer Release State](../RELEASE_STATE.md)
-2. [Aktueller Projektstatus](PROJECT_STATUS.md)
-3. [Release Pipeline](RELEASE_PIPELINE.md)
-4. [GrowCentral Nexus UI Design System](DESIGN_SYSTEM_NEXUS.md)
-5. [Projektgeschichte](../PROJECT_HISTORY.md)
-6. [Architektur-Master](ARCHITECTURE_MASTER.md)
-7. [Hardware-Testplan](HARDWARE_TEST_PLAN.md)
-8. [Security & Trust Model](SECURITY_AND_TRUST_MODEL.md)
-9. [Known Limitations](KNOWN_LIMITATIONS.md)
-10. [Roadmap](ROADMAP.md)
+2. [Hardware Support Policy](HARDWARE_SUPPORT_POLICY.md)
+3. [Hardware-Testplan](HARDWARE_TEST_PLAN.md)
+4. [Aktueller Projektstatus](PROJECT_STATUS.md)
+5. [Release Pipeline](RELEASE_PIPELINE.md)
+6. [GrowCentral Nexus UI](DESIGN_SYSTEM_NEXUS.md)
+7. [Projektgeschichte](../PROJECT_HISTORY.md)
+8. [Architektur-Master](ARCHITECTURE_MASTER.md)
+9. [Security & Trust Model](SECURITY_AND_TRUST_MODEL.md)
+10. [Known Limitations](KNOWN_LIMITATIONS.md)
+
+## Verbindliche Hardwarebegriffe
+
+- **Legacy/Lite:** Pi 3B / 3B+ – unterstützt, konservative Ressourcenprofile.
+- **Full Support Standard:** Pi 4 / 400 / CM4 – empfohlene Referenzplattform.
+- **Full Support Performance:** Pi 5 / CM5 – Performanceplattform.
+- **Universal Image:** ein reguläres Image für alle unterstützten Klassen.
+- **Separate Images:** nur bei technisch zwingend unterschiedlichen Kernel-/Paket-/Servicebasen.
+
+Neue Features dürfen nicht durch die Leistungsgrenzen des Pi 3 begrenzt werden. Runtime-Komponenten sollen die zentrale Quelle `shared/hardware_profile.py` verwenden.
 
 ## Aktueller Testfokus
 
-- Raspberry Pi Build 118 / `pi-universal-alpha-0.7.5-118`
-- First Boot / LAN / WLAN / AP / Persistenz
-- Logitech C920 / UVC inklusive firmware-/modell-/USB-ID-bewusster LED-Fähigkeitserkennung
-- bedingte LED-Steuerung nur auf unterstützter Hardware
-- Elecrow 7-Zoll Touch-Kiosk
-- FRITZ!/Tapo-Livepfade
-- relevante Mars-Hydro-/BLE-Diagnosepfade
+- nächster Post-176 Universal-Image-Build;
+- automatische Hardwareklassifikation und Diagnoseausgabe;
+- Pi-3-Legacy/Lite-Ressourcenprofil;
+- Pi-4/5-Full-Support-Pfad;
+- First Boot / LAN / WLAN / AP / Persistenz;
+- Logitech C920/UVC mit hardwareabhängigen Auflösungsgrenzen;
+- Elecrow Touch-Kiosk;
+- FRITZ!/Tapo;
+- Cloud V7 und Entitlements;
+- Support-/Diagnosepfade.
 
 ## Plattform-Dokumentation
 
@@ -46,46 +53,24 @@ Diese Struktur ist die technische Wissensbasis des Projekts. Historische Build-D
 - [Sources](SOURCES.md)
 - [Decision Log](DECISION_LOG.md)
 
-## Historische Build-Dokumente
+## Sprachversionen
 
-Build-spezifische Dateien wie `BUILD_71_CHECKPOINT.md`, `BUILD_72_MOBILE_V0.1.md` und die Build-85-Testnotizen sind **historische Nachweise**. Sie bleiben zur Nachvollziehbarkeit im Repository, dürfen aber nicht als aktueller Stand interpretiert werden.
-
-## Deutsch
-
-- [Übersicht](de/README.md)
-- [Full Platform](de/FULL_PLATFORM.md)
-- [Datenbank & Rechte](de/DATENBANK_UND_RECHTE.md)
-- [GUI-Vorschau](de/GUI_VORSCHAU.md)
-- [Raspberry Pi Test Image](de/RASPBERRY_PI_3B_TEST_IMAGE.md)
-
-## English documentation
-
-- [Overview](en/README.md)
-- [Full Platform](en/FULL_PLATFORM.md)
-- [Database & RBAC](en/DATABASE_AND_RBAC.md)
-- [GUI Preview](en/GUI_PREVIEW.md)
-- [Raspberry Pi Test Image](en/RASPBERRY_PI_3B_TEST_IMAGE.md)
+- [Deutsch](de/README.md)
+- [English](en/README.md)
 
 ## Dokumentationsregeln
 
-- `implemented`: Code/Laufzeit ist nachweisbar vorhanden.
+- `implemented`: Code/Laufzeit vorhanden.
 - `experimental`: vorhanden, aber nicht ausreichend am Zielgerät validiert.
-- `candidate`: für den nächsten Zieltest vorgesehen, aber noch nicht hardwarevalidiert.
-- `validated`: relevanter realer Zieltest erfolgreich abgeschlossen.
-- `baseline/design`: Schema, Architektur oder Interface ist definiert, aber nicht zwingend komplett verdrahtet.
+- `candidate`: für den nächsten Zieltest vorgesehen.
+- `validated`: relevanter realer Zieltest erfolgreich.
+- `baseline/design`: Architektur/Interface definiert.
 - `planned`: noch nicht implementiert.
-- Reverse-Engineering-Angaben müssen als Beobachtung/Hypothese gekennzeichnet werden.
-- Herstellerangaben, Open-Source-Referenzen, APK-Beobachtungen und Experimente werden getrennt geführt.
-- Buildnummern werden aus dem kanonischen Release State übernommen, nicht lokal in einzelnen Dokumenten erfunden.
+- Build- und Hardwarestatus werden aus den kanonischen Dokumenten übernommen und nicht lokal erfunden.
+- Historische Builddateien bleiben nachvollziehbar, definieren aber nicht den aktuellen Stand.
 
 ---
 
 ## English
 
-The current canonical state is **alpha-0.7.5 · master e339602 · Build 118 = next hardware-test candidate**. Build 117 was successfully tested but is superseded. See [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
-
-Read first: [Release State](../RELEASE_STATE.md) · [Project Status](PROJECT_STATUS.md) · [Release Pipeline](RELEASE_PIPELINE.md) · [Nexus Design System](DESIGN_SYSTEM_NEXUS.md) · [Hardware Test Plan](HARDWARE_TEST_PLAN.md).
-
-Historical build documents remain available for traceability but do not define the current release state.
-
-Documentation status terms are `implemented`, `experimental`, `candidate`, `validated`, `baseline/design`, and `planned`. A candidate may only become validated after the relevant real target-hardware test has passed.
+GrowCentral uses **one universal Raspberry Pi image with runtime hardware profiles**. Pi 3B/3B+ is Legacy/Lite; Pi 4/400/CM4 and Pi 5/CM5 are Full Support. See [Hardware Support Policy](HARDWARE_SUPPORT_POLICY.md) and [Release State](../RELEASE_STATE.md).
