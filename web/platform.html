@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07100d">
+<title>135er-Grow Central</title>
+<link rel="icon" type="image/png" href="/static/brand-mark.png">
+<link rel="stylesheet" href="/static/platform.css?v=1">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><img src="/static/brand-logo.png" alt="135er-Grow Central"><span>LOCAL CONTROL PLATFORM</span></div>
+    <nav id="nav">
+      <button class="active" data-view="dashboard"><b>◈</b> Übersicht</button>
+      <button data-view="grow"><b>⌁</b> Grow</button>
+      <button data-view="devices"><b>◇</b> Geräte</button>
+      <button data-view="automation"><b>⟲</b> Automation</button>
+      <button data-view="energy"><b>⚡</b> Energie</button>
+      <button data-view="camera"><b>◉</b> Kamera</button>
+      <button data-view="system"><b>⚙</b> System</button>
+    </nav>
+    <div class="side-status"><i></i><div><small>CORE</small><strong id="sideCore">LOCAL ONLINE</strong></div></div>
+  </aside>
+
+  <main>
+    <header>
+      <div><small>GC://LOCAL · UNIVERSAL DEVICE PLATFORM</small><h1 id="pageTitle">Grow Environment</h1></div>
+      <div class="header-actions"><span id="clock">--:--</span><span class="pill local">LOCAL-FIRST</span><button id="syncBtn">SYNC</button></div>
+    </header>
+
+    <section class="view active" id="dashboard">
+      <div class="hero">
+        <div><small>GROW CENTRAL CORE</small><h2>Eine Zentrale. Alle Geräte.</h2><p>Mars Hydro, Spider Farmer, Tuya, AC Infinity, VIVOSUN, Shelly, Zigbee, ESP32 und bestehende Smart-Home-Geräte laufen über dieselbe Entity- und Automation-Schicht.</p></div>
+        <div class="hero-state"><span id="providerCount">--</span><small>PROVIDER</small><strong id="coreState">Core wird geprüft…</strong></div>
+      </div>
+      <div class="metric-grid">
+        <article><small>TEMPERATUR</small><strong><span id="temp">--.-</span> °C</strong><em>Umgebung</em></article>
+        <article><small>LUFTFEUCHTE</small><strong><span id="rh">--</span> %</strong><em>Relative Feuchte</em></article>
+        <article><small>VPD</small><strong><span id="vpd">--</span> kPa</strong><em>Berechnet / Sensor</em></article>
+        <article><small>LIVE POWER</small><strong><span id="power">--</span> W</strong><em id="onlineDevices">0 Geräte online</em></article>
+      </div>
+      <article class="panel"><div class="panel-head"><div><small>DEVICE FABRIC</small><h3>Provider-Status</h3></div><button data-open="devices">ALLE GERÄTE</button></div><div class="provider-strip" id="providerStrip"></div></article>
+      <div class="two-col"><article class="panel"><div class="panel-head"><div><small>CONTROL</small><h3>Aktive Geräte</h3></div></div><div id="devicePreview" class="list"><div class="empty">Geräte werden geladen…</div></div></article><article class="panel"><div class="panel-head"><div><small>PLATFORM HEALTH</small><h3>Systemzustand</h3></div></div><div id="healthGrid" class="health-grid"><div><span>API</span><strong>…</strong></div><div><span>Local</span><strong>…</strong></div><div><span>Cloud</span><strong>OPTIONAL</strong></div><div><span>Fail-safe</span><strong>ACTIVE</strong></div></div></article></div>
+    </section>
+
+    <section class="view" id="grow">
+      <div class="section-intro"><small>GROW WORKSPACE</small><h2>Growboxen & Pflanzen</h2><p>Geräte werden nicht mehr nach Hersteller bedient, sondern einer Growbox und ihrer Funktion zugeordnet.</p></div>
+      <div class="three-col"><article class="panel grow-card"><small>GROWBOX 1</small><h3>Primärer Grow</h3><p>Klima, Licht, Abluft, Bewässerung, Sensorik und Kamera als ein logischer Raum.</p><span class="pill">LOCAL</span></article><article class="panel"><small>ZIELWERTE</small><h3>Klima-Profil</h3><div class="kv"><span>Temperatur</span><b>—</b><span>RH</span><b>—</b><span>VPD</span><b>—</b></div></article><article class="panel"><small>JOURNAL</small><h3>Pflanzenverlauf</h3><p>Fotos, Bewässerung, EC/pH, Notizen und Ereignisse werden phasenbezogen zusammengeführt.</p></article></div>
+    </section>
+
+    <section class="view" id="devices">
+      <div class="section-intro with-action"><div><small>UNIVERSAL DEVICE PLATFORM · GC-DEVICE-V1</small><h2>Geräte & Provider</h2><p>Discovery über BLE, LAN, MQTT, Zigbee-Gateway und herstellerspezifische Adapter. Schreibzugriffe werden erst nach Modellvalidierung freigegeben.</p></div><button class="primary" id="discoverBtn">GERÄTE SUCHEN</button></div>
+      <article class="panel"><div class="panel-head"><div><small>FIRST-CLASS PROVIDERS</small><h3>Unterstützte Ökosysteme</h3></div><span class="pill" id="platformApi">LOADING</span></div><div class="provider-grid" id="providerGrid"></div></article>
+      <article class="panel"><div class="panel-head"><div><small>REGISTERED ENTITIES</small><h3>Aktuelle Hardware</h3></div></div><div id="deviceList" class="list"><div class="empty">Geräteregistrierung wird geladen…</div></div></article>
+      <div class="notice">Supportstufen: <b>Detected</b> = erkannt/reserviert · <b>Experimental</b> = Integration in Entwicklung · <b>Compatible</b> = technisch nutzbar · <b>Validated</b> = echte Hardware geprüft · <b>Certified</b> = definierte Modell/Firmware-Kombination vollständig freigegeben.</div>
+    </section>
+
+    <section class="view" id="automation">
+      <div class="section-intro"><small>VENDOR-NEUTRAL AUTOMATION</small><h2>Automation</h2><p>Regeln arbeiten mit Capabilities wie <code>fan_speed</code>, <code>brightness</code> oder <code>soil_moisture</code> – niemals mit Hersteller-Datenpunkten.</p></div>
+      <div class="three-col"><article class="panel"><small>KLIMA</small><h3>Temperatur → Abluft</h3><p>Beispiel: über 29 °C Abluft hochregeln, unabhängig davon ob das Zielgerät von Spider Farmer, AC Infinity oder VIVOSUN stammt.</p></article><article class="panel"><small>BEWÄSSERUNG</small><h3>Sensor → Pumpe</h3><p>ESP32/Zigbee Feuchte kann eine Tuya-, Shelly- oder Grow-Central-Pumpe auslösen.</p></article><article class="panel"><small>SAFETY</small><h3>Verified Commands</h3><p>Kritische Schreibvorgänge erhalten Rückmeldung, Retry und Fail-safe-Policy.</p></article></div>
+      <article class="panel"><div class="panel-head"><div><small>LOCAL RULES</small><h3>Vorhandene Automationen</h3></div></div><div id="automationList" class="list"><div class="empty">Automationen werden geladen…</div></div></article>
+    </section>
+
+    <section class="view" id="energy">
+      <div class="section-intro"><small>ENERGY MATRIX</small><h2>Verbrauch</h2><p>Leistung und Energie werden über die einheitliche Capability-Schicht zusammengeführt.</p></div>
+      <div class="metric-grid"><article><small>LIVE</small><strong><span id="energyPower">--</span> W</strong><em>Gesamtleistung</em></article><article><small>ENERGIE</small><strong><span id="energyTotal">--</span> kWh</strong><em>Gemeldete Summe</em></article><article><small>ONLINE</small><strong id="energyOnline">-- / --</strong><em>Messgeräte</em></article><article><small>AKTIV</small><strong id="energyOn">--</strong><em>Schaltgeräte</em></article></div>
+      <article class="panel"><div id="energyDevices" class="list"><div class="empty">Energiedaten werden geladen…</div></div></article>
+    </section>
+
+    <section class="view" id="camera">
+      <div class="section-intro"><small>VISION</small><h2>Kamera</h2><p>Lokale UVC-Kameras bleiben Teil des Device-Modells und werden später genauso über <code>stream</code> und <code>snapshot</code> angesprochen.</p></div>
+      <article class="panel camera-panel"><div id="cameraState" class="empty">Kamera wird geprüft…</div><a class="legacy-link" href="/legacy#camera">ERWEITERTE KAMERA-STEUERUNG ÖFFNEN</a></article>
+    </section>
+
+    <section class="view" id="system">
+      <div class="section-intro"><small>CORE & NETWORK</small><h2>System</h2><p>Der Raspberry Pi bleibt die autoritative lokale Instanz. Cloud ist Erweiterung, nicht Voraussetzung.</p></div>
+      <article class="panel"><div class="system-grid" id="systemGrid"><div><span>Hostname</span><b>…</b></div><div><span>IP</span><b>…</b></div><div><span>Version</span><b>…</b></div><div><span>Hardware</span><b>…</b></div><div><span>OS</span><b>…</b></div><div><span>Uptime</span><b>…</b></div></div></article>
+      <div class="notice">Die bisherige Oberfläche bleibt während der Migration unter <a href="/legacy">/legacy</a> erreichbar.</div>
+    </section>
+  </main>
+</div>
+<script src="/static/platform.js?v=1"></script>
+</body>
+</html>
