@@ -17,6 +17,7 @@ class HardwareProfile:
     support_class: str
     full_support: bool
     recommended: bool
+    camera_max_width: int
     camera_max_height: int
     camera_max_fps: int
     kiosk_effects: str
@@ -32,6 +33,7 @@ LEGACY_LITE = HardwareProfile(
     support_class="LEGACY_LITE",
     full_support=False,
     recommended=False,
+    camera_max_width=1280,
     camera_max_height=720,
     camera_max_fps=15,
     kiosk_effects="reduced",
@@ -44,6 +46,7 @@ FULL_STANDARD = HardwareProfile(
     support_class="FULL_SUPPORT",
     full_support=True,
     recommended=True,
+    camera_max_width=1920,
     camera_max_height=1080,
     camera_max_fps=30,
     kiosk_effects="full",
@@ -56,6 +59,7 @@ FULL_PERFORMANCE = HardwareProfile(
     support_class="FULL_SUPPORT",
     full_support=True,
     recommended=True,
+    camera_max_width=1920,
     camera_max_height=1080,
     camera_max_fps=30,
     kiosk_effects="full",
@@ -68,6 +72,7 @@ UNKNOWN = HardwareProfile(
     support_class="UNCLASSIFIED",
     full_support=False,
     recommended=False,
+    camera_max_width=1280,
     camera_max_height=720,
     camera_max_fps=15,
     kiosk_effects="reduced",
@@ -96,6 +101,10 @@ def read_model(path: Path = MODEL_PATH) -> str:
         return path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
     except OSError:
         return "Unknown Raspberry Pi"
+
+
+def current_profile() -> HardwareProfile:
+    return classify_model(read_model())
 
 
 def current_hardware() -> dict[str, object]:
