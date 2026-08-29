@@ -32,12 +32,16 @@ def test_unknown_hardware_fails_conservatively():
 
 def test_legacy_profile_is_intentionally_limited():
     assert not LEGACY_LITE.full_support
-    assert LEGACY_LITE.camera_max_height <= 720
+    assert LEGACY_LITE.camera_max_width == 1280
+    assert LEGACY_LITE.camera_max_height == 720
+    assert LEGACY_LITE.camera_max_fps == 15
     assert LEGACY_LITE.worker_profile == "conservative"
 
 
 def test_full_profiles_are_not_constrained_by_pi3():
     assert FULL_STANDARD.full_support
     assert FULL_PERFORMANCE.full_support
+    assert FULL_STANDARD.camera_max_width >= 1920
     assert FULL_STANDARD.camera_max_height >= 1080
+    assert FULL_STANDARD.camera_max_fps >= 30
     assert FULL_PERFORMANCE.worker_profile == "performance"
