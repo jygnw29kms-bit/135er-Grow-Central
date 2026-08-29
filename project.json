@@ -1,26 +1,34 @@
 {
   "name": "135er-Grow Central",
-  "version": "0.7.4",
-  "status": "early-test",
-  "platform": "Raspberry Pi + optional Linux VPS",
-  "primary_device": "Mars Hydro DF100M / MZ_MZF002",
+  "version": "0.7.5",
+  "status": "alpha-candidate",
+  "platform": "Raspberry Pi Universal Image + optional Linux VPS",
+  "primary_device": "Raspberry Pi local authority",
   "esp32": false,
-  "languages": [
-    "de",
-    "en"
-  ],
-  "architecture": [
-    "local",
-    "cloud",
-    "shared"
-  ],
+  "languages": ["de", "en"],
+  "architecture": ["local", "cloud", "shared"],
+  "hardware_support": {
+    "image_strategy": "universal",
+    "minimum": "Raspberry Pi 3B/3B+",
+    "recommended": "Raspberry Pi 4 >= 2 GB",
+    "optimal": "Raspberry Pi 4 4 GB or Raspberry Pi 5",
+    "profiles": {
+      "legacy_lite": ["Raspberry Pi 3B", "Raspberry Pi 3B+"],
+      "full_standard": ["Raspberry Pi 4B", "Raspberry Pi 400", "Compute Module 4"],
+      "full_performance": ["Raspberry Pi 5", "Compute Module 5"]
+    },
+    "policy": "docs/HARDWARE_SUPPORT_POLICY.md"
+  },
   "cloud": {
     "optional": true,
+    "generation": "V7",
     "transport": "HTTPS",
     "remote_commands_default": false
   },
   "documentation": {
     "index": "docs/README.md",
+    "hardware_policy": "docs/HARDWARE_SUPPORT_POLICY.md",
+    "hardware_test": "docs/HARDWARE_TEST_PLAN.md",
     "german": "docs/de/README.md",
     "english": "docs/en/README.md",
     "sources": "docs/SOURCES.md"
