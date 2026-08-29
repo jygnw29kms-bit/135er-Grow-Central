@@ -10,9 +10,9 @@ from app.devices.models import Capability
 from app.devices.runtime import ProviderRuntime
 
 
-def test_runtime_exposes_proven_compatibility_providers():
+def test_runtime_exposes_proven_and_native_providers():
     runtime = ProviderRuntime()
-    assert runtime.ids() == ("fritz", "home_assistant", "shelly", "tapo")
+    assert set(runtime.ids()) == {"fritz", "growcentral_esp32", "home_assistant", "shelly", "tapo"}
 
 
 def test_legacy_state_normalization_is_vendor_neutral():
