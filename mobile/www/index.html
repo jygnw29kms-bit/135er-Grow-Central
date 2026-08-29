@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#041012">
   <meta name="color-scheme" content="dark">
-  <title>135er Grow Central · Nexus Mobile</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.0">
+  <title>135er Grow Central · Mobile</title>
+  <link rel="stylesheet" href="styles.css?v=0.3.0">
 </head>
 <body>
   <main class="app-shell">
@@ -15,18 +15,18 @@
         <img src="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/web/brand-logo.png" alt="135er Grow Central" onerror="this.hidden=true;document.documentElement.classList.add('logo-fallback')">
         <div class="brand-fallback" aria-hidden="true"><b>135er</b><span>Grow Central</span></div>
       </div>
-      <div class="live-badge"><i></i>NEXUS MOBILE</div>
+      <div class="live-badge"><i></i>LOCAL CONTROL</div>
     </header>
 
     <section class="connect-card">
-      <div class="section-kicker">LOCAL-FIRST · SECURE CLIENT</div>
-      <h1>Deine Grow-Zentrale.<br><span>Direkt auf dem Smartphone.</span></h1>
-      <p class="lead">Die App verbindet sich mit deiner vorhandenen Grow-Central-Instanz. Geräte, Automationen und Zugangsdaten bleiben beim Raspberry Pi oder beim ausdrücklich eingerichteten HTTPS-Server.</p>
+      <div class="section-kicker">UNIVERSAL DEVICE PLATFORM · GC-DEVICE-V1</div>
+      <h1>Eine App.<br><span>Dein kompletter Grow.</span></h1>
+      <p class="lead">Die App öffnet dieselbe Grow-Central-Plattform wie der Raspberry Pi. Hersteller werden über Provider angebunden; Growbox, Automationen und Oberfläche arbeiten mit einheitlichen Gerätefunktionen.</p>
 
       <div class="status-grid" aria-label="Mobile Architektur">
-        <article><small>LOCAL</small><strong>Pi</strong><span>Geräteautorität</span></article>
-        <article><small>MOBILE</small><strong>UI</strong><span>Nexus Client</span></article>
-        <article><small>REMOTE</small><strong>HTTPS</strong><span>optional</span></article>
+        <article><small>CORE</small><strong>Pi</strong><span>lokal autoritativ</span></article>
+        <article><small>DEVICE API</small><strong>V1</strong><span>herstellerneutral</span></article>
+        <article><small>PROVIDER</small><strong>12+</strong><span>von Anfang an</span></article>
       </div>
 
       <form id="connect-form" novalidate>
@@ -36,7 +36,7 @@
           <input id="endpoint" name="endpoint" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" value="http://135er-Grow-Central.local/" aria-describedby="endpoint-hint">
         </div>
         <div class="actions">
-          <button class="primary" type="submit"><span>VERBINDEN</span><b>→</b></button>
+          <button class="primary" type="submit"><span>GROW CENTRAL ÖFFNEN</span><b>→</b></button>
           <button type="button" class="secondary" id="setup">FIRST-BOOT IP</button>
         </div>
       </form>
@@ -44,17 +44,17 @@
       <div id="status" class="status" role="status" aria-live="polite"></div>
 
       <div class="quick-info" id="endpoint-hint">
-        <div><i class="ok"></i><span><b>Heimnetz</b> 135er-Grow-Central.local</span></div>
-        <div><i></i><span><b>First Boot</b> 10.42.0.1</span></div>
-        <div><i class="secure"></i><span><b>Remote</b> ausschließlich HTTPS</span></div>
+        <div><i class="ok"></i><span><b>Local-first</b> Steuerung bleibt auf dem Pi</span></div>
+        <div><i></i><span><b>Provider</b> Mars Hydro · Spider Farmer · Tuya · AC Infinity · VIVOSUN · Shelly · Zigbee · ESP32</span></div>
+        <div><i class="secure"></i><span><b>Remote</b> ausschließlich über bewusst eingerichtetes HTTPS</span></div>
       </div>
     </section>
 
     <footer>
       <span>135ER GROW CENTRAL</span>
-      <span class="platform" id="platformLabel">MOBILE CLIENT</span>
+      <span class="platform" id="platformLabel">UNIVERSAL MOBILE CLIENT</span>
     </footer>
   </main>
-  <script src="app.js?v=0.2.0"></script>
+  <script src="app.js?v=0.3.0"></script>
 </body>
 </html>
