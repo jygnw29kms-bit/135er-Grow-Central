@@ -6,6 +6,7 @@ on:
     paths:
       - 'website/**'
       - 'RELEASE_STATE.md'
+      - 'docs/HARDWARE_SUPPORT_POLICY.md'
       - 'docs/DESIGN_SYSTEM_NEXUS.md'
       - '.github/workflows/deploy-website-sftp.yml'
       - 'scripts/install-135ercloud-v6.sh'
@@ -29,18 +30,24 @@ jobs:
           cp scripts/install-135ercloud-v6.sh website/135ercloud-server-install.sh
           cp scripts/setup-135ercloud-apt-repo-v1.sh website/setup-135ercloud-apt-repo.sh
           cp RELEASE_STATE.md website/RELEASE_STATE.md
+          cp docs/HARDWARE_SUPPORT_POLICY.md website/HARDWARE_SUPPORT_POLICY.md
           sha256sum \
             website/135ercloud-server-install.sh \
             website/setup-135ercloud-apt-repo.sh \
             website/RELEASE_STATE.md \
+            website/HARDWARE_SUPPORT_POLICY.md \
             > website/SHA256SUMS.txt
           {
             echo '135er-Grow Central release publication'
             echo 'version=alpha-0.7.5'
-            echo 'master_anchor=e339602'
-            echo 'pi_candidate=118'
-            echo 'pi_tag=pi-universal-alpha-0.7.5-118'
-            echo 'status=CANDIDATE'
+            echo 'image_strategy=universal'
+            echo 'pi3_support=LEGACY_LITE'
+            echo 'pi4_support=FULL_SUPPORT'
+            echo 'pi5_support=FULL_SUPPORT_PERFORMANCE'
+            echo 'last_published_candidate=176'
+            echo 'last_published_tag=pi-universal-alpha-0.7.5-176'
+            echo 'current_master_requires_new_image=true'
+            echo 'status=CANDIDATE_TRANSITION'
             echo 'public_url=https://dezender.de/GC/'
             echo "published_commit=${GITHUB_SHA}"
           } > website/release-state.txt
@@ -58,6 +65,7 @@ jobs:
       - name: Deployment information
         run: |
           echo '135er-Grow Central product website deployed to https://dezender.de/GC/'
-          echo 'Cloud V6 and APT bootstrap republished with SHA256SUMS'
-          echo 'Release state: Build 118 CANDIDATE / master e339602'
+          echo 'Hardware Support Policy and canonical Release State republished'
+          echo 'Image strategy: Universal; Pi 3 Legacy/Lite; Pi 4/5 Full Support'
+          echo 'Last published candidate: Build 176; current master requires a new image build'
           echo 'Target: /var/www/vhosts/dezender.de/httpdocs/GC/'
