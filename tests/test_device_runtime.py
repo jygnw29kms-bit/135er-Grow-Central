@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
@@ -35,8 +36,7 @@ def test_legacy_state_normalization_is_vendor_neutral():
     }
 
 
-@pytest.mark.asyncio
-async def test_compatibility_provider_discovers_registered_devices(tmp_path, monkeypatch):
+def test_compatibility_provider_discovers_registered_devices(tmp_path, monkeypatch):
     path = tmp_path / "devices.json"
     path.write_text(
         json.dumps(
@@ -68,7 +68,7 @@ async def test_compatibility_provider_discovers_registered_devices(tmp_path, mon
     )
     monkeypatch.setenv("GC_SMARTHOME_DEVICE_CONFIG", str(path))
 
-    devices = await LegacySmartHomeProvider("shelly").discover()
+    devices = asyncio.run(LegacySmartHomeProvider("shelly").discover())
     assert len(devices) == 1
     device = devices[0]
     assert device.global_id == "shelly:tent_light"
@@ -80,8 +80,7 @@ async def test_compatibility_provider_discovers_registered_devices(tmp_path, mon
     assert device.metadata["writable"] is True
 
 
-@pytest.mark.asyncio
-async def test_unapproved_device_cannot_be_read_or_written(tmp_path, monkeypatch):
+def test_unapproved_device_cannot_be_read_or_written(tmp_path, monkeypatch):
     path = tmp_path / "devices.json"
     path.write_text(
         json.dumps(
@@ -105,6 +104,6 @@ async def test_unapproved_device_cannot_be_read_or_written(tmp_path, monkeypatch
     provider = LegacySmartHomeProvider("shelly")
 
     with pytest.raises(PermissionError, match="not approved"):
-        await provider.state("locked")
+        asyncio.run(provider.state("locked"))
     with pytest.raises(PermissionError, match="not approved"):
-        await provider.command("locked", Capability.POWER, True)
+        asyncio.run(provider.command("locked", Capability.POWER, True))
