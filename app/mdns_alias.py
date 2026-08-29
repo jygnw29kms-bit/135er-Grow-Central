@@ -56,7 +56,9 @@ async def _publisher() -> None:
     published: str | None = None
     while True:
         address = _primary_ipv4()
-        if address != published:
+        publisher_dead = _process is not None and _process.returncode is not None
+        publisher_missing = bool(address) and _process is None
+        if address != published or publisher_dead or publisher_missing:
             await _stop_process()
             published = None
             if address:
@@ -69,6 +71,8 @@ async def _publisher() -> None:
                     await asyncio.sleep(1)
                     if _process.returncode is None:
                         published = address
+                    else:
+                        _process = None
                 except OSError:
                     _process = None
         await asyncio.sleep(20)
