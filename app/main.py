@@ -1,6 +1,6 @@
 """135er-Grow Central Local API alpha-0.7.5.
 
-DE: Lokaler Raspberry-Pi-Dienst für Grow-Control, Smart Home,
+DE: Lokaler Raspberry-Pi-Dienst für Grow Central, Smart Home,
 Netzwerkverwaltung, BLE-Diagnose und die lokale Weboberfläche.
 """
 from __future__ import annotations
