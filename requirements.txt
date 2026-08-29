@@ -10,3 +10,4 @@ python-kasa>=0.10,<1
 zeroconf>=0.147,<1
 cryptography>=44,<51
 aiomqtt>=2,<3
+tinytuya>=1.17,<2
