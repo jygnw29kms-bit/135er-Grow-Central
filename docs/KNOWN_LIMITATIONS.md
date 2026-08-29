@@ -1,44 +1,44 @@
 # Known Limitations and Open Risks
 
-## DF100M protocol
+## Hardware support classes
 
-- write UUID is not yet validated on hardware;
-- notification UUID is not yet conclusively mapped;
-- speed packet format remains experimental;
-- RPM decoding is not established;
-- Legacy cloud/API observations may not be required for local BLE and may change independently.
+- Raspberry Pi 3B/3B+ is **Legacy/Lite**, not the performance baseline for new features.
+- Pi 3 is intentionally constrained to conservative camera, kiosk, diagnostics and worker defaults.
+- Pi 4/400/5 are the Full-Support feature baseline; Full-Support behavior still requires real hardware validation.
+- Unknown ARM hardware is `UNCLASSIFIED` and receives conservative defaults without a support guarantee.
+- The project deliberately keeps one universal image; a future split is allowed only if kernel/package/service requirements diverge materially.
+
+## Validation status
+
+- Build 176 is the last published Candidate before the hardware-profile runtime.
+- current `master` contains Post-176 runtime changes and therefore requires a fresh universal-image build before a new Candidate can be named.
+- successful CI/image builds do not replace physical validation.
+- validation is tracked separately by support class.
+
+## Camera
+
+- Pi 3 Legacy/Lite is capped by policy at 1280×720 with a reduced FPS target.
+- Pi 4/5 Full Support may expose up to 1920×1080 only when the attached UVC camera actually advertises the mode.
+- LED/V4L2 writes remain capability-aware and deny-by-default.
+
+## DF100M / Mars Hydro
+
+- DF100M protocol write details remain experimental unless reproduced on hardware;
+- unverified BLE/iConnect writes remain disabled;
+- Mars Hydro/iFresh integration continues to separate architecture from validated write protocol.
 
 ## Application runtime
 
-- one BLE client is intended at a time in current baseline;
-- notification retention is limited/in-memory in current research path;
-- full production RBAC/login/session enforcement is not yet complete;
-- cloud Alpha uses static token authentication;
-- PostgreSQL target architecture is not equivalent to full PostgreSQL runtime integration;
-- migrations/Alembic are future work;
-- WebSocket live updates are future work;
-- automation/schedule engine is not yet fully executed in production runtime;
-- executable backup/restore workflow needs further implementation and testing.
+- not every planned resource profile is yet consumed by every subsystem; `shared/hardware_profile.py` is now the required source for future profile-aware changes;
+- production RBAC, backup/restore and some advanced automation/history targets remain under development;
+- Cloud V7 remains optional and must never become the implicit local master.
 
-## Hardware test image
+## Test image
 
-- credentials `test/test` are insecure by design and temporary;
-- image is a prerelease/hardware-test artifact;
-- Wi-Fi onboarding is not assumed as fully automated; Ethernet is preferred for first boot;
-- first-boot firewall service has to be verified on real Raspberry Pi kernel;
-- successful CI build does not substitute for physical boot validation.
+- public test credentials are intentionally temporary/insecure where still used by the candidate image;
+- setup AP, WLAN handover, Kiosk, camera and integrations require class-specific physical testing;
+- carrier-dependent Compute Module WLAN/Bluetooth/Ethernet support depends on actual carrier hardware.
 
-## GUI
+## Documentation rule
 
-- preview image is a design reference, not proof every visual element is wired to live data;
-- generated preview previously contained placeholder device/date details; authoritative device data is Device ID `A0A3B35EFDC8`, firmware `V1.8`.
-
-## Cloud
-
-- must never be treated as local master;
-- direct Pi port exposure is unsupported/insecure;
-- remote control remains disabled until both cloud and Pi opt-in conditions and local validation are present.
-
-## Documentation risk
-
-Any feature marked `baseline`, `planned`, `target` or `experimental` must not be presented as production-complete without code and test evidence.
+Historical build documents may contain older candidate numbers or Pi-3-focused terminology. They are historical evidence only. Current operational truth is defined by `RELEASE_STATE.md`, `HARDWARE_SUPPORT_POLICY.md`, `PROJECT_STATUS.md` and the active runtime classifier.
