@@ -1,140 +1,80 @@
 <p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central · GrowCentral Nexus UI" width="100%"></p>
 
-<p align="center">
-  <a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="RELEASE_STATE.md"><strong>Release State</strong></a> · <a href="docs/HARDWARE_TEST_PLAN.md"><strong>Hardware Test</strong></a> · <a href="SECURITY.md">Security</a>
-</p>
+<p align="center"><a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="RELEASE_STATE.md"><strong>Release State</strong></a> · <a href="docs/HARDWARE_SUPPORT_POLICY.md"><strong>Hardware Policy</strong></a> · <a href="docs/HARDWARE_TEST_PLAN.md"><strong>Hardware Test</strong></a></p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
-  <img alt="Pi Candidate" src="https://img.shields.io/badge/Pi%20candidate-Build%20159-ffb52b?style=flat-square&labelColor=061015">
-  <img alt="Cloud" src="https://img.shields.io/badge/Cloud-V7-35e8da?style=flat-square&labelColor=061015">
-  <img alt="Design" src="https://img.shields.io/badge/UI-GrowCentral%20Nexus-2ae5ff?style=flat-square&labelColor=061015">
+<img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
+<img alt="Published Pi Candidate" src="https://img.shields.io/badge/published%20candidate-Build%20176-ffb52b?style=flat-square&labelColor=061015">
+<img alt="Image" src="https://img.shields.io/badge/image-Universal-35e8da?style=flat-square&labelColor=061015">
+<img alt="Pi 3" src="https://img.shields.io/badge/Pi%203B%2F3B%2B-Legacy%2FLite-ffb52b?style=flat-square&labelColor=061015">
+<img alt="Pi 4/5" src="https://img.shields.io/badge/Pi%204%2F5-Full%20Support-71ff3b?style=flat-square&labelColor=061015">
 </p>
 
 # Deutsch
 
-**135er-Grow Central** ist eine local-first Steuer-, Überwachungs- und Automationsplattform für Raspberry Pi mit optionaler eigener Cloud-Anbindung.
+**135er-Grow Central** ist eine Local-First Steuer-, Überwachungs- und Automationsplattform für Raspberry Pi mit optionaler eigener Cloud-Anbindung.
 
-## Aktueller Stand · 28.08.2026
+## Verbindliche Hardwarestrategie
 
-| Bereich | Stand |
-|---|---|
-| Repository | `master` |
-| Version | `alpha-0.7.5` |
-| Pi-Testkandidat | **Build 159** |
-| Release | `pi-universal-alpha-0.7.5-159` |
-| Status | **CANDIDATE** |
-| Cloud | **V7** |
-| Server | Plesk + Standalone vorgesehen |
-| APT | Update-/Upgradepfad vorgesehen |
-| Design | GrowCentral Nexus UI |
+GrowCentral verwendet weiterhin **ein Universal-Image**. Die Hardware wird zur Laufzeit zentral erkannt; Funktionen und Ressourcenprofile richten sich nach `shared/hardware_profile.py`.
 
-### Aktuelles Pi-Image
+| Hardware | Supportklasse | Rolle |
+|---|---|---|
+| Raspberry Pi 3B / 3B+ | **Legacy/Lite** | weiterhin unterstützt, konservative Ressourcenlimits |
+| Raspberry Pi 4B / 400 | **Full Support** | empfohlene Standardplattform |
+| Raspberry Pi 5 | **Full Support / Performance** | optimale Plattform für rechenintensive Funktionen |
+| Compute Module 4 / 5 | **Full Support** | entsprechend der Generation |
 
-`135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-159.img.xz`
+**Minimum / Legacy:** Pi 3B/3B+  
+**Empfohlen:** Pi 4 ab 2 GB  
+**Optimal:** Pi 4 mit 4 GB oder Pi 5
 
-SHA-256:
+Pi 3 bleibt unterstützt, darf aber neue Full-Support-Funktionen nicht mehr auf sein Leistungsniveau begrenzen. Separate Images entstehen erst, wenn unterschiedliche Kernel-, Paket- oder Servicebasen technisch zwingend werden. Details: [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md).
 
-`136ebc324595ccf732b4e48292b3cbf6a09e362846c53f2070190c44a3953f3b`
+## Release-Stand
 
-Build 159 bleibt **CANDIDATE**, bis der reale Hardwaretest bestanden ist.
+Der letzte veröffentlichte Universal-Image-Candidate ist **Build 176** (`pi-universal-alpha-0.7.5-176`). Seit Build 176 enthält `master` zusätzliche Runtime-Änderungen für die neue Hardware-Profilarchitektur. Daher bleibt Build 176 der letzte veröffentlichte Candidate, ist aber nicht mehr runtime-identisch mit dem aktuellen `master`; der nächste erfolgreiche Image-Build wird der neue Hardware-Testkandidat.
 
-## Nächster realer Test
+Build 176 Image: `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-176.img.xz`  
+SHA-256: `65047be1375461d5107c97527e90f6e6e458c3a61057175f15ec45752e450815`
 
-Der aktuelle Testpfad ist bewusst kurz und eindeutig:
+## Hardware-Profilierung in der Runtime
 
-1. Build 159 frisch flashen.
-2. First Boot über Setup-AP durchführen.
-3. Heim-WLAN konfigurieren.
-4. Setup abschließen.
-5. Raspberry Pi rebooten.
-6. Erreichbarkeit im Heimnetz prüfen.
-7. GUI/Login/Persistenz prüfen.
-8. Cloud-Anbindung prüfen.
-9. Danach erst den Plesk-Server aktualisieren.
-10. Danach Grow-Central-Plesk-Plugin installieren und Cloud V7 testen.
+Die zentrale Klassifikation ist Teil der Runtime und Diagnose. Komponenten sollen keine eigenen Modell-Sonderfälle pflegen. Aktuelle Profile:
+
+- `LEGACY_LITE`: Pi 3B/3B+ – Kamera konservativ bis 720p/reduzierte FPS, reduzierte Kiosk-Effekte, kompaktere Diagnosehistorie, konservative Worker;
+- `FULL_SUPPORT` Standard: Pi 4/400/CM4 – volle Nexus UI, normale Parallelität, Full-Support-Kamera-/Diagnoseprofil;
+- `FULL_SUPPORT` Performance: Pi 5/CM5 – volle Nexus UI, Performance-Worker und erweiterte Diagnosehistorie;
+- `UNCLASSIFIED`: unbekannte Hardware – konservativer Diagnosemodus ohne Supportzusage.
+
+Die Diagnose-API weist Modell und aktives Hardwareprofil aus.
+
+## Local First + Cloud V7
+
+Der Raspberry Pi bleibt die autoritative lokale Instanz. Cloud V7 ergänzt den Betrieb mit Geräte-/Kunden-Zuordnung, Gruppen, Status/Plan, Feature-Entitlements, sicherem Pi-Abruf und APT-Upgradepfad. Lokale Kernfunktionen sollen auch ohne Cloud weiterarbeiten.
+
+Lokale Bereiche umfassen First Boot/Netzwerk, GUI/Auth, Räume/Grow, Automationen, FRITZ! Smart Home, Tapo, Logitech C920/UVC, Mars-Hydro-/Bluetooth-Diagnose, Kiosk/Touch und Supportdiagnose.
+
+## Tests und Release-Gates
+
+CI prüft die Hardwareklassifikation mindestens für Pi 3B/3B+, Pi 4/400, Pi 5 sowie CM4/CM5. Reale Hardwarevalidierung wird nach Supportklasse dokumentiert. Ein Pi-3-spezifischer Legacy/Lite-Fehler darf nicht automatisch den Full-Support-Pfad für Pi 4/5 blockieren, muss aber sichtbar dokumentiert werden.
 
 Ausführlich: [`docs/HARDWARE_TEST_PLAN.md`](docs/HARDWARE_TEST_PLAN.md).
-
-## Cloud V7
-
-Cloud V7 enthält die Grundlage für die spätere zentrale Geräte- und Freischaltungsverwaltung:
-
-- Plesk- und Standalone-Routing;
-- Admin- und Entitlement-Endpunkte;
-- Geräte-/Kunden-Zuordnung;
-- Gerätegruppen;
-- Status, Plan und Laufzeit;
-- manuell schaltbare Feature-Entitlements;
-- sicherer Abruf der effektiven Freischaltungen durch die Pis;
-- APT-Paketierung und Upgradepfad;
-- CI-Validierung der V7-Routen;
-- gehärtete Entitlement-Updates.
-
-Aktuell vorgesehene Feature-Schalter:
-
-- `remote_control`
-- `camera`
-- `history_extended`
-- `alerts`
-- `automation_pro`
-- `api_access`
-- `beta_features`
-
-## Plesk-Vorbereitung
-
-Vor Installation des Grow-Central-Plesk-Plugins zuerst das Serverbetriebssystem sauber aktualisieren:
-
-```bash
-sudo apt update
-sudo apt upgrade
-sudo apt --fix-broken install
-sudo systemctl --failed
-```
-
-Wenn zentrale Systemkomponenten aktualisiert wurden, Server kontrolliert rebooten und **Plesk erst vollständig prüfen**, bevor das Grow-Central-Plugin installiert wird.
-
-Damit bleiben zwei Fehlerklassen sauber getrennt:
-
-- Betriebssystem/Plesk-Update
-- Grow-Central-Plugin/Cloud V7
-
-## Local-First
-
-Der Raspberry Pi bleibt die autoritative lokale Instanz. Cloud-Funktionen ergänzen den lokalen Betrieb und sollen ihn nicht unnötig blockieren.
-
-Typische lokale Bereiche:
-
-- First Boot und Netzwerk;
-- GUI/Auth;
-- Räume und Grow;
-- Automationen;
-- FRITZ! Smart Home;
-- Tapo;
-- Logitech C920/UVC;
-- Mars-Hydro-/Bluetooth-Diagnose;
-- Systemdiagnose und Supportdateien.
 
 ## Zugriff
 
 - First Boot: `http://10.42.0.1/`
-- lokal nach Einrichtung: `http://135er-Grow-Central.local/`
+- lokal nach Einrichtung: `http://135er-GrowCentral.local/`
 - Port `8080`: Kompatibilitätspfad
 
 ## Mobile
 
-Mobile Apps bleiben Clients der Grow-Central-Plattform und ersetzen den Pi nicht.
-
-- Android: APK
-- iOS: Sideload IPA
-
-## Projekttrennung
-
-Dieses Repository enthält **ausschließlich 135er-Grow-Central**. Fremde Websites, Deployments und andere Projekte gehören nicht in dieses Repository.
+Android APK und iOS Sideload IPA bleiben Clients der GrowCentral-WebGUI; die Geräteautorität bleibt beim Pi.
 
 ## Kanonische Dokumente
 
 - [`RELEASE_STATE.md`](RELEASE_STATE.md)
+- [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md)
 - [`docs/HARDWARE_TEST_PLAN.md`](docs/HARDWARE_TEST_PLAN.md)
 - [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md)
 - [`SECURITY.md`](SECURITY.md)
@@ -143,12 +83,8 @@ Dieses Repository enthält **ausschließlich 135er-Grow-Central**. Fremde Websit
 
 # English
 
-**135er-Grow Central alpha-0.7.5** is a local-first Raspberry Pi control, monitoring and automation platform with an optional self-hosted cloud layer.
+GrowCentral keeps **one universal Raspberry Pi image** and uses a central runtime hardware profile. Raspberry Pi 3B/3B+ remains supported as **Legacy/Lite**; Raspberry Pi 4/400 and 5 are **Full Support** and define the feature baseline for future development. Pi 3 limitations must not constrain new Full-Support features.
 
-The current Raspberry Pi hardware-test candidate is **Build 159** (`pi-universal-alpha-0.7.5-159`). It remains **CANDIDATE** until a real First Boot → home-network reboot → local GUI → cloud-connectivity test succeeds.
+The last published candidate is Build 176. Current `master` contains post-176 hardware-profile runtime changes, so the next successful universal-image build will become the next hardware-test candidate.
 
-Cloud **V7** adds Plesk and standalone routing, device/customer/group management, manual feature entitlements, secure Pi entitlement retrieval, APT packaging and upgrade support.
-
-The next validation sequence is: flash Build 159, complete First Boot, join the home network, reboot, verify local operation, verify cloud connectivity, then update the Plesk host and install the Grow-Central Plesk plugin.
-
-Canonical status: [`RELEASE_STATE.md`](RELEASE_STATE.md).
+Canonical policy: [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md). Canonical release state: [`RELEASE_STATE.md`](RELEASE_STATE.md).
