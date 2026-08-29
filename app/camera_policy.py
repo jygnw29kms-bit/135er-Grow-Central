@@ -40,10 +40,11 @@ def install(camera_module: Any) -> None:
         ]
 
     def resolve_mode_profiled(camera_id, width, height):
+        limit = f"{max_width}x{max_height}"
         if width is not None and width > max_width:
-            raise ValueError(f"Grow Central hardware profile limits camera width to {max_width}")
+            raise ValueError(f"Grow Central hardware profile limits camera resolution to {limit}")
         if height is not None and height > max_height:
-            raise ValueError(f"Grow Central hardware profile limits camera height to {max_height}")
+            raise ValueError(f"Grow Central hardware profile limits camera resolution to {limit}")
         return original_resolve_mode(camera_id, width, height)
 
     def controls_with_led(camera_id):
