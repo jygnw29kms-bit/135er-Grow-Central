@@ -2,131 +2,111 @@
 
 ## 1. Architectural goal
 
-A local-first control platform in which loss of internet, cloud, or vendor services does not remove local observability and automation. The Raspberry Pi is the authoritative local master.
+GrowCentral is a local-first control platform in which loss of internet, cloud or vendor services does not remove local observability and automation. The Raspberry Pi is the authoritative local master.
 
-## 2. Logical topology
+## 2. Hardware architecture
+
+GrowCentral uses **one universal Raspberry Pi image** with one central runtime hardware classifier.
 
 ```text
-┌──────────────────────────── Clients ────────────────────────────┐
-│ Browser · iPad · Tablet · Smartphone · Desktop                │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ LAN HTTP/HTTPS
-                                ▼
-┌──────────────────── 135er-Grow Central Local ──────────────────┐
-│ Raspberry Pi 3B                                               │
-│                                                              │
-│ FastAPI / Web UI                                             │
-│ Device adapters / policy / audit                            │
-│ Local configuration / SQLite                               │
-│ Schedules / automation target                             │
-│ Cloud-link agent                                         │
-│                                                        │
-│ Mars Hydro/iConnect abstraction                        │
-│   ├─ FC3000 2024 · USB · iConnect                    │
-│   ├─ iFresh / DF100 · iConnect                      │
-│   └─ DF100M BLE diagnostics/fallback               │
-│                                                   │
-│ Smart home / power                                  │
-│   ├─ Shelly Gen2+ local JSON-RPC                    │
-│   ├─ Tapo / FRITZ! via validated local/HA paths    │
-│   └─ Home Assistant bridge                          │
-│                                                    │
-│ Camera: Logitech C920 local Linux video stack      │
-│                                                    │
-│ HTTPS outbound ───────────────────────────────┐     │
-└───────────────────────────────────────────────┼─────┘
-                                                │
-                                                ▼
-                               ┌── Optional Linux VPS Cloud ──┐
-                               │ FastAPI/API                  │
-                               │ PostgreSQL target            │
-                               │ Telemetry/history            │
-                               │ Users/RBAC target            │
-                               │ Remote overview              │
-                               │ Command requests (opt-in)    │
-                               └──────────────────────────────┘
+Universal Image
+     |
+/proc/device-tree/model
+     |
+shared/hardware_profile.py
+     |
+     +-- LEGACY_LITE -------- Pi 3B / 3B+
+     +-- FULL_SUPPORT ------- Pi 4 / 400 / CM4
+     +-- FULL_SUPPORT PERF -- Pi 5 / CM5
+     +-- UNCLASSIFIED ------- conservative fallback
 ```
 
-## 3. Authoritative hardware definitions
+This classifier is an architectural boundary. Runtime components must consume it instead of inventing independent model checks.
 
-- **Mars Hydro FC3000** means the **2024 model with USB port and iConnect support**.
-- **DF100** means the **Mars Hydro iFresh series using iConnect**.
-- Existing **DF100M / MZ_MZF002** BLE code is an experimental diagnostics/reverse-engineering/fallback path, not the primary ecosystem architecture.
-- **ESP32 is excluded** from the target architecture.
-- Logitech C920 is the reference camera target currently prepared in the image.
+### Support policy
 
-## 4. Control authority
+- Pi 3B/3B+ remains supported as Legacy/Lite.
+- Pi 4/400/5 define the Full-Support feature baseline.
+- Pi 3 performance limits must not constrain future Full-Support functionality.
+- Separate images are permitted only when different kernel/package/service bases become technically necessary.
 
-Priority order:
+## 3. Logical topology
 
-1. local safety / explicit local controls;
-2. local schedules and automations;
-3. validated optional cloud command requests.
+```text
+Browser / Tablet / Mobile
+          |
+          v
+135er-Grow Central Local
+   Universal Raspberry Pi
+          |
+   Hardware Profile
+   /   |    |    \
+Devices Camera Kiosk Diagnostics
+          |
+     Local Automation
+          |
+ optional outbound HTTPS
+          |
+       Cloud V7
+```
 
-The cloud must never become an implicit master. Vendor-cloud paths must not be able to bypass local device approval, authentication, writable flags, or audit.
+## 4. Runtime resource profiles
 
-## 5. Device adapter boundary
+### Legacy/Lite – Pi 3B / 3B+
 
-Device-specific protocol logic is isolated from GUI/business logic. The Mars Hydro layer must expose normalized capabilities without pretending unvalidated features exist. No guessed iConnect write protocol is permitted.
+Conservative workers, compact diagnostics history, reduced kiosk effects and conservative camera limits (currently up to 1280×720 / reduced FPS target).
 
-The current DF100M BLE tooling remains useful for discovery, GATT inspection, notification capture, and controlled protocol research. Its compatibility endpoints may remain while the primary Mars Hydro/iConnect adapter is developed.
+### Full Support Standard – Pi 4 / 400 / CM4
 
-## 6. Local data responsibility
+Full Nexus UI/Kiosk, standard workers, normal diagnostics history and Full-Support camera modes up to 1920×1080 when advertised by the camera.
 
-SQLite is intended to retain enough data for independent operation:
+### Full Support Performance – Pi 5 / CM5
 
-- configuration;
-- devices and local identities;
-- schedules;
-- automation rules;
-- local sensor cache/history;
-- power telemetry and cost history;
-- event state;
-- cloud synchronization state.
+Full UI/Kiosk, performance workers, extended diagnostics history and the Full-Support camera path.
 
-## 7. Cloud data responsibility
+## 5. Device authority and adapters
 
-PostgreSQL is the target for users/RBAC, sites/devices, consolidated history, audit records, cloud nodes, remote command requests/results, and backup metadata. Current Alpha runtime completeness must not be confused with the target architecture.
+Device-specific protocol logic remains isolated from GUI/business logic. Known capabilities, authentication, writable flags and audit remain mandatory. No guessed iConnect/BLE writes are permitted.
 
-## 8. Network boundary
+Authoritative device families include FRITZ! Smart Home, TP-Link Tapo, Logitech C920/UVC, Mars Hydro/iFresh targets and experimental DF100M BLE diagnostics.
 
-- No direct public exposure of the Pi GUI ports 80 or 8080.
-- Pi cloud communication is outbound HTTPS.
-- Remote commands are treated as requests and validated locally.
-- First boot uses the dedicated provisioning AP and portal; main UI availability must recover even if provisioning fails.
-- Bluetooth device presentation should prefer readable advertised names and conservative type hints over raw MAC addresses.
+## 6. Camera architecture
 
-## 9. Security controls
+The generic UVC backend stays model-independent. `app/camera_policy.py` applies GrowCentral policy from the canonical hardware profile. This allows Pi 3 to stay conservative while Pi 4/5 are no longer artificially capped by the Legacy/Lite baseline.
 
-- dedicated systemd service account;
-- firewall baseline;
-- unattended security upgrades;
-- secrets in environment/config, not committed source;
-- device writes deny-by-default until protocol validation;
-- audit trail as platform requirement;
-- role separation as platform requirement;
-- public website has no device-control credentials or local API access.
+## 7. Diagnostics
 
-## 10. UI architecture target
+Diagnostics must expose:
 
-The GUI is a responsive dark HUD / control-room interface shared by Website, local GUI, cloud GUI, and project previews. It must remain usable on an iPad 6th-generation-class viewport, phones, tablets, and desktops. PNG is the runtime image format preference; WebP is not used.
+- Raspberry Pi model;
+- active support class and runtime profile;
+- build/version;
+- services, networking and radio state;
+- display/kiosk state;
+- setup/first-boot state;
+- cloud-link state where applicable.
 
-The GUI must support normalized device status, power values, kWh history, hour/day/week/month/year views, and user-defined electricity cost projection. Concept preview values must remain clearly distinguishable from validated live telemetry.
+Support bundles and future telemetry must preserve this hardware context.
 
-## 11. Current image validation state
+## 8. Local and cloud responsibility
 
-The current Raspberry Pi image has been reported as looking good in the first basic functions from first boot. This is recorded as a positive Alpha smoke-test result only. Repeated physical tests for AP/DHCP, provisioning transition, GUI recovery, Bluetooth, camera, smart-home hardware, and Mars Hydro/iConnect communication remain required.
+Local SQLite/configuration retains enough state for independent operation. Cloud V7 is optional and provides centralized management, device/customer/group assignments, entitlements, diagnostics and remote views. The cloud never becomes an implicit local master.
 
-## 12. Future runtime extensions
+## 9. Network and security boundaries
 
-- validated Mars Hydro/iConnect adapter;
-- persistent power time-series and cost calculations;
-- user login/session endpoints;
-- RBAC enforcement middleware;
-- sensor ingest/history queries;
-- schedule/automation execution engine;
-- audit persistence;
-- WebSocket live updates;
-- device heartbeat/offline state;
-- executable backup/restore workflows;
-- Matter only after authentication/audit maturity.
+- no direct public exposure of local GUI ports;
+- outbound HTTPS for cloud communication;
+- remote commands are requests validated locally;
+- setup AP/captive portal for first boot;
+- device writes deny-by-default;
+- dedicated service accounts, firewall, audit and protected secrets.
+
+## 10. UI architecture
+
+GrowCentral Nexus UI is shared by local GUI, kiosk, mobile and public presentation. Visual complexity may be reduced by the Legacy/Lite profile, while Pi 4/5 retain the Full-Support interface baseline.
+
+## 11. Validation architecture
+
+CI validates classifier behavior and generic runtime correctness. Real hardware validation is tracked by support class. A Pi-3 Legacy/Lite regression does not automatically invalidate Pi-4/5 Full Support, but must remain explicitly documented.
+
+See [`HARDWARE_SUPPORT_POLICY.md`](HARDWARE_SUPPORT_POLICY.md) and [`HARDWARE_TEST_PLAN.md`](HARDWARE_TEST_PLAN.md).
