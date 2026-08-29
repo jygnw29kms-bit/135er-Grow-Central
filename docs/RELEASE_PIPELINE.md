@@ -1,108 +1,73 @@
 # Release-Pipeline – 135er-Grow Central
 
-**Stand:** 2026-08-23  
-**Kanonische Quelle:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
+**Stand:** 2026-08-29  
+**Kanonische Quellen:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md), [`HARDWARE_SUPPORT_POLICY.md`](HARDWARE_SUPPORT_POLICY.md)
 
 ## Grundsatz
 
-Es wird strikt zwischen vier Zuständen unterschieden:
+Es wird strikt zwischen folgenden Zuständen unterschieden:
 
 1. **Repository-Stand** – aktueller `master`.
 2. **Build/Artefakt** – durch GitHub Actions erzeugtes Paket.
-3. **Hardware-Testkandidat** – Build, der als nächstes real geprüft werden soll.
-4. **Hardwarevalidierte Basis** – Kandidat, der den realen Zieltest bestanden hat.
+3. **Published Candidate** – veröffentlichtes Universal-Image für den nächsten Realtest.
+4. **Supportklassen-Validierung** – reale Prüfung getrennt nach Legacy/Lite und Full Support.
+5. **Validated** – nur für tatsächlich real geprüfte Supportklassen.
 
-Eine Commit-, Run- oder Buildnummer ist deshalb nicht automatisch hardwarevalidiert.
+Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
+
+## Hardwarestrategie als Release-Gate
+
+- ein **Universal-Image** bleibt Standard;
+- Pi 3B/3B+ = `LEGACY_LITE`;
+- Pi 4/400/CM4 = `FULL_SUPPORT` Standard;
+- Pi 5/CM5 = `FULL_SUPPORT` Performance;
+- Runtime-Komponenten verwenden die zentrale Klassifikation `shared/hardware_profile.py`;
+- CI testet die Klassifikation;
+- reale Tests werden pro Supportklasse dokumentiert;
+- ein Pi-3-spezifischer Legacy/Lite-Fehler blockiert nicht automatisch die Full-Support-Freigabe für Pi 4/5, muss aber offen dokumentiert werden.
 
 ## Aktueller Stand
 
-- Version: **alpha-0.7.5**
-- aktueller Master-Anker: **`e339602`**
-- Build 117: vorheriger erfolgreicher Hardwaretest, inzwischen überholt
-- nächster Raspberry-Pi-Testkandidat: **Build 118**
-- Kandidaten-Tag: **`pi-universal-alpha-0.7.5-118`**
-- Build 118: **CANDIDATE**, noch nicht `VALIDATED`
-- Stable: noch nicht freigegeben
-
-## Inhalt des konsolidierten Kandidaten
-
-Build 118 basiert auf dem zusammengeführten aktuellen Stand einschließlich:
-
-- aktueller GUI-/Netzwerk-/First-Boot-/Persistenzpfade;
-- FRITZ! Smart Home und Tapo;
-- Logitech C920/UVC;
-- firmware-/modell-/USB-ID-bewusster Kamera-LED-Fähigkeitserkennung;
-- bedingter V4L2-/Logitech-LED-Steuerung und Tests;
-- Elecrow 7-Zoll Touch-Kiosk samt systemd-Service;
-- Räume/Grow/Pflanzen/Automation;
-- Energie-/Kostenlogik;
-- GrowCentral Nexus UI;
-- Mobile Nexus Clients;
-- Cloud V6 und signiertem APT-Pfad.
+- Version: `alpha-0.7.5`
+- letzter veröffentlichter Candidate: **Build 176** / `pi-universal-alpha-0.7.5-176`
+- Build 176: `CANDIDATE`, noch nicht hardwarevalidiert
+- aktueller `master`: enthält Post-176-Hardwareprofil-Runtime
+- Konsequenz: **neuer Universal-Image-Build erforderlich**; erst dessen erfolgreicher Release wird neuer Candidate
 
 ## Verbindliche Release-Gates
 
-1. Quellstand konsistent auf `master` zusammenführen.
-2. Python-, Security-, Integrations- und Release-Guards ausführen.
-3. Pi-Image exakt aus dem vorgesehenen Kandidatenstand verwenden.
-4. Boot und Reboot auf realer Raspberry-Pi-Hardware prüfen.
-5. First Boot, Setup-AP, LAN/WLAN, GUI und Persistenz prüfen.
-6. C920 einschließlich LED-Fähigkeitserkennung/Steuerung auf realer Hardware prüfen.
-7. Bei betroffenen Änderungen FRITZ!, Tapo, Mars Hydro und Elecrow-Kiosk prüfen.
-8. Bei Fehlern Support-Paket erzeugen und auswerten.
-9. Kandidaten erst nach erfolgreichem Realtest als `VALIDATED` kennzeichnen.
-10. README, Website, Mobile-/Cloud-/APT-Doku und Downloads synchronisieren.
-
-## Build-118-Regel
-
-Build 118 wird nicht durch einen rein dokumentarischen Folgecommit künstlich ersetzt. Ein neuer Pi-Build >118 wird erst erzeugt, wenn sich der tatsächlich im Image enthaltene Laufzeitstand ändert oder Build 118 im Hardwaretest einen Fix erfordert. So bleibt der Hardwaretest reproduzierbar auf genau dem vorgesehenen Kandidaten.
+1. Quellstand auf `master` konsistent halten.
+2. Python-, Security-, Hardwareprofil-, Integrations- und Release-Guards ausführen.
+3. Universal-Image aus exakt diesem Runtime-Stand bauen.
+4. Boot/Reboot/Pristine/Packaging/Checksum/Release erfolgreich.
+5. neuen Build als `CANDIDATE` veröffentlichen.
+6. Realtest mindestens auf der Full-Support-Referenzklasse Pi 4/400 durchführen.
+7. Pi-3-Legacy/Lite separat prüfen und Abweichungen separat klassifizieren.
+8. Pi 5/Performance separat validieren, sofern Zielhardware verfügbar.
+9. First Boot, Netzwerk, mDNS, GUI/Auth/Persistenz, Kiosk, Kamera, Cloud und Diagnose prüfen.
+10. Website, README und kanonische Doku auf exakt denselben Stand synchronisieren.
+11. `VALIDATED` nur für real bestätigte Supportklassen vergeben.
 
 ## Distribution
 
 ### Raspberry Pi
 
-Workflow: `.github/workflows/build-pi3-image.yml`
+Workflow: `.github/workflows/build-pi3-image.yml` (historischer Dateiname; Output ist das Universal-Image).
 
-- Ziel: Raspberry Pi 3B+ / kompatible 64-bit Plattformbasis
-- BUILD-Metadaten stammen aus GitHub Actions
-- aktueller Testkandidat: Build 118
-- Tag: `pi-universal-alpha-0.7.5-118`
+Der Workflow erzeugt ein gemeinsames Image für alle Supportklassen. Separate Images dürfen nicht ohne dokumentierten technischen Grund eingeführt werden.
 
 ### Mobile
 
-Workflow: `.github/workflows/mobile-build.yml`
+Android und iOS bleiben WebGUI-Clients; Hardwareklassifikation und Geräteautorität liegen beim Pi.
 
-- Android: `GrowCentral-Nexus-Android-APK`
-- iOS: `GrowCentral-Nexus-iOS-Sideload-IPA`
-- iOS wird als unsigned Device-IPA erzeugt und erst beim Sideloading für das konkrete Gerät signiert
-- Mobile bleibt WebGUI-Client; der Pi bleibt Geräteautorität
-- lokale HTTP-Ziele: `.local` und private Netze
-- Remote: HTTPS erforderlich
+### Cloud / APT
 
-### Cloud / Server
-
-Kanonische Installer:
-
-- `scripts/install-135ercloud-v6.sh`
-- `scripts/setup-135ercloud-apt-repo-v1.sh`
-
-Die Website-Pipeline kopiert diese bei jedem Release-Abgleich erneut in den öffentlichen Webroot und veröffentlicht zusätzlich Release-Metadaten/Prüfsummen.
-
-### APT
-
-- Repository: `https://repo.dezender.de/apt`
-- dedizierter `Signed-By`-Keyring
-- alte Grow-Central-Quellen werden vor der kanonischen Einrichtung bereinigt
-- APT-/Cloud-Installer bleiben inhaltlich an denselben Release-State gekoppelt
+Cloud V7 bleibt optional. Plesk-/Standalone-Varianten, Entitlements und APT-Upgrades sind unabhängig von der lokalen Hardwareklasse; die Pi-Seite kann ihre effektiven Fähigkeiten und Hardwareprofile an Diagnose-/Supportpfade melden.
 
 ### Website
 
-`dezender.de` ist eine öffentliche read-only Project Console im GrowCentral Nexus UI. Sie zeigt Kandidaten- und Validierungsstatus, darf aber keinen Testkandidaten als hardwarevalidiert ausgeben.
+`https://dezender.de/GC/` muss immer dieselbe Hardwarestrategie und denselben Candidate-Status wie `RELEASE_STATE.md` kommunizieren.
 
 ## Historische Dokumente
 
-Dateien wie `BUILD_71_CHECKPOINT.md`, `BUILD_72_MOBILE_V0.1.md` und Build-85-spezifische Testnotizen bleiben als historische Nachweise erhalten. Sie definieren **nicht** mehr den aktuellen Release-Stand. Der aktuelle Status steht ausschließlich in `RELEASE_STATE.md`, dieser Pipeline und den darauf verweisenden Oberflächen.
-
-## Release-Regel
-
-Ein Paket gilt nur dann als **veröffentlicht/validiert**, wenn Quellstand, Artefakt, Prüfsummen und reale Zieltests eindeutig zueinander gehören. `CANDIDATE` und `VALIDATED` dürfen nicht synonym verwendet werden.
+Build-spezifische Altdateien bleiben als Historie erhalten. Sie definieren weder aktuelle Hardwareklassen noch den aktuellen Candidate.
