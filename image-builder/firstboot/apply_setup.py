@@ -32,6 +32,7 @@ MARKER = STATE_DIR / ".provisioned"
 ERROR_FILE = STATE_DIR / "setup-last-error"
 WARNING_FILE = STATE_DIR / "setup-last-warning"
 APP_ENV = Path("/opt/135er-grow-central/.env")
+SETUP_AP_SCRIPT = APP_ROOT / "image-builder/firstboot/setup-ap.sh"
 FIXED_HOSTNAME = "135er-grow-central"
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
@@ -174,13 +175,41 @@ def install_runtime_policy() -> None:
     run("systemctl", "daemon-reload")
 
 
+def _setup_ap_ready() -> bool:
+    wlan = wifi_interface()
+    if not wlan:
+        return False
+    address = run("ip", "-4", "address", "show", "dev", wlan, check=False)
+    dhcp = run("ss", "-H", "-lun", check=False)
+    return address.returncode == 0 and "10.42.0.1/24" in address.stdout and dhcp.returncode == 0 and ":67" in dhcp.stdout
+
+
 def restore_access_point(message: str) -> None:
     MARKER.unlink(missing_ok=True)
     ERROR_FILE.write_text(message[:500] + "\n", encoding="utf-8")
     os.chmod(ERROR_FILE, 0o640)
     os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)
     run("nmcli", "connection", "down", TARGET_CONNECTION, check=False)
-    run("nmcli", "connection", "up", AP_CONNECTION, check=False)
+    run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes", check=False)
+
+    # Reuse the hardened AP bootstrap instead of relying on one best-effort
+    # nmcli call. setup-ap.sh already performs radio reset plus a bounded
+    # wpa_supplicant/NetworkManager recovery if AP activation stalls.
+    if SETUP_AP_SCRIPT.is_file():
+        run("bash", str(SETUP_AP_SCRIPT), check=False)
+    else:
+        run("nmcli", "--wait", "35", "connection", "up", AP_CONNECTION, check=False)
+
+    deadline = time.monotonic() + 40
+    while time.monotonic() < deadline:
+        if _setup_ap_ready():
+            return
+        time.sleep(2)
+
+    recovery_message = "Setup-AP-Wiederherstellung fehlgeschlagen: 10.42.0.1/DHCP wurde nicht bestätigt."
+    ERROR_FILE.write_text((message[:350] + "\n" + recovery_message + "\n"), encoding="utf-8")
+    os.chmod(ERROR_FILE, 0o640)
+    os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)
 
 
 def write_warning(message: str) -> None:
