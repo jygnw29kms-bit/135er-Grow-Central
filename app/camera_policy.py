@@ -1,15 +1,15 @@
 """Grow Central camera policy layered on top of the generic UVC backend.
 
 The core camera module intentionally stays generic. This policy constrains the
-Grow Central UI to Raspberry-Pi-friendly modes and exposes a guarded status-LED
-control when the attached UVC device actually advertises one.
+Grow Central UI according to the canonical Raspberry Pi hardware profile and
+exposes a guarded status-LED control when the attached UVC device advertises one.
 """
 from __future__ import annotations
 
 from typing import Any
 
-MAX_WIDTH = 1280
-MAX_HEIGHT = 720
+from shared.hardware_profile import current_profile
+
 LED_CONTROL_CANDIDATES = (
     "led1_mode",
     "led_mode",
@@ -21,25 +21,29 @@ def install(camera_module: Any) -> None:
     if getattr(camera_module, "_GC_POLICY_INSTALLED", False):
         return
 
+    profile = current_profile()
+    max_width = profile.camera_max_width
+    max_height = profile.camera_max_height
+
     original_parse_modes = camera_module._parse_mjpeg_modes
     original_resolve_mode = camera_module._resolve_capture_mode
     original_controls = camera_module._controls_sync
     original_set_control = camera_module._set_control_sync
 
-    def parse_modes_720p(text: str):
+    def parse_modes_profiled(text: str):
         modes = original_parse_modes(text)
         return [
             mode
             for mode in modes
-            if int(mode.get("width") or 0) <= MAX_WIDTH
-            and int(mode.get("height") or 0) <= MAX_HEIGHT
+            if int(mode.get("width") or 0) <= max_width
+            and int(mode.get("height") or 0) <= max_height
         ]
 
-    def resolve_mode_720p(camera_id, width, height):
-        if width is not None and width > MAX_WIDTH:
-            raise ValueError("Grow Central limits camera capture to 1280x720")
-        if height is not None and height > MAX_HEIGHT:
-            raise ValueError("Grow Central limits camera capture to 1280x720")
+    def resolve_mode_profiled(camera_id, width, height):
+        if width is not None and width > max_width:
+            raise ValueError(f"Grow Central hardware profile limits camera width to {max_width}")
+        if height is not None and height > max_height:
+            raise ValueError(f"Grow Central hardware profile limits camera height to {max_height}")
         return original_resolve_mode(camera_id, width, height)
 
     def controls_with_led(camera_id):
@@ -54,7 +58,13 @@ def install(camera_module: Any) -> None:
             payload["status_led_source"] = source_name
         else:
             payload["status_led_available"] = False
-        payload["max_resolution"] = {"width": MAX_WIDTH, "height": MAX_HEIGHT, "label": "720p"}
+        payload["max_resolution"] = {
+            "width": max_width,
+            "height": max_height,
+            "label": f"{max_height}p",
+        }
+        payload["hardware_profile"] = profile.key
+        payload["support_class"] = profile.support_class
         return payload
 
     def set_control_with_led(request):
@@ -102,8 +112,8 @@ def install(camera_module: Any) -> None:
             "auto_focus_disabled": False,
         }
 
-    camera_module._parse_mjpeg_modes = parse_modes_720p
-    camera_module._resolve_capture_mode = resolve_mode_720p
+    camera_module._parse_mjpeg_modes = parse_modes_profiled
+    camera_module._resolve_capture_mode = resolve_mode_profiled
     camera_module._controls_sync = controls_with_led
     camera_module._set_control_sync = set_control_with_led
     camera_module._GC_POLICY_INSTALLED = True
