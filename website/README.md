@@ -4,108 +4,56 @@ Die statische Projektseite unter `website/` ist die öffentliche Produkt- und Ma
 
 **Öffentliche URL:** `https://dezender.de/GC/`  
 **Version:** `alpha-0.7.5`  
-**Master-Anker:** `e339602`  
-**Pi-Testkandidat:** `Build 118` / `pi-universal-alpha-0.7.5-118`  
-**Status:** `CANDIDATE` – noch nicht hardwarevalidiert
+**Letzter veröffentlichter Pi-Candidate:** Build 176 / `pi-universal-alpha-0.7.5-176`  
+**Aktueller master:** enthält Post-176-Hardwareprofil-Runtime; nächster Universal-Image-Build erforderlich
 
-Kanonische Quelle: [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
+Kanonische Quellen: [`../RELEASE_STATE.md`](../RELEASE_STATE.md) und [`../docs/HARDWARE_SUPPORT_POLICY.md`](../docs/HARDWARE_SUPPORT_POLICY.md).
 
-## Ziel der Website
+## Produktbotschaft
 
-Die Seite vermarktet und erklärt Grow Central als Local-First Steuerungs- und Automationsplattform für Grow-Umgebungen. Sie ist bewusst keine reine Entwicklerkonsole mehr, sondern eine professionelle Produktpräsentation mit:
+GrowCentral bleibt eine **Local-First Universal-Raspberry-Pi-Plattform**. Die Website muss die Hardwareklassen überall konsistent kommunizieren:
 
-- Produktnutzen und Plattformidee;
-- Feature-Übersicht;
-- Geräte- und Herstellerintegrationen;
-- GrowCentral Nexus UI für Desktop, Touch/Kiosk und Mobile;
-- Local-First Architektur und optionaler Cloud-Ebene;
-- Sicherheits- und Capability-Modell;
-- aktuellem Release- und Hardwareteststatus;
-- FAQ, GitHub- und Release-Einstiegspunkten.
+- Pi 3B/3B+ = **Legacy/Lite**, weiterhin unterstützt;
+- Pi 4/400/CM4 = **Full Support Standard**, empfohlen;
+- Pi 5/CM5 = **Full Support Performance**, optimal für rechenintensive Funktionen;
+- ein **Universal-Image** bleibt Standard;
+- separate Images nur bei technisch zwingend unterschiedlichen Systembasen.
 
-## Aktueller Stand – 24.08.2026
+Pi 3 darf die Entwicklung neuer Full-Support-Funktionen nicht auf sein Leistungsniveau begrenzen.
 
-Build 117 war ein erfolgreicher Teststand, ist durch den konsolidierten e339-Master inzwischen überholt. Die Website zeigt deshalb Build 118 als nächsten Hardwaretest-Kandidaten und vermeidet die falsche Aussage, er sei bereits validiert.
+## Inhalte
 
-Build 118 umfasst unter anderem:
+Die Seite erklärt:
 
-- aktuelle Local-First GUI / First Boot / Netzwerk / Persistenz;
+- Universal-Image und Runtime-Hardwareerkennung;
+- Hardwareprofile und Produktempfehlungen;
+- First Boot / Captive Portal / Netzwerk / mDNS;
+- Geräte-, Raum- und Grow-Verwaltung;
+- Automationen;
 - FRITZ! Smart Home und Tapo;
-- Logitech C920/UVC;
-- firmware-/modell-/USB-ID-bewusste Kamera-LED-Fähigkeitserkennung;
-- bedingte V4L2-/Logitech-LED-Steuerung;
-- Elecrow 7-Zoll Touch-Kiosk;
-- Räume/Grow-Bereiche, Automationen, Diagnose und Supportpfade;
-- GrowCentral Nexus UI;
-- Mobile Nexus Clients;
-- Cloud V6 und signierten APT-Pfad.
+- Logitech C920/UVC mit hardwareabhängigen Capture-Limits;
+- Kiosk/Touch und GrowCentral Nexus UI;
+- Diagnose inkl. erkanntem Modell/Profil;
+- Cloud V7, Entitlements und Local-First-Architektur;
+- aktuellen Release-/Candidate-Status.
 
-## Distribution
+## Release-Kommunikation
 
-Der Deploy-Workflow veröffentlicht zusätzlich:
+Build 176 ist der **letzte veröffentlichte Candidate**. Die Website darf ihn nicht als aktuellen `master` oder `VALIDATED` darstellen. Seit Einführung der Hardwareprofil-Runtime ist ein neuer Universal-Image-Build erforderlich; erst nach erfolgreicher Veröffentlichung wird dessen Buildnummer als neuer Candidate übernommen.
 
-- `135ercloud-server-install.sh` – Cloud-/Server-Installer V6;
-- `setup-135ercloud-apt-repo.sh` – signierter APT-Bootstrap;
-- `RELEASE_STATE.md` – kanonischer Release-Stand;
-- `SHA256SUMS.txt` – Prüfsummen der veröffentlichten Dateien;
-- `release-state.txt` – maschinenlesbare Veröffentlichungsinformationen.
+## Deployment
 
-APT Repository: `https://repo.dezender.de/apt`
-
-## Mobile
-
-Mobile bleibt ein WebGUI-Client und ersetzt den Raspberry Pi nicht.
-
-- Android: `GrowCentral-Nexus-Android-APK`
-- iOS: `GrowCentral-Nexus-iOS-Sideload-IPA`
-- Remote-Ziele müssen HTTPS verwenden.
-- Die iOS-IPA wird ohne persönliche Apple-Signatur erzeugt und beim Sideloading für das konkrete Zielgerät signiert.
-
-## Design
-
-Die Website folgt verbindlich dem **GrowCentral Nexus UI**. Logo und Branding bleiben unverändert. Panelstruktur, Farben, Statussemantik, Typografie und responsive Regeln werden mit Pi-GUI, Kiosk, Mobile und Repo-Präsentation geteilt.
-
-Designsystem: [`../docs/DESIGN_SYSTEM_NEXUS.md`](../docs/DESIGN_SYSTEM_NEXUS.md)
-
-## Sicherheit
-
-Die öffentliche Website bleibt read-only und enthält:
-
-- keine lokalen Geräte-Credentials;
-- keine Pi-Passwörter;
-- keine direkten LAN-Steuerendpunkte;
-- keine Smart-Home-Tokens.
-
-## Branding und GUI-Vorschau
-
-Branding:
-
-- `assets/brand/135er-grow-central-lockup-v0.9.png`
-- `assets/brand/135er-grow-central-logo.png`
-- `assets/brand/135er-grow-central-mark.png`
-
-GUI-Familie:
-
-- `assets/gui/local-desktop-v0.9.png`
-- `assets/gui/local-tablet-v0.9.png`
-- `assets/gui/local-mobile-v0.9.png`
-- `assets/gui/cloud-desktop-v0.9.png`
-
-Aktuelle Vorschaubilder müssen Nexus UI zeigen. Veraltete Screenshots werden ersetzt oder als historisch markiert.
-
-## Produktions-Deployment
-
-Plesk-Webroot der Grow-Central-Seite:
+Plesk-Ziel:
 
 ```text
 /var/www/vhosts/dezender.de/httpdocs/GC/
 ```
 
-`.github/workflows/deploy-website-sftp.yml` veröffentlicht Änderungen an `website/**` und den kanonischen Server-/APT-Skripten automatisch nach:
+Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht `website/**` automatisch nach `https://dezender.de/GC/`.
 
-```text
-https://dezender.de/GC/
-```
+## Design und Sicherheit
+
+Die Website folgt dem **GrowCentral Nexus UI**, bleibt read-only und enthält keine lokalen Geräte-Credentials, Pi-Passwörter, LAN-Steuerendpunkte oder Smart-Home-Tokens.
 
 ## Lokale Vorschau
 
