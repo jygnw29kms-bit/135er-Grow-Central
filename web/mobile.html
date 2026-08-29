@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de" data-mode="simple">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#070b0d"><meta name="color-scheme" content="dark">
+<title>Grow Central Mobile</title><link rel="icon" href="/static/brand-mark.png"><link rel="stylesheet" href="/static/mobile.css?v=1">
+</head>
+<body>
+<div class="mobile-app">
+<header class="mobile-head"><div class="mobile-brand"><img src="/static/brand-mark.png" alt=""><div><b>Grow Central</b><small id="connectionLabel">LOCAL</small></div></div><div class="head-actions"><div class="mobile-mode"><button id="mSimple" class="active">Einfach</button><button id="mAdvanced">Advanced</button></div><button id="mRefresh" class="round">↻</button></div></header>
+<main>
+<section id="mOverview" class="mview active">
+  <div class="mstatus" id="mStatus"><div><i>✓</i><span><b id="mHeadline">Grow Central wird geprüft…</b><small id="mHeadlineSub">Lokale Daten werden geladen.</small></span></div></div>
+  <div class="mmetrics"><article><small>TEMP</small><strong id="mTemp">—</strong><span>°C</span></article><article><small>RH</small><strong id="mRh">—</strong><span>%</span></article><article><small>VPD</small><strong id="mVpd">—</strong><span>kPa</span></article><article class="advanced-only"><small>POWER</small><strong id="mPower">—</strong><span>W</span></article></div>
+  <article class="mcard"><header><div><small>GROWBOX</small><h2>Aktueller Betrieb</h2></div><button data-tab="grow">Öffnen</button></header><div id="mGrowSummary" class="mempty">Noch keine Growbox-Daten.</div><div class="mquick"><button data-tab="devices"><i>＋</i>Gerät</button><button data-tab="automation"><i>⌁</i>Regel</button><button data-tab="camera"><i>◉</i>Kamera</button></div></article>
+  <article class="mcard"><header><div><small>GERÄTE</small><h2>Status</h2></div><b id="mDeviceCount">0 / 0</b></header><div id="mDevicePreview" class="mlist"><div class="mempty">Geräte werden geladen…</div></div></article>
+  <article class="mcard advanced-only"><header><div><small>PROVIDER RUNTIME</small><h2>Integrationen</h2></div><b id="mRuntimeCount">—</b></header><div id="mRuntimePreview" class="mlist"></div></article>
+</section>
+<section id="mGrow" class="mview"><div class="msection"><small>GROW WORKSPACE</small><h1>Growboxen</h1><p>Klima, Geräte und Pflanzen an einem Ort.</p></div><div id="mGrowCards"><article class="mcard"><b>Noch keine Growbox-Konfiguration</b><p class="muted">Die vorhandene Raumverwaltung kann über „Mehr → Desktop / Erweitert“ geöffnet werden.</p></article></div></section>
+<section id="mDevices" class="mview"><div class="msection with-button"><div><small>GC-DEVICE-V1</small><h1>Geräte</h1><p>Alle Hersteller, eine Ansicht.</p></div><button id="mDiscover" class="primary">Suchen</button></div><div class="mchips"><button class="active" data-mfilter="all">Alle</button><button data-mfilter="online">Online</button><button data-mfilter="sensor">Sensoren</button><button data-mfilter="light">Licht</button><button data-mfilter="fan">Lüfter</button></div><div id="mDeviceList" class="mlist"><div class="mempty">Geräte werden geladen…</div></div></section>
+<section id="mAutomation" class="mview"><div class="msection"><small>LOCAL AUTOMATION</small><h1>Automationen</h1><p>Einfache Regeln ohne Herstellerwissen.</p></div><div id="mAutomationList" class="mlist"><div class="mempty">Regeln werden geladen…</div></div><a class="wide-link" href="/legacy#automation">Erweiterte Regelverwaltung</a></section>
+<section id="mCamera" class="mview"><div class="msection"><small>VISION</small><h1>Kamera</h1></div><div id="mCameraList" class="camera-mobile"><div class="mempty">Kamera wird geprüft…</div></div><a class="wide-link" href="/legacy#camera">Kamera-Einstellungen</a></section>
+<section id="mMore" class="mview"><div class="msection"><small>GROW CENTRAL</small><h1>Mehr</h1></div><article class="mcard advanced-only"><header><div><small>SYSTEM</small><h2>Lokaler Core</h2></div></header><div id="mSystem" class="mkv"></div></article><article class="mcard advanced-only"><header><div><small>ENERGIE</small><h2>Verbrauch</h2></div></header><div class="energy-mobile"><strong id="mEnergy">—</strong><span>kWh gemeldet</span></div></article><div class="settings-list"><a href="/legacy">Desktop / Erweitert <span>›</span></a><a href="/legacy#rooms">Growbox verwalten <span>›</span></a><a href="/legacy#settings">Einstellungen <span>›</span></a></div><button id="desktopMode" class="desktop-switch">Desktopansicht auf diesem Gerät verwenden</button></section>
+</main>
+<nav class="bottom-nav"><button class="active" data-tab="overview"><i>⌂</i><span>Übersicht</span></button><button data-tab="grow"><i>▣</i><span>Grow</span></button><button data-tab="devices"><i>◫</i><span>Geräte</span></button><button data-tab="automation"><i>⌁</i><span>Regeln</span></button><button data-tab="more"><i>•••</i><span>Mehr</span></button></nav>
+</div><div id="mToast" class="mtoast"></div><script src="/static/mobile.js?v=1"></script></body></html>
