@@ -4,6 +4,7 @@ from .gc_esp32 import GrowCentralEsp32Provider
 from .generic_mqtt import GenericMqttProvider
 from .legacy_smarthome import LegacySmartHomeProvider
 from .provider import DeviceProvider
+from .spiderfarmer_ggs import SpiderFarmerGgsProvider
 from .tuya_local import TuyaLocalProvider
 from .zigbee2mqtt import Zigbee2MqttProvider
 
@@ -27,6 +28,7 @@ class ProviderRuntime:
         self._providers["zigbee"] = Zigbee2MqttProvider()
         self._providers["mqtt"] = GenericMqttProvider()
         self._providers["tuya"] = TuyaLocalProvider()
+        self._providers["spider_farmer"] = SpiderFarmerGgsProvider()
 
     def ids(self) -> tuple[str, ...]:
         return tuple(sorted(self._providers))
