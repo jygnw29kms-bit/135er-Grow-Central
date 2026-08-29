@@ -1,42 +1,21 @@
 <!doctype html>
 <html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>135er-Grow Central Cloud</title>
+<title>135er-Grow Central · Cloud</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
 <style>
-:root{--bg:#05090e;--card:#0d151e;--line:#1d2d38;--tx:#eef7fb;--mut:#8299a7;--g:#35f0a7;--c:#32ccff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#102330,#05090e 35%);color:var(--tx);font-family:system-ui,-apple-system,sans-serif}
-main{max-width:1150px;margin:auto;padding:28px 18px}.top{display:flex;justify-content:space-between;align-items:center;gap:24px}.brand{display:flex;align-items:center;width:min(620px,70%)}.brand img{display:block;width:100%;height:auto;max-height:92px;object-fit:contain;object-position:left center;filter:drop-shadow(0 0 12px #32ccff33)}.sub{color:var(--mut);font-size:13px;margin:8px 0 24px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#0d151edd;border:1px solid var(--line);border-radius:17px;padding:17px}.label{font-size:10px;color:var(--mut);letter-spacing:.08em}.value{font-size:30px;font-weight:900;margin-top:10px}.g{color:var(--g)}.c{color:var(--c)}
-.panel{margin-top:14px}.row{display:flex;gap:10px;flex-wrap:wrap}input,button{background:#0b1219;color:var(--tx);border:1px solid var(--line);padding:10px 12px;border-radius:10px}button{border-color:var(--g);color:var(--g);font-weight:800}pre{overflow:auto;color:#a7bfcc;font-size:12px}
-@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}}
+:root{color-scheme:dark;--bg:#050908;--panel:#0b1210;--line:#20312b;--tx:#f2f7f5;--mut:#82958d;--g:#72f0ad;--c:#77ddeb;--a:#f2cc72;font-family:Inter,system-ui,-apple-system,sans-serif}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#10231c 0,transparent 34%),var(--bg);color:var(--tx)}main{max-width:1180px;margin:auto;padding:26px 18px 50px}.top{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{width:min(520px,64%)}.brand img{display:block;width:100%;max-height:72px;object-fit:contain;object-position:left}.state{border:1px solid #2b543f;border-radius:999px;padding:7px 10px;color:var(--g);font-size:10px;font-weight:800;letter-spacing:.1em}.hero{margin:28px 0 16px;border:1px solid #284437;border-radius:22px;padding:24px;background:linear-gradient(125deg,#0e1c17,#08100e 70%)}.hero small,.label{font-size:9px;color:var(--g);letter-spacing:.14em}.hero h1{font-size:34px;margin:7px 0}.hero p{color:var(--mut);max-width:760px;line-height:1.55}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:linear-gradient(145deg,#0e1814,#08100d);border:1px solid var(--line);border-radius:17px;padding:17px}.value{font-size:27px;font-weight:800;margin-top:10px}.g{color:var(--g)}.c{color:var(--c)}.a{color:var(--a)}.panel{margin-top:14px}.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}input,button{background:#09110e;color:var(--tx);border:1px solid var(--line);padding:11px 12px;border-radius:10px}button{border-color:#376b51;color:var(--g);font-weight:800}pre{overflow:auto;color:#9bb0a7;font-size:12px;background:#07100c;padding:14px;border-radius:11px;border:1px solid #17251f}.architecture{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.architecture div{border:1px solid var(--line);border-radius:13px;padding:13px;background:#09110e}.architecture small{display:block;color:var(--mut);font-size:9px}.architecture strong{display:block;margin-top:5px;font-size:12px}.architecture div:first-child strong{color:var(--g)}@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}.architecture{grid-template-columns:1fr}.brand{width:70%}}@media(max-width:460px){.grid{grid-template-columns:1fr 1fr}.hero h1{font-size:28px}.top{align-items:flex-start}.state{font-size:8px}}
 </style></head>
 <body><main>
-<div class="top"><div class="brand"><img src="/static/brand-logo.png" alt="135er-Grow Central · J.L."></div><div class="g">● VPS ONLINE</div></div>
-<h1>Remote Overview</h1><div class="sub">Optionaler Cloud-Layer – der Raspberry Pi bleibt lokale Steuerzentrale.</div>
+<div class="top"><div class="brand"><img src="/static/brand-logo.png" alt="135er-Grow Central"></div><div class="state">● CLOUD LINK</div></div>
+<section class="hero"><small>OPTIONAL REMOTE LAYER</small><h1>Grow Central Cloud</h1><p>Remote-Übersicht, Backup, Push und Multi-Site-Funktionen. Die Geräteautorität, Automationen und Fail-safe-Steuerung bleiben auf der jeweiligen lokalen Grow Central.</p><div class="architecture"><div><small>LOCAL CORE</small><strong>AUTHORITATIVE</strong></div><div><small>DEVICE MODEL</small><strong>GC-DEVICE-V1</strong></div><div><small>CLOUD</small><strong>REMOTE / OPTIONAL</strong></div></div></section>
 <div class="grid">
 <div class="card"><div class="label">TEMPERATUR</div><div id="t" class="value c">—</div></div>
 <div class="card"><div class="label">LUFTFEUCHTE</div><div id="h" class="value c">—</div></div>
 <div class="card"><div class="label">VPD</div><div id="v" class="value g">—</div></div>
-<div class="card"><div class="label">DF100M</div><div id="f" class="value g">—</div></div>
+<div class="card"><div class="label">ABLÜFTUNG</div><div id="f" class="value g">—</div></div>
 </div>
-<div class="card panel">
-<div class="label">VERBINDUNG</div>
-<div class="row"><input id="site" value="garage"><input id="token" type="password" placeholder="API Token"><button onclick="load()">SYNC</button></div>
-<pre id="log">Token bleibt nur im Browser dieser Sitzung.</pre>
-</div>
+<div class="card panel"><div class="label">SITE VERBINDUNG</div><div class="row"><input id="site" value="garage" aria-label="Site"><input id="token" type="password" placeholder="API Token" aria-label="API Token"><button onclick="load()">SYNC</button></div><pre id="log">Token bleibt nur im Browser dieser Sitzung. Cloud-Kommunikation ersetzt keine lokale Automation.</pre></div>
 <script>
-async function load(){
- const site=document.getElementById('site').value, token=document.getElementById('token').value;
- try{
-  const r=await fetch('/api/v1/sites/'+encodeURIComponent(site)+'/latest',{headers:{'X-API-Token':token}});
-  const x=await r.json(); if(!r.ok) throw new Error(x.detail||r.statusText);
-  t.textContent=(x.temperature_c??'—')+(x.temperature_c!=null?' °C':'');
-  h.textContent=(x.humidity_pct??'—')+(x.humidity_pct!=null?' %':'');
-  v.textContent=(x.vpd_kpa??'—')+(x.vpd_kpa!=null?' kPa':'');
-  f.textContent=(x.fan_speed_pct??'—')+(x.fan_speed_pct!=null?' %':'');
-  log.textContent=JSON.stringify(x,null,2);
- }catch(e){log.textContent='Fehler: '+e.message}
-}
-</script>
-</main></body></html>
+async function load(){const site=document.getElementById('site').value,token=document.getElementById('token').value;try{const r=await fetch('/api/v1/sites/'+encodeURIComponent(site)+'/latest',{headers:{'X-API-Token':token}});const x=await r.json();if(!r.ok)throw new Error(x.detail||r.statusText);t.textContent=(x.temperature_c??'—')+(x.temperature_c!=null?' °C':'');h.textContent=(x.humidity_pct??'—')+(x.humidity_pct!=null?' %':'');v.textContent=(x.vpd_kpa??'—')+(x.vpd_kpa!=null?' kPa':'');f.textContent=(x.fan_speed_pct??'—')+(x.fan_speed_pct!=null?' %':'');log.textContent=JSON.stringify(x,null,2)}catch(e){log.textContent='Fehler: '+e.message}}
+</script></main></body></html>

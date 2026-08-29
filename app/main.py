@@ -1,6 +1,6 @@
 """135er-Grow Central Local API alpha-0.7.5.
 
-DE: Lokaler Raspberry-Pi-Dienst für Mars Hydro/iConnect, Smart Home,
+DE: Lokaler Raspberry-Pi-Dienst für Grow Central, Smart Home,
 Netzwerkverwaltung, BLE-Diagnose und die lokale Weboberfläche.
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
 from app.diagnostics import router as diagnostics_router
+from app.devices.router import router as devices_router
 from app.smarthome.router import router as smarthome_router
 from app.network import router as network_router
 from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
@@ -36,6 +37,7 @@ WEB_DIR = BASE_DIR / "web"
 app = FastAPI(title="135er-Grow Central Local", version="0.7.5")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 app.include_router(network_router)
+app.include_router(devices_router)
 app.include_router(smarthome_router)
 app.include_router(diagnostics_router)
 app.include_router(system_router)
@@ -88,12 +90,18 @@ def _status_payload() -> dict[str, Any]:
 
 @app.get("/")
 async def index():
+    platform = WEB_DIR / "platform.html"
+    return FileResponse(platform if platform.exists() else WEB_DIR / "index.html")
+
+
+@app.get("/legacy")
+async def legacy_index():
     return FileResponse(WEB_DIR / "index.html")
 
 
 @app.get("/api/health")
 async def health():
-    return {"ok": True, "service": "135er-Grow Central Local", "version": "0.7.5"}
+    return {"ok": True, "service": "135er-Grow Central Local", "version": "0.7.5", "device_api": "gc-device-v1"}
 
 
 @app.get("/api/config")
@@ -301,17 +309,21 @@ async def raw(body: RawBody):
 async def df100m_status_alias():
     return _status_payload()
 
+
 @app.get("/api/df100m/discover", dependencies=[Depends(require_write_auth)])
 async def df100m_discover_alias(timeout: float = 7.0):
     return await discover(timeout)
+
 
 @app.post("/api/df100m/connect", dependencies=[Depends(require_write_auth)])
 async def df100m_connect_alias(address: str):
     return await _connect(address)
 
+
 @app.get("/api/df100m/services", dependencies=[Depends(require_write_auth)])
 async def df100m_services_alias():
     return await services()
+
 
 @app.post("/api/df100m/speed", dependencies=[Depends(require_write_auth)])
 async def df100m_speed_alias(percent: int):
