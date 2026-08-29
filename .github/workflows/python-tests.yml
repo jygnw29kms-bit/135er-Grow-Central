@@ -31,4 +31,10 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - run: python -m pip check
       - run: python -m compileall -q app shared cloud local image-builder/firstboot
+      - name: JavaScript syntax checks
+        run: |
+          node --check web/platform.js
+          node --check web/mobile.js
+          node --check web/room_views.js
+          node --check mobile/www/app.js
       - run: python -m pytest -q

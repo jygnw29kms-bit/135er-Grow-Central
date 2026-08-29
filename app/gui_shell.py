@@ -1,4 +1,4 @@
-"""Redesigned Grow Central GUI shell while preserving the proven device UI."""
+"""Grow Central GUI routes while preserving the proven legacy UI."""
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -11,7 +11,7 @@ router = APIRouter(tags=["gui-shell"])
 
 @router.get("/ui", include_in_schema=False)
 async def gui_shell():
-    """Serve the shell with the runtime viewport guard enabled on every device."""
+    """Serve the existing console shell used by diagnostics and transition tools."""
     html = (WEB_DIR / "console.html").read_text(encoding="utf-8")
     if "mobile_runtime_fix.css" not in html:
         html = html.replace(
@@ -28,6 +28,12 @@ async def gui_shell():
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
+@router.get("/mobile", include_in_schema=False)
+async def mobile_gui():
+    """Dedicated touch-first UI for phones and compact mobile devices."""
+    return FileResponse(WEB_DIR / "mobile.html", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/legacy", include_in_schema=False)
 async def legacy_gui():
-    return FileResponse(WEB_DIR / "index.html")
+    return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
