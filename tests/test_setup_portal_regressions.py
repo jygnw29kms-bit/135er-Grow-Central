@@ -26,6 +26,27 @@ def test_captive_portal_cleans_setup_ap_after_provisioning():
     assert "_cleanup_captive_runtime()" in source
 
 
+def test_unprovisioned_appliance_exposes_setup_not_normal_runtime_routes():
+    source = PORTAL.read_text(encoding="utf-8")
+    assert 'if path == "/api/health" and request.method == "GET":' in source
+    assert 'if path.startswith("/api/"):' in source
+    assert '"detail": "Ersteinrichtung erforderlich"' in source
+    assert "status_code=403" in source
+    assert 'return RedirectResponse("/setup", status_code=302)' in source
+    assert '/static/brand-logo.png' in source
+    assert '/static/brand-mark.png' in source
+
+
+def test_firstboot_portal_creates_gui_login_and_keeps_ssh_opt_in():
+    source = PORTAL.read_text(encoding="utf-8")
+    assert "kein bekanntes Benutzer- oder Gerätepasswort" in source
+    assert 'id="guiPassword2"' in source
+    assert 'id="sshEnabled" type="checkbox"' in source
+    assert "SSH aktivieren" in source
+    assert "ssh_enabled:ssh" in source
+    assert "new_password:ssh?$('systemPassword').value:''" in source
+
+
 def test_setup_wifi_list_uses_dom_text_not_ssid_html():
     source = PORTAL.read_text(encoding="utf-8")
     assert "document.createElement('option')" in source
