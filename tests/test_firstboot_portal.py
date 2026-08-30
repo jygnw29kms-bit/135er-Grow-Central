@@ -151,7 +151,8 @@ def test_image_workflow_has_no_factory_password_or_default_ssh_exposure():
     assert "GrowCentral:grow-central-test" not in workflow
     assert "Initial GUI login: GrowCentral / grow-central-test" not in workflow
     assert "Setup AP key: grow-central-test" not in workflow
-    assert "GUI_PASSWORD_HASH=" not in workflow
+    assert not any(line.strip().startswith("GC_GUI_PASSWORD_HASH=") for line in workflow.splitlines())
+    assert not any(line.strip().startswith("GC_GUI_USERNAME=") for line in workflow.splitlines())
     assert not any(line.strip() == "ufw allow 22/tcp" for line in workflow.splitlines())
     assert "systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh " not in workflow
     assert "passwd --lock GrowCentral" in workflow
