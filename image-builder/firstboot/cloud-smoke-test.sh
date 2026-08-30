@@ -12,6 +12,24 @@ install -d -m 0750 "$LOG_DIR" 2>/dev/null || true
 chmod 0640 "$LOG_FILE" 2>/dev/null || true
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+# Transitional image-builder compatibility: the historical workflow still
+# verifies its former GUI packages before invoking this script. During the
+# image customization chroot we remove that complete stack again, so the
+# published appliance is genuinely headless and does not carry Chromium/X11.
+if systemd-detect-virt --quiet --chroot 2>/dev/null; then
+  printf 'HEADLESS-PRUNE: Entferne lokale Kiosk-/X11-Pakete aus dem finalen Image.\n'
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get purge -y --auto-remove \
+    chromium openbox unclutter xinit x11-xserver-utils \
+    xserver-xorg-core xserver-xorg-input-libinput >/dev/null 2>&1 || true
+  rm -f /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+  rm -f /etc/systemd/system/grow-central-display-kiosk.service
+  rm -rf /home/GrowCentral/.config/chromium-growcentral 2>/dev/null || true
+  printf '%s\n' headless >/var/lib/135er-grow-central/display-policy
+  chown growcentral:growcentral /var/lib/135er-grow-central/display-policy 2>/dev/null || true
+  chmod 0640 /var/lib/135er-grow-central/display-policy 2>/dev/null || true
+fi
+
 printf '135er Grow Central optional cloud probe\nZeit UTC: %s\nCloud: %s\n' \
   "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$CLOUD_ORIGIN"
 
