@@ -1,10 +1,12 @@
 from pathlib import Path
 
 
-def test_display_setup_keeps_ap_failure_isolated():
+def test_setup_ap_is_permanently_display_free():
     script = Path("image-builder/firstboot/setup-ap.sh").read_text()
-    assert "display-setup.sh || log" in script
     assert "802-11-wireless-security.pmf 1" in script
+    assert "display-policy" in script
+    assert "display-setup.sh" not in script
+    assert "chromium" not in script.lower()
 
 
 def test_display_setup_enforces_headless_product_policy():
