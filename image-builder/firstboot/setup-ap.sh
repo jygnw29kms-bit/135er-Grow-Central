@@ -56,11 +56,11 @@ dhcp-option=114,${CAPTIVE_URL}
 EOF
 chmod 0644 "${DNSMASQ_SHARED_DIR}/90-grow-central-captive.conf"
 
-# Display/boot tuning is deliberately best-effort and isolated from AP startup.
-# A display failure must never regress the Build-85 provisioning network path.
-if [ -x /opt/135er-grow-central/image-builder/firstboot/display-setup.sh ]; then
-  /opt/135er-grow-central/image-builder/firstboot/display-setup.sh || log "Display setup skipped after a non-fatal error."
-fi
+# The product is permanently headless. There is deliberately no display/kiosk
+# initialization on the provisioning path anymore.
+printf '%s\n' 'headless' >"${STATE_DIR}/display-policy"
+chown growcentral:growcentral "${STATE_DIR}/display-policy" 2>/dev/null || true
+chmod 0640 "${STATE_DIR}/display-policy" 2>/dev/null || true
 
 # The CI image smoke test runs in a container without Raspberry Pi radio hardware.
 if systemd-detect-virt --quiet --container; then
@@ -84,8 +84,6 @@ esac
 
 systemctl is-active --quiet NetworkManager.service || systemctl start NetworkManager.service
 
-# Keep wlan0 when present (confirmed Pi 3B/4 path), otherwise accept the first
-# Wi-Fi device NetworkManager manages (USB Wi-Fi or Compute Module carrier).
 for _ in $(seq 1 40); do
   WIFI_DEVICES="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1}')"
   if printf '%s\n' "$WIFI_DEVICES" | grep -Fxq wlan0; then WLAN=wlan0; break; fi
@@ -102,7 +100,6 @@ printf '%s\n' "$WLAN" >"${STATE_DIR}/hardware-wlan-interface"
 chown growcentral:growcentral "$STATE_DIR/hardware-model" "$STATE_DIR/hardware-profile" "$STATE_DIR/hardware-wlan-interface" || true
 chmod 0640 "$STATE_DIR/hardware-model" "$STATE_DIR/hardware-profile" "$STATE_DIR/hardware-wlan-interface" || true
 
-# If the configured home WLAN is already active, do not steal it for AP use.
 if nmcli -t -f NAME,DEVICE connection show --active | grep -Fxq "grow-central-uplink:${WLAN}"; then
   log "Home WLAN is already active on ${WLAN}; setup AP is not required."
   exit 0
@@ -141,11 +138,7 @@ create_ap_profile() {
   nmcli connection down "$CONNECTION" >/dev/null 2>&1 || true
   nmcli connection delete "$CONNECTION" >/dev/null 2>&1 || true
 
-  nmcli connection add \
-    type wifi \
-    ifname "$WLAN" \
-    con-name "$CONNECTION" \
-    ssid "$SSID"
+  nmcli connection add type wifi ifname "$WLAN" con-name "$CONNECTION" ssid "$SSID"
 
   nmcli connection modify "$CONNECTION" \
     connection.interface-name "$WLAN" \
@@ -189,8 +182,6 @@ recover_supplicant_and_networkmanager() {
   nmcli connection down "$CONNECTION" >/dev/null 2>&1 || true
   nmcli device disconnect "$WLAN" >/dev/null 2>&1 || true
 
-  # Raspberry Pi OS normally exposes wpa_supplicant through D-Bus. Restarting
-  # the service is safe here because this is still the unprovisioned first boot.
   if systemctl list-unit-files wpa_supplicant.service >/dev/null 2>&1; then
     systemctl restart wpa_supplicant.service || true
     sleep 3
