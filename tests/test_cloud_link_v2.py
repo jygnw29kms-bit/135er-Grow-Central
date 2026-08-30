@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
-
-import pytest
+import asyncio
 
 from local.cloud_link import agent_v2
 
@@ -30,30 +28,27 @@ class FakeClient:
         return self.response
 
 
-@pytest.mark.asyncio
-async def test_local_status_uses_configured_local_api_token(monkeypatch):
+def test_local_status_uses_configured_local_api_token(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "LOCAL_API", "http://127.0.0.1:8080")
     monkeypatch.setattr(agent_v2.legacy, "LOCAL_TOKEN", "test-token")
     client = FakeClient(FakeResponse(200, {"ok": True}))
 
-    payload = await agent_v2.local_status(client)
+    payload = asyncio.run(agent_v2.local_status(client))
 
     assert payload == {"ok": True}
     assert client.calls[0][1]["headers"] == {"X-API-Token": "test-token"}
 
 
-@pytest.mark.asyncio
-async def test_cloud_capabilities_reports_incompatible_http_response(monkeypatch):
+def test_cloud_capabilities_reports_incompatible_http_response(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
     client = FakeClient(FakeResponse(404, {}))
 
-    result = await agent_v2.cloud_capabilities(client)
+    result = asyncio.run(agent_v2.cloud_capabilities(client))
 
     assert result == {"reachable": True, "compatible": False, "http_status": 404}
 
 
-@pytest.mark.asyncio
-async def test_cloud_capabilities_accepts_health_contract(monkeypatch):
+def test_cloud_capabilities_accepts_health_contract(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
     client = FakeClient(FakeResponse(200, {
         "ok": True,
@@ -62,7 +57,7 @@ async def test_cloud_capabilities_accepts_health_contract(monkeypatch):
         "closed_test_mode": True,
     }))
 
-    result = await agent_v2.cloud_capabilities(client)
+    result = asyncio.run(agent_v2.cloud_capabilities(client))
 
     assert result["compatible"] is True
     assert result["version"] == "0.8.0"
