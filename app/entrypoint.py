@@ -11,6 +11,7 @@ from app.gui_shell import router as gui_shell_router
 from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
+from app.runtime_health import router as runtime_health_router
 from app.setup_portal import SetupPortalMiddleware
 
 _install_camera_policy(_camera)
@@ -31,5 +32,6 @@ app.include_router(automation_router)
 app.include_router(firstboot_router)
 app.include_router(rooms_router)
 app.include_router(cloud_status_router)
+app.include_router(runtime_health_router)
 install_mdns_alias(app)
 install_rooms(app)
