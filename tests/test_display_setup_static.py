@@ -13,7 +13,8 @@ def test_setup_ap_is_permanently_display_free():
 def test_display_setup_script_is_removed_from_headless_product():
     display_setup = Path("image-builder/firstboot/display-setup.sh")
     workflow = Path(".github/workflows/build-pi3-image.yml").read_text()
+    setup_ap = Path("image-builder/firstboot/setup-ap.sh").read_text()
     assert not display_setup.exists()
     assert "test ! -e /opt/135er-grow-central/image-builder/firstboot/display-setup.sh" in workflow
     assert "Unexpected kiosk package in headless image" in workflow
-    assert "display-policy" in workflow
+    assert "display-policy" in setup_ap
