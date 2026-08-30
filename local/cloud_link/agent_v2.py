@@ -12,11 +12,13 @@ from datetime import datetime, timezone
 import json
 import logging
 import time
-from urllib.parse import urlparse
 
 import httpx
 
-from . import agent as legacy
+try:  # package import in tests / modules
+    from . import agent as legacy
+except ImportError:  # direct file execution by systemd
+    import agent as legacy  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 
