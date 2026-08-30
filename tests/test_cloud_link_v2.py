@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import subprocess
+import sys
 
 from local.cloud_link import agent_v2
 
@@ -62,3 +65,22 @@ def test_cloud_capabilities_accepts_health_contract(monkeypatch):
     assert result["compatible"] is True
     assert result["version"] == "0.8.0"
     assert result["closed_test_mode"] is True
+
+
+def test_cloud_agent_v2_can_be_started_as_systemd_script(tmp_path):
+    env = os.environ.copy()
+    env.update({
+        "GC_CLOUD_ENABLED": "false",
+        "GC_CLOUD_URL": "https://example.invalid",
+        "GC_CLOUD_CONTACT_STATE": str(tmp_path / "contact.json"),
+    })
+    result = subprocess.run(
+        [sys.executable, "local/cloud_link/agent_v2.py"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Cloud Link disabled" in result.stdout
