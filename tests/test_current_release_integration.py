@@ -17,18 +17,23 @@ def test_current_feature_set_is_integrated():
     assert "camera_router" in entry
     assert "automation_router" in entry
     assert "rooms_router" in entry
+    assert "runtime_health_router" in entry
     assert "install_rooms(app)" in entry
     assert "install_mdns_alias(app)" in entry
+    assert "TouchKeyboardMiddleware" not in entry
 
-    # Current show/test GUI integrations.
+    # Current show/test GUI integrations remain available during migration.
     assert "RÄUME & GROW" in console
     assert "Growtagebuch" in console
     assert "Pflanzen" in console
 
-    # The physically validated Build-85 AP/first-boot path must remain intact.
+    # The physically validated AP/first-boot path remains intact, but the
+    # product is permanently headless and does not initialize a display stack.
     assert 'CONNECTION="grow-central-setup-ap"' in setup_ap
     assert "802-11-wireless-security.pmf 1" in setup_ap
-    assert "display-setup.sh" in setup_ap
+    assert "display-policy" in setup_ap
+    assert "display-setup.sh" not in setup_ap
+    assert "chromium" not in setup_ap.lower()
 
     # Cloud bootstrap must self-heal legacy duplicate Signed-By sources.
     assert 'BACKUP_ROOT="/var/backups/135er-growcentral-apt"' in apt_bootstrap

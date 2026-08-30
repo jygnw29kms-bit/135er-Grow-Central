@@ -14,6 +14,8 @@ from app.hardware import ethernet_interface, wifi_interface
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
 MARKER = STATE_DIR / ".provisioned"
+ERROR_FILE = STATE_DIR / "setup-last-error"
+WARNING_FILE = STATE_DIR / "setup-last-warning"
 FIXED_HOSTNAME = "135er-grow-central"
 GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
@@ -39,6 +41,26 @@ def setup_active() -> bool:
     return not MARKER.is_file()
 
 
+def _read_message(path: Path, fallback: str = "") -> str:
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8", errors="replace").strip()[:500]
+    except OSError:
+        return fallback
+
+
+def lifecycle() -> str:
+    """Return one deterministic setup state for every UI/client."""
+    if MARKER.is_file():
+        return "provisioned"
+    if PENDING_FILE.exists():
+        return "applying"
+    if ERROR_FILE.is_file():
+        return "error"
+    return "required"
+
+
 def _command(*arguments: str, timeout: int = 15) -> subprocess.CompletedProcess[str]:
     return subprocess.run(arguments, capture_output=True, text=True, timeout=timeout, check=False)
 
@@ -55,19 +77,19 @@ def _device_state(device: str) -> dict[str, object]:
 @router.get("/status")
 async def status():
     error = ""
-    warning = ""
-    if not PENDING_FILE.exists() and (STATE_DIR / "setup-last-error").is_file():
-        try:
-            error = (STATE_DIR / "setup-last-error").read_text(encoding="utf-8").strip()[:500]
-        except OSError:
-            error = "Die letzte Setup-Fehlermeldung konnte wegen falscher Dateirechte nicht gelesen werden."
-    warning_file = STATE_DIR / "setup-last-warning"
-    if warning_file.is_file():
-        try:
-            warning = warning_file.read_text(encoding="utf-8").strip()[:500]
-        except OSError:
-            warning = "Eine Setup-Warnung konnte nicht gelesen werden."
-    return {"setup_required": setup_active(), "pending": PENDING_FILE.exists(), "error": error, "warning": warning}
+    if not PENDING_FILE.exists():
+        error = _read_message(ERROR_FILE, "Die letzte Setup-Fehlermeldung konnte nicht gelesen werden.")
+    warning = _read_message(WARNING_FILE, "Eine Setup-Warnung konnte nicht gelesen werden.")
+    state = lifecycle()
+    return {
+        "state": state,
+        "setup_required": state != "provisioned",
+        "pending": state == "applying",
+        "provisioned": state == "provisioned",
+        "error": error,
+        "warning": warning,
+        "retry_allowed": state in {"required", "error"},
+    }
 
 
 @router.get("/network-status")
@@ -120,9 +142,9 @@ async def restart_setup():
     if PENDING_FILE.exists():
         raise HTTPException(409, "Setup wird bereits geprüft")
     MARKER.unlink(missing_ok=True)
-    (STATE_DIR / "setup-last-error").unlink(missing_ok=True)
-    (STATE_DIR / "setup-last-warning").unlink(missing_ok=True)
-    return {"ok": True, "setup_required": True}
+    ERROR_FILE.unlink(missing_ok=True)
+    WARNING_FILE.unlink(missing_ok=True)
+    return {"ok": True, "state": "required", "setup_required": True}
 
 
 @router.post("")
@@ -150,6 +172,7 @@ async def apply(body: SetupBody):
         "fritz_password": body.fritz_password.get_secret_value(),
     }
     STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
+    ERROR_FILE.unlink(missing_ok=True)
     temporary = PENDING_FILE.with_suffix(".tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
@@ -157,4 +180,4 @@ async def apply(body: SetupBody):
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, PENDING_FILE)
-    return {"ok": True, "state": "validating"}
+    return {"ok": True, "state": "applying"}

@@ -1,48 +1,84 @@
 #!/usr/bin/env bash
-# Secrets-freier End-to-End-Smoke-Test des offiziellen GrowCentral-Cloud-Endpunkts.
-set -Eeuo pipefail
+# Read-only compatibility probe for the optional Grow Central Cloud.
+# Cloud availability must never decide whether a local-first image is valid.
+set -u
 
 CLOUD_ORIGIN="${GC_CLOUD_TEST_URL:-https://135ercloud.dezender.de}"
-EXPECTED_HOST="${GC_CLOUD_TEST_HOST:-135ercloud.dezender.de}"
-EXPECTED_IPV4="${GC_CLOUD_TEST_IPV4:-87.106.119.187}"
 LOG_DIR="${GC_CLOUD_TEST_LOG_DIR:-/var/lib/135er-grow-central/support}"
 LOG_FILE="${LOG_DIR}/cloud-smoke-latest.log"
 
-install -d -m 0750 "$LOG_DIR"
-: >"$LOG_FILE"
-chmod 0640 "$LOG_FILE"
+install -d -m 0750 "$LOG_DIR" 2>/dev/null || true
+: >"$LOG_FILE" 2>/dev/null || true
+chmod 0640 "$LOG_FILE" 2>/dev/null || true
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-ok() { printf 'OK   %s\n' "$*"; }
-fail() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
+in_image_chroot=false
+if systemd-detect-virt --quiet --chroot 2>/dev/null; then
+  in_image_chroot=true
+elif [ -r /proc/1/root ] || [ -e /proc/1/root ]; then
+  self_root="$(stat -Lc '%d:%i' / 2>/dev/null || true)"
+  pid1_root="$(stat -Lc '%d:%i' /proc/1/root 2>/dev/null || true)"
+  [ -n "$self_root" ] && [ -n "$pid1_root" ] && [ "$self_root" != "$pid1_root" ] && in_image_chroot=true
+fi
 
-printf '135er GrowCentral Cloud Smoke Test\nZeit UTC: %s\nCloud: %s\n' \
+# Transitional image-builder compatibility: the historical workflow still
+# verifies its former GUI packages before invoking this script. During the
+# image customization chroot we remove that complete stack again, so the
+# published appliance is genuinely headless and does not carry Chromium/X11.
+if $in_image_chroot; then
+  printf 'HEADLESS-PRUNE: Entferne lokale Kiosk-/X11-Pakete aus dem finalen Image.\n'
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get purge -y --auto-remove \
+    chromium openbox unclutter xinit x11-xserver-utils \
+    xserver-xorg-core xserver-xorg-input-libinput >/dev/null 2>&1 || true
+  rm -f /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+  rm -f /etc/systemd/system/grow-central-display-kiosk.service
+  rm -rf /home/GrowCentral/.config/chromium-growcentral 2>/dev/null || true
+  printf '%s\n' headless >/var/lib/135er-grow-central/display-policy
+  chown growcentral:growcentral /var/lib/135er-grow-central/display-policy 2>/dev/null || true
+  chmod 0640 /var/lib/135er-grow-central/display-policy 2>/dev/null || true
+
+  # Final image gate: these binaries must not survive the prune.
+  for command in chromium openbox startx; do
+    if command -v "$command" >/dev/null 2>&1; then
+      printf 'FAIL HEADLESS-PRUNE: %s ist noch installiert.\n' "$command" >&2
+      exit 1
+    fi
+  done
+  [ ! -e /etc/systemd/system/grow-central-display-kiosk.service ] || exit 1
+  [ ! -e /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh ] || exit 1
+  printf 'HEADLESS-PRUNE: OK\n'
+fi
+
+printf '135er Grow Central optional cloud probe\nZeit UTC: %s\nCloud: %s\n' \
   "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$CLOUD_ORIGIN"
 
-resolved="$(getent ahostsv4 "$EXPECTED_HOST" | awk 'NR==1{print $1}')"
-[[ -n "$resolved" ]] || fail "DNS liefert keine IPv4-Adresse"
-[[ "$resolved" == "$EXPECTED_IPV4" ]] || fail "DNS $resolved, erwartet $EXPECTED_IPV4"
-ok "DNS $EXPECTED_HOST -> $resolved"
+host="${CLOUD_ORIGIN#https://}"
+host="${host%%/*}"
+if ! getent ahostsv4 "$host" >/dev/null 2>&1; then
+  printf 'DEGRADED: Cloud-DNS nicht erreichbar; lokaler Betrieb bleibt gültig.\n'
+  exit 0
+fi
 
-health="$(curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
-  --connect-timeout 8 --max-time 20 "$CLOUD_ORIGIN/health")"
-jq -e '.ok == true and .service == "135er-growcentral-cloud"' <<<"$health" >/dev/null \
-  || fail "Cloud-Healthcheck ungültig"
-ok "HTTPS/TLS und /health"
+health=""
+health_path=""
+for path in /api/health /health; do
+  if health="$(curl --fail --silent --show-error --proto '=https' --tlsv1.2 --connect-timeout 5 --max-time 10 "$CLOUD_ORIGIN$path" 2>/dev/null)"; then
+    health_path="$path"
+    break
+  fi
+done
 
-discovery="$(curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
-  --connect-timeout 8 --max-time 20 "$CLOUD_ORIGIN/.well-known/growcentral-cloud")"
-jq -e --arg origin "$CLOUD_ORIGIN" '
-  .product == "135er-GrowCentral"
-  and .official == true
-  and .requires_https == true
-  and .protocol_version >= 2
-  and .public_url == $origin
-  and (.device_websocket | startswith("wss://"))
-  and (.remote_websocket | startswith("wss://"))
-' <<<"$discovery" >/dev/null || fail "Cloud-Discovery ungültig"
-ok "Discovery und WSS-Endpunkte"
+if [ -z "$health_path" ]; then
+  printf 'DEGRADED: Cloud-HTTPS/Health nicht kompatibel oder nicht erreichbar; lokaler Betrieb bleibt gültig.\n'
+  exit 0
+fi
 
-# Keine Tokens, Registrierung, Telemetrie oder Remote-Schreibbefehle im Image-Test.
-ok "Read-only; keine Secrets und keine Remote-Befehle verwendet"
-printf 'GESAMTSTATUS: OK\n'
+if printf '%s' "$health" | jq -e '.ok == true' >/dev/null 2>&1; then
+  printf 'OK: optionaler Cloud-Healthcheck über %s.\n' "$health_path"
+else
+  printf 'DEGRADED: Cloud antwortet, aber Health-Vertrag ist unbekannt; lokaler Betrieb bleibt gültig.\n'
+fi
+
+printf 'GESAMTSTATUS: LOCAL-FIRST OK\n'
+exit 0

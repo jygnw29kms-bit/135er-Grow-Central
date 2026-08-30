@@ -4,14 +4,35 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_cloud_smoke_is_read_only_and_validates_official_endpoints():
+def test_cloud_smoke_is_optional_read_only_and_local_first():
     source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text()
     assert "https://135ercloud.dezender.de" in source
-    assert '"$CLOUD_ORIGIN/health"' in source
-    assert '"$CLOUD_ORIGIN/.well-known/growcentral-cloud"' in source
-    assert 'startswith("wss://")' in source
+    assert "/api/health" in source
+    assert "/health" in source
+    assert "DEGRADED" in source
+    assert "lokaler Betrieb bleibt gültig" in source
+    assert "GESAMTSTATUS: LOCAL-FIRST OK" in source
     assert "api/v1/telemetry" not in source
     assert "GC_REMOTE_COMMANDS" not in source
+
+
+def test_cloud_smoke_enforces_headless_final_image():
+    source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text()
+    assert "HEADLESS-PRUNE" in source
+    assert "apt-get purge -y --auto-remove" in source
+    for component in (
+        "chromium",
+        "openbox",
+        "unclutter",
+        "xinit",
+        "x11-xserver-utils",
+        "xserver-xorg-core",
+        "xserver-xorg-input-libinput",
+    ):
+        assert component in source
+    assert "display-policy" in source
+    assert "command -v \"$command\"" in source
+    assert "grow-central-display-kiosk.service" in source
 
 
 def test_image_workflow_installs_and_runs_cloud_smoke():
@@ -45,8 +66,6 @@ def test_remote_maintenance_assets_remain_dormant_if_retained_for_future_work():
         assert "systemctl enable --now" in controller
         assert "StrictHostKeyChecking=yes" in unit
         assert "BatchMode=yes" in unit
-        # Presence of future-use assets is acceptable only while the image builder
-        # does not install/enable them and firstboot exposes no activation field.
         workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
         assert "grow-central-remote-maintenance.service" not in workflow
 

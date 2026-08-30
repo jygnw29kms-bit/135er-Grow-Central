@@ -21,7 +21,6 @@ router = APIRouter(prefix="/api/v1/diagnostics", tags=["diagnostics"])
 UNITS = (
     "135er-grow-central.service",
     "135er-grow-central-cloud-link.service",
-    "grow-central-display-kiosk.service",
     "grow-central-setup-ap.service",
     "grow-central-apply-setup.path",
     "grow-central-apply-setup.service",
@@ -117,14 +116,11 @@ async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
     _, disk = await _command("df", "-h", "/", "/var/lib/135er-grow-central")
     _, memory = await _command("free", "-m")
 
-    display = {
-        "name": _read(STATE_DIR / "display-name"),
-        "mode": _read(STATE_DIR / "display-mode"),
-        "connector": _read(STATE_DIR / "display-connector"),
-        "kiosk_started": _read(STATE_DIR / "display-kiosk-started"),
-        "packages_missing": _read(STATE_DIR / "display-kiosk-packages-missing"),
-        "api_not_ready": _read(STATE_DIR / "display-api-not-ready"),
-        "kiosk_files_missing": (STATE_DIR / "display-kiosk-files-missing").exists(),
+    runtime_policy = {
+        "mode": "headless",
+        "display_policy": _read(STATE_DIR / "display-policy") or "headless",
+        "local_kiosk_supported": False,
+        "clients": ["web", "mobile"],
     }
 
     result = {
@@ -145,11 +141,14 @@ async def diagnostic_snapshot(lines: int = Query(default=120, ge=10, le=500)):
             "network_manager_general": nm_general,
             "tcp_listeners": listeners,
         },
-        "display": display,
+        "runtime": runtime_policy,
         "radios": {"rfkill": rfkill_state},
         "setup": {
             "last_error": _read(STATE_DIR / "setup-last-error"),
             "last_warning": _read(STATE_DIR / "setup-last-warning"),
+        },
+        "cloud": {
+            "runtime_status": _read(STATE_DIR / "cloud-link-status.json"),
         },
         "markers": {
             "provisioned": (STATE_DIR / ".provisioned").exists(),
@@ -195,4 +194,10 @@ async def download_support_bundle():
     if not SUPPORT_LATEST.is_file():
         raise HTTPException(404, "Noch kein Support-Paket vorhanden")
     append_audit("diagnostics.bundle.downloaded")
-    return FileResponse(SUPPORT_LATEST, media_type="application/gzip", filename="Grow-Central-Support.tar.gz")
+    # No HTML/body-rewriting middleware exists in the headless architecture;
+    # FileResponse can stream the archive with its exact Content-Length.
+    return FileResponse(
+        path=SUPPORT_LATEST,
+        media_type="application/gzip",
+        filename="Grow-Central-Support.tar.gz",
+    )
