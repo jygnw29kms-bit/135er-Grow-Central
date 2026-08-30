@@ -20,7 +20,7 @@ from . import agent as legacy
 
 logger = logging.getLogger(__name__)
 
-CLOUD_STATE = legacy.CONTACT_ACK.with_name("cloud-link-runtime.json")
+CLOUD_STATE = legacy.CONTACT_ACK.with_name("cloud-link-status.json")
 MIN_RETRY = 30
 MAX_RETRY = 600
 
@@ -91,6 +91,7 @@ async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
 
 async def main() -> None:
     if not legacy.CLOUD_ENABLED:
+        _persist_state(state="disabled", detail="cloud link disabled", cloud_compatible=None)
         print("Grow Central Cloud Link disabled / Cloud-Link deaktiviert")
         return
 
@@ -107,7 +108,13 @@ async def main() -> None:
         while True:
             capabilities = await cloud_capabilities(client)
             if not capabilities.get("compatible"):
-                _persist_state(state="degraded", reason="cloud_incompatible_or_unreachable", capabilities=capabilities)
+                _persist_state(
+                    state="degraded",
+                    detail="cloud health unavailable or incompatible",
+                    cloud_compatible=False,
+                    capabilities=capabilities,
+                    retry_seconds=retry_seconds,
+                )
                 logger.warning("Cloud unavailable/incompatible: %s; retry in %ss", json.dumps(capabilities), retry_seconds)
                 await asyncio.sleep(retry_seconds)
                 retry_seconds = min(MAX_RETRY, retry_seconds * 2)
@@ -117,16 +124,19 @@ async def main() -> None:
             try:
                 telemetry, local = await telemetry_payload(client)
                 response = await client.post(
-                    f"{legacy.CLOUD_URL}/api/v1/telemetry",
-                    json=telemetry,
-                    headers=headers,
-                    timeout=10,
+                    f"{legacy.CLOUD_URL}/api/v1/telemetry", json=telemetry, headers=headers, timeout=10
                 )
                 if response.status_code == 404:
-                    _persist_state(state="degraded", reason="telemetry_endpoint_missing", capabilities=capabilities)
-                    logger.error("Cloud API mismatch: telemetry endpoint missing")
-                    await asyncio.sleep(MAX_RETRY)
-                    connected = False
+                    _persist_state(
+                        state="degraded",
+                        detail="cloud telemetry endpoint missing",
+                        cloud_compatible=False,
+                        http_status=404,
+                        retry_seconds=retry_seconds,
+                    )
+                    logger.warning("Cloud API mismatch: telemetry endpoint returned HTTP 404; retry in %ss", retry_seconds)
+                    await asyncio.sleep(retry_seconds)
+                    retry_seconds = min(MAX_RETRY, retry_seconds * 2)
                     continue
                 response.raise_for_status()
 
@@ -145,25 +155,39 @@ async def main() -> None:
 
                 if now >= next_diag:
                     full_diag = await legacy.full_local_diagnostics(client)
-                    response = await client.post(
+                    diag_response = await client.post(
                         f"{legacy.CLOUD_URL}/api/v1/diagnostics/snapshot",
                         json=legacy.diagnostic_payload(local, full_diag),
                         headers=headers,
                         timeout=30,
                     )
-                    response.raise_for_status()
+                    diag_response.raise_for_status()
                     next_diag = now + legacy.DIAG_SYNC
 
                 last_bundle_signature = await legacy.mirror_bundle_if_changed(client, headers, last_bundle_signature)
+                _persist_state(
+                    state="connected",
+                    detail="telemetry sync active",
+                    cloud_compatible=True,
+                    capabilities=capabilities,
+                    retry_seconds=legacy.SYNC,
+                )
                 retry_seconds = MIN_RETRY
-                _persist_state(state="connected", reason="ok", capabilities=capabilities)
             except Exception as exc:
                 connected = False
-                _persist_state(state="degraded", reason=type(exc).__name__, capabilities=capabilities)
-                logger.warning("Cloud cycle failed: %s", type(exc).__name__)
-                retry_seconds = min(MAX_RETRY, max(MIN_RETRY, retry_seconds * 2))
+                _persist_state(
+                    state="degraded",
+                    detail=f"cloud sync failed: {type(exc).__name__}",
+                    cloud_compatible=True,
+                    capabilities=capabilities,
+                    retry_seconds=retry_seconds,
+                )
+                logger.warning("Cloud sync degraded: %s; retry in %ss", type(exc).__name__, retry_seconds)
+                await asyncio.sleep(retry_seconds)
+                retry_seconds = min(MAX_RETRY, retry_seconds * 2)
+                continue
 
-            await asyncio.sleep(legacy.SYNC if connected else retry_seconds)
+            await asyncio.sleep(legacy.SYNC)
 
 
 if __name__ == "__main__":
