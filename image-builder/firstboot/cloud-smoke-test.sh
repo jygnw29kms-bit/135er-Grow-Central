@@ -28,6 +28,17 @@ if systemd-detect-virt --quiet --chroot 2>/dev/null; then
   printf '%s\n' headless >/var/lib/135er-grow-central/display-policy
   chown growcentral:growcentral /var/lib/135er-grow-central/display-policy 2>/dev/null || true
   chmod 0640 /var/lib/135er-grow-central/display-policy 2>/dev/null || true
+
+  # Final image gate: these binaries must not survive the prune.
+  for command in chromium openbox startx; do
+    if command -v "$command" >/dev/null 2>&1; then
+      printf 'FAIL HEADLESS-PRUNE: %s ist noch installiert.\n' "$command" >&2
+      exit 1
+    fi
+  done
+  [ ! -e /etc/systemd/system/grow-central-display-kiosk.service ] || exit 1
+  [ ! -e /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh ] || exit 1
+  printf 'HEADLESS-PRUNE: OK\n'
 fi
 
 printf '135er Grow Central optional cloud probe\nZeit UTC: %s\nCloud: %s\n' \
