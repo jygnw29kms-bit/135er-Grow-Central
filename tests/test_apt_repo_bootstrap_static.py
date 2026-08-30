@@ -30,7 +30,10 @@ def test_bootstrap_writes_one_canonical_signed_by_source():
     assert "Signed-By: $KEY" in text
 
 
-def test_build85_ap_path_remains_unchanged():
+def test_firstboot_ap_keeps_network_path_but_has_no_factory_key():
     setup_ap = (ROOT / "image-builder" / "firstboot" / "setup-ap.sh").read_text(encoding="utf-8")
-    assert "802-11-wireless-security.pmf 1" in setup_ap
     assert 'CONNECTION="grow-central-setup-ap"' in setup_ap
+    assert "ipv4.method shared" in setup_ap
+    assert "wifi-sec.psk" not in setup_ap
+    assert "wifi-sec.key-mgmt wpa-psk" not in setup_ap
+    assert "passwd --lock GrowCentral" in setup_ap
