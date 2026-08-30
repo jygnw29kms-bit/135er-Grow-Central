@@ -1,5 +1,6 @@
 name: Force current GrowCentral image build
 
+# Touch this workflow intentionally to dispatch a fresh candidate image from current master.
 on:
   push:
     branches: [ master ]
