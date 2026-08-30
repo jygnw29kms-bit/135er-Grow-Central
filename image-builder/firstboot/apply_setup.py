@@ -33,6 +33,7 @@ ERROR_FILE = STATE_DIR / "setup-last-error"
 WARNING_FILE = STATE_DIR / "setup-last-warning"
 APP_ENV = Path("/opt/135er-grow-central/.env")
 SETUP_AP_SCRIPT = APP_ROOT / "image-builder/firstboot/setup-ap.sh"
+SSH_DROPIN = Path("/etc/ssh/sshd_config.d/99-grow-central-access.conf")
 FIXED_HOSTNAME = "135er-grow-central"
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
@@ -70,8 +71,11 @@ def validate(config: dict[str, str]) -> None:
         raise ValueError("invalid hostname")
     if config.get("timezone") not in TIMEZONES:
         raise ValueError("invalid timezone")
-    if len(config.get("new_password", "")) < 12:
+    ssh_enabled = config.get("ssh_enabled") == "1"
+    if ssh_enabled and len(config.get("new_password", "")) < 12:
         raise ValueError("invalid system password")
+    if not ssh_enabled and config.get("new_password", ""):
+        raise ValueError("system password supplied while SSH is disabled")
     if config["mode"] == "wifi":
         ssid = config.get("ssid", "")
         wifi_password = config.get("wifi_password", "")
@@ -175,6 +179,47 @@ def install_runtime_policy() -> None:
     run("systemctl", "daemon-reload")
 
 
+def disable_local_ssh() -> None:
+    """Fail closed: no password login and no local SSH listener."""
+    SSH_DROPIN.parent.mkdir(parents=True, exist_ok=True)
+    SSH_DROPIN.write_text(
+        "PasswordAuthentication no\n"
+        "KbdInteractiveAuthentication no\n"
+        "PermitRootLogin no\n",
+        encoding="utf-8",
+    )
+    os.chmod(SSH_DROPIN, 0o644)
+    run("passwd", "--lock", "GrowCentral", check=False)
+    for unit in ("ssh.socket", "ssh.service", "sshd.service"):
+        run("systemctl", "disable", "--now", unit, check=False)
+
+
+def configure_local_ssh(enabled: bool, password: str = "") -> None:
+    if not enabled:
+        disable_local_ssh()
+        return
+    if len(password) < 12:
+        raise RuntimeError("SSH wurde aktiviert, aber das Systempasswort ist ungültig.")
+    SSH_DROPIN.parent.mkdir(parents=True, exist_ok=True)
+    SSH_DROPIN.write_text(
+        "PasswordAuthentication yes\n"
+        "KbdInteractiveAuthentication no\n"
+        "PermitRootLogin no\n"
+        "AllowUsers GrowCentral\n",
+        encoding="utf-8",
+    )
+    os.chmod(SSH_DROPIN, 0o644)
+    run("chpasswd", input_text=f"GrowCentral:{password}\n")
+    run("passwd", "--unlock", "GrowCentral", check=False)
+    run("ssh-keygen", "-A")
+    run("mkdir", "-p", "/run/sshd")
+    validation = run("/usr/sbin/sshd", "-t", check=False)
+    if validation.returncode != 0:
+        disable_local_ssh()
+        raise RuntimeError("Die SSH-Konfiguration konnte nicht validiert werden.")
+    run("systemctl", "enable", "--now", "ssh.service")
+
+
 def _setup_ap_ready() -> bool:
     wlan = wifi_interface()
     if not wlan:
@@ -186,15 +231,13 @@ def _setup_ap_ready() -> bool:
 
 def restore_access_point(message: str) -> None:
     MARKER.unlink(missing_ok=True)
+    disable_local_ssh()
     ERROR_FILE.write_text(message[:500] + "\n", encoding="utf-8")
     os.chmod(ERROR_FILE, 0o640)
     os.chown(ERROR_FILE, 0, grp.getgrnam("growcentral").gr_gid)
     run("nmcli", "connection", "down", TARGET_CONNECTION, check=False)
     run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes", check=False)
 
-    # Reuse the hardened AP bootstrap instead of relying on one best-effort
-    # nmcli call. setup-ap.sh already performs radio reset plus a bounded
-    # wpa_supplicant/NetworkManager recovery if AP activation stalls.
     if SETUP_AP_SCRIPT.is_file():
         run("bash", str(SETUP_AP_SCRIPT), check=False)
     else:
@@ -315,10 +358,13 @@ def main() -> int:
     ERROR_FILE.unlink(missing_ok=True)
     previous_env = APP_ENV.read_bytes() if APP_ENV.exists() else None
     runtime_settings_changed = False
+    ssh_enabled = False
     system_credential = ""
     try:
         validate(config)
-        system_credential = config["new_password"]
+        ssh_enabled = config.get("ssh_enabled") == "1"
+        system_credential = config.get("new_password", "") if ssh_enabled else ""
+        disable_local_ssh()
         if config["mode"] == "wifi":
             configure_wifi(config)
         network_device = wifi_interface() if config["mode"] == "wifi" else ethernet_interface()
@@ -335,28 +381,31 @@ def main() -> int:
         network_mode = config["mode"]
         config.clear()
         ERROR_FILE.unlink(missing_ok=True)
-        keep_access_point = network_mode == "ethernet"
-        run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "yes" if keep_access_point else "no", check=False)
-        if not keep_access_point:
-            run("nmcli", "connection", "down", AP_CONNECTION, check=False)
+
+        # Never bring the setup AP back automatically after successful setup.
+        run("nmcli", "connection", "modify", AP_CONNECTION, "connection.autoconnect", "no", check=False)
         wlan = wifi_interface()
-        if wlan:
-            run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "80", "proto", "tcp", check=False)
-            run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "443", "proto", "tcp", check=False)
-            if not keep_access_point:
-                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "67", "proto", "udp", check=False)
-                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "53", "proto", "udp", check=False)
-                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", "53", "proto", "tcp", check=False)
+        if wlan and network_mode == "wifi":
+            run("nmcli", "connection", "down", AP_CONNECTION, check=False)
+
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
         verify_runtime(network_address)
-        run("chpasswd", input_text=f"GrowCentral:{system_credential}\n")
+        configure_local_ssh(ssh_enabled, system_credential)
         system_credential = ""
         mark_provisioned()
+
+        # Remove setup-only firewall allowances. In Ethernet mode the AP may
+        # remain up just long enough for the browser to observe completion;
+        # SetupPortalMiddleware then tears it down and it cannot autoconnect.
+        if wlan:
+            for port, proto in ((80, "tcp"), (443, "tcp"), (67, "udp"), (53, "udp"), (53, "tcp")):
+                run("ufw", "--force", "delete", "allow", "in", "on", wlan, "to", "any", "port", str(port), "proto", proto, check=False)
         return 0
     except Exception as error:
         config.clear()
         system_credential = ""
+        disable_local_ssh()
         if runtime_settings_changed:
             restore_runtime_settings(previous_env)
             run("systemctl", "restart", "135er-grow-central.service", check=False)
