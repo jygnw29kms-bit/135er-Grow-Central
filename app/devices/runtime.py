@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gc_esp32 import GrowCentralEsp32Provider
 from .generic_mqtt import GenericMqttProvider
 from .legacy_smarthome import LegacySmartHomeProvider
-from .mars_hydro_marspro import MarsHydroMarsProProvider
+from .marshydro_marspro import MarsHydroMarsProProvider
 from .provider import DeviceProvider
 from .spiderfarmer_ggs import SpiderFarmerGgsProvider
 from .tuya_local import TuyaLocalProvider
