@@ -91,7 +91,7 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata xserver-xorg-core xserver-xorg-input-libinput xinit openbox chromium unclutter x11-xserver-utils
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
 
           find /etc/netplan /usr/lib/netplan -type f -name '*.yaml' -exec chmod 0600 {} + 2>/dev/null || true
 
@@ -545,10 +545,20 @@ jobs:
           grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/local/cloud_link/.env
           grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/local/cloud_link/.env
           grep -qx 'GC_REMOTE_COMMANDS=false' /opt/135er-grow-central/local/cloud_link/.env
-          command -v startx
-          command -v chromium
-          command -v openbox
-          test -x /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+          for forbidden_cmd in startx chromium openbox; do
+            if command -v "$forbidden_cmd" >/dev/null 2>&1; then
+              echo "Unexpected kiosk command in headless image: $forbidden_cmd" >&2
+              exit 1
+            fi
+          done
+          for forbidden_pkg in xserver-xorg-core xserver-xorg-input-libinput xinit openbox chromium unclutter x11-xserver-utils; do
+            if dpkg-query -W -f='${Status}' "$forbidden_pkg" 2>/dev/null | grep -q 'install ok installed'; then
+              echo "Unexpected kiosk package in headless image: $forbidden_pkg" >&2
+              exit 1
+            fi
+          done
+          test ! -e /opt/135er-grow-central/image-builder/firstboot/display-kiosk.sh
+          test ! -e /opt/135er-grow-central/image-builder/firstboot/display-setup.sh
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/entrypoint.py
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/diagnostics.py
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
