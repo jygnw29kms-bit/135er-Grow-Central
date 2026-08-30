@@ -70,7 +70,7 @@ def test_system_password_is_optional_only_when_ssh_is_disabled():
         apply_setup.validate(invalid)
 
 
-def test_ssh_disabled_path_locks_account_and_stops_all_local_ssh_units(tmp_path):
+def test_ssh_disabled_path_locks_account_stops_listener_and_closes_firewall(tmp_path):
     calls = []
 
     def fake_run(*arguments, **_kwargs):
@@ -85,9 +85,10 @@ def test_ssh_disabled_path_locks_account_and_stops_all_local_ssh_units(tmp_path)
     assert ("passwd", "--lock", "GrowCentral") in calls
     for unit in ("ssh.socket", "ssh.service", "sshd.service"):
         assert ("systemctl", "disable", "--now", unit) in calls
+    assert ("ufw", "--force", "delete", "allow", "22/tcp") in calls
 
 
-def test_ssh_enabled_path_sets_user_password_only_after_explicit_opt_in(tmp_path):
+def test_ssh_enabled_path_sets_password_opens_firewall_and_starts_service(tmp_path):
     calls = []
 
     def fake_run(*arguments, **kwargs):
@@ -101,6 +102,7 @@ def test_ssh_enabled_path_sets_user_password_only_after_explicit_opt_in(tmp_path
     assert "PasswordAuthentication yes" in dropin.read_text(encoding="utf-8")
     chpasswd = next(item for item in calls if item[0] == ("chpasswd",))
     assert chpasswd[1] == "GrowCentral:ein-neues-systempasswort\n"
+    assert any(item[0] == ("ufw", "allow", "22/tcp") for item in calls)
     assert any(item[0] == ("systemctl", "enable", "--now", "ssh.service") for item in calls)
 
 
@@ -142,6 +144,18 @@ def test_image_workflow_is_synchronized_to_alpha_075():
     assert "grow-central-firstboot-debug.service" in workflow
     assert "grow-central-support-bundle.path" in workflow
     assert "Storage=persistent" in workflow
+
+
+def test_image_workflow_has_no_factory_password_or_default_ssh_exposure():
+    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "GrowCentral:grow-central-test" not in workflow
+    assert "Initial GUI login: GrowCentral / grow-central-test" not in workflow
+    assert "Setup AP key: grow-central-test" not in workflow
+    assert "GUI_PASSWORD_HASH=" not in workflow
+    assert "ufw allow 22/tcp" not in workflow
+    assert "systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh " not in workflow
+    assert "passwd --lock GrowCentral" in workflow
+    assert "Factory password: none" in workflow
 
 
 def test_appliance_exposes_a_simple_port_80_login_without_changing_the_backend_port():
