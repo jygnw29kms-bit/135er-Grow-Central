@@ -180,7 +180,7 @@ def install_runtime_policy() -> None:
 
 
 def disable_local_ssh() -> None:
-    """Fail closed: no password login and no local SSH listener."""
+    """Fail closed: no password login, no local SSH listener and no firewall hole."""
     SSH_DROPIN.parent.mkdir(parents=True, exist_ok=True)
     SSH_DROPIN.write_text(
         "PasswordAuthentication no\n"
@@ -192,6 +192,7 @@ def disable_local_ssh() -> None:
     run("passwd", "--lock", "GrowCentral", check=False)
     for unit in ("ssh.socket", "ssh.service", "sshd.service"):
         run("systemctl", "disable", "--now", unit, check=False)
+    run("ufw", "--force", "delete", "allow", "22/tcp", check=False)
 
 
 def configure_local_ssh(enabled: bool, password: str = "") -> None:
@@ -217,6 +218,7 @@ def configure_local_ssh(enabled: bool, password: str = "") -> None:
     if validation.returncode != 0:
         disable_local_ssh()
         raise RuntimeError("Die SSH-Konfiguration konnte nicht validiert werden.")
+    run("ufw", "allow", "22/tcp")
     run("systemctl", "enable", "--now", "ssh.service")
 
 
