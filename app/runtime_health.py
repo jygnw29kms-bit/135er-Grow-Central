@@ -35,10 +35,21 @@ def _json(path: Path) -> dict:
         return {}
 
 
+def _setup_lifecycle() -> str:
+    if (STATE_DIR / ".provisioned").is_file():
+        return "provisioned"
+    if (STATE_DIR / "setup-pending.json").exists():
+        return "applying"
+    if (STATE_DIR / "setup-last-error").is_file():
+        return "error"
+    return "required"
+
+
 @router.get("/health")
 async def runtime_health():
     cloud = _json(CLOUD_STATE)
-    provisioned = (STATE_DIR / ".provisioned").exists()
+    setup_state = _setup_lifecycle()
+    provisioned = setup_state == "provisioned"
     setup_error = _text(STATE_DIR / "setup-last-error")
     setup_warning = _text(STATE_DIR / "setup-last-warning")
     provider_ids = list(device_runtime.ids())
@@ -50,12 +61,14 @@ async def runtime_health():
 
     blockers: list[str] = []
     warnings: list[str] = []
-    if setup_error:
+    if setup_state == "error" or setup_error:
         blockers.append("setup_error")
     if not provider_ids:
         blockers.append("device_runtime_empty")
     if setup_warning:
         warnings.append("setup_warning")
+    if setup_state in {"required", "applying"}:
+        warnings.append(f"setup_{setup_state}")
     if cloud_enabled and cloud_state != "connected":
         warnings.append("cloud_not_connected")
 
@@ -73,6 +86,8 @@ async def runtime_health():
         "build": _text(APP_DIR / "BUILD"),
         "provisioned": provisioned,
         "setup": {
+            "state": setup_state,
+            "required": setup_state != "provisioned",
             "error": setup_error,
             "warning": setup_warning,
         },
