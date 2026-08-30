@@ -46,6 +46,26 @@ install -d -o growcentral -g growcentral -m 0750 "$STATE_DIR"
 install -d -o root -g growcentral -m 0750 "$CERT_DIR"
 install -d -o root -g root -m 0755 "$DNSMASQ_SHARED_DIR"
 
+# Never alter credentials again after the appliance has been provisioned.
+if [ -e "${STATE_DIR}/.provisioned" ]; then
+  log "Appliance already provisioned; setup AP is not required."
+  exit 0
+fi
+
+# Unprovisioned appliances have no usable local OS credential. SSH can only be
+# enabled later by apply_setup.py after explicit opt-in and password creation.
+passwd --lock GrowCentral >/dev/null 2>&1 || true
+mkdir -p /etc/ssh/sshd_config.d
+cat >/etc/ssh/sshd_config.d/99-grow-central-access.conf <<'EOF'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+EOF
+chmod 0644 /etc/ssh/sshd_config.d/99-grow-central-access.conf
+for unit in ssh.socket ssh.service sshd.service; do
+  systemctl disable --now "$unit" >/dev/null 2>&1 || true
+done
+
 # NetworkManager's IPv4 shared mode uses dnsmasq and explicitly supports
 # additional snippets from dnsmasq-shared.d. During first boot every DNS name
 # therefore resolves to the Pi, exactly like a hotel/guest Wi-Fi portal. DHCP
@@ -140,6 +160,8 @@ create_ap_profile() {
 
   nmcli connection add type wifi ifname "$WLAN" con-name "$CONNECTION" ssid "$SSID"
 
+  # The setup WLAN is intentionally open. It exists only while the appliance is
+  # unprovisioned; SetupPortalMiddleware exposes provisioning endpoints only.
   nmcli connection modify "$CONNECTION" \
     connection.interface-name "$WLAN" \
     connection.autoconnect yes \
@@ -148,9 +170,6 @@ create_ap_profile() {
     802-11-wireless.band bg \
     802-11-wireless.channel 1 \
     802-11-wireless.powersave 2 \
-    wifi-sec.key-mgmt wpa-psk \
-    wifi-sec.psk grow-central-test \
-    802-11-wireless-security.pmf 1 \
     ipv4.method shared \
     ipv4.addresses "$ADDRESS" \
     ipv4.shared-dhcp-range "$DHCP_RANGE" \
@@ -226,7 +245,7 @@ fi
 for _ in $(seq 1 35); do
   if ip -4 address show dev "$WLAN" | grep -Fq "$ADDRESS" \
     && ss -H -lun | awk '$4 ~ /:67$/ { found=1 } END { exit !found }'; then
-    log "READY: model=${MODEL:-unknown} profile=${PLATFORM} interface=${WLAN} SSID=${SSID} ADDRESS=${ADDRESS} DHCP=${DHCP_RANGE} captive=${CAPTIVE_URL}"
+    log "READY: model=${MODEL:-unknown} profile=${PLATFORM} interface=${WLAN} SSID=${SSID} security=open ADDRESS=${ADDRESS} DHCP=${DHCP_RANGE} captive=${CAPTIVE_URL}"
     exit 0
   fi
   sleep 1

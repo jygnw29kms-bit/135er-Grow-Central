@@ -14,19 +14,17 @@ assert APPLY_SPEC and APPLY_SPEC.loader
 APPLY_SPEC.loader.exec_module(apply_setup)
 
 
-def valid_form():
+def valid_form(ssh_enabled=True):
     return {
         "mode": "wifi",
         "hostname": "135er-grow-central",
         "timezone": "Europe/Berlin",
         "ssid": "Werkstatt WLAN",
         "wifi_password": "sicheres-wlan-passwort",
-        "new_password": "ein-neues-systempasswort",
-        "new_password_confirm": "ein-neues-systempasswort",
+        "ssh_enabled": "1" if ssh_enabled else "0",
+        "new_password": "ein-neues-systempasswort" if ssh_enabled else "",
         "gui_username": "GrowCentral",
         "gui_password": "ein-neues-gui-passwort",
-        "gui_password_confirm": "ein-neues-gui-passwort",
-        "maintenance_activation_code": "GC-ABCDEF-GHJKLM",
         "fritz_enabled": "0",
     }
 
@@ -37,6 +35,16 @@ def test_setup_ap_exposes_always_on_gui_for_firstboot():
     assert 'DHCP_RANGE="10.42.0.10,10.42.0.250"' in script
     assert 'ipv4.shared-dhcp-range "$DHCP_RANGE"' in script
     assert "ipv4.method shared" in script
+
+
+def test_setup_ap_is_open_only_while_unprovisioned_and_locks_ssh():
+    script = SETUP_AP_PATH.read_text(encoding="utf-8")
+    assert "wifi-sec.psk" not in script
+    assert "wifi-sec.key-mgmt wpa-psk" not in script
+    assert 'if [ -e "${STATE_DIR}/.provisioned" ]' in script
+    assert "passwd --lock GrowCentral" in script
+    assert "PasswordAuthentication no" in script
+    assert 'systemctl disable --now "$unit"' in script
 
 
 def test_runtime_password_hash_does_not_store_plaintext():
@@ -52,6 +60,50 @@ def test_apply_revalidates_gui_and_fritz_fields(monkeypatch):
     config["gui_username"] = "ungültig mit leerzeichen"
     with __import__("pytest").raises(ValueError):
         apply_setup.validate(config)
+
+
+def test_system_password_is_optional_only_when_ssh_is_disabled():
+    apply_setup.validate(valid_form(ssh_enabled=False))
+    invalid = valid_form(ssh_enabled=True)
+    invalid["new_password"] = ""
+    with __import__("pytest").raises(ValueError):
+        apply_setup.validate(invalid)
+
+
+def test_ssh_disabled_path_locks_account_stops_listener_and_closes_firewall(tmp_path):
+    calls = []
+
+    def fake_run(*arguments, **_kwargs):
+        calls.append(arguments)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    dropin = tmp_path / "99-grow-central-access.conf"
+    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup, "SSH_DROPIN", dropin):
+        apply_setup.configure_local_ssh(False)
+
+    assert "PasswordAuthentication no" in dropin.read_text(encoding="utf-8")
+    assert ("passwd", "--lock", "GrowCentral") in calls
+    for unit in ("ssh.socket", "ssh.service", "sshd.service"):
+        assert ("systemctl", "disable", "--now", unit) in calls
+    assert ("ufw", "--force", "delete", "allow", "22/tcp") in calls
+
+
+def test_ssh_enabled_path_sets_password_opens_firewall_and_starts_service(tmp_path):
+    calls = []
+
+    def fake_run(*arguments, **kwargs):
+        calls.append((arguments, kwargs.get("input_text")))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    dropin = tmp_path / "99-grow-central-access.conf"
+    with patch.object(apply_setup, "run", fake_run), patch.object(apply_setup, "SSH_DROPIN", dropin):
+        apply_setup.configure_local_ssh(True, "ein-neues-systempasswort")
+
+    assert "PasswordAuthentication yes" in dropin.read_text(encoding="utf-8")
+    chpasswd = next(item for item in calls if item[0] == ("chpasswd",))
+    assert chpasswd[1] == "GrowCentral:ein-neues-systempasswort\n"
+    assert any(item[0] == ("ufw", "allow", "22/tcp") for item in calls)
+    assert any(item[0] == ("systemctl", "enable", "--now", "ssh.service") for item in calls)
 
 
 def test_wifi_password_is_not_exposed_in_process_arguments(monkeypatch):
@@ -94,6 +146,19 @@ def test_image_workflow_is_synchronized_to_alpha_075():
     assert "Storage=persistent" in workflow
 
 
+def test_image_workflow_has_no_factory_password_or_default_ssh_exposure():
+    workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "GrowCentral:grow-central-test" not in workflow
+    assert "Initial GUI login: GrowCentral / grow-central-test" not in workflow
+    assert "Setup AP key: grow-central-test" not in workflow
+    assert not any(line.strip().startswith("GC_GUI_PASSWORD_HASH=") for line in workflow.splitlines())
+    assert not any(line.strip().startswith("GC_GUI_USERNAME=") for line in workflow.splitlines())
+    assert not any(line.strip() == "ufw allow 22/tcp" for line in workflow.splitlines())
+    assert "systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service ssh " not in workflow
+    assert "passwd --lock GrowCentral" in workflow
+    assert "Factory password: none" in workflow
+
+
 def test_appliance_exposes_a_simple_port_80_login_without_changing_the_backend_port():
     root = Path(__file__).parents[1]
     workflow = IMAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
@@ -111,11 +176,11 @@ def test_appliance_exposes_a_simple_port_80_login_without_changing_the_backend_p
     assert "http://127.0.0.1/api/health" in workflow
 
 
-def test_setup_completion_marker_is_written_only_after_runtime_and_password_change():
+def test_setup_completion_marker_is_written_only_after_runtime_and_access_policy():
     source = APPLY_PATH.read_text(encoding="utf-8")
     main_source = source[source.index("def main()") :]
-    assert main_source.index("verify_runtime(network_address)") < main_source.index('run("chpasswd"')
-    assert main_source.index('run("chpasswd"') < main_source.index("mark_provisioned()")
+    assert main_source.index("verify_runtime(network_address)") < main_source.index("configure_local_ssh(ssh_enabled, system_credential)")
+    assert main_source.index("configure_local_ssh(ssh_enabled, system_credential)") < main_source.index("mark_provisioned()")
     assert "SETUP_FILE" not in source
 
 

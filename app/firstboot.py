@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, SecretStr
+
 from app.hardware import ethernet_interface, wifi_interface
 
 STATE_DIR = Path("/var/lib/135er-grow-central")
@@ -28,9 +29,10 @@ class SetupBody(BaseModel):
     timezone: str
     ssid: str = ""
     wifi_password: SecretStr = SecretStr("")
-    new_password: SecretStr
     gui_username: str
     gui_password: SecretStr
+    ssh_enabled: bool = False
+    new_password: SecretStr = SecretStr("")
     fritz_enabled: bool = False
     fritz_host: str = ""
     fritz_username: str = ""
@@ -113,7 +115,10 @@ async def networks():
         raise HTTPException(503, "Keine von NetworkManager verwaltete WLAN-Schnittstelle erkannt")
     result = subprocess.run(
         ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"],
-        capture_output=True, text=True, timeout=25, check=False,
+        capture_output=True,
+        text=True,
+        timeout=25,
+        check=False,
     )
     if result.returncode != 0:
         raise HTTPException(503, (result.stderr or "WLAN-Suche fehlgeschlagen").strip()[:180])
@@ -132,7 +137,8 @@ async def networks():
         "message": (
             "Der Raspberry Pi 3B kann während des aktiven Setup-APs keine anderen WLANs zuverlässig anzeigen. "
             "Bitte die SSID manuell eintragen."
-            if setup_ap_active and not rows else ""
+            if setup_ap_active and not rows
+            else ""
         ),
     }
 
@@ -157,18 +163,33 @@ async def apply(body: SetupBody):
         raise HTTPException(422, "Ungültiger Netzwerkmodus")
     if body.timezone not in TIMEZONES:
         raise HTTPException(422, "Zeitzone ungültig")
-    if len(body.new_password.get_secret_value()) < 12 or not GUI_USER_RE.fullmatch(body.gui_username) or len(body.gui_password.get_secret_value()) < 12:
-        raise HTTPException(422, "System- und GUI-Passwort müssen mindestens 12 Zeichen haben")
-    if body.mode == "wifi" and (not 1 <= len(body.ssid.encode()) <= 32 or (body.wifi_password.get_secret_value() and not 8 <= len(body.wifi_password.get_secret_value()) <= 63)):
+    if not GUI_USER_RE.fullmatch(body.gui_username) or len(body.gui_password.get_secret_value()) < 12:
+        raise HTTPException(422, "GUI-Benutzer ungültig oder GUI-Passwort kürzer als 12 Zeichen")
+    if body.ssh_enabled and len(body.new_password.get_secret_value()) < 12:
+        raise HTTPException(422, "Für aktiviertes SSH muss das Systempasswort mindestens 12 Zeichen haben")
+    if body.mode == "wifi" and (
+        not 1 <= len(body.ssid.encode()) <= 32
+        or (body.wifi_password.get_secret_value() and not 8 <= len(body.wifi_password.get_secret_value()) <= 63)
+    ):
         raise HTTPException(422, "WLAN-Daten ungültig")
-    if body.fritz_enabled and not (body.fritz_host and body.fritz_username and body.fritz_password.get_secret_value()):
+    if body.fritz_enabled and not (
+        body.fritz_host and body.fritz_username and body.fritz_password.get_secret_value()
+    ):
         raise HTTPException(422, "FRITZ!-Zugangsdaten unvollständig")
+
     config = {
-        "mode": body.mode, "hostname": FIXED_HOSTNAME, "timezone": body.timezone,
-        "ssid": body.ssid, "wifi_password": body.wifi_password.get_secret_value(),
-        "new_password": body.new_password.get_secret_value(), "gui_username": body.gui_username,
-        "gui_password": body.gui_password.get_secret_value(), "fritz_enabled": "1" if body.fritz_enabled else "0",
-        "fritz_host": body.fritz_host, "fritz_username": body.fritz_username,
+        "mode": body.mode,
+        "hostname": FIXED_HOSTNAME,
+        "timezone": body.timezone,
+        "ssid": body.ssid,
+        "wifi_password": body.wifi_password.get_secret_value(),
+        "gui_username": body.gui_username,
+        "gui_password": body.gui_password.get_secret_value(),
+        "ssh_enabled": "1" if body.ssh_enabled else "0",
+        "new_password": body.new_password.get_secret_value() if body.ssh_enabled else "",
+        "fritz_enabled": "1" if body.fritz_enabled else "0",
+        "fritz_host": body.fritz_host,
+        "fritz_username": body.fritz_username,
         "fritz_password": body.fritz_password.get_secret_value(),
     }
     STATE_DIR.mkdir(mode=0o750, parents=True, exist_ok=True)
@@ -180,4 +201,4 @@ async def apply(body: SetupBody):
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, PENDING_FILE)
-    return {"ok": True, "state": "applying"}
+    return {"ok": True, "state": "applying", "ssh_enabled": body.ssh_enabled}

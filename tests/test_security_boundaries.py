@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from app import firstboot
 from app.main import _ble_identity, _classify_ble_name, app
 from app.smarthome.onboarding import _lan_host
 from cloud.app.config import settings
@@ -10,9 +11,17 @@ from cloud.app.main import CommandPayload, TelemetryPayload, check_token
 
 
 def test_ble_state_change_fails_closed_without_local_token(monkeypatch):
+    monkeypatch.setattr(firstboot, "setup_active", lambda: False)
     monkeypatch.delenv("GC_LOCAL_API_TOKEN", raising=False)
     response = TestClient(app).post("/api/connect", json={"address": "AA:BB:CC:DD:EE:FF"})
     assert response.status_code == 503
+
+
+def test_unprovisioned_runtime_is_blocked_before_ble_token_check(monkeypatch):
+    monkeypatch.setattr(firstboot, "setup_active", lambda: True)
+    monkeypatch.delenv("GC_LOCAL_API_TOKEN", raising=False)
+    response = TestClient(app).post("/api/connect", json={"address": "AA:BB:CC:DD:EE:FF"})
+    assert response.status_code == 403
 
 
 def test_cloud_token_placeholder_fails_closed():

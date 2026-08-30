@@ -37,12 +37,13 @@ def test_cloud_smoke_enforces_headless_final_image():
 
 def test_image_workflow_installs_and_runs_cloud_smoke():
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
+    setup_ap = (ROOT / "image-builder/firstboot/setup-ap.sh").read_text()
     assert "grow-central-cloud-smoke-test" in workflow
     assert "cloud-smoke-test.sh" in workflow
     assert "GC_REMOTE_COMMANDS=false" in workflow
-    assert "802-11-wireless-security.pmf 1" in (
-        ROOT / "image-builder/firstboot/setup-ap.sh"
-    ).read_text()
+    assert "ipv4.method shared" in setup_ap
+    assert "wifi-sec.psk" not in setup_ap
+    assert "PasswordAuthentication no" in setup_ap
 
 
 def test_closed_test_image_has_no_remote_maintenance_activation_path():

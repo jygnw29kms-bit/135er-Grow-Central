@@ -27,10 +27,13 @@ def test_current_feature_set_is_integrated():
     assert "Growtagebuch" in console
     assert "Pflanzen" in console
 
-    # The physically validated AP/first-boot path remains intact, but the
-    # product is permanently headless and does not initialize a display stack.
+    # First boot remains headless and network-shared, but intentionally has no
+    # factory Wi-Fi credential. Runtime routes are restricted by the portal.
     assert 'CONNECTION="grow-central-setup-ap"' in setup_ap
-    assert "802-11-wireless-security.pmf 1" in setup_ap
+    assert "ipv4.method shared" in setup_ap
+    assert "wifi-sec.psk" not in setup_ap
+    assert "wifi-sec.key-mgmt wpa-psk" not in setup_ap
+    assert "passwd --lock GrowCentral" in setup_ap
     assert "display-policy" in setup_ap
     assert "display-setup.sh" not in setup_ap
     assert "chromium" not in setup_ap.lower()
