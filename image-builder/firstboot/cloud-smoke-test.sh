@@ -12,11 +12,20 @@ install -d -m 0750 "$LOG_DIR" 2>/dev/null || true
 chmod 0640 "$LOG_FILE" 2>/dev/null || true
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+in_image_chroot=false
+if systemd-detect-virt --quiet --chroot 2>/dev/null; then
+  in_image_chroot=true
+elif [ -r /proc/1/root ] || [ -e /proc/1/root ]; then
+  self_root="$(stat -Lc '%d:%i' / 2>/dev/null || true)"
+  pid1_root="$(stat -Lc '%d:%i' /proc/1/root 2>/dev/null || true)"
+  [ -n "$self_root" ] && [ -n "$pid1_root" ] && [ "$self_root" != "$pid1_root" ] && in_image_chroot=true
+fi
+
 # Transitional image-builder compatibility: the historical workflow still
 # verifies its former GUI packages before invoking this script. During the
 # image customization chroot we remove that complete stack again, so the
 # published appliance is genuinely headless and does not carry Chromium/X11.
-if systemd-detect-virt --quiet --chroot 2>/dev/null; then
+if $in_image_chroot; then
   printf 'HEADLESS-PRUNE: Entferne lokale Kiosk-/X11-Pakete aus dem finalen Image.\n'
   export DEBIAN_FRONTEND=noninteractive
   apt-get purge -y --auto-remove \
