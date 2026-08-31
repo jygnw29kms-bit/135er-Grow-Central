@@ -1,0 +1,8 @@
+/* iOS/WebKit vertical scroll hardening for the dedicated mobile Command Center.
+   Keep horizontal chip scrolling intact while avoiding root scroll locking. */
+html{height:auto!important;min-height:100%;overflow-x:hidden;overflow-y:auto!important}
+body{height:auto!important;min-height:100dvh;overflow-x:hidden;overflow-y:auto!important;overscroll-behavior-x:none;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch}
+.mobile-app{height:auto!important;min-height:100dvh;padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+main{height:auto!important;min-height:0;overflow:visible!important}
+.mview.active{height:auto!important;min-height:0;overflow:visible!important}
+@supports(-webkit-touch-callout:none){html,body{position:static!important;max-height:none!important}.mobile-app{position:relative}}
