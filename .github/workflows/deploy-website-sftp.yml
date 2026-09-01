@@ -40,15 +40,20 @@ jobs:
           {
             echo '135er-Grow Central release publication'
             echo 'version=alpha-0.7.5'
-            echo 'image_strategy=universal'
-            echo 'pi3_support=LEGACY_LITE'
+            echo 'image_strategy=universal-headless'
+            echo 'pi3_support=SUPPORTED_LEGACY_LITE'
             echo 'pi4_support=FULL_SUPPORT'
             echo 'pi5_support=FULL_SUPPORT_PERFORMANCE'
-            echo 'last_published_candidate=176'
-            echo 'last_published_tag=pi-universal-alpha-0.7.5-176'
-            echo 'current_master_requires_new_image=true'
-            echo 'status=CANDIDATE_TRANSITION'
+            echo 'last_published_candidate=199'
+            echo 'last_published_tag=pi-universal-alpha-0.7.5-199'
+            echo 'candidate_commit=34442bc41d2c79328d3d5c61eb63a744f4c433a6'
+            echo 'current_master_requires_new_image=false'
+            echo 'status=CANDIDATE'
+            echo 'runtime_mode=headless-local-first'
+            echo 'kiosk=false'
             echo 'public_url=https://dezender.de/GC/'
+            echo 'image_url=https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-199'
+            echo 'ios_sideload_url=https://github.com/jygnw29kms-bit/135er-Grow-Central/actions/runs/33276409060/artifacts/9721641763'
             echo "published_commit=${GITHUB_SHA}"
           } > website/release-state.txt
 
@@ -66,6 +71,6 @@ jobs:
         run: |
           echo '135er-Grow Central product website deployed to https://dezender.de/GC/'
           echo 'Hardware Support Policy and canonical Release State republished'
-          echo 'Image strategy: Universal; Pi 3 Legacy/Lite; Pi 4/5 Full Support'
-          echo 'Last published candidate: Build 176; current master requires a new image build'
+          echo 'Architecture: headless/local-first; no kiosk runtime'
+          echo 'Current published candidate: Build 199 / alpha-0.7.5'
           echo 'Target: /var/www/vhosts/dezender.de/httpdocs/GC/'
