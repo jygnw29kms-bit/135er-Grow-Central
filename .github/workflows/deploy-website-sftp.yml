@@ -1,4 +1,4 @@
-name: Deploy Website to dezender.de/GC via SFTP
+name: Deploy Website to dezender.de via SFTP
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: SFTP Deploy /GC
+    name: SFTP Deploy /GC and root redirect
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,14 +24,33 @@ jobs:
           set -euo pipefail
           install -d \
             public-site/assets/brand \
-            public-site/assets/gui
+            public-site/assets/gui \
+            root-site
           cp website/index.html public-site/index.html
           cp website/styles.css public-site/styles.css
           cp website/assets/brand/135er-grow-central-lockup-v0.9.png public-site/assets/brand/
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
 
-      - name: Deploy public product website to /GC
+          cat > root-site/index.html <<'EOF'
+          <!doctype html>
+          <html lang="de">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta name="robots" content="noindex,follow">
+            <meta http-equiv="refresh" content="0; url=/GC/">
+            <link rel="canonical" href="https://dezender.de/GC/">
+            <title>135er-Grow Central</title>
+            <script>location.replace('/GC/');</script>
+          </head>
+          <body>
+            <p>Weiterleitung zu <a href="/GC/">135er-Grow Central</a> …</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy public project website to /GC
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
@@ -41,7 +60,17 @@ jobs:
           remote_path: '/var/www/vhosts/dezender.de/httpdocs/GC/'
           delete_remote_files: true
 
+      - name: Replace obsolete root page with redirect to /GC
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './root-site/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/'
+          delete_remote_files: false
+
       - name: Deployment information
         run: |
-          echo '135er-Grow Central product website deployed to https://dezender.de/GC/'
-          echo 'Only approved public marketing files were deployed'
+          echo '135er-Grow Central website deployed to https://dezender.de/GC/'
+          echo 'https://dezender.de/ now redirects to /GC/ so the obsolete root page is no longer served'
