@@ -1,5 +1,14 @@
 # Changelog
 
+## alpha-0.7.5 – Build 199 and closed-development transition (2026-09-02)
+
+- set Build 199 / `34442bc41d2c79328d3d5c61eb63a744f4c433a6` as the current hardware-test `CANDIDATE`
+- align canonical release, project, hardware-test and release-pipeline documentation with the headless Build 199 runtime
+- mark source, images, mobile packages, install scripts and internal release details as closed-development material
+- replace the public `dezender.de/GC/` page with a product-focused presentation without repository links, build numbers, commit IDs, internal protocols or downloads
+- deploy the public website from an explicit allowlist and remove previously published internal scripts, checksums and documentation from the web directory
+- add release-consistency guards for the current candidate and the public/private information boundary
+
 ## alpha-0.7.5 – Post-176 universal hardware-profile architecture (2026-08-29)
 
 - keep one universal Raspberry Pi image as the canonical distribution strategy

@@ -6,9 +6,9 @@ Reproduzierbare reale Validierung des GrowCentral-Universal-Images nach der verb
 
 ## Release-Basis
 
-- Letzter veröffentlichter Candidate: `pi-universal-alpha-0.7.5-176`
-- Build 176 bleibt Referenzartefakt, ist aber nach Einführung der Hardwareprofil-Runtime nicht mehr identisch mit aktuellem `master`.
-- Der **nächste erfolgreiche Universal-Image-Build aus aktuellem master** wird der neue Hardware-Testkandidat.
+- Aktueller Candidate: `pi-universal-alpha-0.7.5-199`
+- Candidate-Commit: `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
+- Build 199 enthält die aktuelle headless Runtime und die Hardwareprofil-Architektur.
 - Status bis zum Realtest: **CANDIDATE**.
 
 ## Zu testende Supportklassen
@@ -51,7 +51,7 @@ Zusätzlich prüfen:
 
 - Hardwareprofil = `LEGACY_LITE`;
 - Kamera bleibt im konservativen Profil (Zielmaximum 720p, reduzierte FPS);
-- Kiosk bleibt bedienbar mit reduzierten Effekten;
+- headless Betrieb bleibt innerhalb der konservativen Ressourcenlimits stabil;
 - Worker-/Parallelitätsprofil ist konservativ;
 - Diagnosehistorie ist kompakt;
 - FRITZ!, Tapo, Automationen, lokale GUI und Cloud-Link bleiben grundsätzlich nutzbar;
@@ -62,7 +62,7 @@ Zusätzlich prüfen:
 Zusätzlich prüfen:
 
 - Hardwareprofil = `FULL_SUPPORT` / Standard;
-- volle Nexus UI und Kiosk;
+- volle Nexus UI über Desktop- und Mobile-Clients;
 - Full-Support-Kamera-Pfad;
 - Standard-Worker und normale Diagnosehistorie;
 - paralleler Betrieb von Kamera, GUI, Automationen, Diagnose und Cloud-Link;
@@ -75,7 +75,7 @@ Zusätzlich prüfen:
 - Hardwareprofil = `FULL_SUPPORT` / Performance;
 - Performance-Worker aktiv;
 - erweiterte Diagnosehistorie;
-- volle Nexus UI/Kiosk/Kamera;
+- volle Nexus UI über externe Clients und Kamera;
 - zukünftige rechenintensive Funktionen werden bevorzugt hier validiert.
 
 ## Gemeinsame Integrationsprüfung
@@ -87,7 +87,6 @@ Nach erfolgreicher Baseline:
 - Logitech C920/UVC;
 - Bluetooth-Scan;
 - Mars Hydro / iConnect Diagnose;
-- Elecrow Touch/Kiosk;
 - Räume/Grow/Automationen;
 - Support-Bundle inkl. Hardwaremodell/-profil und Schwärzung sensibler Daten;
 - Cloud V7 / Entitlements.
@@ -106,7 +105,7 @@ Für **jede** Hardwareklasse wird separat geführt:
 | mDNS/Hostname | TBD | TBD | TBD |
 | GUI Auth | TBD | TBD | TBD |
 | SSH Auth | TBD | TBD | TBD |
-| Kiosk/Touch | TBD | TBD | TBD |
+| Headless Betrieb | TBD | TBD | TBD |
 | Kamera | TBD | TBD | TBD |
 | Cloud V7 | TBD | TBD | TBD |
 | Diagnose | TBD | TBD | TBD |

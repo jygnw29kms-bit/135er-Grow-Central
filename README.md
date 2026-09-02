@@ -1,90 +1,91 @@
-<p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central · GrowCentral Nexus UI" width="100%"></p>
+<p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central" width="100%"></p>
 
-<p align="center"><a href="#deutsch"><strong>Deutsch</strong></a> · <a href="#english"><strong>English</strong></a> · <a href="RELEASE_STATE.md"><strong>Release State</strong></a> · <a href="docs/HARDWARE_SUPPORT_POLICY.md"><strong>Hardware Policy</strong></a> · <a href="docs/HARDWARE_TEST_PLAN.md"><strong>Hardware Test</strong></a></p>
+<p align="center"><strong>Closed Development · Local First · Raspberry Pi · Desktop + Mobile</strong></p>
 
-<p align="center">
-<img alt="Version" src="https://img.shields.io/badge/version-alpha--0.7.5-71ff3b?style=flat-square&labelColor=061015">
-<img alt="Published Pi Candidate" src="https://img.shields.io/badge/published%20candidate-Build%20176-ffb52b?style=flat-square&labelColor=061015">
-<img alt="Image" src="https://img.shields.io/badge/image-Universal-35e8da?style=flat-square&labelColor=061015">
-<img alt="Pi 3" src="https://img.shields.io/badge/Pi%203B%2F3B%2B-Legacy%2FLite-ffb52b?style=flat-square&labelColor=061015">
-<img alt="Pi 4/5" src="https://img.shields.io/badge/Pi%204%2F5-Full%20Support-71ff3b?style=flat-square&labelColor=061015">
-</p>
+# 135er-Grow Central
 
-# Deutsch
+> **Vertrauliches Entwicklungsprojekt.** Dieses Repository ist nicht als Open-Source-Projekt freigegeben. Quellcode, Images, mobile Testpakete, interne Dokumentation und technische Details sind ausschließlich für autorisierte Projektbeteiligte bestimmt.
 
-**135er-Grow Central** ist eine Local-First Steuer-, Überwachungs- und Automationsplattform für Raspberry Pi mit optionaler eigener Cloud-Anbindung.
+135er-Grow Central ist eine lokale Steuerungs-, Überwachungs- und Automationsplattform für Grow-Umgebungen. Ein Raspberry Pi bildet die lokale Zentrale; Browser, Smartphone, Tablet und die mobilen Clients dienen als Bedienoberflächen. Eine Cloud-Anbindung ist optional und ersetzt nicht die lokale Geräteautorität.
 
-## Verbindliche Hardwarestrategie
+## Aktueller Referenzstand
 
-GrowCentral verwendet weiterhin **ein Universal-Image**. Die Hardware wird zur Laufzeit zentral erkannt; Funktionen und Ressourcenprofile richten sich nach `shared/hardware_profile.py`.
+| Bereich | Stand |
+|---|---|
+| Version | `alpha-0.7.5` |
+| Aktueller Pi-Candidate | **Build 199** |
+| Release-Tag | `pi-universal-alpha-0.7.5-199` |
+| Quellstand des Candidates | `34442bc41d2c79328d3d5c61eb63a744f4c433a6` |
+| Veröffentlichungsdatum | 31. August 2026 |
+| Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung offen |
+| Entwicklungsmodus | **Closed / nicht öffentlich distribuieren** |
 
-| Hardware | Supportklasse | Rolle |
+Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historische Build-Dokumente bleiben nachvollziehbar, definieren aber nicht den aktuellen Projektstand.
+
+## Produktprinzipien
+
+- **Local First:** Steuerung, Messwerte und Automationen bleiben grundsätzlich vor Ort verfügbar.
+- **Headless Appliance:** Der Pi benötigt keinen eigenen Desktop oder Monitor.
+- **Eine Oberfläche pro Gerätetyp:** Desktop- und Mobile-Ansichten sind für ihren jeweiligen Einsatz optimiert.
+- **Herstellerübergreifend:** Geräte werden über eine gemeinsame Plattform eingebunden.
+- **Sichere Standardwerte:** Keine bekannten Factory-Passwörter; SSH wird nur ausdrücklich aktiviert.
+- **Optionale Cloud:** Fernzugriff und Verwaltung können ergänzt werden, die lokale Instanz bleibt maßgeblich.
+
+## Geplanter und implementierter Funktionsumfang
+
+- geführte Ersteinrichtung mit Netzwerkübernahme;
+- Räume, Grow-Bereiche und Gerätezuordnung;
+- Sensorwerte, Verlauf und Zustandsübersicht;
+- Zeitpläne und zustandsbasierte Automationen;
+- Kamera-Unterstützung für geeignete UVC-Geräte;
+- einheitliche Diagnose- und Laufzeitübersicht;
+- Desktop-Weboberfläche sowie eigene mobile Oberfläche;
+- iOS-Sideload- und Android-Testclients;
+- optionale Cloud- und Verwaltungsfunktionen.
+
+Der jeweilige Funktionsstatus ist modell-, firmware- und hardwareabhängig. Eine vorhandene Integration bedeutet nicht automatisch, dass sämtliche Lese- und Schreibfunktionen bereits für jedes Gerät freigegeben sind.
+
+## Geräteökosysteme
+
+Aktuell werden Integrationspfade für unter anderem folgende Systeme entwickelt oder validiert:
+
+- AVM FRITZ! Smart Home
+- TP-Link Tapo
+- Shelly
+- Tuya / Smart Life
+- Mars Hydro
+- Spider Farmer
+- Home Assistant
+- Zigbee2MQTT und generisches MQTT
+- Grow-Central-ESP32-Sensoren und -Aktoren
+- Logitech C920 und weitere geeignete UVC-Kameras
+
+Schreibzugriffe bleiben gesperrt, solange Protokoll, Modell oder Firmware nicht ausreichend validiert sind.
+
+## Hardwarestrategie
+
+Grow Central verwendet weiterhin ein Universal-Image mit zentraler Hardwareerkennung.
+
+| Hardware | Klasse | Einordnung |
 |---|---|---|
-| Raspberry Pi 3B / 3B+ | **Legacy/Lite** | weiterhin unterstützt, konservative Ressourcenlimits |
-| Raspberry Pi 4B / 400 | **Full Support** | empfohlene Standardplattform |
-| Raspberry Pi 5 | **Full Support / Performance** | optimale Plattform für rechenintensive Funktionen |
-| Compute Module 4 / 5 | **Full Support** | entsprechend der Generation |
+| Raspberry Pi 3B / 3B+ | Legacy/Lite | unterstützt mit konservativen Ressourcenprofilen |
+| Raspberry Pi 4B / 400 / CM4 | Full Support | empfohlene Standardplattform |
+| Raspberry Pi 5 / CM5 | Full Support Performance | Plattform mit zusätzlicher Leistungsreserve |
 
-**Minimum / Legacy:** Pi 3B/3B+  
-**Empfohlen:** Pi 4 ab 2 GB  
-**Optimal:** Pi 4 mit 4 GB oder Pi 5
+Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servicebasen technisch zwingend werden.
 
-Pi 3 bleibt unterstützt, darf aber neue Full-Support-Funktionen nicht mehr auf sein Leistungsniveau begrenzen. Separate Images entstehen erst, wenn unterschiedliche Kernel-, Paket- oder Servicebasen technisch zwingend werden. Details: [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md).
+## Release-Regeln
 
-## Release-Stand
+1. `master` und die kanonische Dokumentation bilden immer den neuesten bekannten Projektstand ab.
+2. Ein erfolgreicher CI-Lauf oder Image-Build erhält zunächst den Status `CANDIDATE`.
+3. `VALIDATED` wird erst nach dokumentiertem Test auf realer Zielhardware vergeben.
+4. Neue Builds, Images, App-Pakete und Installationsskripte werden bis auf Weiteres nicht öffentlich verteilt.
+5. Die öffentliche Seite unter [dezender.de/GC](https://dezender.de/GC/) erklärt nur Produktnutzen und Entwicklungsstatus; interne Downloads, Commit-IDs, Protokolle und Betriebsdetails bleiben dort verborgen.
 
-Der letzte veröffentlichte Universal-Image-Candidate ist **Build 176** (`pi-universal-alpha-0.7.5-176`). Seit Build 176 enthält `master` zusätzliche Runtime-Änderungen für die neue Hardware-Profilarchitektur. Daher bleibt Build 176 der letzte veröffentlichte Candidate, ist aber nicht mehr runtime-identisch mit dem aktuellen `master`; der nächste erfolgreiche Image-Build wird der neue Hardware-Testkandidat.
+## Lizenz- und Vertraulichkeitshinweis
 
-Build 176 Image: `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-176.img.xz`  
-SHA-256: `65047be1375461d5107c97527e90f6e6e458c3a61057175f15ec45752e450815`
+Das Repository wurde bisher mit einer MIT-Lizenz veröffentlicht. Eine spätere Umstellung auf private Entwicklung widerruft Rechte an bereits unter dieser Lizenz bezogenen Fassungen nicht. Bis eine mögliche Neulizenzierung für künftige Fassungen rechtlich und mit allen Rechteinhabern geklärt ist, bleibt die Datei [`LICENSE`](LICENSE) maßgeblich. Unabhängig davon gehören Zugangsdaten, Tokens, Schlüssel, lokale Adressen, Diagnosepakete und Kundendaten weder in Commits noch in öffentliche Artefakte.
 
-## Hardware-Profilierung in der Runtime
+## English summary
 
-Die zentrale Klassifikation ist Teil der Runtime und Diagnose. Komponenten sollen keine eigenen Modell-Sonderfälle pflegen. Aktuelle Profile:
-
-- `LEGACY_LITE`: Pi 3B/3B+ – Kamera konservativ bis 720p/reduzierte FPS, reduzierte Kiosk-Effekte, kompaktere Diagnosehistorie, konservative Worker;
-- `FULL_SUPPORT` Standard: Pi 4/400/CM4 – volle Nexus UI, normale Parallelität, Full-Support-Kamera-/Diagnoseprofil;
-- `FULL_SUPPORT` Performance: Pi 5/CM5 – volle Nexus UI, Performance-Worker und erweiterte Diagnosehistorie;
-- `UNCLASSIFIED`: unbekannte Hardware – konservativer Diagnosemodus ohne Supportzusage.
-
-Die Diagnose-API weist Modell und aktives Hardwareprofil aus.
-
-## Local First + Cloud V7
-
-Der Raspberry Pi bleibt die autoritative lokale Instanz. Cloud V7 ergänzt den Betrieb mit Geräte-/Kunden-Zuordnung, Gruppen, Status/Plan, Feature-Entitlements, sicherem Pi-Abruf und APT-Upgradepfad. Lokale Kernfunktionen sollen auch ohne Cloud weiterarbeiten.
-
-Lokale Bereiche umfassen First Boot/Netzwerk, GUI/Auth, Räume/Grow, Automationen, FRITZ! Smart Home, Tapo, Logitech C920/UVC, Mars-Hydro-/Bluetooth-Diagnose, Kiosk/Touch und Supportdiagnose.
-
-## Tests und Release-Gates
-
-CI prüft die Hardwareklassifikation mindestens für Pi 3B/3B+, Pi 4/400, Pi 5 sowie CM4/CM5. Reale Hardwarevalidierung wird nach Supportklasse dokumentiert. Ein Pi-3-spezifischer Legacy/Lite-Fehler darf nicht automatisch den Full-Support-Pfad für Pi 4/5 blockieren, muss aber sichtbar dokumentiert werden.
-
-Ausführlich: [`docs/HARDWARE_TEST_PLAN.md`](docs/HARDWARE_TEST_PLAN.md).
-
-## Zugriff
-
-- First Boot: `http://10.42.0.1/`
-- lokal nach Einrichtung: `http://135er-GrowCentral.local/`
-- Port `8080`: Kompatibilitätspfad
-
-## Mobile
-
-Android APK und iOS Sideload IPA bleiben Clients der GrowCentral-WebGUI; die Geräteautorität bleibt beim Pi.
-
-## Kanonische Dokumente
-
-- [`RELEASE_STATE.md`](RELEASE_STATE.md)
-- [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md)
-- [`docs/HARDWARE_TEST_PLAN.md`](docs/HARDWARE_TEST_PLAN.md)
-- [`docs/DESIGN_SYSTEM_NEXUS.md`](docs/DESIGN_SYSTEM_NEXUS.md)
-- [`SECURITY.md`](SECURITY.md)
-
----
-
-# English
-
-GrowCentral keeps **one universal Raspberry Pi image** and uses a central runtime hardware profile. Raspberry Pi 3B/3B+ remains supported as **Legacy/Lite**; Raspberry Pi 4/400 and 5 are **Full Support** and define the feature baseline for future development. Pi 3 limitations must not constrain new Full-Support features.
-
-The last published candidate is Build 176. Current `master` contains post-176 hardware-profile runtime changes, so the next successful universal-image build will become the next hardware-test candidate.
-
-Canonical policy: [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md). Canonical release state: [`RELEASE_STATE.md`](RELEASE_STATE.md).
+135er-Grow Central is a closed-development, local-first Raspberry Pi platform for grow monitoring, device control and automation. Build 199 is the current `alpha-0.7.5` hardware-test candidate. Automated build gates passed; physical validation is still pending. Source code, images, mobile packages and internal technical documentation are not intended for public distribution.

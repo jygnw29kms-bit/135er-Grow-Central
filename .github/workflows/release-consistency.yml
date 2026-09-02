@@ -29,10 +29,11 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
-          grep -Fq 'Build 176' RELEASE_STATE.md
-          grep -Fq 'pi-universal-alpha-0.7.5-176' RELEASE_STATE.md
+          grep -Fq 'Build 199' RELEASE_STATE.md
+          grep -Fq 'pi-universal-alpha-0.7.5-199' RELEASE_STATE.md
+          grep -Fq '34442bc41d2c79328d3d5c61eb63a744f4c433a6' RELEASE_STATE.md
           grep -Fq 'CANDIDATE' RELEASE_STATE.md
-          grep -Fq 'neuer Universal-Image-Build erforderlich' RELEASE_STATE.md
+          grep -Fq 'CLOSED' RELEASE_STATE.md
 
       - name: Verify canonical hardware support classes
         shell: bash
@@ -55,9 +56,21 @@ jobs:
           done
           grep -Fq 'Legacy/Lite' website/index.html
           grep -Fq 'Full Support' website/index.html
-          grep -Fq 'Build 176' website/index.html
+          grep -Fq 'geschlossener Entwicklungsphase' website/index.html
           grep -Fxq '0.2.1' mobile/VERSION
           grep -Fq '"version": "0.2.1"' mobile/package.json
+
+      - name: Guard public website boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='github\.com|Build [0-9]+|pi-universal-|candidate_commit|GC_CLOUD_|127\.0\.0\.1|10\.42\.0\.1|gc-device-v1|install-135ercloud'
+          if grep -Eiq "$forbidden" website/index.html; then
+            echo 'public website exposes an internal project marker'
+            exit 1
+          fi
+          grep -Fq 'Closed Development' README.md
+          grep -Fq 'keine öffentliche Distribution' RELEASE_STATE.md
 
       - name: Guard validation state
         shell: bash
@@ -72,8 +85,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in RELEASE_STATE.md README.md docs/PROJECT_STATUS.md docs/RELEASE_PIPELINE.md docs/README.md website/README.md; do
-            if grep -Eq 'Build 118|pi-universal-alpha-0\.7\.5-118|master e339602' "$file"; then
+          for file in RELEASE_STATE.md README.md docs/PROJECT_STATUS.md docs/RELEASE_PIPELINE.md docs/README.md docs/HARDWARE_TEST_PLAN.md docs/KNOWN_LIMITATIONS.md website/README.md; do
+            if grep -Eq 'Build 118|pi-universal-alpha-0\.7\.5-118|master e339602|Build 176|pi-universal-alpha-0\.7\.5-176' "$file"; then
               echo "obsolete active release marker found in $file"
               exit 1
             fi

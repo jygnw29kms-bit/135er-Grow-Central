@@ -1,29 +1,359 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#02070a">
-<meta name="description" content="135er-Grow Central: headless Local-First Grow-Automation mit Universal Raspberry Pi Image, eigener Desktop- und Mobile-GUI, universeller Geräteplattform, Automationen, Kamera, Diagnose und optionaler Cloud.">
-<meta name="robots" content="index,follow,max-image-preview:large">
-<meta property="og:type" content="website"><meta property="og:title" content="135er-Grow Central · Headless Local-First Grow Platform"><meta property="og:description" content="Ein Universal-Image, eine Geräteplattform und eigene Oberflächen für Desktop und Mobile. Build 199 ist der aktuelle Candidate."><meta property="og:image" content="assets/gui/local-desktop-v0.9.png"><meta property="og:url" content="https://dezender.de/GC/">
-<title>135er-Grow Central · Headless Local-First Grow Platform</title>
-<link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png"><link rel="stylesheet" href="styles.css?v=3.3.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#02070a">
+  <meta name="description" content="135er-Grow Central bündelt Grow-Überwachung, Geräte, Sensoren und Automationen in einer lokalen Raspberry-Pi-Zentrale mit optionaler Cloud-Erweiterung.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="135er-Grow Central · Die lokale Zentrale für deinen Grow">
+  <meta property="og:description" content="Herstellerübergreifend überwachen, steuern und automatisieren – lokal auf dem Raspberry Pi, komfortabel auf Desktop und Mobilgeräten.">
+  <meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
+  <meta property="og:url" content="https://dezender.de/GC/">
+  <title>135er-Grow Central · Local-First Grow Automation</title>
+  <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
+  <link rel="stylesheet" href="styles.css?v=4.0.0">
 </head>
 <body>
-<a class="skip-link" href="#main">Zum Inhalt springen</a><div class="noise" aria-hidden="true"></div>
-<header class="site-header"><div class="wrap nav-wrap"><a class="brand" href="#top"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central"></a><button class="menu-toggle" id="menuToggle" aria-label="Navigation öffnen" aria-expanded="false">☰</button><nav class="site-nav" id="siteNav"><a href="#produkt">Produkt</a><a href="#hardware">Hardware</a><a href="#features">Features</a><a href="#integrationen">Integrationen</a><a href="#technik">Technik</a><a href="#release">Release</a><a href="#faq">FAQ</a><a class="nav-cta" href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub ↗</a></nav></div></header>
-<main id="main">
-<section class="hero" id="top"><div class="hero-grid wrap"><div class="hero-copy"><div class="eyebrow"><span class="dot"></span> GROW CENTRAL · HEADLESS LOCAL-FIRST PLATFORM</div><h1>Eine Zentrale.<br><span>Viele Geräte. Eine Logik.</span></h1><p class="lead">135er-Grow Central macht den Raspberry Pi zur kompakten Grow-Appliance: kein lokaler Kiosk, kein Desktop-Ballast. Bedienung erfolgt über die eigene responsive Tech-GUI, mobile Oberfläche oder die iOS-/Android-App. Der Pi bleibt die lokale Geräteautorität.</p><div class="hero-actions"><a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-199">Build 199 herunterladen ↗</a><a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/actions/runs/33276409060/artifacts/9721641763">iOS Sideload IPA ↗</a></div><div class="trust-row"><span>HEADLESS</span><span>LOCAL-FIRST</span><span>UNIVERSAL DEVICE PLATFORM</span><span>DESKTOP + MOBILE</span></div></div><div class="hero-visual"><div class="status-orbit orbit-a"></div><div class="status-orbit orbit-b"></div><div class="screen-frame"><div class="screen-top"><span>GROW CENTRAL COMMAND CENTER</span><span class="live">● LOCAL RUNTIME</span></div><img src="assets/gui/local-desktop-v0.9.png" alt="Grow Central Benutzeroberfläche"></div><div class="floating-card fc-one"><small>CANDIDATE</small><strong>BUILD 199</strong><span>Boot + Reboot geprüft</span></div><div class="floating-card fc-two"><small>MODE</small><strong>HEADLESS</strong><span>Web · Mobile · App</span></div></div></div></section>
-<section class="signal-bar"><div class="wrap signal-grid"><div><small>VERSION</small><strong>alpha-0.7.5</strong></div><div><small>AKTUELLER CANDIDATE</small><strong>Build 199</strong></div><div><small>MASTER</small><strong>34442bc4</strong></div><div><small>ARCHITEKTUR</small><strong>Local-First</strong></div></div></section>
-<section class="section intro" id="produkt"><div class="wrap split-head"><div><div class="eyebrow">DIE PLATTFORM</div><h2>Grow-Steuerung als Appliance statt Bastel-Desktop.</h2></div><p>Grow Central bündelt First Boot, Netzwerk, Geräte, Räume, Sensorik, Kamera, Automationen, Diagnose und optionale Cloud-Anbindung. Seit dem großen Runtime-Umbau ist die Zielarchitektur dauerhaft headless: weniger Pakete, weniger RAM-Verbrauch, kleinere Images und weniger Fehlerquellen.</p></div><div class="value-grid wrap"><article class="value-card featured"><div class="icon">◈</div><h3>Eine Geräteplattform</h3><p>`gc-device-v1` vereinheitlicht Hersteller, Transportwege, Capabilities, Status und sichere Befehle.</p><span>UNIVERSAL DEVICE API</span></article><article class="value-card"><div class="icon">⌁</div><h3>Local First</h3><p>Automationen und Hardwarezugriff funktionieren lokal. Cloud ist Erweiterung, nicht Voraussetzung.</p><span>LOCAL-FIRST</span></article><article class="value-card"><div class="icon">⚙</div><h3>Headless</h3><p>Kein Chromium-Kiosk, kein X11/Openbox. Bedienung erfolgt dort, wo Nutzer sie wirklich brauchen.</p><span>LEAN RUNTIME</span></article><article class="value-card"><div class="icon">◎</div><h3>Unified Health</h3><p>Desktop und Mobile verwenden denselben Runtime-Health-Vertrag für Core, Setup, Cloud und Provider.</p><span>ONE SOURCE OF TRUTH</span></article></div></section>
-<section class="section dark-section" id="hardware"><div class="wrap"><div class="section-title"><div><div class="eyebrow">UNIVERSAL RASPBERRY PI IMAGE</div><h2>Ein Image für Pi 3B/3B+, Pi 4/400 und Pi 5.</h2></div><p>Das aktuelle Image wird aus Raspberry Pi OS Lite 64-bit gebaut. Hardware und NetworkManager-Interfaces werden zur Laufzeit erkannt. Pi 3 bleibt konservativ unterstützt, Pi 4/5 sind die bevorzugte Basis für neue Funktionen.</p></div><div class="feature-grid"><article><div class="num">3</div><h3>Pi 3B / 3B+</h3><p>Unterstützte Legacy/Lite-Klasse für lokale Steuerung, Sensorik, Smart Home, Automationen und Cloud-Link.</p><span class="tag amber">SUPPORTED</span></article><article><div class="num">4</div><h3>Pi 4 / 400 / CM4</h3><p>Empfohlene Standardplattform mit voller Runtime, Kamera, mehreren Providern und komfortabler Diagnose.</p><span class="tag lime">FULL SUPPORT</span></article><article><div class="num">5</div><h3>Pi 5 / CM5</h3><p>Performance-Klasse mit zusätzlicher Reserve für größere Installationen und zukünftige rechenintensive Funktionen.</p><span class="tag lime">PERFORMANCE</span></article></div><div class="hero-actions"><a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/HARDWARE_SUPPORT_POLICY.md">Hardware Policy ↗</a></div></div></section>
-<section class="section" id="features"><div class="wrap"><div class="section-title"><div><div class="eyebrow">FEATURES</div><h2>Vom ersten Start bis zum laufenden Grow.</h2></div></div><div class="feature-grid"><article><div class="num">01</div><h3>Sicherer First Boot</h3><p>Setup-AP, WLAN-Handover und eigene Zugangsdaten. Keine bekannten Factory-Passwörter; SSH ist standardmäßig aus.</p><span class="tag cyan">SETUP</span></article><article><div class="num">02</div><h3>Desktop Command Center</h3><p>Klare Tech-Oberfläche für Status, Räume, Geräte, Automationen und Diagnose.</p><span class="tag cyan">DESKTOP</span></article><article><div class="num">03</div><h3>Eigene Mobile GUI</h3><p>Keine verkleinerte Desktop-Seite: touchoptimierte mobile Oberfläche mit iOS-WebKit-Fixes.</p><span class="tag lime">MOBILE</span></article><article><div class="num">04</div><h3>Kamera</h3><p>UVC/Logitech C920, Snapshot und MJPEG mit capability-aware Steuerung.</p><span class="tag amber">CAMERA</span></article><article><div class="num">05</div><h3>Automationen</h3><p>Zeit- und zustandsbasierte Regeln auf Basis einheitlicher Geräte-Capabilities.</p><span class="tag lime">RULES</span></article><article><div class="num">06</div><h3>Diagnose & Runtime Health</h3><p>Einheitlicher Zustand für Core, Provisioning, Cloud und Provider; Diagnostics ohne alte Streaming-Middleware.</p><span class="tag cyan">HEALTH</span></article></div></div></section>
-<section class="section integrations-section" id="integrationen"><div class="wrap"><div class="split-head"><div><div class="eyebrow">GERÄTEÖKOSYSTEM</div><h2>Herstellerübergreifend von Anfang an.</h2></div><p>Grow Central übersetzt Geräte in ein gemeinsames Capability-Modell. Schreibbefehle werden nur dort aktiviert, wo Protokoll und Modell sicher validiert sind.</p></div><div class="integration-grid"><article class="integration-card"><div class="integration-head"><div class="logo-token">FRITZ</div><span class="state local">LOCAL</span></div><h3>AVM FRITZ!</h3><p>Smart-Home-Geräte, Status, Schalten, Leistung und Energie.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">TAPO</div><span class="state local">LOCAL</span></div><h3>TP-Link Tapo</h3><p>Lokale Adapter-Integration und authentifiziertes Onboarding.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">SHELLY</div><span class="state local">LOCAL</span></div><h3>Shelly</h3><p>Lokale Smart-Home-Integration über den gemeinsamen Device-Layer.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">TUYA</div><span class="state local">LOCAL-FIRST</span></div><h3>Tuya / Smart Life</h3><p>Explizites DP-Mapping statt blindem Schreiben; Local-First Provider.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">ZB</div><span class="state hybrid">MQTT</span></div><h3>Zigbee2MQTT</h3><p>Zigbee-Geräte werden über einen nativen Provider in `gc-device-v1` eingebunden.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">MQTT</div><span class="state hybrid">SCHEMA</span></div><h3>Generic MQTT</h3><p>Definiertes Schema für Community-, DIY- und Fremdgeräte mit ACK-pflichtigen Writes.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">ESP32</div><span class="state local">OWN</span></div><h3>Grow Central ESP32</h3><p>Eigene Sensor-/Aktormodule für Boden, Klima und weitere Grow-Messwerte.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">SF</div><span class="state local">BLE</span></div><h3>Spider Farmer GGS</h3><p>Nativer Provider für validierte GGS-BLE-Pfade; unbekannte Befehle bleiben gesperrt.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">MH</div><span class="state guarded">TELEMETRY</span></div><h3>Mars Hydro</h3><p>MarsPro-Telemetrie integriert; Writes bleiben bis zur Modell-/Firmware-Validierung gesperrt.</p></article><article class="integration-card"><div class="integration-head"><div class="logo-token">HA</div><span class="state hybrid">BRIDGE</span></div><h3>Home Assistant</h3><p>Bestehende Installationen können als Integrationsbrücke genutzt werden.</p></article></div></div></section>
-<section class="section architecture-section" id="technik"><div class="wrap architecture-grid"><div class="architecture-copy"><div class="eyebrow">ARCHITEKTUR</div><h2>Headless Runtime + Universal Device Platform.</h2><p>Der Pi ist die lokale Autorität. `gc-device-v1` trennt Herstellerlogik vom Core; ein gemeinsamer Runtime-Health-Vertrag versorgt Desktop und Mobile. Cloud-Link v2 arbeitet authentifiziert, mit Backoff und klaren degraded-Zuständen statt Fehlerschleifen. Die Cloud bleibt optional.</p><div class="principles"><div><b>01</b><span><strong>Headless Appliance</strong><small>Kein lokaler Desktop nötig.</small></span></div><div><b>02</b><span><strong>Provider Layer</strong><small>Hersteller austauschbar integrierbar.</small></span></div><div><b>03</b><span><strong>Safe Writes</strong><small>Nur deklarierte und validierte Capabilities.</small></span></div><div><b>04</b><span><strong>Unified Health</strong><small>Ein Statusmodell für alle Clients.</small></span></div></div></div><div class="architecture-visual"><img src="assets/architecture.svg" alt="Architektur von 135er-Grow Central"></div></div></section>
-<section class="section dark-section" id="release"><div class="wrap"><div class="section-title"><div><div class="eyebrow">RELEASE STATE</div><h2>Build 199 ist der aktuelle veröffentlichte Candidate.</h2></div><p>Build 199 basiert auf Commit <strong>34442bc4</strong>. Python-Tests, Security, Image-Anpassung, Boot, Reboot, Pristine-Check, Komprimierung und Veröffentlichung sind erfolgreich. Der Status bleibt CANDIDATE bis zum realen Hardwaretest.</p></div><div class="feature-grid"><article><div class="num">199</div><h3>Universal Image Candidate</h3><p>alpha-0.7.5 · Raspberry Pi OS Lite 64-bit · headless · noch nicht als Hardware-VALIDATED markiert.</p><span class="tag amber">CANDIDATE</span></article><article><div class="num">1</div><h3>Ein Universal-Image</h3><p>Pi 3B/3B+, Pi 4/400, Pi 5 und kompatible Compute Modules.</p><span class="tag cyan">ONE IMAGE</span></article><article><div class="num">0</div><h3>Kiosk-Abhängigkeiten</h3><p>Chromium, X11, Openbox und startx gehören nicht mehr zur Zielarchitektur.</p><span class="tag lime">HEADLESS</span></article></div><div class="hero-actions"><a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-199">Build 199 Release ↗</a><a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/actions/runs/33276409060/artifacts/9721641763">iOS IPA ↗</a></div></div></section>
-<section class="section" id="faq"><div class="wrap"><div class="section-title"><div><div class="eyebrow">FAQ</div><h2>Häufige Fragen.</h2></div></div><div class="feature-grid"><article><h3>Brauche ich einen Monitor am Pi?</h3><p>Nein. Grow Central ist dauerhaft headless ausgelegt. Du bedienst es über Browser, Smartphone, Tablet oder Mobile-App.</p></article><article><h3>Welche Geräte werden unterstützt?</h3><p>Der Runtime-Layer enthält aktuell u. a. FRITZ!, Tapo, Shelly, Home Assistant, Grow-Central-ESP32, Zigbee2MQTT, Generic MQTT, Tuya Local, Spider Farmer GGS und Mars Hydro Telemetrie.</p></article><article><h3>Ist Cloud zwingend?</h3><p>Nein. Die Kernsteuerung ist Local-First. Eine Cloud-Anbindung kann zusätzliche Remote- und Verwaltungsfunktionen bereitstellen.</p></article><article><h3>Ist Build 199 bereits VALIDATED?</h3><p>Noch nicht. Alle automatisierten Build-/Boot-Gates sind grün; die endgültige Einstufung erfolgt nach dem realen Raspberry-Pi-Hardwaretest.</p></article></div></div></section>
-</main>
-<footer><div class="wrap"><strong>135er-Grow Central</strong><span>Headless · Local First · Universal Device Platform · Desktop + Mobile</span></div></footer>
-<script>const m=document.getElementById('menuToggle'),n=document.getElementById('siteNav');if(m&&n){m.addEventListener('click',()=>{const o=n.classList.toggle('open');m.setAttribute('aria-expanded',String(o));});n.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{n.classList.remove('open');m.setAttribute('aria-expanded','false');}));}</script>
-</body></html>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="wrap nav-wrap">
+      <a class="brand" href="#top">
+        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central">
+      </a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Navigation öffnen" aria-expanded="false">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="Hauptnavigation">
+        <a href="#produkt">Produkt</a>
+        <a href="#vorteile">Vorteile</a>
+        <a href="#funktionen">Funktionen</a>
+        <a href="#integrationen">Integrationen</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#status">Status</a>
+        <a class="nav-cta" href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-grid wrap">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="dot"></span> LOCAL-FIRST GROW AUTOMATION</div>
+          <h1>Eine Zentrale.<br><span>Dein ganzer Grow.</span></h1>
+          <p class="lead">135er-Grow Central führt Geräte, Sensorwerte, Räume und Automationen in einer übersichtlichen Plattform zusammen. Die lokale Raspberry-Pi-Zentrale arbeitet eigenständig – bedient wird sie bequem per Browser, Smartphone oder Tablet.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#produkt">Grow Central entdecken</a>
+            <a class="btn ghost" href="#status">Entwicklungsstatus</a>
+          </div>
+          <div class="trust-row" aria-label="Produktmerkmale">
+            <span>LOCAL FIRST</span>
+            <span>HERSTELLERÜBERGREIFEND</span>
+            <span>DESKTOP + MOBILE</span>
+            <span>OPTIONALE CLOUD</span>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="status-orbit orbit-a"></div>
+          <div class="status-orbit orbit-b"></div>
+          <div class="screen-frame">
+            <div class="screen-top">
+              <span>GROW CENTRAL COMMAND CENTER</span>
+              <span class="live">● LOCAL</span>
+            </div>
+            <img src="assets/gui/local-desktop-v0.9.png" alt="Vorschau der Grow-Central-Benutzeroberfläche">
+          </div>
+          <div class="floating-card fc-one">
+            <small>ENTWICKLUNG</small>
+            <strong>CLOSED PHASE</strong>
+            <span>Produktvalidierung läuft</span>
+          </div>
+          <div class="floating-card fc-two">
+            <small>BEDIENUNG</small>
+            <strong>ÜBERALL IM NETZ</strong>
+            <span>Desktop · Tablet · Mobil</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="signal-bar" aria-label="Plattformüberblick">
+      <div class="wrap signal-grid">
+        <div><small>STEUERUNG</small><strong>Lokal auf dem Pi</strong></div>
+        <div><small>OBERFLÄCHE</small><strong>Responsive</strong></div>
+        <div><small>GERÄTE</small><strong>Eine Plattform</strong></div>
+        <div><small>CLOUD</small><strong>Optional</strong></div>
+      </div>
+    </section>
+
+    <section class="section intro" id="produkt">
+      <div class="wrap split-head">
+        <div>
+          <div class="eyebrow">DAS PRODUKT</div>
+          <h2>Weniger Einzel-Apps. Mehr Überblick.</h2>
+        </div>
+        <p>Grow Central ist als kompakte, dauerhaft laufende Zentrale gedacht. Statt Lampen, Lüfter, Steckdosen, Sensoren und Kameras getrennt zu verwalten, werden die wichtigen Informationen und Abläufe an einem Ort zusammengeführt.</p>
+      </div>
+      <div class="value-grid wrap" id="vorteile">
+        <article class="value-card featured">
+          <div class="icon">⌁</div>
+          <h3>Local First</h3>
+          <p>Die lokale Steuerung bleibt vor Ort verfügbar. Eine Internet- oder Cloud-Verbindung ist für die Kernidee nicht Voraussetzung.</p>
+          <span>LOKALE AUTORITÄT</span>
+        </article>
+        <article class="value-card">
+          <div class="icon">◈</div>
+          <h3>Eine Gerätewelt</h3>
+          <p>Unterschiedliche Hersteller und Übertragungswege werden in einer gemeinsamen Bedienlogik zusammengeführt.</p>
+          <span>EINHEITLICHE BEDIENUNG</span>
+        </article>
+        <article class="value-card">
+          <div class="icon">◎</div>
+          <h3>Überall im Heimnetz</h3>
+          <p>Die Oberfläche ist für Desktop, Tablet und Smartphone ausgelegt. Ein eigener Monitor am Raspberry Pi ist nicht nötig.</p>
+          <span>RESPONSIVE</span>
+        </article>
+        <article class="value-card">
+          <div class="icon">⚙</div>
+          <h3>Automationen</h3>
+          <p>Zeitpläne und Messwerte können später gemeinsam genutzt werden, um wiederkehrende Abläufe zuverlässig zu automatisieren.</p>
+          <span>REGELN & ZEITPLÄNE</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="funktionen">
+      <div class="wrap">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">FUNKTIONEN</div>
+            <h2>Vom Einrichten bis zum täglichen Betrieb.</h2>
+          </div>
+          <p>Der Fokus liegt auf verständlicher Einrichtung, einem klaren Gesamtstatus und Funktionen, die im Alltag wirklich helfen.</p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <div class="num">01</div>
+            <h3>Geführte Einrichtung</h3>
+            <p>Netzwerk und Zugang werden beim ersten Start Schritt für Schritt eingerichtet.</p>
+            <span class="tag cyan">SETUP</span>
+          </article>
+          <article>
+            <div class="num">02</div>
+            <h3>Räume & Grow-Bereiche</h3>
+            <p>Geräte und Messwerte lassen sich strukturiert den jeweiligen Bereichen zuordnen.</p>
+            <span class="tag cyan">ORGANISATION</span>
+          </article>
+          <article>
+            <div class="num">03</div>
+            <h3>Live-Status & Verlauf</h3>
+            <p>Klima, Gerätezustände und wichtige Entwicklungen werden übersichtlich dargestellt.</p>
+            <span class="tag lime">MONITORING</span>
+          </article>
+          <article>
+            <div class="num">04</div>
+            <h3>Zeitpläne & Regeln</h3>
+            <p>Beleuchtung, Lüftung und weitere Abläufe können zeit- oder zustandsabhängig gesteuert werden.</p>
+            <span class="tag lime">AUTOMATION</span>
+          </article>
+          <article>
+            <div class="num">05</div>
+            <h3>Kamera</h3>
+            <p>Geeignete USB-Kameras können für lokale Einblicke und die Dokumentation eingebunden werden.</p>
+            <span class="tag amber">KAMERA</span>
+          </article>
+          <article>
+            <div class="num">06</div>
+            <h3>Systemdiagnose</h3>
+            <p>Ein gemeinsamer Systemstatus hilft dabei, Verbindungen und Komponenten nachvollziehbar zu prüfen.</p>
+            <span class="tag cyan">DIAGNOSE</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section integrations-section" id="integrationen">
+      <div class="wrap">
+        <div class="split-head">
+          <div>
+            <div class="eyebrow">GERÄTEÖKOSYSTEM</div>
+            <h2>Offen für die Geräte, die bereits da sind.</h2>
+          </div>
+          <p>Grow Central wird herstellerübergreifend entwickelt. Der konkrete Funktionsumfang hängt vom jeweiligen Modell, der Firmware und dem Stand der Hardwarevalidierung ab.</p>
+        </div>
+        <div class="integration-grid">
+          <article class="integration-card">
+            <div class="integration-head"><div class="logo-token">HOME</div><span class="state local">LOCAL</span></div>
+            <h3>Smart Home</h3>
+            <p>Integrationspfade für AVM FRITZ!, TP-Link Tapo, Shelly, Tuya / Smart Life und Home Assistant.</p>
+          </article>
+          <article class="integration-card">
+            <div class="integration-head"><div class="logo-token">GROW</div><span class="state guarded">VALIDIERUNG</span></div>
+            <h3>Grow-Hardware</h3>
+            <p>Anbindungen für ausgewählte Geräte und Sensorwege von Mars Hydro und Spider Farmer befinden sich in Entwicklung und Prüfung.</p>
+          </article>
+          <article class="integration-card">
+            <div class="integration-head"><div class="logo-token">MQTT</div><span class="state hybrid">BRIDGE</span></div>
+            <h3>Zigbee & MQTT</h3>
+            <p>Brücken für Zigbee2MQTT und klar definierte MQTT-Geräte erweitern die Plattform um zusätzliche Sensoren und Aktoren.</p>
+          </article>
+          <article class="integration-card">
+            <div class="integration-head"><div class="logo-token">ESP32</div><span class="state local">OPTIONAL</span></div>
+            <h3>Eigene Sensormodule</h3>
+            <p>Optionale ESP32-Module sind für Substratfeuchte, Temperatur, pH, EC und weitere Messwerte vorgesehen.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="hardware">
+      <div class="wrap">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">RASPBERRY PI</div>
+            <h2>Eine Plattform für mehrere Leistungsklassen.</h2>
+          </div>
+          <p>Grow Central erkennt die Hardwareklasse und passt den Betrieb an die verfügbaren Ressourcen an. Für neue Installationen ist ein Raspberry Pi 4 oder 5 vorgesehen.</p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <div class="num">3</div>
+            <h3>Pi 3B / 3B+</h3>
+            <p>Weiterhin als ressourcenschonende Legacy/Lite-Klasse vorgesehen.</p>
+            <span class="tag amber">Legacy/Lite</span>
+          </article>
+          <article>
+            <div class="num">4</div>
+            <h3>Pi 4 / 400 / CM4</h3>
+            <p>Empfohlene Standardplattform für eine ausgewogene Grow-Central-Installation.</p>
+            <span class="tag lime">Full Support</span>
+          </article>
+          <article>
+            <div class="num">5</div>
+            <h3>Pi 5 / CM5</h3>
+            <p>Zusätzliche Leistungsreserve für größere Installationen und künftige Funktionen.</p>
+            <span class="tag lime">PERFORMANCE</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="status">
+      <div class="wrap">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">PROJEKTSTATUS</div>
+            <h2>Aktuell in geschlossener Entwicklungsphase.</h2>
+          </div>
+          <p>Grow Central wird derzeit technisch konsolidiert und auf realer Raspberry-Pi-Hardware validiert. Quellcode, Test-Images, App-Pakete und interne Entwicklungsstände werden bis auf Weiteres nicht öffentlich bereitgestellt.</p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <div class="num">01</div>
+            <h3>Plattformaufbau</h3>
+            <p>Lokale Zentrale, responsive Oberflächen und Geräteintegration werden gemeinsam weiterentwickelt.</p>
+            <span class="tag lime">AKTIV</span>
+          </article>
+          <article>
+            <div class="num">02</div>
+            <h3>Hardwaretests</h3>
+            <p>Ein Build wird erst nach realen Tests auf der jeweiligen Hardwareklasse als validiert eingestuft.</p>
+            <span class="tag amber">IN PRÜFUNG</span>
+          </article>
+          <article>
+            <div class="num">03</div>
+            <h3>Verfügbarkeit</h3>
+            <p>Eine öffentliche Test- oder Produktfreigabe wird zu einem späteren Zeitpunkt gesondert angekündigt.</p>
+            <span class="tag cyan">NOCH NICHT ÖFFENTLICH</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="faq">
+      <div class="wrap">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">FAQ</div>
+            <h2>Häufige Fragen.</h2>
+          </div>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Braucht der Pi einen Monitor?</h3>
+            <p>Nein. Grow Central ist für den Betrieb ohne eigenen Desktop ausgelegt und wird über andere Geräte im Netzwerk bedient.</p>
+          </article>
+          <article>
+            <h3>Funktioniert Grow Central ohne Cloud?</h3>
+            <p>Die Kernidee ist Local First. Eine Cloud kann zusätzliche Fern- und Verwaltungsfunktionen ergänzen, bleibt aber optional.</p>
+          </article>
+          <article>
+            <h3>Sind alle genannten Geräte vollständig unterstützt?</h3>
+            <p>Noch nicht. Der Funktionsumfang hängt von Modell und Firmware ab. Kritische Schreibfunktionen werden erst nach sicherer Validierung freigegeben.</p>
+          </article>
+          <article>
+            <h3>Kann ich Grow Central schon herunterladen?</h3>
+            <p>Derzeit nicht öffentlich. Das Projekt befindet sich in einer geschlossenen Entwicklungs- und Hardwaretestphase.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central">
+        <p>Local-First Steuerung, Monitoring und Automationen für Grow-Umgebungen.</p>
+      </div>
+      <div>
+        <strong>PLATTFORM</strong>
+        <a href="#produkt">Produkt</a>
+        <a href="#funktionen">Funktionen</a>
+        <a href="#hardware">Hardware</a>
+      </div>
+      <div>
+        <strong>PROJEKT</strong>
+        <a href="#status">Status</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div>
+        <strong>ENTWICKLUNG</strong>
+        <span><i class="status-dot"></i>Geschlossene Entwicklungsphase</span>
+        <span>© 2026 135er-Grow Central</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menuToggle');
+    const navigation = document.getElementById('siteNav');
+    if (menuButton && navigation) {
+      menuButton.addEventListener('click', () => {
+        const open = navigation.classList.toggle('open');
+        menuButton.setAttribute('aria-expanded', String(open));
+      });
+      navigation.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+        navigation.classList.remove('open');
+        menuButton.setAttribute('aria-expanded', 'false');
+      }));
+    }
+    const revealTargets = document.querySelectorAll('.value-card,.feature-grid article,.integration-card');
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('reveal');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      revealTargets.forEach((element) => observer.observe(element));
+    } else {
+      revealTargets.forEach((element) => element.classList.add('reveal'));
+    }
+  </script>
+</body>
+</html>

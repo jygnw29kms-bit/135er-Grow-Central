@@ -1,63 +1,56 @@
-# 135er-Grow Central – Product Website
+# 135er-Grow Central – öffentliche Produktseite
 
-Die statische Projektseite unter `website/` ist die öffentliche Produkt- und Marketingseite von **135er-Grow Central**.
+Die statische Seite unter `website/` ist die öffentliche, bewusst reduzierte Produktdarstellung von **135er-Grow Central**.
 
-**Öffentliche URL:** `https://dezender.de/GC/`  
-**Version:** `alpha-0.7.5`  
-**Letzter veröffentlichter Pi-Candidate:** Build 176 / `pi-universal-alpha-0.7.5-176`  
-**Aktueller master:** enthält Post-176-Hardwareprofil-Runtime; nächster Universal-Image-Build erforderlich
+**Öffentliche URL:** `https://dezender.de/GC/`
 
-Kanonische Quellen: [`../RELEASE_STATE.md`](../RELEASE_STATE.md) und [`../docs/HARDWARE_SUPPORT_POLICY.md`](../docs/HARDWARE_SUPPORT_POLICY.md).
+## Kommunikationsziel
 
-## Produktbotschaft
+Die Seite erklärt verständlich:
 
-GrowCentral bleibt eine **Local-First Universal-Raspberry-Pi-Plattform**. Die Website muss die Hardwareklassen überall konsistent kommunizieren:
+- den Local-First-Ansatz;
+- die Raspberry-Pi-Zentrale ohne eigenen Desktop;
+- die Bedienung auf Desktop, Tablet und Smartphone;
+- Räume, Geräte, Messwerte, Kamera, Zeitpläne und Automationen;
+- die herstellerübergreifende Ausrichtung;
+- die Hardwareklassen Pi 3 Legacy/Lite, Pi 4 Full Support und Pi 5 Performance;
+- die gemeinsame Universal-Image-Strategie für die unterstützten Raspberry-Pi-Klassen;
+- die geschlossene Entwicklungs- und Hardwaretestphase.
 
-- Pi 3B/3B+ = **Legacy/Lite**, weiterhin unterstützt;
-- Pi 4/400/CM4 = **Full Support Standard**, empfohlen;
-- Pi 5/CM5 = **Full Support Performance**, optimal für rechenintensive Funktionen;
-- ein **Universal-Image** bleibt Standard;
-- separate Images nur bei technisch zwingend unterschiedlichen Systembasen.
+## Vertraulichkeitsgrenze
 
-Pi 3 darf die Entwicklung neuer Full-Support-Funktionen nicht auf sein Leistungsniveau begrenzen.
+Die öffentliche Seite veröffentlicht ausdrücklich **nicht**:
 
-## Inhalte
+- Repository- oder Quellcode-Links;
+- Buildnummern, Commit-IDs oder Workflow-Run-IDs;
+- Images, App-Pakete oder Installationsskripte;
+- API-Namen, interne Protokolle oder konkrete Betriebsendpunkte;
+- lokale Adressen, Ports, Zugangsdaten, Tokens oder Diagnosedaten;
+- interne Release-, Hardware- oder Architektur-Dokumente.
 
-Die Seite erklärt:
+Hersteller- und Produktnamen beschreiben Integrationspfade. Sie sind keine pauschale Zusage, dass jedes Modell und jede Firmware bereits vollständig unterstützt wird.
 
-- Universal-Image und Runtime-Hardwareerkennung;
-- Hardwareprofile und Produktempfehlungen;
-- First Boot / Captive Portal / Netzwerk / mDNS;
-- Geräte-, Raum- und Grow-Verwaltung;
-- Automationen;
-- FRITZ! Smart Home und Tapo;
-- Logitech C920/UVC mit hardwareabhängigen Capture-Limits;
-- Kiosk/Touch und GrowCentral Nexus UI;
-- Diagnose inkl. erkanntem Modell/Profil;
-- Cloud V7, Entitlements und Local-First-Architektur;
-- aktuellen Release-/Candidate-Status.
+## Öffentliche Dateien
 
-## Release-Kommunikation
+Der Deployment-Workflow veröffentlicht ausschließlich eine feste Positivliste:
 
-Build 176 ist der **letzte veröffentlichte Candidate**. Die Website darf ihn nicht als aktuellen `master` oder `VALIDATED` darstellen. Seit Einführung der Hardwareprofil-Runtime ist ein neuer Universal-Image-Build erforderlich; erst nach erfolgreicher Veröffentlichung wird dessen Buildnummer als neuer Candidate übernommen.
+- `index.html`
+- `styles.css`
+- benötigte Markenbilder;
+- eine ausgewählte, bereits freigegebene GUI-Vorschau.
+
+Alle früher öffentlich abgelegten Installationsskripte, Release-Dateien, Prüfsummen und internen Dokumente werden beim nächsten Deployment aus dem Webverzeichnis entfernt.
 
 ## Deployment
 
-Plesk-Ziel:
+Zielverzeichnis:
 
 ```text
 /var/www/vhosts/dezender.de/httpdocs/GC/
 ```
 
-Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht `website/**` automatisch nach `https://dezender.de/GC/`.
+Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht die Positivliste nach `https://dezender.de/GC/` und bereinigt Dateien, die nicht mehr zu dieser Liste gehören.
 
-## Design und Sicherheit
+## Gestaltung
 
-Die Website folgt dem **GrowCentral Nexus UI**, bleibt read-only und enthält keine lokalen Geräte-Credentials, Pi-Passwörter, LAN-Steuerendpunkte oder Smart-Home-Tokens.
-
-## Lokale Vorschau
-
-```bash
-cd website
-python3 -m http.server 8000
-```
+Branding, Logo und Wiedererkennungswert von **135er-Grow Central** bleiben unverändert. Die Seite folgt weiterhin dem GrowCentral Nexus UI, konzentriert sich jedoch auf Produktnutzen statt auf interne Implementierungsdetails.

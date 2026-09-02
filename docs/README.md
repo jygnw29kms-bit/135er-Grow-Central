@@ -3,7 +3,7 @@
 <p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
 
 > [!IMPORTANT]
-> GrowCentral verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Der letzte veröffentlichte Candidate ist Build 176; aktueller `master` enthält bereits Post-176-Hardwareprofil-Runtime und benötigt einen neuen Image-Build.
+> Grow Central verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Build 199 ist der aktuelle `alpha-0.7.5` Candidate. Die automatisierten Gates sind bestanden; reale Hardwarevalidierung steht noch aus. Neue Artefakte werden geschlossen verteilt.
 
 ## Zuerst lesen
 
@@ -30,13 +30,13 @@ Neue Features dürfen nicht durch die Leistungsgrenzen des Pi 3 begrenzt werden.
 
 ## Aktueller Testfokus
 
-- nächster Post-176 Universal-Image-Build;
+- reale Hardwarevalidierung von Build 199;
 - automatische Hardwareklassifikation und Diagnoseausgabe;
 - Pi-3-Legacy/Lite-Ressourcenprofil;
 - Pi-4/5-Full-Support-Pfad;
 - First Boot / LAN / WLAN / AP / Persistenz;
 - Logitech C920/UVC mit hardwareabhängigen Auflösungsgrenzen;
-- Elecrow Touch-Kiosk;
+- stabiler headless Betrieb;
 - FRITZ!/Tapo;
 - Cloud V7 und Entitlements;
 - Support-/Diagnosepfade.

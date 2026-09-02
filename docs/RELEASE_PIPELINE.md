@@ -1,6 +1,6 @@
 # Release-Pipeline – 135er-Grow Central
 
-**Stand:** 2026-08-29  
+**Stand:** 2026-09-02
 **Kanonische Quellen:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md), [`HARDWARE_SUPPORT_POLICY.md`](HARDWARE_SUPPORT_POLICY.md)
 
 ## Grundsatz
@@ -29,10 +29,11 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 ## Aktueller Stand
 
 - Version: `alpha-0.7.5`
-- letzter veröffentlichter Candidate: **Build 176** / `pi-universal-alpha-0.7.5-176`
-- Build 176: `CANDIDATE`, noch nicht hardwarevalidiert
-- aktueller `master`: enthält Post-176-Hardwareprofil-Runtime
-- Konsequenz: **neuer Universal-Image-Build erforderlich**; erst dessen erfolgreicher Release wird neuer Candidate
+- aktueller Candidate: **Build 199** / `pi-universal-alpha-0.7.5-199`
+- Candidate-Commit: `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
+- Build 199: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
+- reale, klassenbezogene Hardwarevalidierung steht noch aus
+- neue Releases und Artefakte werden bis auf Weiteres geschlossen verteilt
 
 ## Verbindliche Release-Gates
 
@@ -40,11 +41,11 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 2. Python-, Security-, Hardwareprofil-, Integrations- und Release-Guards ausführen.
 3. Universal-Image aus exakt diesem Runtime-Stand bauen.
 4. Boot/Reboot/Pristine/Packaging/Checksum/Release erfolgreich.
-5. neuen Build als `CANDIDATE` veröffentlichen.
+5. neuen Build intern als `CANDIDATE` bereitstellen.
 6. Realtest mindestens auf der Full-Support-Referenzklasse Pi 4/400 durchführen.
 7. Pi-3-Legacy/Lite separat prüfen und Abweichungen separat klassifizieren.
 8. Pi 5/Performance separat validieren, sofern Zielhardware verfügbar.
-9. First Boot, Netzwerk, mDNS, GUI/Auth/Persistenz, Kiosk, Kamera, Cloud und Diagnose prüfen.
+9. First Boot, Netzwerk, mDNS, GUI/Auth/Persistenz, Kamera, Cloud und Diagnose prüfen.
 10. Website, README und kanonische Doku auf exakt denselben Stand synchronisieren.
 11. `VALIDATED` nur für real bestätigte Supportklassen vergeben.
 
@@ -62,11 +63,11 @@ Android und iOS bleiben WebGUI-Clients; Hardwareklassifikation und Geräteautori
 
 ### Cloud / APT
 
-Cloud V7 bleibt optional. Plesk-/Standalone-Varianten, Entitlements und APT-Upgrades sind unabhängig von der lokalen Hardwareklasse; die Pi-Seite kann ihre effektiven Fähigkeiten und Hardwareprofile an Diagnose-/Supportpfade melden.
+Die Cloud bleibt optional. Plesk-/Standalone-Varianten, Entitlements und APT-Upgrades sind unabhängig von der lokalen Hardwareklasse; die Pi-Seite kann ihre effektiven Fähigkeiten und Hardwareprofile an Diagnose-/Supportpfade melden.
 
 ### Website
 
-`https://dezender.de/GC/` muss immer dieselbe Hardwarestrategie und denselben Candidate-Status wie `RELEASE_STATE.md` kommunizieren.
+`https://dezender.de/GC/` kommuniziert Produktnutzen, Hardwarestrategie und die geschlossene Entwicklungsphase. Konkrete Buildnummern, Commit-IDs, Downloadlinks, Installationsskripte und interne Betriebsdetails bleiben ausschließlich in der privaten Projektdokumentation.
 
 ## Historische Dokumente
 

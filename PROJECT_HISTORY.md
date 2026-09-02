@@ -60,12 +60,20 @@ Das Universal-Image bleibt Standard. Separate Images werden nur eingeführt, wen
 
 Die zentrale Runtime-Quelle ist `shared/hardware_profile.py`. Die Diagnose weist Modell und Profil aus; CI testet die Supportklassen. Die verbindliche Policy steht in [`docs/HARDWARE_SUPPORT_POLICY.md`](docs/HARDWARE_SUPPORT_POLICY.md).
 
-## 11. Nächster Meilenstein
+## 11. Build 199 und dauerhafte Headless-Architektur
 
-Da die Hardwareprofil-Runtime nach Build 176 in `master` integriert wurde, ist ein neuer Universal-Image-Build erforderlich. Dieser nächste erfolgreiche Build wird neuer Hardware-Testkandidat. Die reale Validierung wird getrennt nach Legacy/Lite und Full-Support-Klassen protokolliert.
+Build 199 ist der aktuelle `alpha-0.7.5` Hardwaretest-Candidate. Er enthält die Hardwareprofil-Runtime, den dauerhaft headless ausgelegten Appliance-Betrieb, die aktuelle Desktop-/Mobile-Oberfläche und die gehärtete Ersteinrichtung ohne bekannte Factory-Passwörter. Die automatisierten Image-, Boot-, Reboot-, Pristine-, Packaging- und Release-Gates sind erfolgreich. Die reale Hardwarevalidierung steht noch aus.
+
+## 12. Geschlossene Entwicklungsphase
+
+Seit dem 2. September 2026 werden Quellcode, neue Builds, Images, App-Pakete, Installationsskripte und interne technische Dokumente nicht mehr öffentlich verteilt. Die öffentliche Projektseite beschreibt Produktnutzen, Geräteklassen und Entwicklungsstatus, ohne interne Downloads oder Implementierungsdetails offenzulegen.
+
+## 13. Nächster Meilenstein
+
+Build 199 wird auf realer Raspberry-Pi-Hardware geprüft. Die Validierung wird getrennt nach Legacy/Lite und Full-Support-Klassen protokolliert; erst danach erhält die jeweils bestätigte Klasse den Status `VALIDATED`.
 
 ---
 
 ## English summary
 
-GrowCentral evolved into a local-first Raspberry Pi automation platform with one universal image. Raspberry Pi 3B/3B+ remains supported as **Legacy/Lite**, while Pi 4/400 and Pi 5 define **Full Support** for future features. Build 176 is the last published candidate before the runtime hardware-profile architecture; the next successful universal-image build from current master becomes the next hardware-test candidate.
+Grow Central evolved into a local-first Raspberry Pi automation platform with one universal image. Raspberry Pi 3B/3B+ remains supported as **Legacy/Lite**, while Pi 4/400 and Pi 5 define **Full Support** for future features. Build 199 is the current `alpha-0.7.5` hardware-test candidate. Automated gates passed; physical validation is pending. Development and distribution are now closed.
