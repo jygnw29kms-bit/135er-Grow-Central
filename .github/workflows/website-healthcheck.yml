@@ -1,0 +1,100 @@
+name: Verify public GrowCentral website
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_run:
+    workflows:
+      - 'Deploy Website to dezender.de/GC via SFTP'
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: growcentral-public-website-health
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: HTTP and deployment consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Verify /GC is publicly reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-delay 2 \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -D live-headers.txt \
+            -o live-index.html \
+            https://dezender.de/GC/
+
+          test -s live-index.html
+          grep -Fq '135er-Grow Central · Local-First Grow Automation' live-index.html
+          grep -Fq 'LOCAL-FIRST GROW AUTOMATION' live-index.html
+          grep -Fq 'CLOSED PHASE' live-index.html
+
+      - name: Verify deployed index matches repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(sha256sum website/index.html | awk '{print $1}')"
+          actual="$(sha256sum live-index.html | awk '{print $1}')"
+          echo "repository_index_sha256=$expected"
+          echo "live_index_sha256=$actual"
+          test "$expected" = "$actual"
+
+      - name: Verify deployed stylesheet matches repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-delay 2 \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -o live-styles.css \
+            'https://dezender.de/GC/styles.css?v=4.0.0'
+
+          expected="$(sha256sum website/styles.css | awk '{print $1}')"
+          actual="$(sha256sum live-styles.css | awk '{print $1}')"
+          echo "repository_styles_sha256=$expected"
+          echo "live_styles_sha256=$actual"
+          test "$expected" = "$actual"
+
+      - name: Verify response security baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -L -sS -o /dev/null -w '%{http_code}' --max-time 30 https://dezender.de/GC/)"
+          echo "http_status=$status"
+          test "$status" = '200'
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## GrowCentral public website check'
+            echo
+            echo '- Target: https://dezender.de/GC/'
+            echo '- Checks: HTTP reachability, product markers, index SHA-256, stylesheet SHA-256'
+            echo '- Source: current repository checkout'
+          } >> "$GITHUB_STEP_SUMMARY"
