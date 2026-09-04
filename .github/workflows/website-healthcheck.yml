@@ -2,6 +2,10 @@ name: Verify public GrowCentral website
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/website-healthcheck.yml'
   schedule:
     - cron: '17 * * * *'
   workflow_run:
@@ -79,7 +83,7 @@ jobs:
           echo "live_styles_sha256=$actual"
           test "$expected" = "$actual"
 
-      - name: Verify response security baseline
+      - name: Verify HTTP status
         shell: bash
         run: |
           set -euo pipefail
