@@ -1,0 +1,34 @@
+name: Build Dyson V11 BMS Pi3 Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'standalone/dyson-v11-bms-pi3-image-builder/**'
+      - '.github/workflows/dyson-v11-bms-pi3-image.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git coreutils quilt parted qemu-user-static debootstrap zerofree zip dosfstools libarchive-tools pigz xz-utils
+      - name: Build bootable Raspberry Pi 3 image
+        working-directory: standalone/dyson-v11-bms-pi3-image-builder
+        run: |
+          chmod +x build.sh stage-dyson/00-install-packages/01-run.sh
+          ./build.sh
+      - name: List artifacts
+        run: ls -lh standalone/dyson-v11-bms-pi3-image-builder/deploy/
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dyson-v11-bms-pi3-image
+          path: standalone/dyson-v11-bms-pi3-image-builder/deploy/*
+          if-no-files-found: error
+          retention-days: 14
