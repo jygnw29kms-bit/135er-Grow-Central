@@ -1,0 +1,79 @@
+name: Deploy Dyson V11 BMS APT repo to dezender.de
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'standalone/dyson-v11-bms-apt-deploy/**'
+      - '.github/workflows/deploy-dyson-v11-bms-apt-sftp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: SFTP Deploy Dyson V11 BMS APT repo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Recreate and verify deployment payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d standalone/dyson-v11-bms-apt-deploy/payload.tar.gz.b64 > /tmp/dyson-v11-bms-site.tar.gz
+          echo '6de22b3cd9e1d70b2f1917371564b70e5508e9d9f4f19d959dfcd09328cd601e  /tmp/dyson-v11-bms-site.tar.gz' | sha256sum -c -
+          mkdir -p public-dyson
+          tar -xzf /tmp/dyson-v11-bms-site.tar.gz -C public-dyson --strip-components=1
+
+          test -f public-dyson/install.sh
+          test -f public-dyson/repo-key.asc
+          test -f public-dyson/apt/dists/stable/InRelease
+          test -f public-dyson/apt/dists/stable/Release
+          test -f public-dyson/apt/dists/stable/Release.gpg
+          test -f public-dyson/apt/dists/stable/main/binary-armhf/Packages
+          test -f public-dyson/apt/dists/stable/main/binary-arm64/Packages
+          test -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb
+
+          bash -n public-dyson/install.sh
+          echo '7562b94fb0e35000918d615dce66387c90afe9ff573dbe7311ccdad2ea750012  public-dyson/install.sh' | sha256sum -c -
+          echo '3b8f912f2ac68e348bcc0620d2ad24e2b7523ee568e4bddc6c9fc808e00c313f  public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb' | sha256sum -c -
+
+          dpkg-deb --info public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb >/dev/null
+          grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
+          grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-arm64/Packages
+
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          gpg --batch --import public-dyson/repo-key.asc
+          gpg --batch --verify public-dyson/apt/dists/stable/Release.gpg public-dyson/apt/dists/stable/Release
+          gpg --batch --verify public-dyson/apt/dists/stable/InRelease
+          rm -rf "$GNUPGHOME"
+
+      - name: Deploy to /dyson-v11-bms
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './public-dyson/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/'
+          delete_remote_files: true
+
+      - name: Verify public URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://dezender.de/dyson-v11-bms/install.sh -o /tmp/install.sh; then
+              break
+            fi
+            sleep 5
+          done
+          bash -n /tmp/install.sh
+          curl -fsSI https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
+          curl -fsSI https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
+          curl -fsSI https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb >/dev/null
+          echo 'Dyson V11 BMS APT repository deployed successfully.'
