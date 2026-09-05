@@ -1,4 +1,4 @@
-name: Deploy Dyson V11 BMS APT repo to dezender.de
+name: Deploy Dyson Service Center APT repo to dezender.de
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: SFTP Deploy Dyson V11 BMS APT repo
+    name: SFTP Deploy Dyson Service Center APT repo
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           base64 -d standalone/dyson-v11-bms-apt-deploy/payload.tar.gz.b64 > /tmp/dyson-v11-bms-site.tar.gz
-          echo '6de22b3cd9e1d70b2f1917371564b70e5508e9d9f4f19d959dfcd09328cd601e  /tmp/dyson-v11-bms-site.tar.gz' | sha256sum -c -
+          echo '38dca40e2672eda0f30bb6027e07a7a51de153c3f59e47c4a7b9f193f8f3ba8f  /tmp/dyson-v11-bms-site.tar.gz' | sha256sum -c -
           mkdir -p public-dyson
           tar -xzf /tmp/dyson-v11-bms-site.tar.gz -C public-dyson --strip-components=1
 
@@ -74,21 +74,23 @@ jobs:
           test -f public-dyson/apt/dists/stable/Release.gpg
           test -f public-dyson/apt/dists/stable/main/binary-armhf/Packages
           test -f public-dyson/apt/dists/stable/main/binary-arm64/Packages
-          test -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb
+          test -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb
 
           bash -n public-dyson/install.sh
-          echo '3b8f912f2ac68e348bcc0620d2ad24e2b7523ee568e4bddc6c9fc808e00c313f  public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb' | sha256sum -c -
+          echo 'ba383628a6b8ff3a51c03f0c682294cbbaf500fad72071e2f6c550708cd80b61  public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb' | sha256sum -c -
 
-          dpkg-deb --info public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb >/dev/null
-          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Package)" = "dyson-v11-bms"
-          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Architecture)" = "all"
-          dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Depends | grep -q 'python3'
-          dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Depends | grep -q 'python3-flask'
-          dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Depends | grep -q 'can-utils'
-          dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb Depends | grep -q 'iproute2'
+          dpkg-deb --info public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
+          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Package)" = "dyson-v11-bms"
+          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Version)" = "0.2.0-1"
+          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Architecture)" = "all"
+          for dep in python3 python3-flask can-utils iproute2 openocd git cmake make gcc-arm-none-eabi; do
+            dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Depends | grep -q "$dep"
+          done
 
           grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
+          grep -q '^Version: 0.2.0-1$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
           grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-arm64/Packages
+          grep -q '^Version: 0.2.0-1$' public-dyson/apt/dists/stable/main/binary-arm64/Packages
 
           GNUPGHOME="$(mktemp -d)"
           export GNUPGHOME
@@ -121,5 +123,5 @@ jobs:
           grep -q 'apt install dyson-v11-bms' /tmp/install.sh
           curl -fsSI https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
           curl -fsSI https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
-          curl -fsSI https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.1.0-1_all.deb >/dev/null
-          echo 'Dyson V11 BMS APT repository deployed successfully.'
+          curl -fsSI https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
+          echo '135er Dyson Service Center APT repository deployed successfully.'
