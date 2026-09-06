@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#05080d">
+  <meta name="description" content="135er God’s Eye – Windows Desktop Client für eine interaktive Echtzeit-Weltansicht mit Flugverkehr, Satelliten, Schiffen, Erdbeben, CCTV und optionaler KI-Sprachsteuerung.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://dezender.de/GC/godseye/">
+  <title>135er God’s Eye · Windows Intelligence Console</title>
+  <style>
+    :root{--bg:#05080d;--panel:#0b1119;--panel2:#101923;--line:#1d3140;--text:#eaf7ff;--muted:#8ea7b7;--accent:#66f7ff;--accent2:#59ffa1;--danger:#ff5d73;--shadow:0 24px 70px rgba(0,0,0,.45)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 70% 10%,rgba(26,93,112,.22),transparent 36%),linear-gradient(180deg,#04070b,#071019 50%,#04070b);color:var(--text);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.14;background-image:linear-gradient(rgba(102,247,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(102,247,255,.06) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 80%)}
+    a{color:inherit}.wrap{width:min(1180px,calc(100% - 36px));margin:auto}.top{display:flex;justify-content:space-between;align-items:center;padding:22px 0;position:relative;z-index:2}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:.06em}.mark{width:42px;height:42px;border:1px solid var(--accent);border-radius:11px;display:grid;place-items:center;color:var(--accent);box-shadow:0 0 32px rgba(102,247,255,.16) inset}.mark b{font-size:13px}.brand small{display:block;color:var(--muted);font-weight:600;letter-spacing:.12em;font-size:10px}.nav{display:flex;gap:20px}.nav a{text-decoration:none;color:var(--muted);font-size:14px}.nav a:hover{color:var(--accent)}
+    .hero{padding:82px 0 54px;display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center}.eyebrow{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}.hero h1{font-size:clamp(48px,7vw,90px);line-height:.92;margin:16px 0 24px;letter-spacing:-.055em}.hero h1 span{display:block;color:transparent;-webkit-text-stroke:1px #bdfcff;text-shadow:0 0 30px rgba(102,247,255,.12)}.lead{font-size:clamp(18px,2.1vw,24px);color:#b7cbd7;max-width:770px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 18px;border-radius:10px;text-decoration:none;font-weight:800;font-size:14px;border:1px solid var(--line);background:#0d151e}.btn.primary{color:#021015;background:linear-gradient(135deg,var(--accent),var(--accent2));border:0}.btn:hover{transform:translateY(-1px)}
+    .hud{position:relative;border:1px solid #1c3c49;border-radius:22px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(38,148,169,.23),transparent 32%),linear-gradient(145deg,#07111a,#05090e);box-shadow:var(--shadow);overflow:hidden}.hud:before,.hud:after{content:"";position:absolute;left:50%;top:50%;border:1px solid rgba(102,247,255,.18);border-radius:50%;transform:translate(-50%,-50%)}.hud:before{width:260px;height:260px}.hud:after{width:340px;height:340px}.globe{position:absolute;width:210px;height:210px;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(102,247,255,.5);box-shadow:0 0 60px rgba(102,247,255,.16),inset -32px -24px 55px rgba(0,0,0,.8);background:radial-gradient(circle at 32% 30%,rgba(89,255,161,.16),transparent 15%),repeating-linear-gradient(12deg,transparent 0 20px,rgba(102,247,255,.07) 21px),repeating-linear-gradient(90deg,transparent 0 26px,rgba(102,247,255,.06) 27px)}.scan{position:absolute;left:0;right:0;top:47%;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 14px var(--accent);animation:scan 4s ease-in-out infinite}@keyframes scan{0%,100%{transform:translateY(-130px);opacity:.15}50%{transform:translateY(130px);opacity:1}}.tag{position:absolute;padding:7px 9px;border:1px solid #234b5c;border-radius:7px;background:rgba(5,11,17,.82);font:700 10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#9eeff5;letter-spacing:.08em}.t1{left:22px;top:22px}.t2{right:22px;top:78px}.t3{left:28px;bottom:72px}.t4{right:25px;bottom:24px}.cross{position:absolute;left:50%;top:50%;width:28px;height:28px;transform:translate(-50%,-50%)}.cross:before,.cross:after{content:"";position:absolute;background:var(--accent)}.cross:before{width:28px;height:1px;top:13px}.cross:after{height:28px;width:1px;left:13px}
+    .statusbar{margin-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.status{padding:12px 14px;border:1px solid #18313f;border-radius:10px;background:rgba(8,15,22,.72)}.status small{display:block;color:#6d8899;text-transform:uppercase;font-size:9px;letter-spacing:.15em}.status b{font:800 13px ui-monospace,monospace;color:#c8faff}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px var(--accent2);margin-right:6px}
+    section{padding:72px 0}.section-title{max-width:780px;margin-bottom:28px}.section-title h2{font-size:clamp(32px,5vw,54px);line-height:1;margin:8px 0 14px;letter-spacing:-.04em}.section-title p{color:var(--muted);font-size:18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{padding:22px;border:1px solid #182d3a;border-radius:14px;background:linear-gradient(160deg,rgba(15,27,38,.92),rgba(7,12,18,.92));min-height:190px}.card .num{font:800 11px ui-monospace,monospace;color:var(--accent);letter-spacing:.14em}.card h3{margin:24px 0 8px;font-size:20px}.card p{margin:0;color:var(--muted)}
+    .win{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{padding:28px;border:1px solid #1b3342;border-radius:16px;background:#081019}.panel h3{margin:0 0 16px;font-size:25px}.list{display:grid;gap:10px}.item{display:flex;gap:10px;color:#afc4d0}.check{color:var(--accent2);font-weight:900}.code{font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;background:#03070a;border:1px solid #153142;border-radius:12px;padding:18px;color:#9eeff5;overflow:auto}.code .dim{color:#557383}.notice{margin-top:18px;padding:16px;border-left:3px solid var(--accent);background:#09151e;color:#9eb6c4}.legal{font-size:13px;color:#6f8796;padding:32px 0 50px;border-top:1px solid #122633}.legal a{color:#9eb6c4}.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #214052;background:#09131c;border-radius:999px;padding:8px 11px;color:#a7bfcb;font-size:12px}.badge i{width:7px;height:7px;background:var(--accent2);border-radius:50%;box-shadow:0 0 10px var(--accent2)}
+    @media(max-width:900px){.hero,.win{grid-template-columns:1fr}.hero{padding-top:45px}.hud{min-height:360px}.grid{grid-template-columns:1fr 1fr}.nav{display:none}.statusbar{grid-template-columns:1fr 1fr}}@media(max-width:620px){.wrap{width:min(100% - 24px,1180px)}.grid{grid-template-columns:1fr}.hero h1{font-size:52px}.statusbar{grid-template-columns:1fr 1fr}.hud{min-height:320px}.globe{width:170px;height:170px}.hud:before{width:220px;height:220px}.hud:after{width:280px;height:280px}}
+  </style>
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/GC/"><span class="mark"><b>135</b></span><span>135er GOD’S EYE<small>WINDOWS INTELLIGENCE CONSOLE</small></span></a>
+    <nav class="nav"><a href="#features">Features</a><a href="#windows">Windows</a><a href="#status">Status</a><a href="/GC/">Grow Central</a></nav>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <div class="eyebrow">135er Experimental Systems · Windows x64</div>
+        <h1>GOD’S <span>EYE</span></h1>
+        <p class="lead">Eine Windows-Desktop-Ausgabe von God’s Eye View: interaktiver 3D-Globus, öffentliche Echtzeitdaten und optional KI-gestützte Sprachsteuerung – verpackt als einfach startbare 135er-Anwendung.</p>
+        <div class="actions"><a class="btn primary" href="#windows">Windows Build ansehen</a><a class="btn" href="https://github.com/bilawalsidhu/gods-eye-view" rel="noopener noreferrer">Upstream auf GitHub</a></div>
+        <p style="margin-top:18px"><span class="badge"><i></i>135er Windows Wrapper · Preview</span></p>
+      </div>
+      <div>
+        <div class="hud" aria-label="Stilisierte God’s-Eye-Konsole">
+          <div class="globe"></div><div class="scan"></div><div class="cross"></div>
+          <div class="tag t1">AIR // LIVE</div><div class="tag t2">SAT // ORBIT</div><div class="tag t3">AIS // MARITIME</div><div class="tag t4">SEISMIC // USGS</div>
+        </div>
+        <div class="statusbar" id="status">
+          <div class="status"><small>Platform</small><b>WINDOWS x64</b></div>
+          <div class="status"><small>Wrapper</small><b>135er v0.2</b></div>
+          <div class="status"><small>Mode</small><b><span class="dot"></span>LOCAL</b></div>
+          <div class="status"><small>Channel</small><b>PREVIEW</b></div>
+        </div>
+      </div>
+    </div>
+
+    <section id="features"><div class="wrap">
+      <div class="section-title"><div class="eyebrow">Live Layers</div><h2>Eine Welt. Viele Datenebenen.</h2><p>Der Windows-Client kapselt die Web-Anwendung als Desktop-App und hält die eigentlichen Datenquellen modular.</p></div>
+      <div class="grid">
+        <article class="card"><div class="num">01 // ADS-B</div><h3>Flugverkehr</h3><p>Zivile und öffentlich sichtbare militärische Flugbewegungen aus unterstützten ADS-B-Quellen.</p></article>
+        <article class="card"><div class="num">02 // ORBIT</div><h3>Satelliten</h3><p>Satellitenpositionen und Orbitaldarstellung auf Basis öffentlich verfügbarer Bahndaten.</p></article>
+        <article class="card"><div class="num">03 // AIS</div><h3>Schiffsverkehr</h3><p>Optionale AIS-Live-Daten für maritime Bewegungen und Objektverfolgung.</p></article>
+        <article class="card"><div class="num">04 // USGS</div><h3>Erdbeben</h3><p>Aktuelle seismische Ereignisse und geographische Darstellung auf dem 3D-Globus.</p></article>
+        <article class="card"><div class="num">05 // CCTV</div><h3>Öffentliche Kameras</h3><p>Unterstützte, öffentlich bereitgestellte Kameraquellen können als Kartenebene eingebunden werden.</p></article>
+        <article class="card"><div class="num">06 // AI</div><h3>Voice / AI</h3><p>Optionaler OpenAI-Realtime-Zugang für sprachgesteuerte Kartenfunktionen und Navigation.</p></article>
+      </div>
+    </div></section>
+
+    <section id="windows"><div class="wrap">
+      <div class="section-title"><div class="eyebrow">135er Windows Edition</div><h2>Doppelklick statt Terminal.</h2><p>Ziel des Wrappers ist eine normale Windows-Anwendung mit Installer und Portable-Build – ohne manuelle Git- oder Node-Einrichtung für den Anwender.</p></div>
+      <div class="win">
+        <div class="panel"><h3>Windows-Paket</h3><div class="list">
+          <div class="item"><span class="check">✓</span><span>Desktop-App auf Electron-Basis</span></div>
+          <div class="item"><span class="check">✓</span><span>Windows 10/11 x64</span></div>
+          <div class="item"><span class="check">✓</span><span>NSIS-Installer + Portable-Ziel</span></div>
+          <div class="item"><span class="check">✓</span><span>Lokaler Dienst auf 127.0.0.1</span></div>
+          <div class="item"><span class="check">✓</span><span>Ersteinrichtung für optionale API-Keys</span></div>
+          <div class="item"><span class="check">✓</span><span>135er Branding und eigene App-ID</span></div>
+        </div><div class="notice">Der fertige signierte Download wird hier ergänzt, sobald der Windows-Build als Release-Artefakt bereitgestellt ist.</div></div>
+        <div class="panel"><h3>Build-Ziel</h3><div class="code"><span class="dim"># Ausgabe</span><br>135er-GodsEye-Setup-x64.exe<br>135er-GodsEye-Portable-x64.exe<br><br><span class="dim"># Anwendung</span><br>Product: 135er God’s Eye<br>App ID: de.135er.godseye<br>Runtime: Electron + Vite/Cesium<br>Scope: Local Desktop Wrapper</div><div class="notice">API-Schlüssel sind optional und werden nicht Bestandteil dieser Website.</div></div>
+      </div>
+    </div></section>
+  </main>
+
+  <footer class="wrap legal">
+    <strong>135er God’s Eye</strong> ist ein separates experimentelles 135er-Projekt und nicht Teil von 135er-Grow Central. Es basiert als Windows-Wrapper auf dem Open-Source-Projekt <a href="https://github.com/bilawalsidhu/gods-eye-view" rel="noopener noreferrer">God’s Eye View von Bilawal Sidhu</a>. Marken-, Urheber- und Lizenzhinweise des Upstream-Projekts bleiben erhalten. Datenquellen können eigenen Nutzungsbedingungen unterliegen.<br><br>
+    <a href="/impressum.html">Impressum</a> · <a href="/datenschutz.html">Datenschutz</a> · <a href="/GC/">135er-Grow Central</a>
+  </footer>
+</body>
+</html>
