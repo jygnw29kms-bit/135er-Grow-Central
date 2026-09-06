@@ -1,0 +1,62 @@
+name: Deploy 135er Gods Eye Web App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/deploy-godseye-web.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy /godseye
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+
+      - name: Build current Gods Eye View upstream
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/bilawalsidhu/gods-eye-view.git gods-eye-upstream
+          cd gods-eye-upstream
+          npm ci
+          npm run build -- --base=/godseye/
+          cd ..
+
+      - name: Apply 135er web branding and preserve upstream license
+        run: |
+          set -euo pipefail
+          cp gods-eye-upstream/LICENSE gods-eye-upstream/dist/UPSTREAM-LICENSE.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('gods-eye-upstream/dist/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("<title>God's Eye View</title>", "<title>135er God's Eye</title>")
+          s = s.replace('<title>God’s Eye View</title>', '<title>135er God’s Eye</title>')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Deploy Gods Eye web app to independent webroot
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './gods-eye-upstream/dist/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/godseye/'
+          delete_remote_files: true
+
+      - name: Deployment information
+        run: |
+          echo '135er Gods Eye deployed independently to https://dezender.de/godseye/'
+          echo 'This deployment has no /GC path dependency.'
+          echo 'Server-side upstream /api proxy features still require a separate backend service.'
