@@ -94,7 +94,7 @@ jobs:
           (cd dist/cloud-apt-v7 && sha256sum 135ercloud-server-install.sh bootstrap-standalone-cloud-core.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh configure-v7-routing.sh cloud-v7/admin_app.py RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
 
       - name: Upload Cloud/APT V7 bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: GrowCentral-CloudV7-APT-Candidate
           path: dist/cloud-apt-v7/
