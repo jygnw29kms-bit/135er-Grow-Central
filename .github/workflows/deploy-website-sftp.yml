@@ -13,11 +13,25 @@ permissions:
 
 jobs:
   deploy:
-    name: SFTP Deploy /GC and root redirect
+    name: SFTP Deploy /GC and Gods Eye Web App
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout 135er repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js for Gods Eye
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+
+      - name: Build Gods Eye browser application
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/bilawalsidhu/gods-eye-view.git upstream-gods-eye
+          cd upstream-gods-eye
+          npm ci
+          npm run build -- --base=/GC/godseye/
+          cd ..
 
       - name: Prepare public website allowlist
         run: |
@@ -32,10 +46,22 @@ jobs:
           cp website/styles.css public-site/styles.css
           cp website/impressum.html public-site/impressum.html
           cp website/datenschutz.html public-site/datenschutz.html
-          cp website/godseye/index.html public-site/godseye/index.html
           cp website/assets/brand/135er-grow-central-lockup-v0.9.png public-site/assets/brand/
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
+
+          rm -rf public-site/godseye/*
+          cp -R upstream-gods-eye/dist/. public-site/godseye/
+          cp upstream-gods-eye/LICENSE public-site/godseye/UPSTREAM-LICENSE.txt
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('public-site/godseye/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('<title>God\'s Eye View</title>', '<title>135er God\'s Eye</title>')
+          s = s.replace('<title>God’s Eye View</title>', '<title>135er God’s Eye</title>')
+          p.write_text(s, encoding='utf-8')
+          PY
 
           python3 - <<'PY'
           from pathlib import Path
@@ -81,7 +107,7 @@ jobs:
           </html>
           EOF
 
-      - name: Deploy public project website to /GC
+      - name: Deploy public website and Gods Eye web app to /GC
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
@@ -104,6 +130,5 @@ jobs:
       - name: Deployment information
         run: |
           echo '135er-Grow Central website deployed to https://dezender.de/GC/'
-          echo '135er Gods Eye page deployed to https://dezender.de/GC/godseye/'
-          echo 'https://dezender.de/ redirects to /GC/'
-          echo 'Imprint and privacy notice are available on both root and /GC paths'
+          echo 'Runnable Gods Eye browser app deployed to https://dezender.de/GC/godseye/'
+          echo 'Note: server-side /api proxies from the upstream Vite runtime require a separate Node service for full live-layer parity.'
