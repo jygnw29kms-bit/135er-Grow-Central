@@ -67,9 +67,16 @@ This directory is standalone and has no runtime dependency on Grow-Central.
 curl -fsSL https://dezender.de/dyson-v11-bms/install.sh | sudo bash
 ```
 
-Existing installations can receive the same checksum-verified current package
-with:
+Existing 0.2/0.3 installations must run the checksum-verified migration once
+to install the current repository key and APT source:
 
 ```bash
 curl -fsSL https://dezender.de/dyson-v11-bms/update.sh | sudo bash
+```
+
+All later releases are delivered through the normal operating-system update:
+
+```bash
+sudo apt update
+sudo apt upgrade
 ```

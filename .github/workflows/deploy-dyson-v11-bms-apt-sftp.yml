@@ -12,186 +12,325 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: dyson-v11-bms-apt-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: SFTP Deploy Dyson Service Center APT repo
-    runs-on: ubuntu-latest
+    name: Build, test and deploy signed APT repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DYSON_SITE_PATH: /var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms
+      DYSON_PRIVATE_KEY_DIR: /var/www/vhosts/dezender.de/private
+      DYSON_PRIVATE_KEY_PATH: /var/www/vhosts/dezender.de/private/dyson-v11-bms-apt-signing-key.pgp.enc
+
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Recreate and verify deployment payload
+      - name: Install repository tooling
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d standalone/dyson-v11-bms-apt-deploy/payload.tar.gz.b64 > /tmp/dyson-v11-bms-site.tar.gz
-          echo '38dca40e2672eda0f30bb6027e07a7a51de153c3f59e47c4a7b9f193f8f3ba8f  /tmp/dyson-v11-bms-site.tar.gz' | sha256sum -c -
-          mkdir -p public-dyson
-          tar -xzf /tmp/dyson-v11-bms-site.tar.gz -C public-dyson --strip-components=1 --no-same-owner
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            apt-utils dpkg-dev gnupg openssl openssh-client sshpass sq
 
-          # Keep the existing signed APT repository intact and add the current
-          # service package as a checksum-pinned direct update. This allows the
-          # diagnostic fix to ship without access to the offline repository key.
-          standalone/dyson-v11-bms-apt-deploy/build-current-package.sh public-dyson/downloads
-          current_package='dyson-v11-bms_0.3.0-1_all.deb'
-          current_sha="$(sha256sum "public-dyson/downloads/${current_package}" | awk '{print $1}')"
-
-          cat > public-dyson/update.sh <<'EOF'
-          #!/bin/bash
+      - name: Restore or create persistent signing key
+        shell: bash
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SSHPASS: ${{ secrets.SFTP_PASSWORD }}
+          DEDICATED_KEY_PASSWORD: ${{ secrets.DYSON_APT_KEY_PASSWORD }}
+        run: |
           set -euo pipefail
 
-          if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-            echo "Bitte als root ausführen: curl -fsSL https://dezender.de/dyson-v11-bms/update.sh | sudo bash" >&2
-            exit 1
-          fi
+          test -n "$SFTP_HOST"
+          test -n "$SFTP_USERNAME"
+          test -n "$SSHPASS"
 
-          arch="$(dpkg --print-architecture)"
-          case "$arch" in
-            armhf|arm64) ;;
-            *)
-              echo "Nicht unterstützte Architektur: $arch (erwartet armhf oder arm64)" >&2
+          signing_key="$RUNNER_TEMP/dyson-v11-bms-apt-signing-key.pgp"
+          encrypted_key="$RUNNER_TEMP/dyson-v11-bms-apt-signing-key.pgp.enc"
+          downloaded_copy="$RUNNER_TEMP/dyson-v11-bms-apt-signing-key.persisted.enc"
+          sftp_batch="$RUNNER_TEMP/dyson-sftp.batch"
+          remote_temporary="${DYSON_PRIVATE_KEY_PATH}.tmp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          key_password="${DEDICATED_KEY_PASSWORD:-$SSHPASS}"
+          export DYSON_APT_KEY_PASSWORD_VALUE="$key_password"
+
+          run_sftp() {
+            sshpass -e sftp \
+              -P 22 \
+              -oBatchMode=no \
+              -oStrictHostKeyChecking=accept-new \
+              -b "$1" \
+              "${SFTP_USERNAME}@${SFTP_HOST}"
+          }
+
+          # A successful connection check is required before a missing key may
+          # trigger first-time generation. Network errors must never rotate it.
+          printf 'pwd\n' > "$sftp_batch"
+          run_sftp "$sftp_batch" >/dev/null
+
+          printf 'get %s %s\n' "$DYSON_PRIVATE_KEY_PATH" "$encrypted_key" > "$sftp_batch"
+          if run_sftp "$sftp_batch" >/dev/null 2>&1; then
+            if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 \
+              -pass env:DYSON_APT_KEY_PASSWORD_VALUE \
+              -in "$encrypted_key" -out "$signing_key"; then
+              echo "Gespeicherter APT-Schlüssel konnte nicht entschlüsselt werden; Abbruch ohne Schlüsselwechsel." >&2
               exit 1
-              ;;
-          esac
+            fi
+            echo "Bestehender, verschlüsselter APT-Signierschlüssel geladen."
+          else
+            printf 'pwd\n' > "$sftp_batch"
+            run_sftp "$sftp_batch" >/dev/null
 
-          package_file='__CURRENT_PACKAGE__'
-          expected_sha='__CURRENT_SHA__'
-          temporary="$(mktemp --suffix=.deb)"
-          cleanup() { rm -f -- "$temporary"; }
-          trap cleanup EXIT
+            sq key generate \
+              --no-cert-store \
+              --userid 'Dyson V11 BMS APT <apt@dezender.de>' \
+              --cipher-suite rsa3k \
+              --expiry never \
+              --can-sign \
+              --cannot-authenticate \
+              --cannot-encrypt \
+              --output "$signing_key"
+            chmod 0600 "$signing_key"
+            openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -md sha256 \
+              -pass env:DYSON_APT_KEY_PASSWORD_VALUE \
+              -in "$signing_key" -out "$encrypted_key"
 
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl
-          curl -fsSL "https://dezender.de/dyson-v11-bms/downloads/${package_file}" -o "$temporary"
-          echo "${expected_sha}  ${temporary}" | sha256sum -c -
-          apt-get install -y "$temporary"
+            printf -- '-mkdir %s\nput %s %s\nrename %s %s\n' \
+              "$DYSON_PRIVATE_KEY_DIR" \
+              "$encrypted_key" "$remote_temporary" \
+              "$remote_temporary" "$DYSON_PRIVATE_KEY_PATH" > "$sftp_batch"
+            run_sftp "$sftp_batch" >/dev/null
 
-          installed="$(dpkg-query -W -f='${Version}' dyson-v11-bms)"
-          if [ "$installed" != '0.3.0-1' ]; then
-            echo "Unerwartete installierte Version: $installed" >&2
-            exit 1
+            printf 'get %s %s\n' "$DYSON_PRIVATE_KEY_PATH" "$downloaded_copy" > "$sftp_batch"
+            run_sftp "$sftp_batch" >/dev/null
+            cmp --silent "$encrypted_key" "$downloaded_copy"
+            echo "Neuer APT-Signierschlüssel verschlüsselt außerhalb des Webroots gesichert."
           fi
-          systemctl is-enabled dyson-v11-bms.service >/dev/null
-          systemctl is-active dyson-v11-bms.service >/dev/null
-          echo "Dyson Service Center ${installed} läuft: http://$(hostname -I | awk '{print $1}'):8080/"
-          EOF
-          sed -i "s/__CURRENT_PACKAGE__/${current_package}/g; s/__CURRENT_SHA__/${current_sha}/g" public-dyson/update.sh
-          chmod 0755 public-dyson/update.sh
 
-          # Register the signed dependency repository, then install the pinned
-          # current service build through the verified updater above.
-          cat > public-dyson/install.sh <<'EOF'
-          #!/bin/bash
+          chmod 0600 "$signing_key"
+          public_check="$RUNNER_TEMP/dyson-signing-key-check.asc"
+          signature_check="$RUNNER_TEMP/dyson-signing-key-check.sig"
+          message_check="$RUNNER_TEMP/dyson-signing-key-check.txt"
+          printf 'dyson-v11-bms signing check\n' > "$message_check"
+          sq key extract-cert --force --no-cert-store \
+            --output "$public_check" "$signing_key"
+          sq sign --force --no-cert-store --detached \
+            --signer-file "$signing_key" \
+            --output "$signature_check" "$message_check"
+          binary_key="$RUNNER_TEMP/dyson-signing-key-check.gpg"
+          gpg --batch --yes --dearmor --output "$binary_key" "$public_check"
+          gpgv --keyring "$binary_key" "$signature_check" "$message_check"
+
+          fingerprint="$(gpg --batch --show-keys --with-colons "$public_check" \
+            | awk -F: '$1 == "fpr" && !fingerprint {fingerprint = $10} END {print fingerprint}')"
+          test "${#fingerprint}" -eq 40
+          {
+            echo "DYSON_APT_SIGNING_KEY_FILE=$signing_key"
+            echo "DYSON_APT_SIGNING_FINGERPRINT=$fingerprint"
+          } >> "$GITHUB_ENV"
+          echo "APT-Signierschlüssel geprüft: $fingerprint"
+
+      - name: Build signed repository
+        shell: bash
+        run: |
           set -euo pipefail
+          bash -n \
+            standalone/dyson-v11-bms-apt-deploy/build-current-package.sh \
+            standalone/dyson-v11-bms-apt-deploy/build-signed-repository.sh
+          install -d -m 0755 apt-deploy-output
+          standalone/dyson-v11-bms-apt-deploy/build-signed-repository.sh apt-deploy-output
 
-          if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-            echo "Bitte als root ausführen: sudo bash install.sh" >&2
-            exit 1
-          fi
+      - name: Prove APT update and upgrade path
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt_root="$RUNNER_TEMP/dyson-apt-client"
+          install -d -m 0755 \
+            "$apt_root/lists/partial" \
+            "$apt_root/cache/archives/partial" \
+            "$apt_root/download"
+          printf 'deb [arch=armhf signed-by=%s/apt-deploy-output/repo-key.asc] file:%s/apt-deploy-output/apt stable main\n' \
+            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE" > "$apt_root/sources.list"
 
-          arch="$(dpkg --print-architecture)"
-          case "$arch" in
-            armhf|arm64) ;;
-            *)
-              echo "Nicht unterstützte Architektur: $arch (erwartet armhf oder arm64)" >&2
-              exit 1
-              ;;
-          esac
-
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl
-
-          install -d -m 0755 /usr/share/keyrings
-          curl -fsSL https://dezender.de/dyson-v11-bms/repo-key.asc \
-            -o /usr/share/keyrings/dyson-v11-bms-repo.asc
-          chmod 0644 /usr/share/keyrings/dyson-v11-bms-repo.asc
-
-          cat > /etc/apt/sources.list.d/dyson-v11-bms.list <<EOFREPO
-          deb [arch=${arch} signed-by=/usr/share/keyrings/dyson-v11-bms-repo.asc] https://dezender.de/dyson-v11-bms/apt stable main
-          EOFREPO
-
-          apt-get update
-          updater="$(mktemp)"
-          trap 'rm -f -- "$updater"' EXIT
-          curl -fsSL https://dezender.de/dyson-v11-bms/update.sh -o "$updater"
-          bash "$updater"
-          EOF
-          chmod 0755 public-dyson/install.sh
-
-          test -f public-dyson/repo-key.asc
-          test -f public-dyson/apt/dists/stable/InRelease
-          test -f public-dyson/apt/dists/stable/Release
-          test -f public-dyson/apt/dists/stable/Release.gpg
-          test -f public-dyson/apt/dists/stable/main/binary-armhf/Packages
-          test -f public-dyson/apt/dists/stable/main/binary-arm64/Packages
-          test -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb
-          test -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb
-
-          bash -n public-dyson/install.sh
-          bash -n public-dyson/update.sh
-          echo 'ba383628a6b8ff3a51c03f0c682294cbbaf500fad72071e2f6c550708cd80b61  public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb' | sha256sum -c -
-
-          dpkg-deb --info public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
-          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Package)" = "dyson-v11-bms"
-          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Version)" = "0.2.0-1"
-          test "$(dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Architecture)" = "all"
-          for dep in python3 python3-flask can-utils iproute2 openocd git cmake make gcc-arm-none-eabi; do
-            dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Depends | grep -q "$dep"
+          printf 'Package: dyson-v11-bms\nStatus: install ok installed\nArchitecture: all\nVersion: 0.2.0-1\n\n' \
+            > "$apt_root/status"
+          for dependency in python3 python3-flask can-utils iproute2 openocd git cmake make gcc-arm-none-eabi; do
+            printf 'Package: %s\nStatus: install ok installed\nArchitecture: all\nVersion: 1:999\n\n' \
+              "$dependency" >> "$apt_root/status"
           done
 
-          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Package)" = "dyson-v11-bms"
-          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Version)" = "0.3.0-1"
-          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Architecture)" = "all"
-          grep -q "${current_sha}" public-dyson/update.sh
-          package_check_dir="$(mktemp -d)"
-          dpkg-deb -x public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb "$package_check_dir"
-          grep -q '^APP_VERSION = "0.3.0"$' "$package_check_dir/opt/dyson-v11-bms/app.py"
-          rm -rf "$package_check_dir"
+          apt_options=(
+            -o APT::Architecture=armhf
+            -o APT::Architectures::=armhf
+            -o APT::Sandbox::User=root
+            -o Debug::NoLocking=1
+            -o Dir::Etc::sourcelist="$apt_root/sources.list"
+            -o Dir::Etc::sourceparts=-
+            -o Dir::State::status="$apt_root/status"
+            -o Dir::State::lists="$apt_root/lists"
+            -o Dir::Cache::archives="$apt_root/cache/archives"
+            -o Dir::Cache::pkgcache=
+            -o Dir::Cache::srcpkgcache=
+            -o APT::Get::List-Cleanup=0
+          )
 
-          grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
-          grep -q '^Version: 0.2.0-1$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
-          grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-arm64/Packages
-          grep -q '^Version: 0.2.0-1$' public-dyson/apt/dists/stable/main/binary-arm64/Packages
+          apt-get "${apt_options[@]}" update
+          apt-cache "${apt_options[@]}" policy dyson-v11-bms | tee "$apt_root/policy.log"
+          grep -q '^  Installed: 0.2.0-1$' "$apt_root/policy.log"
+          grep -q '^  Candidate: 0.3.0-1$' "$apt_root/policy.log"
 
-          GNUPGHOME="$(mktemp -d)"
-          export GNUPGHOME
-          gpg --batch --import public-dyson/repo-key.asc
-          gpg --batch --verify public-dyson/apt/dists/stable/Release.gpg public-dyson/apt/dists/stable/Release
-          gpg --batch --verify public-dyson/apt/dists/stable/InRelease
-          rm -rf "$GNUPGHOME"
+          apt-get "${apt_options[@]}" --simulate upgrade | tee "$apt_root/upgrade.log"
+          grep -Eq '^Inst dyson-v11-bms \[0\.2\.0-1\] \(0\.3\.0-1 ' "$apt_root/upgrade.log"
 
-      - name: Deploy to /dyson-v11-bms
+          (
+            cd "$apt_root/download"
+            apt-get "${apt_options[@]}" download dyson-v11-bms
+          )
+          downloaded="$apt_root/download/dyson-v11-bms_0.3.0-1_all.deb"
+          test -f "$downloaded"
+          test "$(dpkg-deb -f "$downloaded" Version)" = 0.3.0-1
+          expected_sha="$(sed -n 's/^SHA256: //p' \
+            apt-deploy-output/apt/dists/stable/main/binary-armhf/Packages)"
+          echo "$expected_sha  $downloaded" | sha256sum -c -
+
+      - name: Prepare ordered deployment stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 0755 \
+            apt-deploy-stages/data/apt/dists/stable \
+            apt-deploy-stages/bootstrap \
+            apt-deploy-stages/release/apt/dists/stable \
+            apt-deploy-stages/inrelease/apt/dists/stable
+          cp -a apt-deploy-output/apt/pool apt-deploy-stages/data/apt/
+          cp -a apt-deploy-output/apt/dists/stable/main apt-deploy-stages/data/apt/dists/stable/
+          cp -a apt-deploy-output/downloads apt-deploy-stages/data/
+          cp -a \
+            apt-deploy-output/install.sh \
+            apt-deploy-output/update.sh \
+            apt-deploy-output/repo-key.asc \
+            apt-deploy-output/repo-info.json \
+            apt-deploy-output/README.txt \
+            apt-deploy-stages/bootstrap/
+          cp -a \
+            apt-deploy-output/apt/dists/stable/Release \
+            apt-deploy-output/apt/dists/stable/Release.gpg \
+            apt-deploy-stages/release/apt/dists/stable/
+          cp -a apt-deploy-output/apt/dists/stable/InRelease \
+            apt-deploy-stages/inrelease/apt/dists/stable/
+
+      # Upload immutable package/index data first and InRelease last. Together
+      # with Acquire-By-Hash this prevents partially published APT snapshots.
+      - name: Deploy package and index data
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           password: ${{ secrets.SFTP_PASSWORD }}
-          local_path: './public-dyson/*'
+          local_path: './apt-deploy-stages/data/*'
           remote_path: '/var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/'
-          delete_remote_files: true
+          delete_remote_files: false
 
-      - name: Verify public URLs
+      - name: Deploy repository key and bootstrap scripts
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './apt-deploy-stages/bootstrap/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/'
+          delete_remote_files: false
+
+      - name: Deploy detached release metadata
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './apt-deploy-stages/release/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/'
+          delete_remote_files: false
+
+      - name: Publish signed InRelease last
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './apt-deploy-stages/inrelease/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/'
+          delete_remote_files: false
+
+      - name: Verify public repository and upgrade candidate
         shell: bash
         run: |
           set -euo pipefail
-          for i in 1 2 3 4 5 6; do
-            if curl -fsSL https://dezender.de/dyson-v11-bms/install.sh -o /tmp/install.sh; then
+          cache_buster="run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          public_root="$RUNNER_TEMP/dyson-public-repository"
+          install -d -m 0755 \
+            "$public_root/lists/partial" \
+            "$public_root/cache/archives/partial"
+
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL "https://dezender.de/dyson-v11-bms/repo-info.json?${cache_buster}" \
+              -o "$public_root/repo-info.json" && \
+               grep -q '"version": "0.3.0-1"' "$public_root/repo-info.json"; then
               break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "Öffentliches Repository meldet nicht Version 0.3.0-1" >&2
+              exit 1
             fi
             sleep 5
           done
-          bash -n /tmp/install.sh
-          grep -q 'update.sh' /tmp/install.sh
-          curl -fsSL https://dezender.de/dyson-v11-bms/update.sh -o /tmp/update.sh
-          bash -n /tmp/update.sh
-          grep -q '0.3.0-1' /tmp/update.sh
-          curl -fsSIL https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
-          curl -fsSIL https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
-          curl -fsSIL https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
-          curl -fsSL https://dezender.de/dyson-v11-bms/downloads/dyson-v11-bms_0.3.0-1_all.deb -o /tmp/current.deb
-          expected="$(sed -n "s/^expected_sha='\([0-9a-f]\{64\}\)'$/\1/p" /tmp/update.sh)"
-          echo "${expected}  /tmp/current.deb" | sha256sum -c -
-          test "$(dpkg-deb -f /tmp/current.deb Version)" = '0.3.0-1'
-          echo '135er Dyson Service Center 0.3.0 deployed successfully.'
+
+          curl -fsSL "https://dezender.de/dyson-v11-bms/repo-key.asc?${cache_buster}" \
+            -o "$public_root/repo-key.asc"
+          curl -fsSL "https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease?${cache_buster}" \
+            -o "$public_root/InRelease"
+          curl -fsSL "https://dezender.de/dyson-v11-bms/update.sh?${cache_buster}" \
+            -o "$public_root/update.sh"
+          bash -n "$public_root/update.sh"
+          grep -Fq 'sudo apt update && sudo apt upgrade' "$public_root/update.sh"
+
+          public_keyring="$public_root/repo-key.gpg"
+          gpg --batch --yes --dearmor --output "$public_keyring" "$public_root/repo-key.asc"
+          gpgv --keyring "$public_keyring" "$public_root/InRelease"
+
+          printf 'deb [arch=armhf signed-by=%s/repo-key.asc] https://dezender.de/dyson-v11-bms/apt stable main\n' \
+            "$public_root" > "$public_root/sources.list"
+          printf 'Package: dyson-v11-bms\nStatus: install ok installed\nArchitecture: all\nVersion: 0.2.0-1\n\n' \
+            > "$public_root/status"
+          for dependency in python3 python3-flask can-utils iproute2 openocd git cmake make gcc-arm-none-eabi; do
+            printf 'Package: %s\nStatus: install ok installed\nArchitecture: all\nVersion: 1:999\n\n' \
+              "$dependency" >> "$public_root/status"
+          done
+
+          apt_options=(
+            -o APT::Architecture=armhf
+            -o APT::Architectures::=armhf
+            -o APT::Sandbox::User=root
+            -o Debug::NoLocking=1
+            -o Acquire::Retries=3
+            -o Dir::Etc::sourcelist="$public_root/sources.list"
+            -o Dir::Etc::sourceparts=-
+            -o Dir::State::status="$public_root/status"
+            -o Dir::State::lists="$public_root/lists"
+            -o Dir::Cache::archives="$public_root/cache/archives"
+            -o Dir::Cache::pkgcache=
+            -o Dir::Cache::srcpkgcache=
+            -o APT::Get::List-Cleanup=0
+          )
+          apt-get "${apt_options[@]}" update
+          apt-cache "${apt_options[@]}" policy dyson-v11-bms | tee "$public_root/policy.log"
+          grep -q '^  Installed: 0.2.0-1$' "$public_root/policy.log"
+          grep -q '^  Candidate: 0.3.0-1$' "$public_root/policy.log"
+          apt-get "${apt_options[@]}" --simulate upgrade | tee "$public_root/upgrade.log"
+          grep -Eq '^Inst dyson-v11-bms \[0\.2\.0-1\] \(0\.3\.0-1 ' "$public_root/upgrade.log"
+          echo 'Öffentliches APT-Repository: Update und Upgrade auf 0.3.0-1 geprüft.'

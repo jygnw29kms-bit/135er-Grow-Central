@@ -53,7 +53,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n standalone/dyson-v11-bms-apt-deploy/build-current-package.sh
+          bash -n \
+            standalone/dyson-v11-bms-apt-deploy/build-current-package.sh \
+            standalone/dyson-v11-bms-apt-deploy/build-signed-repository.sh
           package_dir="$RUNNER_TEMP/dyson-package"
           standalone/dyson-v11-bms-apt-deploy/build-current-package.sh "$package_dir"
           package="$package_dir/dyson-v11-bms_0.3.0-1_all.deb"
