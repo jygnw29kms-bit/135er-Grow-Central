@@ -177,20 +177,20 @@ jobs:
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5 6; do
-            if curl -fsS https://dezender.de/dyson-v11-bms/install.sh -o /tmp/install.sh; then
+            if curl -fsSL https://dezender.de/dyson-v11-bms/install.sh -o /tmp/install.sh; then
               break
             fi
             sleep 5
           done
           bash -n /tmp/install.sh
           grep -q 'update.sh' /tmp/install.sh
-          curl -fsS https://dezender.de/dyson-v11-bms/update.sh -o /tmp/update.sh
+          curl -fsSL https://dezender.de/dyson-v11-bms/update.sh -o /tmp/update.sh
           bash -n /tmp/update.sh
           grep -q '0.3.0-1' /tmp/update.sh
-          curl -fsSI https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
-          curl -fsSI https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
-          curl -fsSI https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
-          curl -fsS https://dezender.de/dyson-v11-bms/downloads/dyson-v11-bms_0.3.0-1_all.deb -o /tmp/current.deb
+          curl -fsSIL https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
+          curl -fsSIL https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
+          curl -fsSIL https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
+          curl -fsSL https://dezender.de/dyson-v11-bms/downloads/dyson-v11-bms_0.3.0-1_all.deb -o /tmp/current.deb
           expected="$(sed -n "s/^expected_sha='\([0-9a-f]\{64\}\)'$/\1/p" /tmp/update.sh)"
           echo "${expected}  /tmp/current.deb" | sha256sum -c -
           test "$(dpkg-deb -f /tmp/current.deb Version)" = '0.3.0-1'
