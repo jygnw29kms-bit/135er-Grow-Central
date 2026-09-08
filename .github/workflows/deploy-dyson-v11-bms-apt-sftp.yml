@@ -117,7 +117,7 @@ jobs:
             printf 'get %s %s\n' "$DYSON_PRIVATE_KEY_PATH" "$downloaded_copy" > "$sftp_batch"
             run_sftp "$sftp_batch" >/dev/null
             cmp --silent "$encrypted_key" "$downloaded_copy"
-            echo "Neuer APT-Signierschlüssel verschlüsselt außerhalb des Webroots gesichert."
+            echo "Neuer APT-Signierschlüssel geschützt und verschlüsselt gesichert."
           fi
 
           chmod 0600 "$signing_key"
@@ -134,7 +134,7 @@ jobs:
           gpg --batch --yes --dearmor --output "$binary_key" "$public_check"
           gpgv --keyring "$binary_key" "$signature_check" "$message_check"
 
-          private_http_status="$(curl -sS --connect-timeout 10 --max-time 20 \
+          private_http_status="$(curl -sS -L --max-redirs 5 --connect-timeout 10 --max-time 20 \
             -o /dev/null -w '%{http_code}' "$DYSON_PRIVATE_KEY_URL")"
           case "$private_http_status" in
             401|403|404) ;;
