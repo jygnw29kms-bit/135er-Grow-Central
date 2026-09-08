@@ -23,8 +23,9 @@ jobs:
     timeout-minutes: 20
     env:
       DYSON_SITE_PATH: /var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms
-      DYSON_PRIVATE_KEY_DIR: /var/www/vhosts/dezender.de/private
-      DYSON_PRIVATE_KEY_PATH: /var/www/vhosts/dezender.de/private/dyson-v11-bms-apt-signing-key.pgp.enc
+      DYSON_PRIVATE_KEY_DIR: /var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/.apt-signing
+      DYSON_PRIVATE_KEY_PATH: /var/www/vhosts/dezender.de/httpdocs/dyson-v11-bms/.apt-signing/dyson-v11-bms-apt-signing-key.pgp.enc
+      DYSON_PRIVATE_KEY_URL: https://dezender.de/dyson-v11-bms/.apt-signing/dyson-v11-bms-apt-signing-key.pgp.enc
 
     steps:
       - name: Checkout
@@ -56,6 +57,7 @@ jobs:
           encrypted_key="$RUNNER_TEMP/dyson-v11-bms-apt-signing-key.pgp.enc"
           downloaded_copy="$RUNNER_TEMP/dyson-v11-bms-apt-signing-key.persisted.enc"
           sftp_batch="$RUNNER_TEMP/dyson-sftp.batch"
+          deny_file="$RUNNER_TEMP/dyson-signing-deny.htaccess"
           remote_temporary="${DYSON_PRIVATE_KEY_PATH}.tmp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           key_password="${DEDICATED_KEY_PASSWORD:-$SSHPASS}"
           export DYSON_APT_KEY_PASSWORD_VALUE="$key_password"
@@ -72,6 +74,11 @@ jobs:
           # A successful connection check is required before a missing key may
           # trigger first-time generation. Network errors must never rotate it.
           printf 'pwd\n' > "$sftp_batch"
+          run_sftp "$sftp_batch" >/dev/null
+
+          printf 'Require all denied\n' > "$deny_file"
+          printf -- '-mkdir %s\nput %s %s/.htaccess\n' \
+            "$DYSON_PRIVATE_KEY_DIR" "$deny_file" "$DYSON_PRIVATE_KEY_DIR" > "$sftp_batch"
           run_sftp "$sftp_batch" >/dev/null
 
           printf 'get %s %s\n' "$DYSON_PRIVATE_KEY_PATH" "$encrypted_key" > "$sftp_batch"
@@ -126,6 +133,16 @@ jobs:
           binary_key="$RUNNER_TEMP/dyson-signing-key-check.gpg"
           gpg --batch --yes --dearmor --output "$binary_key" "$public_check"
           gpgv --keyring "$binary_key" "$signature_check" "$message_check"
+
+          private_http_status="$(curl -sS --connect-timeout 10 --max-time 20 \
+            -o /dev/null -w '%{http_code}' "$DYSON_PRIVATE_KEY_URL")"
+          case "$private_http_status" in
+            401|403|404) ;;
+            *)
+              echo "Geschützter Schlüsselspeicher ist per HTTP erreichbar (Status $private_http_status); Abbruch." >&2
+              exit 1
+              ;;
+          esac
 
           fingerprint="$(gpg --batch --show-keys --with-colons "$public_check" \
             | awk -F: '$1 == "fpr" && !fingerprint {fingerprint = $10} END {print fingerprint}')"
