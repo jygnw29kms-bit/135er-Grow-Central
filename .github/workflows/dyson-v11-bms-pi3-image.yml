@@ -17,7 +17,7 @@ jobs:
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git coreutils quilt parted qemu-user-static qemu-user-binfmt arch-test debootstrap zerofree zip dosfstools libarchive-tools pigz xz-utils
+          sudo apt-get install -y git coreutils quilt parted qemu-user-binfmt arch-test debootstrap zerofree zip dosfstools libarchive-tools pigz xz-utils
       - name: Build bootable Raspberry Pi 3 image
         working-directory: standalone/dyson-v11-bms-pi3-image-builder
         run: |
