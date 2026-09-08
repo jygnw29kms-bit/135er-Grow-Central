@@ -28,9 +28,9 @@ jobs:
             cloud/requirements.txt
             local/cloud_link/requirements.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt pytest
+      - run: pip install -r requirements.txt pytest flask
       - run: python -m pip check
-      - run: python -m compileall -q app shared cloud local image-builder/firstboot
+      - run: python -m compileall -q app shared cloud local image-builder/firstboot standalone/dyson-v11-bms-pi3-image-builder/stage-dyson/00-install-packages/files
       - name: JavaScript syntax checks
         run: |
           node --check web/platform.js
@@ -38,3 +38,29 @@ jobs:
           node --check web/room_views.js
           node --check mobile/www/app.js
       - run: python -m pytest -q
+      - name: Dyson service tool protocol and diagnostics tests
+        run: python -m unittest discover -s standalone/dyson-v11-bms-pi3-image-builder/tests -v
+      - name: Dyson embedded UI syntax
+        shell: bash
+        run: |
+          python - <<'PY' > "$RUNNER_TEMP/dyson-ui.js"
+          from pathlib import Path
+          source = Path("standalone/dyson-v11-bms-pi3-image-builder/stage-dyson/00-install-packages/files/app.py").read_text()
+          print(source.split("<script>", 1)[1].split("</script>", 1)[0])
+          PY
+          node --check "$RUNNER_TEMP/dyson-ui.js"
+      - name: Build and inspect Dyson Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n standalone/dyson-v11-bms-apt-deploy/build-current-package.sh
+          package_dir="$RUNNER_TEMP/dyson-package"
+          standalone/dyson-v11-bms-apt-deploy/build-current-package.sh "$package_dir"
+          package="$package_dir/dyson-v11-bms_0.3.0-1_all.deb"
+          test "$(dpkg-deb -f "$package" Package)" = dyson-v11-bms
+          test "$(dpkg-deb -f "$package" Version)" = 0.3.0-1
+          control_dir="$RUNNER_TEMP/dyson-control"
+          dpkg-deb -e "$package" "$control_dir"
+          dash -n "$control_dir/postinst" "$control_dir/prerm" "$control_dir/postrm"
+          systemd-analyze verify \
+            standalone/dyson-v11-bms-pi3-image-builder/stage-dyson/00-install-packages/files/dyson-bms-ui.service

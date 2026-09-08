@@ -5,6 +5,7 @@ on:
     branches: [ master ]
     paths:
       - 'standalone/dyson-v11-bms-apt-deploy/**'
+      - 'standalone/dyson-v11-bms-pi3-image-builder/**'
       - '.github/workflows/deploy-dyson-v11-bms-apt-sftp.yml'
   workflow_dispatch:
 
@@ -26,10 +27,60 @@ jobs:
           base64 -d standalone/dyson-v11-bms-apt-deploy/payload.tar.gz.b64 > /tmp/dyson-v11-bms-site.tar.gz
           echo '38dca40e2672eda0f30bb6027e07a7a51de153c3f59e47c4a7b9f193f8f3ba8f  /tmp/dyson-v11-bms-site.tar.gz' | sha256sum -c -
           mkdir -p public-dyson
-          tar -xzf /tmp/dyson-v11-bms-site.tar.gz -C public-dyson --strip-components=1
+          tar -xzf /tmp/dyson-v11-bms-site.tar.gz -C public-dyson --strip-components=1 --no-same-owner
 
-          # The public installer only registers the signed APT source.
-          # The application itself is installed afterwards with apt install.
+          # Keep the existing signed APT repository intact and add the current
+          # service package as a checksum-pinned direct update. This allows the
+          # diagnostic fix to ship without access to the offline repository key.
+          standalone/dyson-v11-bms-apt-deploy/build-current-package.sh public-dyson/downloads
+          current_package='dyson-v11-bms_0.3.0-1_all.deb'
+          current_sha="$(sha256sum "public-dyson/downloads/${current_package}" | awk '{print $1}')"
+
+          cat > public-dyson/update.sh <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+
+          if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+            echo "Bitte als root ausführen: curl -fsSL https://dezender.de/dyson-v11-bms/update.sh | sudo bash" >&2
+            exit 1
+          fi
+
+          arch="$(dpkg --print-architecture)"
+          case "$arch" in
+            armhf|arm64) ;;
+            *)
+              echo "Nicht unterstützte Architektur: $arch (erwartet armhf oder arm64)" >&2
+              exit 1
+              ;;
+          esac
+
+          package_file='__CURRENT_PACKAGE__'
+          expected_sha='__CURRENT_SHA__'
+          temporary="$(mktemp --suffix=.deb)"
+          cleanup() { rm -f -- "$temporary"; }
+          trap cleanup EXIT
+
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl
+          curl -fsSL "https://dezender.de/dyson-v11-bms/downloads/${package_file}" -o "$temporary"
+          echo "${expected_sha}  ${temporary}" | sha256sum -c -
+          apt-get install -y "$temporary"
+
+          installed="$(dpkg-query -W -f='${Version}' dyson-v11-bms)"
+          if [ "$installed" != '0.3.0-1' ]; then
+            echo "Unerwartete installierte Version: $installed" >&2
+            exit 1
+          fi
+          systemctl is-enabled dyson-v11-bms.service >/dev/null
+          systemctl is-active dyson-v11-bms.service >/dev/null
+          echo "Dyson Service Center ${installed} läuft: http://$(hostname -I | awk '{print $1}'):8080/"
+          EOF
+          sed -i "s/__CURRENT_PACKAGE__/${current_package}/g; s/__CURRENT_SHA__/${current_sha}/g" public-dyson/update.sh
+          chmod 0755 public-dyson/update.sh
+
+          # Register the signed dependency repository, then install the pinned
+          # current service build through the verified updater above.
           cat > public-dyson/install.sh <<'EOF'
           #!/bin/bash
           set -euo pipefail
@@ -62,9 +113,10 @@ jobs:
           EOFREPO
 
           apt-get update
-          echo
-          echo "APT-Repository eingerichtet."
-          echo "Installation: sudo apt install dyson-v11-bms"
+          updater="$(mktemp)"
+          trap 'rm -f -- "$updater"' EXIT
+          curl -fsSL https://dezender.de/dyson-v11-bms/update.sh -o "$updater"
+          bash "$updater"
           EOF
           chmod 0755 public-dyson/install.sh
 
@@ -75,8 +127,10 @@ jobs:
           test -f public-dyson/apt/dists/stable/main/binary-armhf/Packages
           test -f public-dyson/apt/dists/stable/main/binary-arm64/Packages
           test -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb
+          test -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb
 
           bash -n public-dyson/install.sh
+          bash -n public-dyson/update.sh
           echo 'ba383628a6b8ff3a51c03f0c682294cbbaf500fad72071e2f6c550708cd80b61  public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb' | sha256sum -c -
 
           dpkg-deb --info public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
@@ -86,6 +140,15 @@ jobs:
           for dep in python3 python3-flask can-utils iproute2 openocd git cmake make gcc-arm-none-eabi; do
             dpkg-deb -f public-dyson/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb Depends | grep -q "$dep"
           done
+
+          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Package)" = "dyson-v11-bms"
+          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Version)" = "0.3.0-1"
+          test "$(dpkg-deb -f public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb Architecture)" = "all"
+          grep -q "${current_sha}" public-dyson/update.sh
+          package_check_dir="$(mktemp -d)"
+          dpkg-deb -x public-dyson/downloads/dyson-v11-bms_0.3.0-1_all.deb "$package_check_dir"
+          grep -q '^APP_VERSION = "0.3.0"$' "$package_check_dir/opt/dyson-v11-bms/app.py"
+          rm -rf "$package_check_dir"
 
           grep -q '^Package: dyson-v11-bms$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
           grep -q '^Version: 0.2.0-1$' public-dyson/apt/dists/stable/main/binary-armhf/Packages
@@ -120,8 +183,15 @@ jobs:
             sleep 5
           done
           bash -n /tmp/install.sh
-          grep -q 'apt install dyson-v11-bms' /tmp/install.sh
+          grep -q 'update.sh' /tmp/install.sh
+          curl -fsS https://dezender.de/dyson-v11-bms/update.sh -o /tmp/update.sh
+          bash -n /tmp/update.sh
+          grep -q '0.3.0-1' /tmp/update.sh
           curl -fsSI https://dezender.de/dyson-v11-bms/repo-key.asc >/dev/null
           curl -fsSI https://dezender.de/dyson-v11-bms/apt/dists/stable/InRelease >/dev/null
           curl -fsSI https://dezender.de/dyson-v11-bms/apt/pool/main/d/dyson-v11-bms/dyson-v11-bms_0.2.0-1_all.deb >/dev/null
-          echo '135er Dyson Service Center APT repository deployed successfully.'
+          curl -fsS https://dezender.de/dyson-v11-bms/downloads/dyson-v11-bms_0.3.0-1_all.deb -o /tmp/current.deb
+          expected="$(sed -n "s/^expected_sha='\([0-9a-f]\{64\}\)'$/\1/p" /tmp/update.sh)"
+          echo "${expected}  /tmp/current.deb" | sha256sum -c -
+          test "$(dpkg-deb -f /tmp/current.deb Version)" = '0.3.0-1'
+          echo '135er Dyson Service Center 0.3.0 deployed successfully.'
