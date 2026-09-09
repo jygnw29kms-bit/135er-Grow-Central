@@ -1,12 +1,22 @@
 <p align="center"><img src="docs/assets/brand/repository-banner-v0.9.png" alt="135er-Grow Central" width="100%"></p>
 
-<p align="center"><strong>Closed Development · Local First · Raspberry Pi · Desktop + Mobile</strong></p>
+<p align="center"><strong>Open Source · Local First · Raspberry Pi · Desktop + Mobile</strong></p>
 
 # 135er-Grow Central
 
-> **Vertrauliches Entwicklungsprojekt.** Dieses Repository ist nicht als Open-Source-Projekt freigegeben. Quellcode, Images, mobile Testpakete, interne Dokumentation und technische Details sind ausschließlich für autorisierte Projektbeteiligte bestimmt.
+> **Vollständig Open Source.** Entwicklung, Quellcode, Dokumentation, Images und veröffentlichbare technische Komponenten werden transparent über dieses Repository bereitgestellt.
 
-135er-Grow Central ist eine lokale Steuerungs-, Überwachungs- und Automationsplattform für Grow-Umgebungen. Ein Raspberry Pi bildet die lokale Zentrale; Browser, Smartphone, Tablet und die mobilen Clients dienen als Bedienoberflächen. Eine Cloud-Anbindung ist optional und ersetzt nicht die lokale Geräteautorität.
+135er-Grow Central ist eine lokale Steuerungs-, Überwachungs- und Automationsplattform für Grow-Umgebungen. Ein Raspberry Pi bildet die lokale Zentrale; Browser, Smartphone, Tablet und mobile Clients dienen als Bedienoberflächen. Eine Cloud-Anbindung ist optional und ersetzt nicht die lokale Geräteautorität.
+
+## Open-Source-Grundsatz
+
+Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repository ist die zentrale öffentliche Referenz für Quellcode, Dokumentation, Build-Informationen und veröffentlichbare Artefakte.
+
+- Beiträge, Issues und Pull Requests sind ausdrücklich willkommen.
+- Die kanonische Dokumentation wird öffentlich gepflegt.
+- Build- und Release-Informationen werden nachvollziehbar dokumentiert.
+- Sicherheitsrelevante Geheimnisse, Zugangsdaten, private Schlüssel und personenbezogene Daten gehören niemals ins Repository.
+- Die Open-Source-Lizenz gilt für die jeweils veröffentlichten Projektbestandteile gemäß `LICENSE`.
 
 ## Aktueller Referenzstand
 
@@ -18,7 +28,7 @@
 | Quellstand des Candidates | `34442bc41d2c79328d3d5c61eb63a744f4c433a6` |
 | Veröffentlichungsdatum | 31. August 2026 |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung offen |
-| Entwicklungsmodus | **Closed / nicht öffentlich distribuieren** |
+| Entwicklungsmodus | **Open Source / öffentlich** |
 
 Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historische Build-Dokumente bleiben nachvollziehbar, definieren aber nicht den aktuellen Projektstand.
 
@@ -79,13 +89,24 @@ Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servic
 1. `master` und die kanonische Dokumentation bilden immer den neuesten bekannten Projektstand ab.
 2. Ein erfolgreicher CI-Lauf oder Image-Build erhält zunächst den Status `CANDIDATE`.
 3. `VALIDATED` wird erst nach dokumentiertem Test auf realer Zielhardware vergeben.
-4. Neue Builds, Images, App-Pakete und Installationsskripte werden bis auf Weiteres nicht öffentlich verteilt.
-5. Die öffentliche Seite unter [dezender.de/GC](https://dezender.de/GC/) erklärt nur Produktnutzen und Entwicklungsstatus; interne Downloads, Commit-IDs, Protokolle und Betriebsdetails bleiben dort verborgen.
+4. Öffentliche Builds, Images, App-Pakete und Installationsskripte werden – sofern technisch und rechtlich veröffentlichbar – über die Open-Source-Projektkanäle dokumentiert und bereitgestellt.
+5. Die öffentliche Projektseite unter [dezender.de/GC](https://dezender.de/GC/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
+6. Zugangsdaten, Tokens, private Schlüssel, lokale Adressen, Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse werden niemals veröffentlicht.
 
-## Lizenz- und Vertraulichkeitshinweis
+## Lizenz
 
-Das Repository wurde bisher mit einer MIT-Lizenz veröffentlicht. Eine spätere Umstellung auf private Entwicklung widerruft Rechte an bereits unter dieser Lizenz bezogenen Fassungen nicht. Bis eine mögliche Neulizenzierung für künftige Fassungen rechtlich und mit allen Rechteinhabern geklärt ist, bleibt die Datei [`LICENSE`](LICENSE) maßgeblich. Unabhängig davon gehören Zugangsdaten, Tokens, Schlüssel, lokale Adressen, Diagnosepakete und Kundendaten weder in Commits noch in öffentliche Artefakte.
+Das Projekt steht unter der **MIT License**. Siehe [`LICENSE`](LICENSE).
+
+Die MIT-Lizenz erlaubt Nutzung, Veränderung, Veröffentlichung, Weitergabe und Verkauf der Software unter den dort genannten Bedingungen. Drittanbieter-Komponenten können eigene Lizenzen und Hinweise enthalten; diese bleiben jeweils maßgeblich.
+
+## Mitmachen
+
+Beiträge sind willkommen. Für Änderungen bevorzugen wir nachvollziehbare Pull Requests mit Beschreibung, Tests bzw. Validierung und einer kurzen Dokumentation der Auswirkungen.
+
+## Sicherheit
+
+Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zertifikate oder personenbezogenen Daten in Issues, Pull Requests oder Commits. Sicherheitslücken sollten verantwortungsvoll gemeldet und nicht unnötig öffentlich ausgenutzt werden.
 
 ## English summary
 
-135er-Grow Central is a closed-development, local-first Raspberry Pi platform for grow monitoring, device control and automation. Build 199 is the current `alpha-0.7.5` hardware-test candidate. Automated build gates passed; physical validation is still pending. Source code, images, mobile packages and internal technical documentation are not intended for public distribution.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 199 is the current `alpha-0.7.5` hardware-test candidate; automated build gates passed and physical validation is still pending.
