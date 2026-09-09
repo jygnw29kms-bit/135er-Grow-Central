@@ -3,7 +3,7 @@
 <p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
 
 > [!IMPORTANT]
-> Grow Central verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Build 199 ist der aktuelle `alpha-0.7.5` Candidate. Die automatisierten Gates sind bestanden; reale Hardwarevalidierung steht noch aus. Neue Artefakte werden geschlossen verteilt.
+> Grow Central verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Build 199 ist der aktuelle `alpha-0.7.5` Candidate. Die automatisierten Gates sind bestanden; reale Hardwarevalidierung steht noch aus. Neue veröffentlichbare Artefakte werden offen über die öffentlichen Projektkanäle bereitgestellt und dokumentiert.
 
 ## Zuerst lesen
 
