@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DOMAIN="${ROOT_DOMAIN:-dezender.de}"
-REPO_HOST="${REPO_HOST:-repo.dezender.de}"
+ROOT_DOMAIN="${ROOT_DOMAIN:-grow-central.de}"
+REPO_HOST="${REPO_HOST:-repo.grow-central.de}"
 REPO_URL="https://${REPO_HOST}/apt"
-DOCROOT="${DOCROOT:-/var/www/vhosts/${ROOT_DOMAIN}/repo.dezender.de}"
+DOCROOT="${DOCROOT:-/var/www/vhosts/${ROOT_DOMAIN}/repo.grow-central.de}"
 APT_ROOT="${APT_ROOT:-${DOCROOT}/apt}"
 KEY_HOME="${KEY_HOME:-/root/.gnupg-135er-growcentral-repo}"
-KEY_EMAIL="${KEY_EMAIL:-repo@dezender.de}"
+KEY_EMAIL="${KEY_EMAIL:-repo@grow-central.de}"
 PKG_NAME="135er-growcentral-cloud"
 PKG_VERSION="${PKG_VERSION:-7.0.0}"
 RAW="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master"
@@ -64,7 +64,7 @@ Version: $PKG_VERSION
 Section: admin
 Priority: optional
 Architecture: all
-Maintainer: 135er GrowCentral <repo@dezender.de>
+Maintainer: 135er GrowCentral <repo@grow-central.de>
 Depends: ca-certificates, curl, wget, openssl, openssh-server, sqlite3, python3, python3-venv, python3-pip, iproute2, util-linux, gnupg
 Suggests: nginx, certbot, python3-certbot-nginx
 Description: 135er Grow Central Cloud Server V7
