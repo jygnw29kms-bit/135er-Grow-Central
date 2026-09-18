@@ -10,7 +10,7 @@ on:
     - cron: '17 * * * *'
   workflow_run:
     workflows:
-      - 'Deploy Website to dezender.de/GC via SFTP'
+      - 'Deploy Grow Central Website to grow-central.de via SFTP'
     types: [completed]
 
 permissions:
@@ -44,12 +44,12 @@ jobs:
             --max-time 30 \
             -D live-headers.txt \
             -o live-index.html \
-            https://dezender.de/GC/
+            https://grow-central.de/
 
           test -s live-index.html
           grep -Fq '135er-Grow Central · Local-First Grow Automation' live-index.html
           grep -Fq 'LOCAL-FIRST GROW AUTOMATION' live-index.html
-          grep -Fq 'CLOSED PHASE' live-index.html
+          grep -Fq 'OPEN SOURCE' live-index.html
 
       - name: Verify deployed index matches repository
         shell: bash
@@ -75,7 +75,7 @@ jobs:
             --connect-timeout 10 \
             --max-time 30 \
             -o live-styles.css \
-            'https://dezender.de/GC/styles.css?v=4.0.0'
+            'https://grow-central.de/styles.css?v=4.0.0'
 
           expected="$(sha256sum website/styles.css | awk '{print $1}')"
           actual="$(sha256sum live-styles.css | awk '{print $1}')"
@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          status="$(curl -L -sS -o /dev/null -w '%{http_code}' --max-time 30 https://dezender.de/GC/)"
+          status="$(curl -L -sS -o /dev/null -w '%{http_code}' --max-time 30 https://grow-central.de/)"
           echo "http_status=$status"
           test "$status" = '200'
 
@@ -98,7 +98,7 @@ jobs:
           {
             echo '## GrowCentral public website check'
             echo
-            echo '- Target: https://dezender.de/GC/'
+            echo '- Target: https://grow-central.de/'
             echo '- Checks: HTTP reachability, product markers, index SHA-256, stylesheet SHA-256'
             echo '- Source: current repository checkout'
           } >> "$GITHUB_STEP_SUMMARY"
