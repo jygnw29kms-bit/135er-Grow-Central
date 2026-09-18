@@ -88,7 +88,7 @@ jobs:
           admin_modes=standalone,plesk,both
           device_entitlements=BASIC,PLUS,PRO,INTERNAL
           entitlement_identity=Ed25519-GCLOUD2
-          apt=https://repo.dezender.de/apt
+          apt=https://repo.grow-central.de/apt
           status=CANDIDATE
           EOF
           (cd dist/cloud-apt-v7 && sha256sum 135ercloud-server-install.sh bootstrap-standalone-cloud-core.sh setup-135ercloud-apt-repo.sh add-135ercloud-apt-repo.sh configure-cloud-admin-mode.sh configure-v7-routing.sh cloud-v7/admin_app.py RELEASE_STATE.md release-state.txt > SHA256SUMS.txt)
