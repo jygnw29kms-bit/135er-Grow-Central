@@ -5,7 +5,7 @@
 - set Build 199 / `34442bc41d2c79328d3d5c61eb63a744f4c433a6` as the current hardware-test `CANDIDATE`
 - align canonical release, project, hardware-test and release-pipeline documentation with the headless Build 199 runtime
 - mark source, images, mobile packages, install scripts and internal release details as closed-development material
-- replace the public `dezender.de/GC/` page with a product-focused presentation without repository links, build numbers, commit IDs, internal protocols or downloads
+- replace the public `grow-central.de/GC/` page with a product-focused presentation without repository links, build numbers, commit IDs, internal protocols or downloads
 - deploy the public website from an explicit allowlist and remove previously published internal scripts, checksums and documentation from the web directory
 - add release-consistency guards for the current candidate and the public/private information boundary
 
@@ -52,7 +52,7 @@
 - add persistent local Grow Central automation definitions with manual, time and temperature triggers plus login-gated manual execution
 - show manually queried FRITZ! plug temperatures by device name on the dashboard and format power, energy, temperature and cost values to two decimal places
 - reduce manufacturer previews to the compact C920 reference size and optimize the webcam device selector, resolution picker and control pad for desktop, tablet and mobile
-- align the productive Raspberry Pi GUI with the public `dezender.de` project interface: framed tablet surface, cyan/lime palette, monospace typography, technical grid and angular controls
+- align the productive Raspberry Pi GUI with the public `grow-central.de` project interface: framed tablet surface, cyan/lime palette, monospace typography, technical grid and angular controls
 
 ## alpha-0.7.5 – Build 67 manufacturer model previews (2026-08-14)
 

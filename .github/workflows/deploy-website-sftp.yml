@@ -34,16 +34,6 @@ jobs:
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
 
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('public-site/index.html')
-          s = p.read_text(encoding='utf-8')
-          marker = '''        <a href="#faq">FAQ</a>\n      </div>\n      <div>\n        <strong>ENTWICKLUNG</strong>'''
-          replacement = '''        <a href="#faq">FAQ</a>\n        <a href="impressum.html">Impressum</a>\n        <a href="datenschutz.html">Datenschutz</a>\n      </div>\n      <div>\n        <strong>ENTWICKLUNG</strong>'''
-          if marker not in s:
-              raise SystemExit('Footer marker not found in website/index.html')
-          p.write_text(s.replace(marker, replacement, 1), encoding='utf-8')
-          PY
 
       - name: Deploy Grow Central to grow-central.de
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4

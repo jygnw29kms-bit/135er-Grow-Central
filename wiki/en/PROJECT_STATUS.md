@@ -24,7 +24,7 @@ Build 117 was successfully tested but is now superseded by the consolidated e339
 - Elecrow 7-inch touch kiosk
 - Nexus Mobile Android + iOS sideload clients
 - Cloud Server V6
-- signed APT repository at `https://repo.dezender.de/apt`
+- signed APT repository at `https://repo.grow-central.de/apt`
 
 ## Experimental / further validation required
 

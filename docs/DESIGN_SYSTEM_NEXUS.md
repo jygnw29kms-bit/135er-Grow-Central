@@ -1,7 +1,7 @@
 # GrowCentral Nexus UI · Design System
 
 **Status:** verbindlich für das gesamte Projekt  
-**Gültig für:** Raspberry-Pi-GUI, Boot-/Kiosk-Oberflächen, Mobile Apps, dezender.de, README/Repo-Präsentation, Screenshots, Release-Grafiken und Cloud-/APT-Präsentation.
+**Gültig für:** Raspberry-Pi-GUI, Boot-/Kiosk-Oberflächen, Mobile Apps, grow-central.de, README/Repo-Präsentation, Screenshots, Release-Grafiken und Cloud-/APT-Präsentation.
 
 ## Unveränderliche Marke
 

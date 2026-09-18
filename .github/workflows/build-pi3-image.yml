@@ -188,7 +188,7 @@ jobs:
           GC_REMOTE_COMMANDS=false
           GC_CLOUD_ENABLED=true
           GC_CLOUD_TEST_MODE=true
-          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_URL=https://135ercloud.grow-central.de
           GC_CLOUD_TOKEN=
           GC_DIAGNOSTIC_SYNC_SECONDS=120
           GC_DIAGNOSTIC_BUNDLE_SECONDS=300
@@ -210,7 +210,7 @@ jobs:
           cat >/opt/135er-grow-central/local/cloud_link/.env <<'EOF'
           GC_CLOUD_ENABLED=true
           GC_CLOUD_TEST_MODE=true
-          GC_CLOUD_URL=https://135ercloud.dezender.de
+          GC_CLOUD_URL=https://135ercloud.grow-central.de
           GC_CLOUD_TOKEN=
           GC_SITE_ID=closed-test
           GC_SYNC_SECONDS=30

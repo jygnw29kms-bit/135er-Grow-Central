@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_cloud_smoke_is_optional_read_only_and_local_first():
     source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text()
-    assert "https://135ercloud.dezender.de" in source
+    assert "https://135ercloud.grow-central.de" in source
     assert "/api/health" in source
     assert "/health" in source
     assert "DEGRADED" in source

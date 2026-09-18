@@ -10,6 +10,7 @@ def test_bootstrap_cleans_legacy_growcentral_sources_before_apt_update():
     update = text.index("apt-get update")
     assert cleanup < update
     assert "repo\\.dezender\\.de/apt" in text
+    assert "repo\\.grow-central\\.de/apt" in text
     assert "growcentral-archive-keyring" in text
     assert "*.sources" in text
     assert "*.list" in text

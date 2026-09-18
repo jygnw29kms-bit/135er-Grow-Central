@@ -6,7 +6,7 @@ Logo und Branding bleiben unverändert. Für alle aktuellen Oberflächen gilt ve
 
 - Raspberry-Pi GUI und First Boot;
 - Elecrow 7-Zoll Touch-Kiosk;
-- dezender.de;
+- grow-central.de;
 - Android/iOS Nexus Mobile;
 - Cloud-/Server-Präsentation;
 - Repo-/README-/Release-Grafiken.

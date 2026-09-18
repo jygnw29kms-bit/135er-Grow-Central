@@ -6,7 +6,7 @@ KEY="/usr/share/keyrings/135er-growcentral-archive-keyring.gpg"
 SOURCE="/etc/apt/sources.list.d/135er-growcentral.sources"
 APT_DIR="/etc/apt"
 BACKUP_ROOT="/var/backups/135er-growcentral-apt"
-MATCH_RE='repo\.dezender\.de/apt|135er[-_ ]?(growcentral|cloud)|growcentral-archive-keyring'
+MATCH_RE='repo\.dezender\.de/apt|repo\.grow-central\.de/apt|135er[-_ ]?(growcentral|cloud)|growcentral-archive-keyring'
 
 [[ $EUID -eq 0 ]] || { echo "Als root ausführen."; exit 1; }
 for cmd in awk cmp cp curl find install mktemp; do

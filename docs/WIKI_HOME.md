@@ -34,8 +34,8 @@ Build 118 ist der nächste reale Hardwaretest-Kandidat auf Basis des konsolidier
 - Android: Nexus WebGUI Client / APK
 - iOS: Nexus WebGUI Client / unsigned Sideload IPA
 - Cloud: optionaler Serverpfad V6
-- APT: signiert unter `https://repo.dezender.de/apt`
-- Website: read-only Project Console unter `https://dezender.de`
+- APT: signiert unter `https://repo.grow-central.de/apt`
+- Website: read-only Project Console unter `https://grow-central.de`
 
 ## Release-Regel
 
