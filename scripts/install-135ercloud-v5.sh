@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-REPO="https://dezender.de/apt/135er-growcentral"
+REPO="https://grow-central.de/apt/135er-growcentral"
 KEY="/etc/apt/keyrings/135er-growcentral.asc"
 SOURCE="/etc/apt/sources.list.d/135er-growcentral.sources"
 FALLBACK="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-135ercloud-v4.sh"
@@ -32,7 +32,7 @@ EOF
  apt-get install -y 135er-growcentral-cloud
  echo -e "      ${G}✓ OK${R}"
  echo -e "${C}[4/4] Status prüfen${R}"
- systemctl is-active --quiet 135er-growcentral-cloud && curl -fsS https://135ercloud.dezender.de/health >/dev/null
+ systemctl is-active --quiet 135er-growcentral-cloud && curl -fsS https://135ercloud.grow-central.de/health >/dev/null
  echo -e "      ${G}✓ OK${R}"
  echo
  echo -e "GESAMTSTATUS: ${G}OK${R} (APT)"
