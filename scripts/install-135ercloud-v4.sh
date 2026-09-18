@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DOMAIN="${ROOT_DOMAIN:-dezender.de}"
-CLOUD_HOST="${CLOUD_HOST:-135ercloud.dezender.de}"
+ROOT_DOMAIN="${ROOT_DOMAIN:-grow-central.de}"
+CLOUD_HOST="${CLOUD_HOST:-135ercloud.grow-central.de}"
 SERVICE="${SERVICE:-135er-growcentral-cloud}"
 APP_USER="${APP_USER:-growcentral-cloud}"
 APP_DIR="${APP_DIR:-/opt/${SERVICE}}"
@@ -96,7 +96,7 @@ class ChallengeBody(BaseModel):device_id:str
 @app.get('/health')
 def health():return {'ok':True,'service':'135er-growcentral-cloud','version':4,'time':now(),'online_devices':len(device_sockets)}
 @app.get('/.well-known/growcentral-cloud')
-def discovery():return {'product':'135er-GrowCentral','protocol_version':2,'cloud_version':4,'official':PUBLIC_URL=='https://135ercloud.dezender.de','public_url':PUBLIC_URL,'requires_https':True,'device_identity':'ed25519','pairing_url':PUBLIC_URL+'/pair','device_websocket':PUBLIC_URL.replace('https://','wss://')+'/api/v2/device/connect','remote_websocket':PUBLIC_URL.replace('https://','wss://')+'/api/v2/remote/connect'}
+def discovery():return {'product':'135er-GrowCentral','protocol_version':2,'cloud_version':4,'official':PUBLIC_URL=='https://135ercloud.grow-central.de','public_url':PUBLIC_URL,'requires_https':True,'device_identity':'ed25519','pairing_url':PUBLIC_URL+'/pair','device_websocket':PUBLIC_URL.replace('https://','wss://')+'/api/v2/device/connect','remote_websocket':PUBLIC_URL.replace('https://','wss://')+'/api/v2/remote/connect'}
 @app.post('/api/v2/account/register')
 def register(b:RegisterBody):
     e=email(b.email);pw(b.password);aid=str(uuid.uuid4())
