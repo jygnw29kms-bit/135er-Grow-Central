@@ -62,7 +62,7 @@ Ein Build wird erst nach erfolgreichem Durchlauf der automatisierten Prüfungen 
 ## Distribution und Vertraulichkeit
 
 - Repository, neue Releases, Images, App-Pakete und Installationsskripte werden bis auf Weiteres geschlossen geführt.
-- Die öffentliche Produktseite unter `https://dezender.de/GC/` enthält keine internen Downloads, Buildnummern, Commit-IDs, Protokollnamen oder Betriebsendpunkte.
+- Die öffentliche Produktseite unter `https://grow-central.de/` enthält keine internen Downloads, Buildnummern, Commit-IDs, Protokollnamen oder Betriebsendpunkte.
 - Bereits früher veröffentlichte Inhalte gelten als potenziell eingesehen oder kopiert und dürfen nicht als vertraulich vorausgesetzt werden.
 - Für bereits unter MIT veröffentlichte Fassungen bleibt die vorhandene Lizenz maßgeblich; eine Neulizenzierung künftiger Fassungen wird separat geklärt.
 - Zugangsdaten, Tokens, Schlüssel und Kundendaten dürfen niemals in Commits oder Release-Artefakten enthalten sein.
