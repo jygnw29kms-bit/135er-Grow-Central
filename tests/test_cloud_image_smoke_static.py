@@ -1,3 +1,5 @@
+import base64
+import gzip
 from pathlib import Path
 
 
@@ -80,3 +82,10 @@ def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
     assert "PasswordAuthentication no" in installer
     assert 'record["used"]=True' in installer
     assert "MAINTENANCE_SSH_HOST" in installer
+
+
+def test_packaged_cloud_installer_matches_current_payload():
+    wrapper = (ROOT / "scripts/install-135ercloud-v6.sh").read_text()
+    encoded = wrapper.split("base64 -d <<'__GCLOUD_PAYLOAD__' | gzip -dc > \"$TMP\"\n", 1)[1].split("\n__GCLOUD_PAYLOAD__", 1)[0]
+    decoded = gzip.decompress(base64.b64decode(encoded))
+    assert decoded == (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_bytes()

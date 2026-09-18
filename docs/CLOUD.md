@@ -27,9 +27,10 @@ FRITZ! / Tapo / C920 / Mars Hydro / Räume
 - Server-Installer: `scripts/install-135ercloud-v6.sh`
 - APT-Bootstrap: `scripts/setup-135ercloud-apt-repo-v1.sh`
 - signiertes Repository: `https://repo.grow-central.de/apt`
-- öffentliche Kopien: `https://grow-central.de/135ercloud-server-install.sh` und `https://grow-central.de/setup-135ercloud-apt-repo.sh`
+- öffentlicher Server-Installer: [`scripts/install-135ercloud-v6.sh`](../scripts/install-135ercloud-v6.sh)
+- öffentliche APT-Einrichtung: [`scripts/add-135ercloud-apt-repo.sh`](../scripts/add-135ercloud-apt-repo.sh)
 
-Der grow-central.de-Deploy veröffentlicht zusätzlich `RELEASE_STATE.md`, `release-state.txt` und `SHA256SUMS.txt`, damit Installer und sichtbarer Release-Stand eindeutig zusammengehören.
+Release- und Buildstände werden im öffentlichen Repository über [`RELEASE_STATE.md`](../RELEASE_STATE.md) und die veröffentlichten Release-Artefakte einschließlich ihrer Prüfsummen dokumentiert.
 
 ## APT-Sicherheit
 
