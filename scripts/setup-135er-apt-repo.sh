@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DOMAIN="dezender.de"
-REPO_URL="https://dezender.de/apt/135er-growcentral"
-REPO_ROOT="/var/www/vhosts/dezender.de/httpdocs/apt/135er-growcentral"
+DOMAIN="grow-central.de"
+REPO_URL="https://grow-central.de/apt/135er-growcentral"
+REPO_ROOT="/var/www/vhosts/grow-central.de/httpdocs/apt/135er-growcentral"
 SRC_URL="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-135ercloud-v4.sh"
 GNUPGHOME="/root/.gnupg-135er-growcentral-repo"
-KEY_NAME="135er GrowCentral APT Repository <repo@dezender.de>"
+KEY_NAME="135er GrowCentral APT Repository <repo@grow-central.de>"
 VERSION="${VERSION:-5.1.0-1}"
 
 G='\033[1;32m'; Y='\033[1;33m'; R='\033[0m'; C='\033[1;36m'
@@ -56,7 +56,7 @@ Version: $VERSION
 Section: net
 Priority: optional
 Architecture: all
-Maintainer: 135er GrowCentral <repo@dezender.de>
+Maintainer: 135er GrowCentral <repo@grow-central.de>
 Depends: python3, python3-fastapi, python3-uvicorn, python3-sqlalchemy, python3-argon2, python3-cryptography, python3-multipart, curl, openssl, sqlite3, iproute2, ca-certificates, util-linux
 Description: 135er GrowCentral Cloud server
  Secure GrowCentral cloud relay for Plesk servers.
@@ -97,7 +97,7 @@ EOF
 cat > "$PKG/usr/lib/135er-growcentral-cloud/setup.sh" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-DOMAIN="135ercloud.dezender.de"; ROOT_DOMAIN="dezender.de"; SERVICE="135er-growcentral-cloud"
+DOMAIN="135ercloud.grow-central.de"; ROOT_DOMAIN="grow-central.de"; SERVICE="135er-growcentral-cloud"
 APP_USER="growcentral-cloud"; DATA="/var/lib/135er-growcentral-cloud"; CONF="/etc/135er-growcentral-cloud"; ENV="$CONF/cloud.env"
 VHOST="/var/www/vhosts/system/$DOMAIN/conf/vhost_nginx.conf"; PORT=18765
 G='\033[1;32m';Y='\033[1;33m';X='\033[1;31m';R='\033[0m';C='\033[1;36m'
@@ -110,7 +110,7 @@ echo;echo "=====================================================================
 step "Plesk prüfen"; command -v plesk >/dev/null && plesk bin domain --info "$ROOT_DOMAIN" >/dev/null 2>&1 && ok "Plesk + $ROOT_DOMAIN" || { fail "Plesk/Domain fehlt";finish; }
 step "Daten/Secrets vorbereiten"; id "$APP_USER" >/dev/null 2>&1 || useradd --system --home "$DATA" --shell /usr/sbin/nologin "$APP_USER";install -d -m0750 -o "$APP_USER" -g "$APP_USER" "$DATA";install -d -m0750 -o root -g "$APP_USER" "$CONF";if [ ! -f "$ENV" ];then umask 077;cat >"$ENV" <<EOT
 APP_PORT=18765
-PUBLIC_URL=https://135ercloud.dezender.de
+PUBLIC_URL=https://135ercloud.grow-central.de
 DATABASE_URL=sqlite:////var/lib/135er-growcentral-cloud/cloud.sqlite3
 SERVER_SECRET=$(openssl rand -hex 32)
 COOKIE_SECRET=$(openssl rand -hex 32)
