@@ -90,7 +90,7 @@ Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servic
 2. Ein erfolgreicher CI-Lauf oder Image-Build erhält zunächst den Status `CANDIDATE`.
 3. `VALIDATED` wird erst nach dokumentiertem Test auf realer Zielhardware vergeben.
 4. Öffentliche Builds, Images, App-Pakete und Installationsskripte werden – sofern technisch und rechtlich veröffentlichbar – über die Open-Source-Projektkanäle dokumentiert und bereitgestellt.
-5. Die öffentliche Projektseite unter [dezender.de/GC](https://dezender.de/GC/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
+5. Die öffentliche Projektseite unter [grow-central.de](https://grow-central.de/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
 6. Zugangsdaten, Tokens, private Schlüssel, lokale Adressen, Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse werden niemals veröffentlicht.
 
 ## Lizenz
