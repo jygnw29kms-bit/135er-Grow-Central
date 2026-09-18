@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DOMAIN="${ROOT_DOMAIN:-dezender.de}"
-REPO_HOST="${REPO_HOST:-repo.dezender.de}"
+ROOT_DOMAIN="${ROOT_DOMAIN:-grow-central.de}"
+REPO_HOST="${REPO_HOST:-repo.grow-central.de}"
 REPO_SUB="${REPO_HOST%.$ROOT_DOMAIN}"
 REPO_URL="https://${REPO_HOST}/apt"
-DOCROOT_REL="/repo.dezender.de"
+DOCROOT_REL="/repo.grow-central.de"
 DOCROOT="/var/www/vhosts/${ROOT_DOMAIN}${DOCROOT_REL}"
 APT_ROOT="${DOCROOT}/apt"
 KEY_HOME="/root/.gnupg-135er-growcentral-repo"
-KEY_EMAIL="${KEY_EMAIL:-repo@dezender.de}"
+KEY_EMAIL="${KEY_EMAIL:-repo@grow-central.de}"
 PKG_NAME="135er-growcentral-cloud"
 PKG_VERSION="${PKG_VERSION:-6.1.0}"
 INSTALLER_URL="${INSTALLER_URL:-https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-135ercloud-v6.sh}"
@@ -115,7 +115,7 @@ Version: $PKG_VERSION
 Section: admin
 Priority: optional
 Architecture: all
-Maintainer: 135er GrowCentral <repo@dezender.de>
+Maintainer: 135er GrowCentral <repo@grow-central.de>
 Depends: ca-certificates, curl, wget, openssl, openssh-server, sqlite3, python3, python3-venv, python3-pip, iproute2, util-linux, gnupg
 Description: 135er GrowCentral Cloud Server
  Plesk-safe GrowCentral Cloud service with account/device pairing,
