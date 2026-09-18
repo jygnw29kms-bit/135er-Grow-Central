@@ -1,4 +1,4 @@
-name: Deploy Grow Central Website to dezender.de via SFTP
+name: Deploy Grow Central Website to grow-central.de via SFTP
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: SFTP Deploy Grow Central /GC
+    name: SFTP Deploy Grow Central
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,8 +24,7 @@ jobs:
           set -euo pipefail
           install -d \
             public-site/assets/brand \
-            public-site/assets/gui \
-            root-site
+            public-site/assets/gui
 
           cp website/index.html public-site/index.html
           cp website/styles.css public-site/styles.css
@@ -46,58 +45,15 @@ jobs:
           p.write_text(s.replace(marker, replacement, 1), encoding='utf-8')
           PY
 
-          cp website/impressum.html root-site/impressum.html
-          cp website/datenschutz.html root-site/datenschutz.html
-
-          python3 - <<'PY'
-          from pathlib import Path
-          for name in ('impressum.html', 'datenschutz.html'):
-              p = Path('root-site') / name
-              s = p.read_text(encoding='utf-8')
-              s = s.replace('href="assets/brand/135er-grow-central-mark.png"', 'href="/GC/assets/brand/135er-grow-central-mark.png"')
-              s = s.replace('href="styles.css?v=4.0.0"', 'href="/GC/styles.css?v=4.0.0"')
-              s = s.replace('href="./">Zurück zu Grow Central</a>', 'href="/GC/">Zurück zu Grow Central</a>')
-              p.write_text(s, encoding='utf-8')
-          PY
-
-          cat > root-site/index.html <<'EOF'
-          <!doctype html>
-          <html lang="de">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta name="robots" content="noindex,follow">
-            <meta http-equiv="refresh" content="0; url=/GC/">
-            <link rel="canonical" href="https://dezender.de/GC/">
-            <title>135er-Grow Central</title>
-            <script>location.replace('/GC/');</script>
-          </head>
-          <body>
-            <p>Weiterleitung zu <a href="/GC/">135er-Grow Central</a> …</p>
-            <p><a href="/impressum.html">Impressum</a> · <a href="/datenschutz.html">Datenschutz</a></p>
-          </body>
-          </html>
-          EOF
-
-      - name: Deploy Grow Central to /GC
+      - name: Deploy Grow Central to grow-central.de
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           password: ${{ secrets.SFTP_PASSWORD }}
           local_path: './public-site/*'
-          remote_path: '/var/www/vhosts/dezender.de/httpdocs/GC/'
+          remote_path: '/var/www/vhosts/grow-central.de/httpdocs/'
           delete_remote_files: true
 
-      - name: Publish root redirect and legal pages
-        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
-        with:
-          username: ${{ secrets.SFTP_USERNAME }}
-          server: ${{ secrets.SFTP_HOST }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          local_path: './root-site/*'
-          remote_path: '/var/www/vhosts/dezender.de/httpdocs/'
-          delete_remote_files: false
-
       - name: Deployment information
-        run: echo '135er-Grow Central deployed to https://dezender.de/GC/'
+        run: echo '135er-Grow Central deployed to https://grow-central.de/'
