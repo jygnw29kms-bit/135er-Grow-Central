@@ -1,0 +1,40 @@
+<?php
+$this->headTitle('135er Grow Central Cloud');
+$h = static function ($value) {
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+};
+?>
+<style>
+.gc-shell{max-width:1180px}.gc-hero{padding:26px;border-radius:14px;color:#f7fbff;background:linear-gradient(135deg,#10263b 0%,#164e63 52%,#166534 100%);box-shadow:0 12px 32px rgba(16,38,59,.18)}.gc-eyebrow{margin:0 0 6px;color:#86efac;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.gc-hero h1{margin:0;color:#fff;font-size:30px}.gc-hero p{max-width:850px;margin:10px 0 0;color:#dbeafe}.gc-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:20px}.gc-card,.gc-section{padding:19px;border:1px solid #d8e2ea;border-radius:12px;background:#fff}.gc-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.gc-card h2,.gc-section h2{margin:0;color:#10263b;font-size:18px}.gc-section{margin-top:22px}.gc-section h2{margin-bottom:14px}.gc-status{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border-radius:999px;font-weight:700}.gc-status::before{width:8px;height:8px;border-radius:50%;content:'';background:currentColor}.gc-ready{color:#166534;background:#dcfce7}.gc-missing{color:#9a3412;background:#ffedd5}.gc-path{margin:13px 0;padding:9px 11px;overflow-wrap:anywhere;border-radius:8px;color:#334155;background:#f1f5f9;font-family:monospace}.gc-button{display:inline-block;padding:9px 14px;border-radius:8px;color:#fff!important;background:#166534;font-weight:700;text-decoration:none!important}.gc-button-secondary{background:#334155}.gc-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.gc-setting{padding:12px;border-radius:9px;background:#f1f5f9}.gc-setting span{display:block;color:#64748b;font-size:12px;text-transform:uppercase}.gc-setting strong{display:block;margin-top:4px;color:#0f172a}.gc-table{width:100%;border-collapse:collapse}.gc-table th,.gc-table td{padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}.gc-table th{color:#475569;font-size:12px;text-transform:uppercase}.gc-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.gc-note{margin-top:18px;padding:14px 16px;border-left:4px solid #16a34a;color:#334155;background:#f0fdf4}
+</style>
+<div class="gc-shell">
+<section class="gc-hero"><p class="gc-eyebrow">135er-Heli · Plesk Cloud-Verwaltung</p><h1>135er Grow Central Cloud</h1><p>Der bewährte V6-Cloud-Core bleibt aktiv. Die V7-Administration ergänzt Gerätefreischaltungen, Pakete und Feature-Status über dieselbe Datenbank. Secrets werden nur serverseitig verwendet und niemals angezeigt.</p></section>
+<div class="gc-grid">
+<?php foreach ($this->checks as $check): ?>
+<section class="gc-card"><div class="gc-card-top"><h2><?= $h($check['name']) ?></h2><span class="gc-status <?= $check['ready'] ? 'gc-ready' : 'gc-missing' ?>"><?= $check['ready'] ? 'Aktiv' : 'Prüfen' ?></span></div><div class="gc-path"><?= $h($check['path']) ?></div><?php if (!empty($check['url'])): ?><a class="gc-button" href="<?= $h($check['url']) ?>" target="_blank" rel="noopener noreferrer">Öffnen</a><?php endif; ?></section>
+<?php endforeach; ?>
+</div>
+<section class="gc-section"><h2>Vorgesehene Cloud-Einstellungen</h2><div class="gc-settings">
+<div class="gc-setting"><span>Administration</span><strong><?= $h($this->settings['admin_mode'] ?? 'plesk') ?></strong></div>
+<div class="gc-setting"><span>Öffentliche URL</span><strong>https://135ercloud.grow-central.de</strong></div>
+<div class="gc-setting"><span>Cloud-Core</span><strong>127.0.0.1:<?= $h($this->settings['core_port'] ?? 18765) ?></strong></div>
+<div class="gc-setting"><span>V7 Admin</span><strong>127.0.0.1:<?= $h($this->settings['admin_port'] ?? 18766) ?></strong></div>
+<div class="gc-setting"><span>Max. Geräte</span><strong><?= $h($this->stats['soft_limit'] ?? $this->settings['max_devices'] ?? 1000) ?></strong></div>
+<div class="gc-setting"><span>Heartbeat</span><strong><?= $h($this->settings['heartbeat_seconds'] ?? 30) ?> Sekunden</strong></div>
+<div class="gc-setting"><span>Offline nach</span><strong><?= $h($this->settings['offline_after_seconds'] ?? 120) ?> Sekunden</strong></div>
+<div class="gc-setting"><span>Remote-Befehle</span><strong>Aus · doppelte Freigabe nötig</strong></div>
+<div class="gc-setting"><span>Admin-Token</span><strong><?= $this->adminTokenConfigured ? 'Sicher konfiguriert' : 'Fehlt' ?></strong></div>
+<div class="gc-setting"><span>Pi-Betrieb</span><strong>Offline vollständig möglich</strong></div>
+</div></section>
+<section class="gc-section"><h2>Geräte und Freischaltungen</h2>
+<?php if (!$this->adminTokenConfigured): ?><p>Die Plesk-Anbindung an den internen V7-Dienst ist noch nicht freigeschaltet.</p>
+<?php elseif (!$this->devices): ?><p>Noch keine verbundenen Grow-Central-Geräte vorhanden.</p>
+<?php else: ?><table class="gc-table"><thead><tr><th>Gerät</th><th>Kunde / Gruppe</th><th>Status</th><th>Paket</th><th>Online</th><th>Features</th></tr></thead><tbody>
+<?php foreach ($this->devices as $device): $features=[]; foreach (['remote_control','camera','history_extended','alerts','automation_pro','api_access','beta_features'] as $feature) { if (!empty($device[$feature])) $features[]=$feature; } ?>
+<tr><td><strong><?= $h($device['name'] ?: $device['id']) ?></strong><br><small><?= $h($device['id']) ?></small></td><td><?= $h($device['customer'] ?: '—') ?><br><small><?= $h($device['device_group'] ?: '—') ?></small></td><td><?= $h($device['effective']['state'] ?? $device['state'] ?? 'pending') ?></td><td><?= $h($device['plan'] ?? 'BASIC') ?></td><td><?= !empty($device['online']) ? 'Ja' : 'Nein' ?></td><td><?= $h($features ? implode(', ', $features) : 'Basis') ?></td></tr>
+<?php endforeach; ?></tbody></table><?php endif; ?>
+<p><small>Pakete: BASIC · PLUS · PRO · INTERNAL. Feature-Flags: Fernsteuerung, Kamera, erweiterte Historie, Warnungen, Automation Pro, API und Beta.</small></p></section>
+<div class="gc-actions"><a class="gc-button gc-button-secondary" href="<?= $h($this->monitoringUrl) ?>">Monitoring</a><a class="gc-button gc-button-secondary" href="<?= $h($this->terminalUrl) ?>">SSH-Terminal</a><a class="gc-button gc-button-secondary" href="<?= $h($this->fileManagerUrl) ?>">Dateimanager</a></div>
+<div class="gc-note">Die Cloud erweitert Grow Central, übernimmt aber nicht die lokale Steuerung. God’s Eye bleibt ein vollständig getrenntes Projekt.</div>
+</div>
+

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<module>
+  <id>grow-central</id>
+  <name>135er Grow Central</name>
+  <description>Plesk-Administration für Grow-Central Cloud, Geräte, Pakete und Feature-Freischaltungen.</description>
+  <version>1.1.1</version>
+  <release>1</release>
+  <vendor>135er-Heli</vendor>
+  <url>https://grow-central.de/</url>
+  <plesk_min_version>18.0.80</plesk_min_version>
+</module>
