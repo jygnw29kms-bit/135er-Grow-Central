@@ -22,7 +22,7 @@ Die eigentliche Anmeldung am Pi erfolgt weiterhin über SSH mit dem während Fir
 ## Automatische Build-Prüfung
 
 - lokaler API-Healthcheck vor dem Verpacken;
-- öffentlicher DNS-A-Record `135ercloud.dezender.de -> 87.106.119.187`;
+- öffentlicher DNS-A-Record `135ercloud.grow-central.de -> 87.106.119.187`;
 - gültiges HTTPS/TLS zum offiziellen Cloud-Endpunkt;
 - erfolgreicher öffentlicher `/health`-Endpunkt;
 - gültige `/.well-known/growcentral-cloud`-Discovery mit HTTPS- und WSS-Endpunkten;

@@ -33,7 +33,7 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 - Candidate-Commit: `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
 - Build 199: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
 - reale, klassenbezogene Hardwarevalidierung steht noch aus
-- neue Releases und Artefakte werden bis auf Weiteres geschlossen verteilt
+- veröffentlichbare Releases und Artefakte werden über die öffentlichen Open-Source-Projektkanäle bereitgestellt
 
 ## Verbindliche Release-Gates
 
@@ -41,7 +41,7 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 2. Python-, Security-, Hardwareprofil-, Integrations- und Release-Guards ausführen.
 3. Universal-Image aus exakt diesem Runtime-Stand bauen.
 4. Boot/Reboot/Pristine/Packaging/Checksum/Release erfolgreich.
-5. neuen Build intern als `CANDIDATE` bereitstellen.
+5. neuen Build mit dokumentiertem Teststatus als `CANDIDATE` bereitstellen.
 6. Realtest mindestens auf der Full-Support-Referenzklasse Pi 4/400 durchführen.
 7. Pi-3-Legacy/Lite separat prüfen und Abweichungen separat klassifizieren.
 8. Pi 5/Performance separat validieren, sofern Zielhardware verfügbar.
@@ -67,7 +67,7 @@ Die Cloud bleibt optional. Plesk-/Standalone-Varianten, Entitlements und APT-Upg
 
 ### Website
 
-`https://dezender.de/GC/` kommuniziert Produktnutzen, Hardwarestrategie und die geschlossene Entwicklungsphase. Konkrete Buildnummern, Commit-IDs, Downloadlinks, Installationsskripte und interne Betriebsdetails bleiben ausschließlich in der privaten Projektdokumentation.
+`https://grow-central.de/` kommuniziert Produktnutzen, Hardwarestrategie und die vollständige Open-Source-Ausrichtung. Quellcode, Dokumentation und veröffentlichte Downloads sind über das öffentliche Repository und dessen Releases verlinkt. Zugangsdaten, private Schlüssel und personenbezogene Betriebsdaten bleiben geschützt.
 
 ## Historische Dokumente
 

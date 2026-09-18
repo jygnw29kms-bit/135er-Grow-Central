@@ -32,9 +32,9 @@ Die öffentliche Website ist rein statisch. Sie enthält keine Tokens, Kennwört
 
 ## Produktions-Deployment
 
-Der per SSH bestätigte absolute Plesk-Webroot für `dezender.de` lautet:
+Der per SSH bestätigte absolute Plesk-Webroot für `grow-central.de` lautet:
 
-`/var/www/vhosts/dezender.de/httpdocs`
+`/var/www/vhosts/grow-central.de/httpdocs`
 
 Der Benutzer `dezender` erreicht dasselbe Verzeichnis über `~/httpdocs`.
 

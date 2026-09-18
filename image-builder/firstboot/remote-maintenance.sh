@@ -7,7 +7,7 @@ STATE_DIR="/var/lib/135er-grow-central/remote-maintenance"
 KEY_FILE="${STATE_DIR}/id_ed25519"
 KNOWN_HOSTS="${STATE_DIR}/known_hosts"
 CONFIG="/etc/135er-grow-central/remote-maintenance.conf"
-CLOUD_URL="${GC_MAINTENANCE_CLOUD_URL:-https://135ercloud.dezender.de}"
+CLOUD_URL="${GC_MAINTENANCE_CLOUD_URL:-https://135ercloud.grow-central.de}"
 
 die() { echo "FEHLER: $*" >&2; exit 1; }
 need_root() { [[ ${EUID:-$(id -u)} -eq 0 ]] || die "Bitte mit sudo ausführen."; }

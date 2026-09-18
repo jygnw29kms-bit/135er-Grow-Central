@@ -26,10 +26,10 @@ FRITZ! / Tapo / C920 / Mars Hydro / Räume
 
 - Server-Installer: `scripts/install-135ercloud-v6.sh`
 - APT-Bootstrap: `scripts/setup-135ercloud-apt-repo-v1.sh`
-- signiertes Repository: `https://repo.dezender.de/apt`
-- öffentliche Kopien: `https://dezender.de/135ercloud-server-install.sh` und `https://dezender.de/setup-135ercloud-apt-repo.sh`
+- signiertes Repository: `https://repo.grow-central.de/apt`
+- öffentliche Kopien: `https://grow-central.de/135ercloud-server-install.sh` und `https://grow-central.de/setup-135ercloud-apt-repo.sh`
 
-Der dezender.de-Deploy veröffentlicht zusätzlich `RELEASE_STATE.md`, `release-state.txt` und `SHA256SUMS.txt`, damit Installer und sichtbarer Release-Stand eindeutig zusammengehören.
+Der grow-central.de-Deploy veröffentlicht zusätzlich `RELEASE_STATE.md`, `release-state.txt` und `SHA256SUMS.txt`, damit Installer und sichtbarer Release-Stand eindeutig zusammengehören.
 
 ## APT-Sicherheit
 

@@ -24,7 +24,7 @@ Build 117 wurde erfolgreich getestet, ist durch den danach zusammengeführten e3
 - Elecrow 7-Zoll Touch-Kiosk
 - Mobile Nexus Android + iOS Sideload Client
 - Cloud Server V6
-- signiertes APT Repository `https://repo.dezender.de/apt`
+- signiertes APT Repository `https://repo.grow-central.de/apt`
 
 ## Experimentell / weiter zu validieren
 

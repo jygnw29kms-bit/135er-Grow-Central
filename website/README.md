@@ -1,56 +1,17 @@
 # 135er-Grow Central – öffentliche Produktseite
 
-Die statische Seite unter `website/` ist die öffentliche, bewusst reduzierte Produktdarstellung von **135er-Grow Central**.
+Öffentliche URL: `https://grow-central.de/`
 
-**Öffentliche URL:** `https://grow-central.de/`
-
-## Kommunikationsziel
-
-Die Seite erklärt verständlich:
-
-- den Local-First-Ansatz;
-- die Raspberry-Pi-Zentrale ohne eigenen Desktop;
-- die Bedienung auf Desktop, Tablet und Smartphone;
-- Räume, Geräte, Messwerte, Kamera, Zeitpläne und Automationen;
-- die herstellerübergreifende Ausrichtung;
-- die Hardwareklassen Pi 3 Legacy/Lite, Pi 4 Full Support und Pi 5 Performance;
-- die gemeinsame Universal-Image-Strategie für die unterstützten Raspberry-Pi-Klassen;
-- die geschlossene Entwicklungs- und Hardwaretestphase.
-
-## Vertraulichkeitsgrenze
-
-Die öffentliche Seite veröffentlicht ausdrücklich **nicht**:
-
-- Repository- oder Quellcode-Links;
-- Buildnummern, Commit-IDs oder Workflow-Run-IDs;
-- Images, App-Pakete oder Installationsskripte;
-- API-Namen, interne Protokolle oder konkrete Betriebsendpunkte;
-- lokale Adressen, Ports, Zugangsdaten, Tokens oder Diagnosedaten;
-- interne Release-, Hardware- oder Architektur-Dokumente.
-
-Hersteller- und Produktnamen beschreiben Integrationspfade. Sie sind keine pauschale Zusage, dass jedes Modell und jede Firmware bereits vollständig unterstützt wird.
+Grow Central wird vollständig Open Source entwickelt. Die Seite erklärt Local First, die optionale Cloud, unterstützte Hardwareklassen und Geräteintegrationen und verlinkt das öffentliche Repository sowie veröffentlichte Releases. Ein CANDIDATE wird erst nach realen Hardwaretests als VALIDATED eingestuft.
 
 ## Öffentliche Dateien
 
-Der Deployment-Workflow veröffentlicht ausschließlich eine feste Positivliste:
-
-- `index.html`
-- `styles.css`
-- benötigte Markenbilder;
-- eine ausgewählte, bereits freigegebene GUI-Vorschau.
-
-Alle früher öffentlich abgelegten Installationsskripte, Release-Dateien, Prüfsummen und internen Dokumente werden beim nächsten Deployment aus dem Webverzeichnis entfernt.
+Das Deployment veröffentlicht ausschließlich `index.html`, `styles.css`, `impressum.html`, `datenschutz.html` und die benötigten Markenbilder sowie eine freigegebene GUI-Vorschau. Projektquellcode wird über GitHub bereitgestellt. Zugangsdaten, private Schlüssel und personenbezogene Diagnosedaten werden nicht ins Webverzeichnis übernommen.
 
 ## Deployment
 
-Zielverzeichnis:
+Ziel: `/var/www/vhosts/grow-central.de/httpdocs/`.
 
-```text
-/var/www/vhosts/grow-central.de/httpdocs/
-```
+Der Workflow `.github/workflows/deploy-website-sftp.yml` erstellt die öffentliche Dateiliste und veröffentlicht sie per SFTP. `scripts/deploy-public-website.sh` stellt dieselben Dateien bei einem Plesk-Git-Deployment bereit; das vollständige Checkout liegt außerhalb von `httpdocs`.
 
-Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht die Positivliste nach `https://grow-central.de/` und bereinigt Dateien, die nicht mehr zu dieser Liste gehören.
-
-## Gestaltung
-
-Branding, Logo und Wiedererkennungswert von **135er-Grow Central** bleiben unverändert. Die Seite folgt weiterhin dem GrowCentral Nexus UI, konzentriert sich jedoch auf Produktnutzen statt auf interne Implementierungsdetails.
+Die Gestaltung bleibt beim GrowCentral Nexus UI.

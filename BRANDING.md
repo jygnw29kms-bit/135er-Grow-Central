@@ -22,7 +22,7 @@ Das kompakte Markenzeichen darf allein als Favicon, App-Icon oder System-Seal ve
 
 - Raspberry-Pi GUI und First Boot;
 - Elecrow-/Kiosk-Oberflächen;
-- dezender.de;
+- grow-central.de;
 - Android- und iOS-Mobile-Clients;
 - Cloud-/APT-Präsentation;
 - README, Repo-Banner und Dokumentationsgrafiken;

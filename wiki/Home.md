@@ -50,8 +50,8 @@ Android / iOS / Desktop / Kiosk
 - Android: `GrowCentral-Nexus-Android-APK`
 - iOS: `GrowCentral-Nexus-iOS-Sideload-IPA`
 - Cloud: Server Installer V6
-- APT: `https://repo.dezender.de/apt`
-- Website: `https://dezender.de`
+- APT: `https://repo.grow-central.de/apt`
+- Website: `https://grow-central.de`
 
 ## Dokumentation
 

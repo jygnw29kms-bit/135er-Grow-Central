@@ -6,7 +6,7 @@ Logo and branding remain unchanged. All current interfaces follow the binding [`
 
 - Raspberry Pi GUI and first boot;
 - Elecrow 7-inch touch kiosk;
-- dezender.de;
+- grow-central.de;
 - Android/iOS Nexus Mobile;
 - Cloud/server presentation;
 - repository, README and release graphics.

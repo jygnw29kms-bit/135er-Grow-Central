@@ -3,7 +3,7 @@
 # Cloud availability must never decide whether a local-first image is valid.
 set -u
 
-CLOUD_ORIGIN="${GC_CLOUD_TEST_URL:-https://135ercloud.dezender.de}"
+CLOUD_ORIGIN="${GC_CLOUD_TEST_URL:-https://135ercloud.grow-central.de}"
 LOG_DIR="${GC_CLOUD_TEST_LOG_DIR:-/var/lib/135er-grow-central/support}"
 LOG_FILE="${LOG_DIR}/cloud-smoke-latest.log"
 

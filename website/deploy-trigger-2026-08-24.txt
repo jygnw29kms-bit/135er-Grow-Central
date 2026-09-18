@@ -1,3 +1,3 @@
 135er-Grow Central website deployment trigger
-Target: https://dezender.de/GC/
+Target: https://grow-central.de/
 Triggered: 2026-08-24

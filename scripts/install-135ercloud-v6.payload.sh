@@ -3,10 +3,10 @@ set -Eeuo pipefail
 
 # ==============================================================================
 # 135er GrowCentral Cloud V6
-# Official cloud: https://135ercloud.dezender.de
+# Official cloud: https://135ercloud.grow-central.de
 #
 # Goals:
-# - Plesk-safe: does not replace Plesk nginx/Apache and does not modify dezender.de
+# - Plesk-safe: does not replace Plesk nginx/Apache and does not modify grow-central.de
 # - Isolated backend bound to 127.0.0.1 only
 # - Accounts can own multiple GrowCentral Pis
 # - Pi GUID identifies an installation/device, but NEVER authenticates it
@@ -23,8 +23,8 @@ set -Eeuo pipefail
 # administration. DNS and a valid TLS certificate must exist for public use.
 # ==============================================================================
 
-ROOT_DOMAIN="${ROOT_DOMAIN:-dezender.de}"
-CLOUD_HOST="${CLOUD_HOST:-135ercloud.dezender.de}"
+ROOT_DOMAIN="${ROOT_DOMAIN:-grow-central.de}"
+CLOUD_HOST="${CLOUD_HOST:-135ercloud.grow-central.de}"
 SERVICE="${SERVICE:-135er-growcentral-cloud}"
 APP_USER="${APP_USER:-growcentral-cloud}"
 APP_DIR="${APP_DIR:-/opt/${SERVICE}}"
@@ -35,7 +35,7 @@ BACKUP_DIR="/root/${SERVICE}-backups"
 SYSTEMD_FILE="/etc/systemd/system/${SERVICE}.service"
 APP_PORT="${APP_PORT:-}"
 PAIR_TTL=600
-APT_REPO_HOST="${APT_REPO_HOST:-repo.dezender.de}"
+APT_REPO_HOST="${APT_REPO_HOST:-repo.grow-central.de}"
 APT_REPO_URL="${APT_REPO_URL:-https://${APT_REPO_HOST}/apt}"
 APT_REPO_KEY_URL="${APT_REPO_KEY_URL:-${APT_REPO_URL}/growcentral-archive-keyring.gpg}"
 APT_KEYRING="/usr/share/keyrings/135er-growcentral-archive-keyring.gpg"
@@ -519,7 +519,7 @@ def discovery():
         "product": "135er-GrowCentral",
         "protocol_version": 2,
         "cloud_version": 6,
-        "official": PUBLIC_URL == "https://135ercloud.dezender.de",
+        "official": PUBLIC_URL == "https://135ercloud.grow-central.de",
         "public_url": PUBLIC_URL,
         "requires_https": True,
         "device_identity": "ed25519",

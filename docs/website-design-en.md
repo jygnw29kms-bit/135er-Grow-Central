@@ -32,9 +32,9 @@ The public website remains fully static. It contains no tokens, passwords, devic
 
 ## Production deployment
 
-The absolute Plesk web root for `dezender.de`, confirmed through SSH, is:
+The absolute Plesk web root for `grow-central.de`, confirmed through SSH, is:
 
-`/var/www/vhosts/dezender.de/httpdocs`
+`/var/www/vhosts/grow-central.de/httpdocs`
 
 The `dezender` system user sees the same directory as `~/httpdocs`.
 

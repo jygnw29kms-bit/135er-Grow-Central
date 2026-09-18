@@ -47,8 +47,8 @@ Nexus Mobile wurde für den konsolidierten Plattformstand auf `0.2.1` angehoben:
 ### Cloud / APT / Website
 
 - Cloud Server Installer V6 bleibt kanonischer Serverpfad;
-- APT Bootstrap bleibt auf dem signierten Repository `https://repo.dezender.de/apt`;
-- dezender.de zeigt Build 118 ausdrücklich als `CANDIDATE`;
+- APT Bootstrap bleibt auf dem signierten Repository `https://repo.grow-central.de/apt`;
+- grow-central.de zeigt Build 118 ausdrücklich als `CANDIDATE`;
 - Website-Deploy publiziert Cloud-/APT-Installer gemeinsam mit Release-State und SHA-256-Summen.
 
 ## Hardwaretest-Checkliste
