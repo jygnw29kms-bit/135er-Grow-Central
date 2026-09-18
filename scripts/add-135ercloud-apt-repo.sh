@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="https://repo.dezender.de/apt"
+REPO="https://repo.grow-central.de/apt"
 KEY="/usr/share/keyrings/135er-growcentral-archive-keyring.gpg"
 SOURCE="/etc/apt/sources.list.d/135er-growcentral.sources"
 APT_DIR="/etc/apt"
