@@ -56,7 +56,7 @@ jobs:
           done
           grep -Fq 'Legacy/Lite' website/index.html
           grep -Fq 'Full Support' website/index.html
-          grep -Fq 'geschlossener Entwicklungsphase' website/index.html
+          grep -Fq 'OPEN SOURCE' website/index.html
           grep -Fxq '0.2.1' mobile/VERSION
           grep -Fq '"version": "0.2.1"' mobile/package.json
 
