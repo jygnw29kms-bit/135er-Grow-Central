@@ -2,7 +2,7 @@
 
 Die statische Seite unter `website/` ist die öffentliche, bewusst reduzierte Produktdarstellung von **135er-Grow Central**.
 
-**Öffentliche URL:** `https://dezender.de/GC/`
+**Öffentliche URL:** `https://grow-central.de/`
 
 ## Kommunikationsziel
 
@@ -46,10 +46,10 @@ Alle früher öffentlich abgelegten Installationsskripte, Release-Dateien, Prüf
 Zielverzeichnis:
 
 ```text
-/var/www/vhosts/dezender.de/httpdocs/GC/
+/var/www/vhosts/grow-central.de/httpdocs/
 ```
 
-Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht die Positivliste nach `https://dezender.de/GC/` und bereinigt Dateien, die nicht mehr zu dieser Liste gehören.
+Der Workflow `.github/workflows/deploy-website-sftp.yml` veröffentlicht die Positivliste nach `https://grow-central.de/` und bereinigt Dateien, die nicht mehr zu dieser Liste gehören.
 
 ## Gestaltung
 
