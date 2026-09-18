@@ -1,0 +1,52 @@
+/* 135er Grow-Central: decorative overrides for Plesk Obsidian. */
+:root, body {
+  --pul-font-family-body: Inter, ui-sans-serif, system-ui, sans-serif;
+  --pul-color-bg-surface-base: #02070a;
+  --pul-color-bg-input: #061015;
+  --pul-color-text-subtle: #a8c1c5;
+  --pul-color-text-link-on-dark: #2ae5ff;
+  --pul-color-border-subtle: #17414a;
+  --pul-color-focus-ring: #2ae5ff66;
+  --pul-color-bg-primary: #71ff3b;
+  --pul-color-bg-primary-hover: #91ff69;
+  --pul-color-bg-primary-pressed: #5be735;
+}
+body {
+  background-color: #02070a;
+}
+.pul-layout__header, .pul-layout__sidebar {
+  background-color: #041014 !important;
+  color: #edf8f6;
+  border-color: #17414a !important;
+}
+.pul-layout__main {
+  background-color: #02070a !important;
+  color: #edf8f6;
+}
+.pul-layout__sidebar a {
+  color: #a8c1c5 !important;
+}
+.pul-layout__sidebar a:hover, .pul-layout__sidebar a:focus-visible {
+  color: #2ae5ff !important;
+  background-color: #0a1820 !important;
+}
+.pul-layout__sidebar a[href*="/modules/grow-central/"] {
+  color: #71ff3b !important;
+  background-color: #0a1820 !important;
+}
+.pul-button--primary {
+  background-color: #71ff3b !important;
+  border-color: #71ff3b !important;
+  color: #031005 !important;
+}
+.pul-button--primary:hover {
+  background-color: #91ff69 !important;
+  border-color: #91ff69 !important;
+}
+.pul-button--primary:disabled, .pul-button--primary.pul-button--disabled {
+  opacity: .55;
+}
+.brand img {
+  content: url("../images/grow-central-lockup.png");
+  object-fit: contain;
+}
