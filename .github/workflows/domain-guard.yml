@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   no-legacy-domain:
-    name: Reject dezender.de references
+    name: Reject legacy domain references
     runs-on: ubuntu-latest
 
     steps:
