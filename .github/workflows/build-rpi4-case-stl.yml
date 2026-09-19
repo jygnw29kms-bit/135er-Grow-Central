@@ -1,0 +1,33 @@
+name: Build Raspberry Pi 4 case STL
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'website/downloads/3d/135er_Grow_Central_RPi4_case.scad'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-stl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenSCAD
+        run: sudo apt-get update && sudo apt-get install -y openscad
+      - name: Build STL files
+        run: |
+          mkdir -p website/downloads/3d
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_bottom.stl -D 'PART="bottom"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_lid.stl -D 'PART="lid"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl -D 'PART="printplate"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+      - name: Commit generated STL
+        run: |
+          git config user.name "grow-central-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add website/downloads/3d/*.stl
+          git diff --cached --quiet && exit 0
+          git commit -m "build: publish Raspberry Pi 4 enclosure STL"
+          git push
