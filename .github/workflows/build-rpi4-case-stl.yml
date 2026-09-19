@@ -30,4 +30,5 @@ jobs:
           git add website/downloads/3d/*.stl
           git diff --cached --quiet && exit 0
           git commit -m "build: publish Raspberry Pi 4 enclosure STL"
+          git pull --rebase origin master
           git push
