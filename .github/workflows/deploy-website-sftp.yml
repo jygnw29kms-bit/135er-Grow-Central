@@ -24,7 +24,8 @@ jobs:
           set -euo pipefail
           install -d \
             public-site/assets/brand \
-            public-site/assets/gui
+            public-site/assets/gui \
+            public-site/downloads/3d
 
           cp website/index.html public-site/index.html
           cp website/styles.css public-site/styles.css
@@ -33,7 +34,10 @@ jobs:
           cp website/assets/brand/135er-grow-central-lockup-v0.9.png public-site/assets/brand/
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
-
+          cp website/downloads/3d/135er_Grow_Central_RPi4_bottom.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_lid.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_case.scad public-site/downloads/3d/
 
       - name: Deploy Grow Central to grow-central.de
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
