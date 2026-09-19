@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LEGACY_DOMAIN='dezender\.de'
+LEGACY_HOST_PART='dezender'
+LEGACY_TLD='.de'
+LEGACY_DOMAIN="${LEGACY_HOST_PART}${LEGACY_TLD}"
+LEGACY_PATTERN="${LEGACY_HOST_PART}\.de"
 
-if git grep -n -I -i -E "$LEGACY_DOMAIN" -- .; then
+if git grep -n -I -i -E "$LEGACY_PATTERN" -- .; then
   echo
-  echo "ERROR: Legacy domain reference detected: dezender.de"
-  echo "Use grow-central.de and the canonical subdomains instead."
+  echo "ERROR: Legacy project domain reference detected."
+  echo "Replace it with grow-central.de or the canonical Grow Central subdomain."
   exit 1
 fi
 
-echo "Domain guard passed: no dezender.de references found in tracked text files."
+echo "Domain guard passed: no legacy project-domain references found in tracked text files."
