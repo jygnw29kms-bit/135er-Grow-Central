@@ -1,0 +1,24 @@
+name: Domain Guard
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-legacy-domain:
+    name: Reject dezender.de references
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check tracked source tree
+        shell: bash
+        run: bash scripts/check-no-dezender-domain.sh
