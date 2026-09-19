@@ -1,6 +1,7 @@
 // 135er Grow Central - Raspberry Pi 4 FDM case
 // Units: mm
 // Designed for FDM printing, 0.4 mm nozzle / 0.2 mm layer.
+// Published build source for grow-central.de.
 // Board reference: Raspberry Pi 4 Model B 85 x 56 mm, 58 x 49 mm mounting pattern.
 
 $fn = 48;
