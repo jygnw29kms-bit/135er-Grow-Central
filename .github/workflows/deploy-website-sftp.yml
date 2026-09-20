@@ -49,6 +49,6 @@ jobs:
            local_path: './public-site/*'
            remote_path: '/var/www/vhosts/grow-central.de/httpdocs/'
            delete_remote_files: true
-
+           sftp_only: true
       - name: Deployment information
         run: echo '135er-Grow Central deployed to https://grow-central.de/'
