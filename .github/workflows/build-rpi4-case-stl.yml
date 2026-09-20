@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install OpenSCAD
-        run: sudo apt-get update && sudo apt-get install -y openscad
+        run: sudo apt-get update && sudo apt-get install -y openscad xvfb
       - name: Build STL files
         run: |
           mkdir -p website/downloads/3d
@@ -27,11 +27,16 @@ jobs:
           openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl -D 'PART="printplate"' -D 'ACCESS_MODE="closed"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
           openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl -D 'PART="printplate"' -D 'ACCESS_MODE="gpio"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
           openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl -D 'PART="printplate"' -D 'ACCESS_MODE="service"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+
+          mkdir -p website/assets/hardware
+          xvfb-run -a openscad             -o website/assets/hardware/rpi4-case-closed.png             --imgsize=960,720 --autocenter --viewall             --camera=120,95,110,55,0,35             -D 'PART="assembly"' -D 'ACCESS_MODE="closed"'             website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          xvfb-run -a openscad             -o website/assets/hardware/rpi4-case-gpio.png             --imgsize=960,720 --autocenter --viewall             --camera=120,95,110,55,0,35             -D 'PART="assembly"' -D 'ACCESS_MODE="gpio"'             website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          xvfb-run -a openscad             -o website/assets/hardware/rpi4-case-service.png             --imgsize=960,720 --autocenter --viewall             --camera=120,95,110,55,0,35             -D 'PART="assembly"' -D 'ACCESS_MODE="service"'             website/downloads/3d/135er_Grow_Central_RPi4_case.scad
       - name: Commit generated STL
         run: |
           git config user.name "grow-central-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add website/downloads/3d/*.stl
+          git add website/downloads/3d/*.stl website/assets/hardware/*.png
           git diff --cached --quiet && exit 0
           git commit -m "build: publish Raspberry Pi 4 enclosure STL"
           git pull --rebase origin master
