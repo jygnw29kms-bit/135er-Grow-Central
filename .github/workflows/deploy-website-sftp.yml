@@ -25,7 +25,8 @@ jobs:
           install -d \
             public-site/assets/brand \
             public-site/assets/gui \
-            public-site/downloads/3d
+            public-site/downloads/3d \
+            public-site/downloads/3d/profiles
 
           cp website/index.html public-site/index.html
           cp website/styles.css public-site/styles.css
@@ -38,6 +39,12 @@ jobs:
           cp website/downloads/3d/135er_Grow_Central_RPi4_lid.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_case.scad public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_lid_gpio.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_lid_service.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl public-site/downloads/3d/
+          cp website/downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl public-site/downloads/3d/
+          cp website/downloads/3d/profiles/135er_RPi4_Case_P2S_PETG_process.json public-site/downloads/3d/profiles/
+          cp website/downloads/3d/profiles/135er_RPi4_Case_P2S_ASA_process.json public-site/downloads/3d/profiles/
 
       - name: Deploy Grow Central via native SFTP
         env:
