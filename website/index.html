@@ -268,7 +268,7 @@
           <article>
             <div class="num">02</div>
             <h3>Pi-4 passend</h3>
-            <p>Ausgelegt auf den Raspberry Pi 4 mit passenden M2.5-Abständen, Luftführung und Aussparungen für die wichtigen Anschlüsse.</p>
+            <p>Ausgelegt auf den Raspberry Pi 4 mit passenden M2.5-Abständen, Luftführung und Aussparungen für die wichtigen Anschlüsse. Der Deckel ist wahlweise geschlossen, mit GPIO-Zugang oder als Service-Version mit zusätzlichem Zugriff auf interne Board-Anschlüsse verfügbar.</p>
             <span class="tag cyan">RPI 4</span>
           </article>
           <article>
@@ -279,9 +279,9 @@
           </article>
           <article>
             <div class="num">04</div>
-            <h3>Open Source</h3>
-            <p>Neben den fertigen STL-Dateien steht auch die parametrische OpenSCAD-Datei zur eigenen Anpassung bereit.</p>
-            <span class="tag cyan">SCAD SOURCE</span>
+            <h3>Optionaler Board-Zugriff</h3>
+            <p>Drei Deckelvarianten: geschlossen, GPIO-Fenster oder Service-Deckel mit zusätzlichem Kabel-/Boardzugang für interne Anschlüsse.</p>
+            <span class="tag cyan">GPIO / SERVICE</span>
           </article>
         </div>
 
@@ -313,10 +313,45 @@
             <a class="btn ghost" href="downloads/3d/135er_Grow_Central_RPi4_lid.stl" download>Lid STL</a>
           </article>
           <article>
+            <div class="num">GPIO</div>
+            <h3>GPIO-Version</h3>
+            <p>Komplette Druckplatte mit offenem 40-Pin-GPIO-Zugang im Deckel.</p>
+            <a class="btn ghost" href="downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl" download>GPIO STL</a>
+          </article>
+          <article>
+            <div class="num">I/O</div>
+            <h3>Service-Version</h3>
+            <p>Zusätzlicher Zugriff auf GPIO sowie interne Board- und Flachbandkabel-Anschlüsse.</p>
+            <a class="btn ghost" href="downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl" download>Service STL</a>
+          </article>
+          <article>
             <div class="num">SCAD</div>
             <h3>OpenSCAD Quelle</h3>
-            <p>Parametrische Quelldatei zum Anpassen und Weiterentwickeln.</p>
+            <p>Parametrische Quelldatei zum Anpassen; ACCESS_MODE = closed, gpio oder service.</p>
             <a class="btn ghost" href="downloads/3d/135er_Grow_Central_RPi4_case.scad" download>SCAD herunterladen</a>
+          </article>
+        </div>
+
+        <div class="section-title" style="margin-top:2rem">
+          <div>
+            <div class="eyebrow">BAMBU LAB P2S</div>
+            <h2>P2S-Druckprofile für PETG und ASA.</h2>
+          </div>
+          <p>Für die 0,4-mm-Düse optimierte Gehäuseprofile mit 0,20-mm-Schichten, zusätzlichen Wänden und erhöhter Bauteilfestigkeit. PETG ist die unkomplizierte Standardwahl; ASA bietet mehr Temperatur- und UV-Reserve.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article>
+            <div class="num">PETG</div>
+            <h3>P2S PETG Case</h3>
+            <p>0,20 mm · 4 Wände · 25 % Gyroid · moderates Tempo · 5 mm Brim.</p>
+            <a class="btn primary" href="downloads/3d/profiles/135er_RPi4_Case_P2S_PETG_process.json" download>P2S PETG Profil</a>
+          </article>
+          <article>
+            <div class="num">ASA</div>
+            <h3>P2S ASA Case</h3>
+            <p>0,20 mm · 5 Wände · 30 % Gyroid · reduziertes Tempo · 8 mm Brim für Warping-Reserve.</p>
+            <a class="btn ghost" href="downloads/3d/profiles/135er_RPi4_Case_P2S_ASA_process.json" download>P2S ASA Profil</a>
           </article>
         </div>
       </div>
