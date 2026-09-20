@@ -21,8 +21,12 @@ jobs:
         run: |
           mkdir -p website/downloads/3d
           openscad -o website/downloads/3d/135er_Grow_Central_RPi4_bottom.stl -D 'PART="bottom"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
-          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_lid.stl -D 'PART="lid"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
-          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl -D 'PART="printplate"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_lid.stl -D 'PART="lid"' -D 'ACCESS_MODE="closed"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_lid_gpio.stl -D 'PART="lid"' -D 'ACCESS_MODE="gpio"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_lid_service.stl -D 'PART="lid"' -D 'ACCESS_MODE="service"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl -D 'PART="printplate"' -D 'ACCESS_MODE="closed"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl -D 'PART="printplate"' -D 'ACCESS_MODE="gpio"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
+          openscad -o website/downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl -D 'PART="printplate"' -D 'ACCESS_MODE="service"' website/downloads/3d/135er_Grow_Central_RPi4_case.scad
       - name: Commit generated STL
         run: |
           git config user.name "grow-central-bot"
