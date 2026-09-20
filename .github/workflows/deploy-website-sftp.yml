@@ -39,7 +39,7 @@ jobs:
           cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_case.scad public-site/downloads/3d/
 
-           - name: Deploy Grow Central via native SFTP
+      - name: Deploy Grow Central via native SFTP
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
