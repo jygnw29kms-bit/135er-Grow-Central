@@ -107,16 +107,14 @@ jobs:
           ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
           cat > /tmp/sftp-batch <<'BATCH'
           cd /var/www/vhosts/dezender.de/httpdocs
-          -mkdir downloads
-          -mkdir downloads/apps
-          put dist/android/GrowLightMeter-Android.apk downloads/apps/GrowLightMeter-Android.apk
-          put dist/android/GrowLightMeter-Android.apk.sha256 downloads/apps/GrowLightMeter-Android.apk.sha256
-          put dist/android/GrowLightMeter-Android.zip downloads/apps/GrowLightMeter-Android.zip
-          put dist/android/GrowLightMeter-Android.zip.sha256 downloads/apps/GrowLightMeter-Android.zip.sha256
-          put dist/ios/GrowLightMeter-iOS-unsigned.ipa downloads/apps/GrowLightMeter-iOS-unsigned.ipa
-          put dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 downloads/apps/GrowLightMeter-iOS-unsigned.ipa.sha256
-          put dist/ios/GrowLightMeter-iOS-Sideload.zip downloads/apps/GrowLightMeter-iOS-Sideload.zip
-          put dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256 downloads/apps/GrowLightMeter-iOS-Sideload.zip.sha256
+          put dist/android/GrowLightMeter-Android.apk GrowLightMeter-Android.apk
+          put dist/android/GrowLightMeter-Android.apk.sha256 GrowLightMeter-Android.apk.sha256
+          put dist/android/GrowLightMeter-Android.zip GrowLightMeter-Android.zip
+          put dist/android/GrowLightMeter-Android.zip.sha256 GrowLightMeter-Android.zip.sha256
+          put dist/ios/GrowLightMeter-iOS-unsigned.ipa GrowLightMeter-iOS-unsigned.ipa
+          put dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 GrowLightMeter-iOS-unsigned.ipa.sha256
+          put dist/ios/GrowLightMeter-iOS-Sideload.zip GrowLightMeter-iOS-Sideload.zip
+          put dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256 GrowLightMeter-iOS-Sideload.zip.sha256
           bye
           BATCH
           sftp -i ~/.ssh/growcentral_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
