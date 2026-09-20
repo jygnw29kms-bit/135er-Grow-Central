@@ -39,9 +39,48 @@ jobs:
           cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_case.scad public-site/downloads/3d/
 
-      - name: Deploy Grow Central to grow-central.de
-        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f # v1.2.4
-        with:
+- name: Deploy Grow Central via native SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
+          chmod 600 ~/.ssh/growcentral_deploy
+
+          ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          sftp \
+            -i ~/.ssh/growcentral_deploy \
+            -P "$SFTP_PORT" \
+            -b - \
+            "$SFTP_USERNAME@$SFTP_HOST" <<SFTP
+          cd /var/www/vhosts/grow-central.de/httpdocs
+          put public-site/index.html
+          put public-site/styles.css
+          put public-site/impressum.html
+          put public-site/datenschutz.html
+          mkdir assets
+          mkdir assets/brand
+          mkdir assets/gui
+          mkdir downloads
+          mkdir downloads/3d
+          put public-site/assets/brand/135er-grow-central-lockup-v0.9.png assets/brand/
+          put public-site/assets/brand/135er-grow-central-mark.png assets/brand/
+          put public-site/assets/gui/local-desktop-v0.9.png assets/gui/
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_bottom.stl downloads/3d/
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_lid.stl downloads/3d/
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_printplate.stl downloads/3d/
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_case.scad downloads/3d/
+          bye
+          SFTP
+
+          rm -f ~/.ssh/growcentral_deploy
            username: ${{ secrets.SFTP_USERNAME }}
            server: ${{ secrets.SFTP_HOST }}
            ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
