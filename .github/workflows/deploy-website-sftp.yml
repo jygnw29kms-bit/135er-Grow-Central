@@ -55,14 +55,29 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
           chmod 600 ~/.ssh/growcentral_deploy
 
-          lftp -e "
-            set sftp:connect-program 'ssh -a -x -i ~/.ssh/growcentral_deploy -p $SFTP_PORT -o StrictHostKeyChecking=accept-new';
-            set net:max-retries 2;
-            set net:timeout 15;
-            mirror --reverse --verbose --delete \
-              ./public-site \
-              /var/www/vhosts/grow-central.de/httpdocs;
-            bye
-          " "sftp://$SFTP_USERNAME@$SFTP_HOST"
+       - name: Deploy Grow Central via SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
+          chmod 600 ~/.ssh/growcentral_deploy
+
+          lftp <<EOF
+          set sftp:connect-program "ssh -a -x -i ~/.ssh/growcentral_deploy -p $SFTP_PORT -o StrictHostKeyChecking=accept-new"
+          set net:max-retries 2
+          set net:timeout 20
+          open sftp://$SFTP_USERNAME@$SFTP_HOST
+          mirror --reverse --verbose --delete ./public-site /var/www/vhosts/grow-central.de/httpdocs
+          bye
+          EOF
 
           rm -f ~/.ssh/growcentral_deploy
