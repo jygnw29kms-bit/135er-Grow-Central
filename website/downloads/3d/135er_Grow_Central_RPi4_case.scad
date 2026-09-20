@@ -6,6 +6,7 @@
 
 $fn = 48;
 PART = "bottom"; // bottom | lid | printplate | assembly
+ACCESS_MODE = "closed"; // closed | gpio | service
 
 wall = 2.4;
 floor_t = 2.4;
@@ -137,6 +138,26 @@ module case_bottom(){
         linear_extrude(height=0.7) text("135er GC",size=4.2,font="Liberation Sans:style=Bold",halign="center");
 }
 
+module service_openings(){
+    // Raspberry Pi 4 optional top access.
+    // ACCESS_MODE="gpio": 40-pin header access only.
+    // ACCESS_MODE="service": GPIO plus ribbon/service access for board connectors.
+    if (ACCESS_MODE=="gpio" || ACCESS_MODE=="service") {
+        // 40-pin GPIO header window, with FDM clearance.
+        translate([wall+6.0, wall+30.0, -0.6])
+            cube([54.0, 10.5, lid_t+1.8]);
+    }
+    if (ACCESS_MODE=="service") {
+        // CSI/DSI/service cable pass-through area.
+        translate([wall+24.0, wall+15.0, -0.6])
+            cube([38.0, 7.0, lid_t+1.8]);
+
+        // Additional narrow cable/service slot toward board center.
+        translate([wall+33.0, wall+23.5, -0.6])
+            cube([22.0, 5.5, lid_t+1.8]);
+    }
+}
+
 module case_lid(){
     lip_h=2.0;
     lip_t=1.4;
@@ -160,6 +181,7 @@ module case_lid(){
                 translate([x,y,lid_t-1.25]) cylinder(d=6.2,h=1.8);
 
         hexvent_field(24,18,8,4,8.0,5.2,lid_t+1.0);
+        service_openings();
     }
 
     translate([outer_x/2,8.7,lid_t])
@@ -168,6 +190,15 @@ module case_lid(){
     translate([outer_x/2,3.4,lid_t])
         linear_extrude(height=0.65)
             text("GROW CENTRAL",size=3.2,font="Liberation Sans:style=Bold",halign="center");
+
+    if (ACCESS_MODE=="gpio")
+        translate([outer_x-19, outer_y-8.5, lid_t])
+            linear_extrude(height=0.55)
+                text("GPIO",size=3.0,font="Liberation Sans:style=Bold",halign="center");
+    else if (ACCESS_MODE=="service")
+        translate([outer_x-22, outer_y-8.5, lid_t])
+            linear_extrude(height=0.55)
+                text("SERVICE",size=2.7,font="Liberation Sans:style=Bold",halign="center");
 }
 
 module assembly(){
