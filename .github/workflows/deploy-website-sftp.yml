@@ -38,24 +38,7 @@ jobs:
           cp website/downloads/3d/135er_Grow_Central_RPi4_lid.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_case.scad public-site/downloads/3d/
-
       - name: Deploy Grow Central via SFTP
-        env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PORT: ${{ secrets.SFTP_PORT }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-
-          sudo apt-get update
-          sudo apt-get install -y lftp
-
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
-          chmod 600 ~/.ssh/growcentral_deploy
-
-            - name: Deploy Grow Central via SFTP
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
@@ -84,3 +67,4 @@ jobs:
 
       - name: Deployment information
         run: echo '135er-Grow Central deployed to https://grow-central.de/'
+    
