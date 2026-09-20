@@ -39,7 +39,9 @@ jobs:
         run: |
           mkdir -p dist/android
           cp mobile/light-meter/android/app/build/outputs/apk/debug/app-debug.apk dist/android/GrowLightMeter-Android.apk
+          (cd dist/android && zip -9 GrowLightMeter-Android.zip GrowLightMeter-Android.apk)
           sha256sum dist/android/GrowLightMeter-Android.apk > dist/android/GrowLightMeter-Android.apk.sha256
+          sha256sum dist/android/GrowLightMeter-Android.zip > dist/android/GrowLightMeter-Android.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: grow-light-meter-android
@@ -72,6 +74,8 @@ jobs:
           cp -R "$APP_PATH" Payload/
           ditto -c -k --sequesterRsrc --keepParent Payload ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa
           shasum -a 256 ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa > ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256
+          (cd ../../../../dist/ios && zip -9 GrowLightMeter-iOS-Sideload.zip GrowLightMeter-iOS-unsigned.ipa)
+          shasum -a 256 ../../../../dist/ios/GrowLightMeter-iOS-Sideload.zip > ../../../../dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: grow-light-meter-ios
@@ -107,8 +111,12 @@ jobs:
           -mkdir downloads/apps
           put dist/android/GrowLightMeter-Android.apk downloads/apps/GrowLightMeter-Android.apk
           put dist/android/GrowLightMeter-Android.apk.sha256 downloads/apps/GrowLightMeter-Android.apk.sha256
+          put dist/android/GrowLightMeter-Android.zip downloads/apps/GrowLightMeter-Android.zip
+          put dist/android/GrowLightMeter-Android.zip.sha256 downloads/apps/GrowLightMeter-Android.zip.sha256
           put dist/ios/GrowLightMeter-iOS-unsigned.ipa downloads/apps/GrowLightMeter-iOS-unsigned.ipa
           put dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 downloads/apps/GrowLightMeter-iOS-unsigned.ipa.sha256
+          put dist/ios/GrowLightMeter-iOS-Sideload.zip downloads/apps/GrowLightMeter-iOS-Sideload.zip
+          put dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256 downloads/apps/GrowLightMeter-iOS-Sideload.zip.sha256
           bye
           BATCH
           sftp -i ~/.ssh/growcentral_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
