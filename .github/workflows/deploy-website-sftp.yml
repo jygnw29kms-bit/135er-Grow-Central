@@ -55,7 +55,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
           chmod 600 ~/.ssh/growcentral_deploy
 
-       - name: Deploy Grow Central via SFTP
+            - name: Deploy Grow Central via SFTP
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
@@ -81,3 +81,6 @@ jobs:
           EOF
 
           rm -f ~/.ssh/growcentral_deploy
+
+      - name: Deployment information
+        run: echo '135er-Grow Central deployed to https://grow-central.de/'
