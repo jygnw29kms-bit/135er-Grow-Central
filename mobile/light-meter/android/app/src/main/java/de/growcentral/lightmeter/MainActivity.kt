@@ -11,6 +11,7 @@ import android.os.HandlerThread
 import android.view.Surface
 import android.view.TextureView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
