@@ -1,0 +1,115 @@
+name: Build and deploy Grow Light Meter apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'mobile/light-meter/**'
+      - '.github/workflows/lightmeter-apps.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grow-light-meter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Grow Central launcher icon
+        run: |
+          install -d mobile/light-meter/android/app/src/main/res/drawable-nodpi
+          cp website/assets/brand/135er-grow-central-mark.png mobile/light-meter/android/app/src/main/res/drawable-nodpi/grow_central_mark.png
+      - name: Build Android APK
+        working-directory: mobile/light-meter/android
+        run: gradle --no-daemon assembleDebug
+      - name: Stage Android package
+        run: |
+          mkdir -p dist/android
+          cp mobile/light-meter/android/app/build/outputs/apk/debug/app-debug.apk dist/android/GrowLightMeter-Android.apk
+          sha256sum dist/android/GrowLightMeter-Android.apk > dist/android/GrowLightMeter-Android.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grow-light-meter-android
+          path: dist/android/*
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Expand iOS Xcode source
+        run: |
+          mkdir -p mobile/light-meter/ios/buildsrc
+          ditto -x -k mobile/light-meter/ios/GrowLightMeter-iOS-source.zip mobile/light-meter/ios/buildsrc
+      - name: Install Grow Central app icon
+        run: |
+          ICON='mobile/light-meter/ios/buildsrc/GrowLightMeter/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png'
+          cp website/assets/brand/135er-grow-central-mark.png "$ICON"
+          sips -z 1024 1024 "$ICON" >/dev/null
+      - name: Build unsigned iOS app for sideload signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd mobile/light-meter/ios/buildsrc
+          xcodebuild             -project GrowLightMeter.xcodeproj             -scheme GrowLightMeter             -configuration Release             -sdk iphoneos             -derivedDataPath build             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             build
+          APP_PATH="$(find build/Build/Products -maxdepth 2 -type d -name 'GrowLightMeter.app' | head -n 1)"
+          test -n "$APP_PATH"
+          rm -rf Payload
+          mkdir -p Payload ../../../../dist/ios
+          cp -R "$APP_PATH" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa
+          shasum -a 256 ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa > ../../../../dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grow-light-meter-ios
+          path: dist/ios/*
+
+  deploy:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: grow-light-meter-android
+          path: dist/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: grow-light-meter-ios
+          path: dist/ios
+      - name: Upload apps to grow-central.de
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/growcentral_deploy
+          chmod 600 ~/.ssh/growcentral_deploy
+          ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
+          cat > /tmp/sftp-batch <<'BATCH'
+          cd /var/www/vhosts/grow-central.de/httpdocs
+          -mkdir downloads
+          -mkdir downloads/apps
+          put dist/android/GrowLightMeter-Android.apk downloads/apps/GrowLightMeter-Android.apk
+          put dist/android/GrowLightMeter-Android.apk.sha256 downloads/apps/GrowLightMeter-Android.apk.sha256
+          put dist/ios/GrowLightMeter-iOS-unsigned.ipa downloads/apps/GrowLightMeter-iOS-unsigned.ipa
+          put dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 downloads/apps/GrowLightMeter-iOS-unsigned.ipa.sha256
+          bye
+          BATCH
+          sftp -i ~/.ssh/growcentral_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
+          rm -f ~/.ssh/growcentral_deploy /tmp/sftp-batch
