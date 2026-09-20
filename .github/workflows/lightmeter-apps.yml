@@ -93,7 +93,7 @@ jobs:
         with:
           name: grow-light-meter-ios
           path: dist/ios
-      - name: Upload apps to grow-central.de
+      - name: Upload apps to dezender.de
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
@@ -106,7 +106,7 @@ jobs:
           chmod 600 ~/.ssh/growcentral_deploy
           ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
           cat > /tmp/sftp-batch <<'BATCH'
-          cd /var/www/vhosts/grow-central.de/httpdocs
+          cd /var/www/vhosts/dezender.de/httpdocs
           -mkdir downloads
           -mkdir downloads/apps
           put dist/android/GrowLightMeter-Android.apk downloads/apps/GrowLightMeter-Android.apk
@@ -117,17 +117,6 @@ jobs:
           put dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 downloads/apps/GrowLightMeter-iOS-unsigned.ipa.sha256
           put dist/ios/GrowLightMeter-iOS-Sideload.zip downloads/apps/GrowLightMeter-iOS-Sideload.zip
           put dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256 downloads/apps/GrowLightMeter-iOS-Sideload.zip.sha256
-          chmod 755 downloads
-          chmod 755 downloads/apps
-          chmod 644 downloads/apps/GrowLightMeter-Android.apk
-          chmod 644 downloads/apps/GrowLightMeter-Android.apk.sha256
-          chmod 644 downloads/apps/GrowLightMeter-Android.zip
-          chmod 644 downloads/apps/GrowLightMeter-Android.zip.sha256
-          chmod 644 downloads/apps/GrowLightMeter-iOS-unsigned.ipa
-          chmod 644 downloads/apps/GrowLightMeter-iOS-unsigned.ipa.sha256
-          chmod 644 downloads/apps/GrowLightMeter-iOS-Sideload.zip
-          chmod 644 downloads/apps/GrowLightMeter-iOS-Sideload.zip.sha256
-          ls -l downloads/apps
           bye
           BATCH
           sftp -i ~/.ssh/growcentral_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
