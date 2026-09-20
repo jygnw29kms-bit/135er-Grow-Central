@@ -25,6 +25,7 @@ jobs:
           install -d \
             public-site/assets/brand \
             public-site/assets/gui \
+            public-site/assets/hardware \
             public-site/downloads/3d \
             public-site/downloads/3d/profiles
 
@@ -35,6 +36,9 @@ jobs:
           cp website/assets/brand/135er-grow-central-lockup-v0.9.png public-site/assets/brand/
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
+          cp website/assets/hardware/rpi4-case-closed.png public-site/assets/hardware/
+          cp website/assets/hardware/rpi4-case-gpio.png public-site/assets/hardware/
+          cp website/assets/hardware/rpi4-case-service.png public-site/assets/hardware/
           cp website/downloads/3d/135er_Grow_Central_RPi4_bottom.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_lid.stl public-site/downloads/3d/
           cp website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl public-site/downloads/3d/
@@ -67,6 +71,7 @@ jobs:
           -mkdir assets
           -mkdir assets/brand
           -mkdir assets/gui
+          -mkdir assets/hardware
           -mkdir downloads
           -mkdir downloads/3d
           put public-site/index.html index.html
@@ -76,10 +81,20 @@ jobs:
           put public-site/assets/brand/135er-grow-central-lockup-v0.9.png assets/brand/135er-grow-central-lockup-v0.9.png
           put public-site/assets/brand/135er-grow-central-mark.png assets/brand/135er-grow-central-mark.png
           put public-site/assets/gui/local-desktop-v0.9.png assets/gui/local-desktop-v0.9.png
+          put public-site/assets/hardware/rpi4-case-closed.png assets/hardware/rpi4-case-closed.png
+          put public-site/assets/hardware/rpi4-case-gpio.png assets/hardware/rpi4-case-gpio.png
+          put public-site/assets/hardware/rpi4-case-service.png assets/hardware/rpi4-case-service.png
           put public-site/downloads/3d/135er_Grow_Central_RPi4_bottom.stl downloads/3d/135er_Grow_Central_RPi4_bottom.stl
           put public-site/downloads/3d/135er_Grow_Central_RPi4_lid.stl downloads/3d/135er_Grow_Central_RPi4_lid.stl
           put public-site/downloads/3d/135er_Grow_Central_RPi4_printplate.stl downloads/3d/135er_Grow_Central_RPi4_printplate.stl
           put public-site/downloads/3d/135er_Grow_Central_RPi4_case.scad downloads/3d/135er_Grow_Central_RPi4_case.scad
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_lid_gpio.stl downloads/3d/135er_Grow_Central_RPi4_lid_gpio.stl
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_lid_service.stl downloads/3d/135er_Grow_Central_RPi4_lid_service.stl
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl
+          put public-site/downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl
+          -mkdir downloads/3d/profiles
+          put public-site/downloads/3d/profiles/135er_RPi4_Case_P2S_PETG_process.json downloads/3d/profiles/135er_RPi4_Case_P2S_PETG_process.json
+          put public-site/downloads/3d/profiles/135er_RPi4_Case_P2S_ASA_process.json downloads/3d/profiles/135er_RPi4_Case_P2S_ASA_process.json
           bye
           EOF
 
