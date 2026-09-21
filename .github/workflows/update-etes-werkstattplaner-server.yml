@@ -1,0 +1,45 @@
+name: Update Etes Werkstattplaner Server
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/update-etes-werkstattplaner-server.yml'
+permissions:
+  contents: read
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Upgrade Werkstattplaner over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SCRIPT='set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y etes-werkstattplaner
+          systemctl restart etes-werkstattplaner
+          sleep 1
+          systemctl is-active etes-werkstattplaner
+          dpkg-query -W -f="${Version}\n" etes-werkstattplaner
+          curl -fsS http://127.0.0.1:3080/health
+          echo
+          curl -fsS http://127.0.0.1:3080/api/setup-status
+          echo'
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
