@@ -1,5 +1,5 @@
 name: Update Etes Werkstattplaner Server
-# deploy redesigned 1.2.0-12
+# deploy redesigned 1.2.0-14
 # deploy canonical 1.2.0-7 after repo republish
 on:
   push:
