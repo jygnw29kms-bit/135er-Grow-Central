@@ -1,46 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 600" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 620" role="img" aria-labelledby="title desc">
 <title id="title">Ete's Autoservice Werkstattplaner</title>
-<desc id="desc">Ete's Autoservice Fachbetrieb für Kraftfahrzeugtechnik – Werkstattplaner</desc>
-<rect width="1800" height="600" rx="24" fill="#fff"/>
-<g transform="translate(34 72)">
-  <g transform="translate(0 8)">
-    <circle cx="150" cy="205" r="122" fill="none" stroke="#111" stroke-width="48"/>
+<desc id="desc">Ete's Autoservice – Fachbetrieb für Kraftfahrzeugtechnik – Werkstattplaner</desc>
+<rect width="1900" height="620" fill="#fff"/>
+<g transform="translate(44 58)">
+  <g transform="translate(0 20)">
+    <circle cx="160" cy="220" r="118" fill="none" stroke="#111" stroke-width="46"/>
     <g fill="#111">
-      <rect x="126" y="-6" width="48" height="74" rx="6"/>
-      <rect x="126" y="342" width="48" height="74" rx="6"/>
-      <rect x="-6" y="181" width="74" height="48" rx="6"/>
-      <rect x="232" y="181" width="74" height="48" rx="6"/>
-      <rect x="36" y="38" width="66" height="44" rx="6" transform="rotate(-45 69 60)"/>
-      <rect x="198" y="328" width="66" height="44" rx="6" transform="rotate(-45 231 350)"/>
-      <rect x="36" y="328" width="66" height="44" rx="6" transform="rotate(45 69 350)"/>
-      <rect x="198" y="38" width="66" height="44" rx="6" transform="rotate(45 231 60)"/>
+      <rect x="138" y="8" width="44" height="70" rx="5"/>
+      <rect x="138" y="362" width="44" height="70" rx="5"/>
+      <rect x="-2" y="198" width="70" height="44" rx="5"/>
+      <rect x="252" y="198" width="70" height="44" rx="5"/>
+      <rect x="44" y="46" width="62" height="42" rx="5" transform="rotate(-45 75 67)"/>
+      <rect x="214" y="352" width="62" height="42" rx="5" transform="rotate(-45 245 373)"/>
+      <rect x="44" y="352" width="62" height="42" rx="5" transform="rotate(45 75 373)"/>
+      <rect x="214" y="46" width="62" height="42" rx="5" transform="rotate(45 245 67)"/>
     </g>
-    <g transform="translate(62 122)">
-      <path d="M4 98h18l16-44c7-19 22-31 41-31h42c16 0 29 9 38 23l12 20h12c11 0 20 9 20 20v49c0 12-10 22-22 22H27C14 157 4 147 4 134z" fill="#ffc400"/>
-      <circle cx="49" cy="134" r="20" fill="#fff"/>
-      <rect x="87" y="91" width="72" height="14" rx="7" fill="#fff"/>
-      <rect x="87" y="115" width="72" height="14" rx="7" fill="#fff"/>
-      <path d="M134 6c17 3 32 12 42 27l-18 26 14 25 31 1c4 16 1 33-9 47l-27-10-21 17 4 31c-15 9-31 12-48 9l-3-31-25-13-26 17c-12-12-18-27-19-44l30-8 9-27-21-23c9-14 23-25 39-30l14 28 28 1z" fill="#222" opacity=".95"/>
-      <path d="M133 17c18 18 21 45 7 66l-5 7v127h-34V90l-5-7c-14-21-11-48 7-66v37h30z" fill="#2b2b2b"/>
-      <circle cx="118" cy="200" r="8" fill="#fff"/>
+    <g transform="translate(68 140)">
+      <path d="M12 100h18l18-43c7-17 22-29 40-29h44c17 0 31 9 40 24l11 18h12c11 0 20 9 20 20v45c0 13-10 23-23 23H34c-13 0-22-10-22-23z" fill="#ffc400"/>
+      <circle cx="58" cy="135" r="18" fill="#fff"/>
+      <circle cx="166" cy="135" r="18" fill="#fff"/>
+      <path d="M122 4c17 3 30 11 40 24l-17 24 13 23 29 1c4 15 1 30-8 43l-25-9-20 16 4 29c-13 8-29 11-44 8l-3-29-23-12-24 16c-11-11-17-25-18-40l28-8 8-25-19-22c8-13 21-23 36-28l13 26 26 1z" fill="#222"/>
+      <path d="M121 17c16 16 19 42 7 62l-5 7v116H92V86l-5-7c-12-20-9-46 7-62v34h27z" fill="#222"/>
+      <circle cx="108" cy="185" r="7" fill="#fff"/>
     </g>
   </g>
-  <g transform="translate(342 20)">
-    <text x="0" y="215" font-family="Arial Narrow,Arial,sans-serif" font-size="210" font-weight="900" fill="#053b9e">ETE’</text>
-    <path d="M7 255H420c62 0 104-34 104-81 0-48 40-90 91-90h764v52H657c-42 0-75 27-75 63 0 61-50 108-118 108H7z" fill="#ffc400"/>
-    <text x="548" y="273" font-family="Arial Narrow,Arial,sans-serif" font-size="174" font-weight="900" letter-spacing="-5" fill="#073a9c">AUTOSERVICE</text>
-    <text x="548" y="350" font-family="Arial,Helvetica,sans-serif" font-size="56" font-weight="700" fill="#111">Fachbetrieb für Kraftfahrzeugtechnik</text>
-    <line x1="548" y1="408" x2="848" y2="408" stroke="#c9c9c9" stroke-width="5" stroke-linecap="round"/>
-    <g transform="translate(870 360)">
-      <rect x="0" y="0" width="500" height="102" rx="51" fill="#073a9c"/>
-      <g transform="translate(36 20)" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="0" y="8" width="74" height="62" rx="8"/>
-        <path d="M17 0v18M57 0v18M8 28h58"/>
-        <path d="M34 42l14 14M48 42L34 56"/>
+
+  <g transform="translate(360 10)">
+    <text x="0" y="225" font-family="Arial Narrow,Arial,sans-serif" font-size="205" font-weight="900" fill="#0a43a8">ETE’</text>
+    <path d="M0 265H430c74 0 116-35 116-92 0-47 42-82 98-82h1070v56H680c-43 0-73 25-73 59 0 65-57 113-130 113H0z" fill="#ffc400"/>
+    <text x="620" y="300" font-family="Arial Narrow,Arial,sans-serif" font-size="176" font-weight="900" letter-spacing="-3" fill="#0a43a8">AUTOSERVICE</text>
+    <text x="624" y="372" font-family="Arial,Helvetica,sans-serif" font-size="54" font-weight="700" fill="#111">Fachbetrieb für Kraftfahrzeugtechnik</text>
+    <line x1="624" y1="430" x2="955" y2="430" stroke="#c8c8c8" stroke-width="5" stroke-linecap="round"/>
+    <g transform="translate(980 380)">
+      <rect x="0" y="0" width="560" height="96" rx="48" fill="#0a43a8"/>
+      <g transform="translate(30 18)" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="0" y="8" width="70" height="58" rx="8"/>
+        <path d="M16 0v18M54 0v18M8 27h54M28 41l14 14M42 41L28 55"/>
       </g>
-      <text x="132" y="68" font-family="Arial,Helvetica,sans-serif" font-size="56" font-weight="700" fill="#fff">Werkstattplaner</text>
+      <text x="118" y="63" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="700" fill="#fff">Werkstattplaner</text>
     </g>
-    <line x1="1390" y1="408" x2="1510" y2="408" stroke="#c9c9c9" stroke-width="5" stroke-linecap="round"/>
+    <line x1="1560" y1="430" x2="1740" y2="430" stroke="#c8c8c8" stroke-width="5" stroke-linecap="round"/>
   </g>
 </g>
 </svg>
