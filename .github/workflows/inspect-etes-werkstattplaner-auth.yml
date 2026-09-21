@@ -1,0 +1,56 @@
+name: Inspect Etes Werkstattplaner Auth
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/inspect-etes-werkstattplaner-auth.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect installed auth defaults
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" '
+            if [ "$(id -u)" = 0 ]; then SUDO=""; else SUDO="sudo"; fi
+            echo "=== helper ==="
+            $SUDO /usr/sbin/etes-werkstattplaner-user --help 2>&1 || true
+            echo "=== auth-related source ==="
+            $SUDO grep -RniE "password|passwort|username|benutzer|admin|login|users" /opt/etes-werkstattplaner /etc/default/etes-werkstattplaner 2>/dev/null | head -200 || true
+            echo "=== sqlite schema/users ==="
+            DB=$(find /var/lib/etes-werkstattplaner -maxdepth 2 -type f \( -name "*.db" -o -name "*.sqlite" -o -name "*.sqlite3" \) | head -1)
+            if [ -n "$DB" ]; then
+              echo "DB=$DB"
+              $SUDO python3 - "$DB" <<"PY"
+import sqlite3,sys
+db=sys.argv[1]
+con=sqlite3.connect(db)
+print("tables:", [r[0] for r in con.execute("select name from sqlite_master where type=\"table\"")])
+for t in ["users","user","accounts","account"]:
+    try:
+        cols=[r[1] for r in con.execute(f"pragma table_info({t})")]
+        if cols:
+            print("table",t,"columns",cols)
+            safe=[c for c in cols if "pass" not in c.lower() and "hash" not in c.lower() and "salt" not in c.lower()]
+            if safe:
+                print("rows", list(con.execute("select "+",".join(safe)+" from "+t)))
+    except Exception as e:
+        pass
+PY
+            fi
+          '
