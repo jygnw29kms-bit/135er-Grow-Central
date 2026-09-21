@@ -1,0 +1,55 @@
+name: Inspect Etes Logo Live
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/inspect-etes-logo-live.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect live logo
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          SCRIPT='set -euo pipefail
+          echo "=== PACKAGE ==="
+          dpkg -s etes-werkstattplaner | grep -E "^Version:"
+          echo "=== PUBLIC DIR ==="
+          ls -lah /opt/etes-werkstattplaner/public
+          echo "=== LOGO FILE ==="
+          file /opt/etes-werkstattplaner/public/etes-logo.webp || true
+          stat /opt/etes-werkstattplaner/public/etes-logo.webp || true
+          echo "=== INDEX REFS ==="
+          grep -n "logo" /opt/etes-werkstattplaner/public/index.html || true
+          echo "=== INTERNAL HEAD ==="
+          curl -sS -I http://127.0.0.1:3080/etes-logo.webp || true
+          echo "=== INTERNAL GET ==="
+          curl -sS -o /tmp/live-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" http://127.0.0.1:3080/etes-logo.webp || true
+          file /tmp/live-logo || true
+          echo "=== PUBLIC HEAD ==="
+          curl --http1.1 -sS -I https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          echo "=== PUBLIC GET ==="
+          curl --http1.1 -sS -o /tmp/public-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          file /tmp/public-logo || true'
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
