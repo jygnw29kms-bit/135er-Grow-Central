@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build and test Werkstattplaner 1.2.0
+      - name: Build and test Werkstattplaner
         shell: bash
         run: |
           set -euo pipefail
@@ -42,8 +42,11 @@ jobs:
 
           test -s pkg/opt/etes-werkstattplaner/public/etes-werkstattplaner-logo.svg
 
-          dpkg-deb --build --root-owner-group pkg publish/etes-werkstattplaner_1.2.0-12_all.deb
-          dpkg-deb --info publish/etes-werkstattplaner_1.2.0-12_all.deb
+          PKG_VERSION="$(awk '/^Version:/ {print $2}' external/etes-werkstattplaner/source/packaging/control)"
+          DEB_NAME="etes-werkstattplaner_${PKG_VERSION}_all.deb"
+          dpkg-deb --build --root-owner-group pkg "publish/${DEB_NAME}"
+          dpkg-deb --info "publish/${DEB_NAME}"
+          printf '%s' "${DEB_NAME}" > publish/current-deb-name.txt
 
           # Alte Version im Repo behalten, damit ein Rollback möglich bleibt.
           base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64             > publish/etes-werkstattplaner_1.0.0-1_all.deb
@@ -109,7 +112,20 @@ jobs:
           put publish/Packages downloads/apt/werkstattplaner/Packages
           put publish/Packages.gz downloads/apt/werkstattplaner/Packages.gz
           put publish/etes-werkstattplaner_1.0.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.0.0-1_all.deb
-          put publish/etes-werkstattplaner_1.2.0-12_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.2.0-12_all.deb
+          lcd publish
+          put current-deb-name.txt /tmp/current-deb-name.txt
+          lcd ..
+          bye
+          EOF
+          DEB_NAME="$(cat publish/current-deb-name.txt)"
+          cat > /tmp/sftp-deb-batch <<EOF
+          cd /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner
+          put publish/${DEB_NAME} ${DEB_NAME}
+          bye
+          EOF
+          sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-deb-batch "$SFTP_USERNAME@$SFTP_HOST"
+          rm -f /tmp/sftp-deb-batch
+          #
           bye
           EOF
           sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
