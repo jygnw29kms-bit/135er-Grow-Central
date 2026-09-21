@@ -14,53 +14,57 @@ jobs:
   setup:
     runs-on: ubuntu-24.04
     steps:
-      - name: Configure Plesk subdomain and reverse proxy
+      - name: Configure Plesk subdomain and reverse proxy over SSH password
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PORT: ${{ secrets.SFTP_PORT }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/etes_ssh
-          chmod 600 ~/.ssh/etes_ssh
-          ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-          ssh -i ~/.ssh/etes_ssh -p "$SFTP_PORT" -o BatchMode=yes "$SFTP_USERNAME@$SFTP_HOST" 'sudo bash -s' <<'REMOTE'
+          cat > /tmp/remote-setup.sh <<'REMOTE'
           set -euo pipefail
 
           PARENT="grow-central.de"
           SUB="werkstattplaner"
           FQDN="${SUB}.${PARENT}"
 
+          echo "=== SERVICE CHECK ==="
+          systemctl is-active etes-werkstattplaner
+          curl -fsSI http://127.0.0.1:3080/ | head -20 || true
+
+          echo "=== CREATE/CHECK PLESK SUBDOMAIN ==="
           if ! plesk bin subdomain --info "$FQDN" >/dev/null 2>&1; then
-            plesk bin subdomain --create "$SUB" -domain "$PARENT" -www-root "/werkstattplaner" -php false -ssl true
+            plesk bin subdomain --create "$SUB" -domain "$PARENT" -www-root "/werkstattplaner" -php false
           fi
 
           CONF="/var/www/vhosts/system/${FQDN}/conf/vhost_nginx.conf"
           mkdir -p "$(dirname "$CONF")"
 
           cat > "$CONF" <<'NGINX'
-          location @etes_werkstattplaner {
+          location / {
               proxy_pass http://127.0.0.1:3080;
               proxy_http_version 1.1;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_set_header Connection "";
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
               proxy_buffering off;
               proxy_cache off;
               proxy_read_timeout 3600s;
-          }
-
-          error_page 418 = @etes_werkstattplaner;
-          recursive_error_pages on;
-          if ($request_uri ~ "^/") {
-              return 418;
           }
           NGINX
 
@@ -70,10 +74,17 @@ jobs:
 
           echo "=== PLESK SUBDOMAIN ==="
           plesk bin subdomain --info "$FQDN" || true
-          echo "=== LOCAL PROXY TEST ==="
+
+          echo "=== LOCAL VHOST TEST ==="
           curl -sS -I -H "Host: $FQDN" http://127.0.0.1/ | head -20 || true
-          echo "=== SERVICE ==="
-          systemctl is-active etes-werkstattplaner
           REMOTE
 
-          rm -f ~/.ssh/etes_ssh
+          SCRIPT_B64="$(base64 -w0 /tmp/remote-setup.sh)"
+
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx '0'; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST"               "echo '$SCRIPT_B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST"               "sudo -S -p '' bash -c \"echo '$SCRIPT_B64' | base64 -d | bash\""
+          fi
+
+          rm -f /tmp/remote-setup.sh
