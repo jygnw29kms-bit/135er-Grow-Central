@@ -29,7 +29,7 @@ jobs:
           SCRIPT='set -euo pipefail
           FQDN="werkstattplaner.grow-central.de"
           echo "=== ISSUE CERT ==="
-          plesk ext sslit --certificate -issue -domain "$FQDN"
+          plesk ext sslit --certificate -issue -domain "$FQDN" -secure-domain
           echo "=== RECONFIGURE ==="
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
           nginx -t
