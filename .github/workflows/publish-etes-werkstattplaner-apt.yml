@@ -28,13 +28,14 @@ jobs:
           dpkg-deb --info publish/etes-werkstattplaner_1.0.0-1_all.deb
           (cd publish && dpkg-scanpackages . /dev/null > Packages && gzip -9 -k -f Packages)
 
-      - name: Deploy through existing dezender SFTP secrets
+      - name: Deploy through existing Grow Central SFTP secrets
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: './publish/*'
-          remote_path: '/var/www/vhosts/dezender.de/repo.dezender.de/apt/werkstattplaner/'
+          remote_path: '/var/www/vhosts/grow-central.de/httpdocs/apt/werkstattplaner/'
           delete_remote_files: false
+          port: ${{ secrets.SFTP_PORT }}
           sftp_only: true
