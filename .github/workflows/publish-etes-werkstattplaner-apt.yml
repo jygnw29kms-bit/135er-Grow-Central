@@ -15,27 +15,74 @@ jobs:
   publish:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@v4
 
-      - name: Build flat APT repository
+      - name: Build and test Werkstattplaner 1.1.0
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev
-          mkdir -p publish
-          base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64 > publish/etes-werkstattplaner_1.0.0-1_all.deb
-          dpkg-deb --info publish/etes-werkstattplaner_1.0.0-1_all.deb
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev
+          python3 -m py_compile external/etes-werkstattplaner/source/app/server.py
+
+          rm -rf pkg publish /tmp/etes-test-data
+          mkdir -p             pkg/DEBIAN             pkg/opt/etes-werkstattplaner             pkg/lib/systemd/system             pkg/usr/sbin             pkg/etc/default             publish
+
+          cp -a external/etes-werkstattplaner/source/app/. pkg/opt/etes-werkstattplaner/
+          for f in control postinst prerm postrm conffiles; do
+            cp "external/etes-werkstattplaner/source/packaging/$f" "pkg/DEBIAN/$f"
+          done
+          cp external/etes-werkstattplaner/source/packaging/etes-werkstattplaner.service pkg/lib/systemd/system/
+          cp external/etes-werkstattplaner/source/packaging/etes-werkstattplaner-user pkg/usr/sbin/
+          cp external/etes-werkstattplaner/source/packaging/default pkg/etc/default/etes-werkstattplaner
+
+          chmod 0755 pkg/DEBIAN/postinst pkg/DEBIAN/prerm pkg/DEBIAN/postrm
+          chmod 0755 pkg/opt/etes-werkstattplaner/server.py pkg/usr/sbin/etes-werkstattplaner-user
+
+          # Offizielle Ete's-Autoservice-Grafik lokal in die App übernehmen.
+          curl -fL --retry 3             'https://www.etes-autoservice.de/s/img/emotionheader5811556573.jpeg?1667899691.960px.369px'             -o pkg/opt/etes-werkstattplaner/public/etes-logo.jpg
+          test -s pkg/opt/etes-werkstattplaner/public/etes-logo.jpg
+
+          dpkg-deb --build --root-owner-group pkg publish/etes-werkstattplaner_1.1.0-1_all.deb
+          dpkg-deb --info publish/etes-werkstattplaner_1.1.0-1_all.deb
+
+          # Alte Version im Repo behalten, damit ein Rollback möglich bleibt.
+          base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64             > publish/etes-werkstattplaner_1.0.0-1_all.deb
+
+          # Frische Installation testen: ohne Benutzer muss Setup erzwungen werden.
+          mkdir -p /tmp/etes-test-data
+          DATA_DIR=/tmp/etes-test-data HOST=127.0.0.1 PORT=38080 COOKIE_SECURE=0             python3 external/etes-werkstattplaner/source/app/server.py >/tmp/etes-test.log 2>&1 &
+          TEST_PID=$!
+          trap 'kill $TEST_PID 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:38080/api/setup-status >/tmp/setup.json; then break; fi
+            sleep .2
+          done
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/setup.json'))
+          assert d == {'needs_setup': True}, d
+          PY
+          curl -fsS -X POST -H 'Content-Type: application/json'             -d '{"name":"TestAdmin","password":"TestPasswort123!","password_confirm":"TestPasswort123!"}'             http://127.0.0.1:38080/api/setup >/tmp/setup-create.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/setup-create.json'))
+          assert d['user']['role']=='admin'
+          assert d['user']['name']=='TestAdmin'
+          PY
+          kill $TEST_PID
+          trap - EXIT
+
           (cd publish && dpkg-scanpackages . /dev/null > Packages && gzip -9 -k -f Packages)
           cat > publish/.htaccess <<'EOF'
           Options -Indexes
           <IfModule mod_authz_core.c>
-            <FilesMatch "^(Packages|Packages\\.gz|etes-werkstattplaner_.*\\.deb)$">
+            <FilesMatch "^(Packages|Packages\.gz|etes-werkstattplaner_.*\.deb)$">
               Require all granted
             </FilesMatch>
           </IfModule>
           <IfModule mod_mime.c>
-            AddType text/plain .gz
+            AddType application/gzip .gz
             AddType application/vnd.debian.binary-package .deb
           </IfModule>
           EOF
@@ -46,6 +93,7 @@ jobs:
           SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
           SFTP_PORT: ${{ secrets.SFTP_PORT }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        shell: bash
         run: |
           set -euo pipefail
           install -d -m 700 ~/.ssh
@@ -62,6 +110,7 @@ jobs:
           put publish/Packages downloads/apt/werkstattplaner/Packages
           put publish/Packages.gz downloads/apt/werkstattplaner/Packages.gz
           put publish/etes-werkstattplaner_1.0.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.0.0-1_all.deb
+          put publish/etes-werkstattplaner_1.1.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.1.0-1_all.deb
           bye
           EOF
           sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
