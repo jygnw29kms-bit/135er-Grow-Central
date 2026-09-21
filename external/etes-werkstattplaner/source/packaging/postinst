@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+if ! getent group werkstattplaner >/dev/null 2>&1; then addgroup --system werkstattplaner >/dev/null; fi
+if ! getent passwd werkstattplaner >/dev/null 2>&1; then adduser --system --ingroup werkstattplaner --home /var/lib/etes-werkstattplaner --no-create-home --shell /usr/sbin/nologin werkstattplaner >/dev/null; fi
+install -d -o werkstattplaner -g werkstattplaner -m 0750 /var/lib/etes-werkstattplaner
+chown -R root:root /opt/etes-werkstattplaner
+chmod 0755 /opt/etes-werkstattplaner/server.py
+if command -v systemctl >/dev/null 2>&1; then
+ systemctl daemon-reload || true
+ systemctl enable etes-werkstattplaner.service >/dev/null 2>&1 || true
+ systemctl restart etes-werkstattplaner.service >/dev/null 2>&1 || true
+fi
+exit 0

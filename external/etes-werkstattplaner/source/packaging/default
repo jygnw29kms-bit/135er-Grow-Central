@@ -1,0 +1,4 @@
+HOST=127.0.0.1
+PORT=3080
+COOKIE_SECURE=1
+DATA_DIR=/var/lib/etes-werkstattplaner

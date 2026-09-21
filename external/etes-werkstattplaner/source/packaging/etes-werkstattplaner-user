@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+  echo "Aufruf: etes-werkstattplaner-user NAME admin|editor|viewer [PASSWORT]" >&2
+  exit 2
+fi
+cd /opt/etes-werkstattplaner
+if [ "$#" -eq 3 ]; then
+  exec runuser -u werkstattplaner -- env DATA_DIR=/var/lib/etes-werkstattplaner /usr/bin/python3 server.py user "$1" "$2" "$3"
+else
+  exec runuser -u werkstattplaner -- env DATA_DIR=/var/lib/etes-werkstattplaner /usr/bin/python3 server.py user "$1" "$2"
+fi

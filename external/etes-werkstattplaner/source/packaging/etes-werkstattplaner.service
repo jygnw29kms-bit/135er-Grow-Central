@@ -1,0 +1,22 @@
+[Unit]
+Description=Ete's Werkstattplaner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=werkstattplaner
+Group=werkstattplaner
+WorkingDirectory=/opt/etes-werkstattplaner
+EnvironmentFile=-/etc/default/etes-werkstattplaner
+ExecStart=/usr/bin/python3 /opt/etes-werkstattplaner/server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/etes-werkstattplaner
+
+[Install]
+WantedBy=multi-user.target

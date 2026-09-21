@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1f33" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Ete's Werkstattplaner</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<section id="loginScreen" class="login-screen">
+  <form id="loginForm" class="login-card">
+    <h1>Ete's Autoservice</h1><p>Werkstattplaner</p>
+    <label>Benutzer<input id="loginName" autocomplete="username" required /></label>
+    <label>Passwort<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+    <div id="loginError" class="login-error"></div>
+    <button class="primary" type="submit">Anmelden</button>
+  </form>
+</section>
+
+<div id="appShell" class="hidden">
+<header class="topbar">
+  <div><div class="brand">Ete's Autoservice</div><div class="subtitle">Werkstattplaner · Server</div></div>
+  <div class="toolbar">
+    <div class="userbox"><span id="syncDot" class="sync-dot"></span><strong id="currentUser"></strong><button id="logoutBtn">Abmelden</button></div>
+    <button id="todayBtn">Heute</button><button id="prevBtn">‹</button><input id="datePicker" type="date" /><button id="nextBtn">›</button>
+    <button id="newBtn" class="primary">+ Termin</button>
+  </div>
+</header>
+<section class="statusbar"><span id="roleBadge"></span><div class="legend" id="legend"></div></section>
+<main><div id="planner" class="planner" aria-label="Werkstattplan"></div></main>
+</div>
+
+<dialog id="appointmentDialog">
+<form method="dialog" id="appointmentForm">
+  <div class="dialog-head"><h2 id="dialogTitle">Termin</h2><button value="cancel" class="icon-btn">✕</button></div>
+  <input type="hidden" id="apptId" />
+  <div class="form-grid">
+    <label>Datum<input id="apptDate" type="date" required /></label><label>Arbeitsplatz<select id="resource" required></select></label>
+    <label>Start<input id="startTime" type="time" step="900" required /></label><label>Ende<input id="endTime" type="time" step="900" required /></label>
+    <label>Kennzeichen<input id="plate" placeholder="HVL-AB 123" required /></label><label>Fahrzeug<input id="vehicle" placeholder="VW Golf VII 2.0 TDI" /></label>
+    <label>Kunde<input id="customer" placeholder="Max Mustermann" /></label><label>Telefon<input id="phone" inputmode="tel" /></label>
+    <label>Mechaniker<select id="mechanic"></select></label><label>Status<select id="status"></select></label>
+    <label class="wide">Auftrag<textarea id="job" rows="3"></textarea></label>
+    <label>Teile-Status<select id="parts"></select></label><label>Ersatzwagen<select id="loaner"></select></label>
+    <label class="wide">Hinweis<textarea id="note" rows="2"></textarea></label>
+  </div>
+  <div id="auditNote" class="audit-note"></div>
+  <div class="dialog-actions"><button type="button" id="deleteBtn" class="danger">Löschen</button><span class="spacer"></span><button value="cancel">Abbrechen</button><button type="submit" id="saveBtn" class="primary">Speichern</button></div>
+</form>
+</dialog>
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body></html>
