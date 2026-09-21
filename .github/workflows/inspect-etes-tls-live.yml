@@ -1,0 +1,47 @@
+name: Inspect Etes TLS Live
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/inspect-etes-tls-live.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect public TLS and logo response
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SCRIPT='set -euo pipefail
+          echo "=== PUBLIC LOGO WITH TLS VERIFY DISABLED ==="
+          curl -k --http1.1 -sS -I https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          curl -k --http1.1 -sS -o /tmp/public-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          file /tmp/public-logo || true
+          echo "=== TLS CERT ==="
+          echo | openssl s_client -connect werkstattplaner.grow-central.de:443 -servername werkstattplaner.grow-central.de 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName || true
+          echo "=== PLESK CERT LIST PARENT ==="
+          plesk bin certificate --list -domain grow-central.de || true
+          echo "=== PLESK CERT LIST SUBDOMAIN ==="
+          plesk bin certificate --list -domain werkstattplaner.grow-central.de || true
+          echo "=== SUBDOMAIN INFO ==="
+          plesk bin subdomain --info werkstattplaner.grow-central.de || true'
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
