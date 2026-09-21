@@ -115,3 +115,29 @@ jobs:
           EOF
           sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
           rm -f ~/.ssh/etes_deploy /tmp/sftp-batch
+
+
+      - name: Normalize public APT permissions
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          REMOTE='chmod 755 /var/www/vhosts/grow-central.de/httpdocs/downloads /var/www/vhosts/grow-central.de/httpdocs/downloads/apt /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner
+          chmod 644 /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner/Packages /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner/Packages.gz /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner/*.deb /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner/.htaccess'
+          B64="$(printf '%s' "$REMOTE" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
