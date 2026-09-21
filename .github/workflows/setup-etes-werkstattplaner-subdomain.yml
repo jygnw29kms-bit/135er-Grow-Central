@@ -2,10 +2,6 @@ name: Setup Etes Werkstattplaner Subdomain
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
-    paths:
-      - '.github/workflows/setup-etes-werkstattplaner-subdomain.yml'
 
 permissions:
   contents: read
@@ -25,7 +21,6 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq sshpass
-
           : "${SSH_PORT:=22}"
           export SSHPASS="$SSH_PASSWORD"
 
@@ -40,11 +35,8 @@ jobs:
           SUB="werkstattplaner"
           FQDN="${SUB}.${PARENT}"
 
-          echo "=== SERVICE CHECK ==="
           systemctl is-active etes-werkstattplaner
-          curl -fsSI http://127.0.0.1:3080/ | head -20 || true
 
-          echo "=== CREATE/CHECK PLESK SUBDOMAIN ==="
           if ! plesk bin subdomain --info "$FQDN" >/dev/null 2>&1; then
             plesk bin subdomain --create "$SUB" -domain "$PARENT" -www-root "/werkstattplaner" -php false
           fi
@@ -77,41 +69,7 @@ jobs:
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
           nginx -t
           systemctl reload nginx
-
-          echo "=== PLESK SUBDOMAIN ==="
-          plesk bin subdomain --info "$FQDN" || true
-
-          echo "=== LOCAL VHOST TEST ==="
-          curl -sS -I -H "Host: $FQDN" http://127.0.0.1/ | head -20 || true
-
-          echo "=== WERKSTATTPLANER AUTH DEFAULTS ==="
-          /usr/sbin/etes-werkstattplaner-user --help 2>&1 || true
-          grep -RniE 'password|passwort|username|benutzer|admin|login|users' /opt/etes-werkstattplaner /etc/default/etes-werkstattplaner 2>/dev/null | head -120 || true
-          echo "=== POSTINST ==="
-          sed -n '1,220p' /var/lib/dpkg/info/etes-werkstattplaner.postinst 2>/dev/null || true
-          echo "=== CURRENT SERVER SOURCE ==="
-          sed -n '1,360p' /opt/etes-werkstattplaner/server.py 2>/dev/null || true
-          echo "=== CURRENT INDEX ==="
-          sed -n '1,260p' /opt/etes-werkstattplaner/public/index.html 2>/dev/null || true
-          echo "=== CURRENT APP JS ==="
-          sed -n '1,360p' /opt/etes-werkstattplaner/public/app.js 2>/dev/null || true
-          echo "=== CURRENT STYLES ==="
-          sed -n '1,360p' /opt/etes-werkstattplaner/public/styles.css 2>/dev/null || true
-
-          echo "=== USERS ==="
-          python3 - <<'PY'
-import sqlite3,glob,os
-dbs=glob.glob('/var/lib/etes-werkstattplaner/*')
-for db in dbs:
-    if os.path.isfile(db):
-        try:
-            con=sqlite3.connect(db)
-            rows=list(con.execute("select name,role,active from users order by name"))
-            if rows:
-                print(db, rows)
-        except Exception:
-            pass
-PY
+          plesk bin subdomain --info "$FQDN"
           REMOTE
 
           SCRIPT_B64="$(base64 -w0 /tmp/remote-setup.sh)"
