@@ -1,0 +1,36 @@
+name: Extract Etes Werkstattplaner Source
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/extract-etes-werkstattplaner-source.yml'
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract current package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/etes-root /tmp/etes-control
+          mkdir -p /tmp/etes-root /tmp/etes-control
+          base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64 > /tmp/etes.deb
+          dpkg-deb -x /tmp/etes.deb /tmp/etes-root
+          dpkg-deb -e /tmp/etes.deb /tmp/etes-control
+          rm -rf external/etes-werkstattplaner/source
+          mkdir -p external/etes-werkstattplaner/source/app external/etes-werkstattplaner/source/packaging
+          cp -a /tmp/etes-root/opt/etes-werkstattplaner/. external/etes-werkstattplaner/source/app/
+          cp -a /tmp/etes-control/. external/etes-werkstattplaner/source/packaging/
+          cp -a /tmp/etes-root/lib/systemd/system/etes-werkstattplaner.service external/etes-werkstattplaner/source/packaging/
+          cp -a /tmp/etes-root/usr/sbin/etes-werkstattplaner-user external/etes-werkstattplaner/source/packaging/
+          cp -a /tmp/etes-root/etc/default/etes-werkstattplaner external/etes-werkstattplaner/source/packaging/default
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add external/etes-werkstattplaner/source
+          if ! git diff --cached --quiet; then
+            git commit -m "Extract Werkstattplaner 1.0.0 source"
+            git push
+          fi
