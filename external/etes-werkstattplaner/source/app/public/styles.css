@@ -15,9 +15,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .auth-backdrop{position:absolute;inset:0;background:
   linear-gradient(90deg,transparent 0 69%,#ffc40018 69% 70%,transparent 70%),
   linear-gradient(0deg,transparent 0 78%,#ffffff0a 78% 79%,transparent 79%);pointer-events:none}
-.auth-card{position:relative;width:min(520px,100%);background:#fff;border-radius:24px;padding:32px 38px;box-shadow:0 30px 90px #0008;border:1px solid #fff8}
-.auth-logo-wrap{width:100%;height:138px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:14px;background:#fff;border-radius:12px}
-.auth-logo{display:block;width:100%;height:100%;object-fit:contain;object-position:center}.auth-divider{height:4px;border-radius:999px;background:linear-gradient(90deg,var(--yellow) 0 34%,var(--navy) 34% 100%);margin-bottom:24px}
+.auth-card{position:relative;width:min(620px,calc(100vw - 36px));background:#fff;border-radius:24px;padding:34px 40px 30px;box-shadow:0 30px 90px #0008;border:1px solid #fff8}
+.auth-logo-wrap{width:100%;min-height:170px;display:flex;align-items:center;justify-content:center;overflow:visible;margin-bottom:12px;background:#fff;border-radius:12px}
+.auth-logo{display:block;width:min(100%,520px);height:auto;max-width:520px;max-height:none;object-fit:contain;object-position:center}.auth-divider{height:4px;border-radius:999px;background:linear-gradient(90deg,var(--yellow) 0 34%,var(--navy) 34% 100%);margin-bottom:24px}
 .auth-card h1{font-size:34px;line-height:1.08;margin:7px 0 10px;color:#102448}.auth-card p{margin:0 0 22px;color:#637188;line-height:1.55}
 .auth-card label{display:grid;gap:7px;margin:14px 0;font-size:12px;font-weight:800;color:#4b5c73}.auth-card input{height:48px;border:1px solid #ccd7e5;border-radius:11px;padding:0 14px;background:#fbfcfe}
 .auth-card input:focus{outline:3px solid #ffc4002f;border-color:#e9b300}.auth-submit{width:100%;height:50px;border-radius:11px;border:1px solid #e8b400;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px}.auth-note{text-align:center;margin-top:18px;color:#8793a4;font-size:12px}
