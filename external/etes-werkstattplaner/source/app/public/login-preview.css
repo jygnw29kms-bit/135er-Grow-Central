@@ -101,3 +101,36 @@
   .auth-submit{height:56px}
   .auth-note{white-space:normal;text-align:center}
 }
+
+/* Final logo-fit override */
+.auth-card{
+  width:min(760px,calc(100vw - 48px))!important;
+  padding:34px 48px 34px!important;
+}
+.auth-logo-wrap{
+  width:100%!important;
+  height:190px!important;
+  min-height:190px!important;
+  margin:0 0 10px!important;
+  padding:8px 0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:visible!important;
+  background:#fff!important;
+}
+.auth-logo{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:660px!important;
+  max-height:174px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  margin:0 auto!important;
+}
+@media(max-width:720px){
+  .auth-card{width:100%!important;padding:24px 22px 28px!important}
+  .auth-logo-wrap{height:135px!important;min-height:135px!important}
+  .auth-logo{max-width:100%!important;max-height:120px!important}
+}
