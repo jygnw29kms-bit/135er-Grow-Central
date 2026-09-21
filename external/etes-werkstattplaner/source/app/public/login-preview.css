@@ -1,0 +1,103 @@
+
+/* Werkstattplaner Login – approved preview layout */
+.auth-screen{
+  position:fixed;inset:0;z-index:9999;overflow:auto;
+  display:grid;place-items:center;min-height:100vh;padding:44px 26px;
+  background:
+    linear-gradient(90deg,rgba(4,22,43,.98) 0 25%,rgba(8,31,59,.90) 25% 72%,rgba(9,34,61,.82) 72% 100%),
+    radial-gradient(circle at 82% 35%,rgba(39,90,132,.28),transparent 36%),
+    linear-gradient(140deg,#0b274a,#071b35 60%,#13385d);
+}
+.auth-screen::before{
+  content:"⚙\A\A▣   TERMINE\A\A◇   FAHRZEUGE\A\A⌕   WERKSTATTPLÄTZE\A\A▥   EFFIZIENTER\A     ARBEITEN";
+  white-space:pre;position:fixed;left:3.4vw;top:8.5vh;color:#b9d0ea;
+  font-weight:700;font-size:14px;line-height:1.85;letter-spacing:.16em;
+  text-shadow:0 1px 1px rgba(0,0,0,.25);
+}
+.auth-screen::after{
+  content:"Mehr\Aals eine\AWerkstatt.";
+  white-space:pre;position:fixed;right:3vw;bottom:6vh;color:#fff;
+  font-family:"Segoe Script","Brush Script MT",cursive;font-size:34px;
+  line-height:1.05;font-style:italic;transform:rotate(-5deg);
+  text-shadow:0 2px 12px rgba(0,0,0,.35);
+}
+.auth-backdrop{
+  position:fixed;inset:0;pointer-events:none;
+  background:
+    linear-gradient(90deg,transparent 0 24%,rgba(32,74,110,.18) 24.1% 24.3%,transparent 24.4% 72%,rgba(255,196,0,.08) 72.1% 72.3%,transparent 72.4%),
+    linear-gradient(0deg,transparent 0 79%,rgba(255,255,255,.05) 79.1% 79.3%,transparent 79.4%),
+    radial-gradient(ellipse at 83% 75%,rgba(117,153,181,.13),transparent 30%);
+}
+.auth-card{
+  position:relative;z-index:2;
+  width:min(700px,calc(100vw - 64px));
+  background:rgba(255,255,255,.985);
+  border-radius:24px;padding:34px 50px 36px;
+  box-shadow:0 28px 85px rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.72);
+}
+.auth-logo-wrap{
+  width:100%;height:205px;display:flex;align-items:center;justify-content:center;
+  margin:0;background:transparent;overflow:hidden;
+}
+.auth-logo{
+  display:block;width:100%;max-width:620px;height:180px;object-fit:contain;object-position:center;
+}
+.auth-divider{
+  height:4px;margin:0 0 26px;border-radius:999px;
+  background:linear-gradient(90deg,#ffc400 0 34%,#15366a 34% 100%);
+}
+.auth-card .eyebrow{
+  color:#ad7b00;font-size:12px;font-weight:900;letter-spacing:.22em;margin-bottom:10px;
+}
+.auth-card h1{
+  color:#10233f;font-size:44px;line-height:1;margin:0 0 11px;font-weight:900;letter-spacing:-.025em;
+}
+.auth-card p{
+  color:#61738b;font-size:18px;margin:0 0 28px;line-height:1.45;
+}
+.auth-card label{
+  display:grid;gap:8px;margin:15px 0;color:#132d51;font-size:13px;font-weight:800;
+}
+.auth-card input{
+  width:100%;height:58px;padding:0 17px 0 50px;
+  border:1px solid #cbd9e9;border-radius:10px;background:#fbfdff;color:#13233d;
+  font-size:16px;font-weight:650;box-shadow:inset 0 1px 2px rgba(15,45,92,.03);
+}
+.auth-card label:first-of-type input{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='%23516d93'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:17px center;
+}
+.auth-card label:nth-of-type(2) input,
+.auth-card label:nth-of-type(3) input{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='%23516d93'%3E%3Cpath d='M7 10V8a5 5 0 0110 0v2h1a2 2 0 012 2v8H4v-8a2 2 0 012-2h1zm2 0h6V8a3 3 0 00-6 0v2z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:17px center;
+}
+.auth-card input:focus{
+  outline:3px solid rgba(255,196,0,.20);border-color:#d6ae24;background-color:#fff;
+}
+.auth-submit{
+  width:100%;height:62px;margin-top:18px;border-radius:10px;border:1px solid #e8b200;
+  font-size:20px;font-weight:900;box-shadow:0 8px 20px rgba(255,196,0,.18);
+}
+.auth-note{
+  display:flex;align-items:center;gap:16px;justify-content:center;margin-top:24px;
+  color:#74869e;font-size:12px;white-space:nowrap;
+}
+.auth-note::before,.auth-note::after{content:"";height:1px;flex:1;background:#d7e0eb}
+.form-error{margin-top:8px;color:#a51e27;font-weight:700}
+@media(max-width:1150px){
+  .auth-screen::before,.auth-screen::after{display:none}
+  .auth-screen{background:linear-gradient(135deg,#0b274a,#071b35 60%,#13385d)}
+}
+@media(max-width:720px){
+  .auth-screen{padding:18px}
+  .auth-card{width:100%;padding:24px 22px 28px;border-radius:18px}
+  .auth-logo-wrap{height:145px}
+  .auth-logo{height:130px}
+  .auth-card h1{font-size:34px}
+  .auth-card p{font-size:15px}
+  .auth-card input{height:54px}
+  .auth-submit{height:56px}
+  .auth-note{white-space:normal;text-align:center}
+}
