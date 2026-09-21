@@ -162,7 +162,7 @@ def validate_appt(b, forced_id=None):
     return a
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = 'EtesWerkstattplaner/1.1'
+    server_version = 'EtesWerkstattplaner/1.2'
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,directory=str(PUBLIC),**kwargs)
@@ -246,7 +246,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         p=urlparse(self.path)
         if p.path=='/health':
-            return self.json_out({'ok':True,'service':'etes-werkstattplaner','version':'1.1.0','configured':users_exist()})
+            return self.json_out({'ok':True,'service':'etes-werkstattplaner','version':'1.2.0','configured':users_exist()})
         if p.path=='/api/setup-status':
             return self.json_out({'needs_setup':not users_exist()})
         if p.path.startswith('/api/'):
@@ -498,7 +498,7 @@ def main():
             print(e,file=sys.stderr)
             sys.exit(2)
         return
-    print(f"Ete's Werkstattplaner 1.1 auf http://{HOST}:{PORT}")
+    print(f"Ete's Werkstattplaner 1.2 auf http://{HOST}:{PORT}")
     ThreadingHTTPServer((HOST,PORT),Handler).serve_forever()
 
 if __name__=='__main__':
