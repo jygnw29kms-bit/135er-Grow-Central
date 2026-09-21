@@ -33,19 +33,19 @@ jobs:
           echo "=== PUBLIC DIR ==="
           ls -lah /opt/etes-werkstattplaner/public
           echo "=== LOGO FILE ==="
-          file /opt/etes-werkstattplaner/public/etes-logo.webp || true
-          stat /opt/etes-werkstattplaner/public/etes-logo.webp || true
+          file /opt/etes-werkstattplaner/public/etes-werkstattplaner-logo.svg || true
+          stat /opt/etes-werkstattplaner/public/etes-werkstattplaner-logo.svg || true
           echo "=== INDEX REFS ==="
           grep -n "logo" /opt/etes-werkstattplaner/public/index.html || true
           echo "=== INTERNAL HEAD ==="
-          curl -sS -I http://127.0.0.1:3080/etes-logo.webp || true
+          curl -sS -I http://127.0.0.1:3080/etes-werkstattplaner-logo.svg || true
           echo "=== INTERNAL GET ==="
-          curl -sS -o /tmp/live-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" http://127.0.0.1:3080/etes-logo.webp || true
+          curl -sS -o /tmp/live-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" http://127.0.0.1:3080/etes-werkstattplaner-logo.svg || true
           file /tmp/live-logo || true
           echo "=== PUBLIC HEAD ==="
-          curl --http1.1 -sS -I https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          curl --http1.1 -sS -I https://werkstattplaner.grow-central.de/etes-werkstattplaner-logo.svg || true
           echo "=== PUBLIC GET ==="
-          curl --http1.1 -sS -o /tmp/public-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" https://werkstattplaner.grow-central.de/etes-logo.webp || true
+          curl --http1.1 -sS -o /tmp/public-logo -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" https://werkstattplaner.grow-central.de/etes-werkstattplaner-logo.svg || true
           file /tmp/public-logo || true'
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
           if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
