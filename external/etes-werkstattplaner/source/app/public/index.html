@@ -11,21 +11,45 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-<section id="loginScreen" class="login-screen">
-  <form id="loginForm" class="login-card">
-    <h1>Ete's Autoservice</h1><p>Werkstattplaner</p>
+<section id="setupScreen" class="auth-screen hidden">
+  <form id="setupForm" class="auth-card">
+    <img class="auth-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
+    <div class="eyebrow">Ersteinrichtung</div>
+    <h1>Werkstattplaner einrichten</h1>
+    <p>Für die erste Inbetriebnahme muss ein Administrator angelegt werden. Ohne dieses Konto bleibt der Planer gesperrt.</p>
+    <label>Admin-Benutzername<input id="setupName" autocomplete="username" required minlength="2" /></label>
+    <label>Admin-Passwort<input id="setupPassword" type="password" autocomplete="new-password" required minlength="10" /></label>
+    <label>Passwort wiederholen<input id="setupPassword2" type="password" autocomplete="new-password" required minlength="10" /></label>
+    <div class="password-hint">Mindestens 10 Zeichen.</div>
+    <div id="setupError" class="form-error"></div>
+    <button class="primary auth-submit" type="submit">Administrator anlegen</button>
+  </form>
+</section>
+
+<section id="loginScreen" class="auth-screen hidden">
+  <form id="loginForm" class="auth-card">
+    <img class="auth-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
+    <div class="eyebrow">Interner Bereich</div>
+    <h1>Werkstattplaner</h1>
+    <p>Mit Ihrem persönlichen Benutzerkonto anmelden.</p>
     <label>Benutzer<input id="loginName" autocomplete="username" required /></label>
     <label>Passwort<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
-    <div id="loginError" class="login-error"></div>
-    <button class="primary" type="submit">Anmelden</button>
+    <div id="loginError" class="form-error"></div>
+    <button class="primary auth-submit" type="submit">Anmelden</button>
   </form>
 </section>
 
 <div id="appShell" class="hidden">
 <header class="topbar">
-  <div><div class="brand">Ete's Autoservice</div><div class="subtitle">Werkstattplaner · Server</div></div>
+  <div class="brand-wrap">
+    <img class="brand-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
+    <div>
+      <div class="brand">Ete's Autoservice</div>
+      <div class="subtitle">Werkstattplaner · Live</div>
+    </div>
+  </div>
   <div class="toolbar">
-    <div class="userbox"><span id="syncDot" class="sync-dot"></span><strong id="currentUser"></strong><button id="logoutBtn">Abmelden</button></div>
+    <div class="userbox"><span id="syncDot" class="sync-dot"></span><strong id="currentUser"></strong><button id="usersBtn" class="hidden">Benutzer</button><button id="logoutBtn">Abmelden</button></div>
     <button id="todayBtn">Heute</button><button id="prevBtn">‹</button><input id="datePicker" type="date" /><button id="nextBtn">›</button>
     <button id="newBtn" class="primary">+ Termin</button>
   </div>
@@ -36,7 +60,7 @@
 
 <dialog id="appointmentDialog">
 <form method="dialog" id="appointmentForm">
-  <div class="dialog-head"><h2 id="dialogTitle">Termin</h2><button value="cancel" class="icon-btn">✕</button></div>
+  <div class="dialog-head"><h2 id="dialogTitle">Termin</h2><button value="cancel" class="icon-btn" aria-label="Schließen">✕</button></div>
   <input type="hidden" id="apptId" />
   <div class="form-grid">
     <label>Datum<input id="apptDate" type="date" required /></label><label>Arbeitsplatz<select id="resource" required></select></label>
@@ -52,6 +76,29 @@
   <div class="dialog-actions"><button type="button" id="deleteBtn" class="danger">Löschen</button><span class="spacer"></span><button value="cancel">Abbrechen</button><button type="submit" id="saveBtn" class="primary">Speichern</button></div>
 </form>
 </dialog>
+
+<dialog id="usersDialog" class="users-dialog">
+  <div class="dialog-panel">
+    <div class="dialog-head"><div><div class="eyebrow">Administration</div><h2>Benutzer verwalten</h2></div><button id="usersCloseBtn" class="icon-btn" type="button" aria-label="Schließen">✕</button></div>
+    <div class="users-layout">
+      <section class="user-create-card">
+        <h3>Neuen Benutzer anlegen</h3>
+        <form id="newUserForm">
+          <label>Name<input id="newUserName" required minlength="2" /></label>
+          <label>Rolle<select id="newUserRole"><option value="viewer">Nur Lesen</option><option value="editor">Bearbeitung</option><option value="admin">Administrator</option></select></label>
+          <label>Initialpasswort<input id="newUserPassword" type="password" required minlength="10" autocomplete="new-password" /></label>
+          <div id="newUserError" class="form-error"></div>
+          <button type="submit" class="primary">Benutzer anlegen</button>
+        </form>
+      </section>
+      <section class="users-list-wrap">
+        <div class="section-title-row"><h3>Vorhandene Benutzer</h3><button id="refreshUsersBtn" type="button">Aktualisieren</button></div>
+        <div id="usersList" class="users-list"></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
 <div id="toast" class="toast hidden"></div>
 <script src="/app.js"></script>
 </body></html>
