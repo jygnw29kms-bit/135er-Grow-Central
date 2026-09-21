@@ -1,4 +1,4 @@
-const CACHE='etes-planer-v1.2-logo5';
+const CACHE='etes-planer-v1.2-logo6';
 const SHELL=['/','/index.html','/styles.css','/app.js','/manifest.webmanifest','/etes-werkstattplaner-logo-final.webp'];
 self.addEventListener('install',e=>{
   self.skipWaiting();
