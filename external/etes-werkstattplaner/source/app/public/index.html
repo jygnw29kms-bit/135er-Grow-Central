@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1f33" />
+  <meta name="theme-color" content="#102b5a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Ete's Werkstattplaner</title>
@@ -12,55 +12,136 @@
 </head>
 <body>
 <section id="setupScreen" class="auth-screen hidden">
+  <div class="auth-backdrop"></div>
   <form id="setupForm" class="auth-card">
-    <img class="auth-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
+    <img class="auth-logo" src="/etes-logo.webp" alt="Ete's Autoservice" />
+    <div class="auth-divider"></div>
     <div class="eyebrow">Ersteinrichtung</div>
     <h1>Werkstattplaner einrichten</h1>
-    <p>Für die erste Inbetriebnahme muss ein Administrator angelegt werden. Ohne dieses Konto bleibt der Planer gesperrt.</p>
-    <label>Admin-Benutzername<input id="setupName" autocomplete="username" required minlength="2" /></label>
-    <label>Admin-Passwort<input id="setupPassword" type="password" autocomplete="new-password" required minlength="10" /></label>
-    <label>Passwort wiederholen<input id="setupPassword2" type="password" autocomplete="new-password" required minlength="10" /></label>
-    <div class="password-hint">Mindestens 10 Zeichen.</div>
+    <p>Beim ersten Start wird ein Administrator angelegt. Erst danach wird der interne Planer freigeschaltet.</p>
+    <label>Admin-Benutzername<input id="setupName" autocomplete="username" required minlength="2" placeholder="z. B. Jens" /></label>
+    <label>Admin-Passwort<input id="setupPassword" type="password" autocomplete="new-password" required minlength="10" placeholder="Mindestens 10 Zeichen" /></label>
+    <label>Passwort wiederholen<input id="setupPassword2" type="password" autocomplete="new-password" required minlength="10" placeholder="Passwort wiederholen" /></label>
     <div id="setupError" class="form-error"></div>
-    <button class="primary auth-submit" type="submit">Administrator anlegen</button>
+    <button class="primary auth-submit" type="submit">Administrator anlegen <span>→</span></button>
+    <div class="auth-note">Sicher · Intern · Rollenbasiert</div>
   </form>
 </section>
 
 <section id="loginScreen" class="auth-screen hidden">
+  <div class="auth-backdrop"></div>
   <form id="loginForm" class="auth-card">
-    <img class="auth-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
+    <img class="auth-logo" src="/etes-logo.webp" alt="Ete's Autoservice" />
+    <div class="auth-divider"></div>
     <div class="eyebrow">Interner Bereich</div>
     <h1>Werkstattplaner</h1>
-    <p>Mit Ihrem persönlichen Benutzerkonto anmelden.</p>
-    <label>Benutzer<input id="loginName" autocomplete="username" required /></label>
-    <label>Passwort<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+    <p>Termine, Fahrzeuge und Werkstattplätze zentral verwalten.</p>
+    <label>Benutzername<input id="loginName" autocomplete="username" required placeholder="Benutzername" /></label>
+    <label>Passwort<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Passwort" /></label>
     <div id="loginError" class="form-error"></div>
-    <button class="primary auth-submit" type="submit">Anmelden</button>
+    <button class="primary auth-submit" type="submit">Anmelden <span>→</span></button>
+    <div class="auth-note">Ete's Autoservice · Fachbetrieb für Kraftfahrzeugtechnik</div>
   </form>
 </section>
 
-<div id="appShell" class="hidden">
-<header class="topbar">
-  <div class="brand-wrap">
-    <img class="brand-logo" src="/etes-logo.jpg" alt="Ete's Autoservice" />
-    <div>
-      <div class="brand">Ete's Autoservice</div>
-      <div class="subtitle">Werkstattplaner · Live</div>
+<div id="appShell" class="hidden app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="/etes-logo.webp" alt="Ete's Autoservice" />
     </div>
-  </div>
-  <div class="toolbar">
-    <div class="userbox"><span id="syncDot" class="sync-dot"></span><strong id="currentUser"></strong><button id="usersBtn" class="hidden">Benutzer</button><button id="logoutBtn">Abmelden</button></div>
-    <button id="todayBtn">Heute</button><button id="prevBtn">‹</button><input id="datePicker" type="date" /><button id="nextBtn">›</button>
-    <button id="newBtn" class="primary">+ Termin</button>
-  </div>
-</header>
-<section class="statusbar"><span id="roleBadge"></span><div class="legend" id="legend"></div></section>
-<main><div id="planner" class="planner" aria-label="Werkstattplan"></div></main>
+    <nav class="side-nav" aria-label="Hauptnavigation">
+      <button class="nav-item active" type="button"><span class="nav-icon">⌂</span><span>Übersicht</span></button>
+      <button class="nav-item" type="button"><span class="nav-icon">▦</span><span>Werkstattplaner</span></button>
+      <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">▤</span><span>Aufträge</span></button>
+      <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">♟</span><span>Kunden</span></button>
+      <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">◆</span><span>Fahrzeuge</span></button>
+      <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">⬡</span><span>Teile & Lager</span></button>
+      <button id="usersBtn" class="nav-item hidden" type="button"><span class="nav-icon">⚙</span><span>Benutzer</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-slogan">Guter Service<br>bringt Sie weiter.</div>
+      <span class="slogan-line"></span>
+    </div>
+  </aside>
+
+  <section class="workspace">
+    <header class="app-header">
+      <div class="header-logo-wrap">
+        <img class="header-logo" src="/etes-logo.webp" alt="Ete's Autoservice" />
+        <div class="header-claim">Kompetenz. Service.<br><strong>Mobilität. Seit immer.</strong></div>
+      </div>
+      <div class="header-right">
+        <div class="userbox">
+          <span id="syncDot" class="sync-dot"></span>
+          <div><strong id="currentUser"></strong><small id="roleBadge"></small></div>
+          <button id="logoutBtn" type="button">Abmelden</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="page-head">
+        <div>
+          <div class="eyebrow">Werkstattsteuerung</div>
+          <h1>Werkstattplaner</h1>
+          <p>Alle Termine und Arbeitsplätze auf einen Blick.</p>
+        </div>
+        <div class="date-actions">
+          <button id="prevBtn" class="square-btn" type="button">‹</button>
+          <input id="datePicker" type="date" />
+          <button id="nextBtn" class="square-btn" type="button">›</button>
+          <button id="todayBtn" type="button">Heute</button>
+          <button id="newBtn" class="primary new-appointment-btn" type="button">＋ Neuer Termin</button>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <div class="planner-card">
+          <div id="planner" class="planner" aria-label="Werkstattplan"></div>
+          <div class="planner-footer">
+            <div id="legend" class="legend"></div>
+            <div class="planner-summary"><strong>6 Arbeitsplätze</strong><span>·</span><span id="todayCount">0 Termine</span></div>
+          </div>
+        </div>
+
+        <aside class="right-rail">
+          <section class="rail-card">
+            <div class="rail-card-head"><span>Kalender</span><strong id="railDateLabel">Heute</strong></div>
+            <div class="mini-calendar">
+              <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+              <b>1</b><b>2</b><b>3</b><b>4</b><b>5</b><b>6</b><b>7</b>
+              <b>8</b><b>9</b><b>10</b><b>11</b><b>12</b><b>13</b><b>14</b>
+              <b>15</b><b>16</b><b>17</b><b>18</b><b>19</b><b>20</b><b class="active-day">21</b>
+            </div>
+          </section>
+
+          <section class="rail-card">
+            <div class="rail-card-head"><span>Schnellaktionen</span></div>
+            <button class="quick-action primary" type="button" onclick="document.getElementById('newBtn').click()">＋ Neuer Termin</button>
+            <button class="quick-action" type="button" disabled>▤ Neuer Auftrag</button>
+            <button class="quick-action" type="button" disabled>♟ Neuer Kunde</button>
+            <button class="quick-action" type="button" disabled>◆ Fahrzeug anlegen</button>
+          </section>
+
+          <section class="rail-card status-card">
+            <div class="rail-card-head"><span>Systemstatus</span></div>
+            <div class="status-item ok"><span>●</span><div><strong>Planer verbunden</strong><small>Live-Synchronisierung aktiv</small></div></div>
+            <div class="status-item"><span>●</span><div><strong>APT-Updates</strong><small>Grow-Central Repository</small></div></div>
+          </section>
+
+          <section class="rail-card logo-card">
+            <img src="/etes-logo.webp" alt="Ete's Autoservice" />
+            <div>Qualität bewegt.</div>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </section>
 </div>
 
 <dialog id="appointmentDialog">
 <form method="dialog" id="appointmentForm">
-  <div class="dialog-head"><h2 id="dialogTitle">Termin</h2><button value="cancel" class="icon-btn" aria-label="Schließen">✕</button></div>
+  <div class="dialog-head"><div><div class="eyebrow">Werkstatttermin</div><h2 id="dialogTitle">Termin</h2></div><button value="cancel" class="icon-btn" aria-label="Schließen">✕</button></div>
   <input type="hidden" id="apptId" />
   <div class="form-grid">
     <label>Datum<input id="apptDate" type="date" required /></label><label>Arbeitsplatz<select id="resource" required></select></label>
