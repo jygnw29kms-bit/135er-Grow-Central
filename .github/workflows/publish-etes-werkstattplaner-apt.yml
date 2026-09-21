@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build and test Werkstattplaner 1.1.0
+      - name: Build and test Werkstattplaner 1.2.0
         shell: bash
         run: |
           set -euo pipefail
@@ -39,12 +39,10 @@ jobs:
           chmod 0755 pkg/DEBIAN/postinst pkg/DEBIAN/prerm pkg/DEBIAN/postrm
           chmod 0755 pkg/opt/etes-werkstattplaner/server.py pkg/usr/sbin/etes-werkstattplaner-user
 
-          # Offizielle Ete's-Autoservice-Grafik lokal in die App übernehmen.
-          curl -fL --retry 3             'https://www.etes-autoservice.de/s/img/emotionheader5811556573.jpeg?1667899691.960px.369px'             -o pkg/opt/etes-werkstattplaner/public/etes-logo.jpg
-          test -s pkg/opt/etes-werkstattplaner/public/etes-logo.jpg
+          test -s pkg/opt/etes-werkstattplaner/public/etes-logo.webp
 
-          dpkg-deb --build --root-owner-group pkg publish/etes-werkstattplaner_1.1.0-1_all.deb
-          dpkg-deb --info publish/etes-werkstattplaner_1.1.0-1_all.deb
+          dpkg-deb --build --root-owner-group pkg publish/etes-werkstattplaner_1.2.0-1_all.deb
+          dpkg-deb --info publish/etes-werkstattplaner_1.2.0-1_all.deb
 
           # Alte Version im Repo behalten, damit ein Rollback möglich bleibt.
           base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64             > publish/etes-werkstattplaner_1.0.0-1_all.deb
@@ -110,7 +108,7 @@ jobs:
           put publish/Packages downloads/apt/werkstattplaner/Packages
           put publish/Packages.gz downloads/apt/werkstattplaner/Packages.gz
           put publish/etes-werkstattplaner_1.0.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.0.0-1_all.deb
-          put publish/etes-werkstattplaner_1.1.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.1.0-1_all.deb
+          put publish/etes-werkstattplaner_1.2.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.2.0-1_all.deb
           bye
           EOF
           sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
