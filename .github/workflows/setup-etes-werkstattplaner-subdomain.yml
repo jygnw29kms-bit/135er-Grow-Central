@@ -53,7 +53,7 @@ jobs:
           mkdir -p "$(dirname "$CONF")"
 
           cat > "$CONF" <<'NGINX'
-          location / {
+          location @etes_werkstattplaner {
               proxy_pass http://127.0.0.1:3080;
               proxy_http_version 1.1;
               proxy_set_header Host $host;
@@ -65,6 +65,12 @@ jobs:
               proxy_buffering off;
               proxy_cache off;
               proxy_read_timeout 3600s;
+          }
+
+          error_page 418 = @etes_werkstattplaner;
+          recursive_error_pages on;
+          if ($request_uri ~ "^/") {
+              return 418;
           }
           NGINX
 
