@@ -54,3 +54,151 @@ dialog{border:0;border-radius:16px;padding:0;max-width:760px;width:calc(100% - 2
 @media(max-width:1200px){.dashboard-grid{grid-template-columns:1fr}.right-rail{grid-template-columns:repeat(2,minmax(0,1fr))}.logo-card{display:none}.header-logo{width:310px}.header-claim{display:none}}
 @media(max-width:850px){.app-shell{grid-template-columns:1fr}.sidebar{height:auto;min-height:0;position:static}.sidebar-brand,.sidebar-footer{display:none}.side-nav{display:flex;overflow:auto}.nav-item{white-space:nowrap}.app-header{height:auto;position:static}.header-logo{width:230px;max-width:55vw}.content{padding:14px}.page-head{align-items:flex-start;flex-direction:column}.dashboard-grid{display:block}.right-rail{margin-top:14px;grid-template-columns:1fr}.timeline-head,.resource-row{grid-template-columns:150px minmax(790px,1fr)}.users-layout{grid-template-columns:1fr}.user-edit-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.auth-card{padding:22px}.auth-card h1{font-size:28px}.header-right{display:none}.header-logo{width:100%;max-width:100%}.form-grid,.user-edit-grid{grid-template-columns:1fr}.wide{grid-column:auto}.date-actions{width:100%}.date-actions input{flex:1}}
+
+
+/* ===== Responsive system 1.3 ===== */
+:root{--touch-size:44px;--mobile-nav-h:68px}
+html,body{max-width:100%;overflow-x:hidden}
+.auth-logo-wrap{height:auto!important;min-height:0!important;padding:8px 0 4px!important}
+.auth-logo{width:min(100%,520px)!important;height:auto!important;max-height:150px!important;object-fit:contain!important}
+#loginScreen .auth-card,#setupScreen .auth-card{width:min(620px,calc(100vw - 32px))!important}
+.touch-ui button,.touch-ui input,.touch-ui select{min-height:var(--touch-size)}
+.touch-ui .appointment{cursor:pointer}
+
+body.device-tablet .app-shell{grid-template-columns:76px minmax(0,1fr)}
+body.device-tablet .sidebar-brand,body.device-tablet .sidebar-footer{display:none}
+body.device-tablet .side-nav{padding:12px 8px;gap:8px}
+body.device-tablet .nav-item{justify-content:center;padding:12px 8px}
+body.device-tablet .nav-item>span:last-child{display:none}
+body.device-tablet .nav-icon{width:auto;font-size:22px}
+body.device-tablet .app-header{height:82px;padding:10px 16px}
+body.device-tablet .header-logo{width:min(350px,44vw);height:62px}
+body.device-tablet .header-claim{display:none}
+body.device-tablet .content{padding:16px}
+body.device-tablet .dashboard-grid{grid-template-columns:1fr}
+body.device-tablet .right-rail{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px}
+body.device-tablet .logo-card{display:none}
+body.device-tablet .planner{min-width:0}
+body.device-tablet .timeline-head,body.device-tablet .resource-row{grid-template-columns:150px minmax(720px,1fr)}
+body.device-tablet .time-scale{min-width:720px}
+body.device-tablet .page-head{align-items:flex-start;flex-direction:column}
+body.device-tablet .date-actions{width:100%}
+
+body.device-phone{padding-bottom:calc(var(--mobile-nav-h) + env(safe-area-inset-bottom))}
+body.device-phone .app-shell{display:block;min-height:100vh}
+body.device-phone .workspace{width:100%;min-width:0}
+body.device-phone .sidebar{
+  position:fixed;left:0;right:0;bottom:0;top:auto;height:calc(var(--mobile-nav-h) + env(safe-area-inset-bottom));min-height:0;
+  z-index:80;display:block;background:#0c2a56;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 24px #071a3440
+}
+body.device-phone .sidebar-brand,body.device-phone .sidebar-footer{display:none}
+body.device-phone .side-nav{
+  height:var(--mobile-nav-h);display:flex;align-items:stretch;gap:2px;padding:6px;overflow-x:auto;overflow-y:hidden
+}
+body.device-phone .nav-item{
+  flex:1 0 64px;min-width:64px;justify-content:center;flex-direction:column;gap:3px;padding:6px 4px;border-radius:10px;font-size:10px
+}
+body.device-phone .nav-item.nav-muted{display:none}
+body.device-phone .nav-icon{width:auto;font-size:20px;line-height:1}
+body.device-phone .app-header{
+  position:sticky;top:0;height:66px;padding:8px 12px;z-index:50;gap:8px
+}
+body.device-phone .header-logo-wrap{min-width:0;gap:0}
+body.device-phone .header-logo{width:min(240px,58vw);height:48px;object-fit:contain;object-position:left center}
+body.device-phone .header-claim{display:none}
+body.device-phone .header-right{display:flex;min-width:0}
+body.device-phone .userbox{gap:7px}
+body.device-phone .userbox>div{display:none}
+body.device-phone .userbox button{min-height:40px;padding:7px 9px;font-size:12px}
+body.device-phone .content{padding:12px 10px 18px}
+body.device-phone .page-head{display:block;margin-bottom:12px}
+body.device-phone .page-head h1{font-size:27px;margin-top:2px}
+body.device-phone .page-head p{font-size:13px}
+body.device-phone .date-actions{
+  width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:7px;margin-top:12px
+}
+body.device-phone .date-actions input{min-width:0;width:100%;grid-column:2}
+body.device-phone #prevBtn{grid-column:1;grid-row:1}
+body.device-phone #nextBtn{grid-column:3;grid-row:1}
+body.device-phone #todayBtn{grid-column:1/2;grid-row:2}
+body.device-phone #newBtn{grid-column:2/4;grid-row:2}
+body.device-phone .date-actions input,body.device-phone .date-actions button{height:46px}
+body.device-phone .dashboard-grid{display:block}
+body.device-phone .right-rail{display:none}
+body.device-phone .planner-card{border-radius:12px;overflow:hidden}
+body.device-phone .planner{min-width:0;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+body.device-phone .timeline-head{display:block;min-width:720px}
+body.device-phone .timeline-corner{display:none}
+body.device-phone .time-scale{min-width:720px}
+body.device-phone .time-scale span{padding:10px 5px;font-size:10px}
+body.device-phone .resource-row{display:block;min-width:720px;border-bottom:8px solid #f4f7fb}
+body.device-phone .resource-label{
+  position:sticky;left:0;z-index:5;width:100vw;max-width:100%;padding:9px 12px;border-right:0;border-bottom:1px solid var(--line);
+  background:#f8fbff
+}
+body.device-phone .resource-icon{width:34px;height:34px;font-size:17px}
+body.device-phone .resource-copy strong{font-size:13px}
+body.device-phone .resource-copy small{display:none}
+body.device-phone .resource-track{min-width:720px;min-height:78px}
+body.device-phone .appointment{top:7px;height:64px;padding:6px 7px;font-size:10px}
+body.device-phone .appointment strong{font-size:11px}
+body.device-phone .appointment .meta{font-size:9px}
+body.device-phone .status-chip{font-size:8px}
+body.device-phone .planner-footer{display:block;padding:10px 12px}
+body.device-phone .legend{gap:7px}
+body.device-phone .legend span{font-size:9px}
+body.device-phone .planner-summary{margin-top:8px;justify-content:space-between}
+body.device-phone dialog{
+  margin:0;width:100vw;max-width:none;height:calc(var(--app-vh,1vh)*100);max-height:none;border-radius:0
+}
+body.device-phone dialog[open]{display:block}
+body.device-phone .dialog-panel,body.device-phone #appointmentForm{padding:16px 14px 22px;min-height:100%;overflow:auto}
+body.device-phone .form-grid{grid-template-columns:1fr;gap:10px}
+body.device-phone .wide{grid-column:auto}
+body.device-phone .dialog-actions{
+  position:sticky;bottom:0;background:#fff;padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:4;border-top:1px solid #e5ebf2
+}
+body.device-phone .dialog-actions button{flex:1;min-height:46px}
+body.device-phone .users-layout{grid-template-columns:1fr}
+body.device-phone .user-edit-grid{grid-template-columns:1fr}
+body.device-phone .users-list{max-height:none}
+body.device-phone .toast{left:12px;right:12px;bottom:calc(var(--mobile-nav-h) + 14px + env(safe-area-inset-bottom));text-align:center}
+
+body.device-phone .auth-screen{
+  place-items:start center;padding:calc(18px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));min-height:calc(var(--app-vh,1vh)*100)
+}
+body.device-phone .auth-card{
+  width:100%!important;max-width:460px!important;border-radius:18px!important;padding:20px 18px 22px!important;margin:auto 0
+}
+body.device-phone .auth-logo-wrap{padding:0!important;margin:0 0 4px!important}
+body.device-phone .auth-logo{width:min(100%,380px)!important;max-height:118px!important}
+body.device-phone .auth-divider{margin:3px 0 18px}
+body.device-phone .auth-card h1{font-size:30px;line-height:1.05}
+body.device-phone .auth-card p{font-size:14px;margin-bottom:18px}
+body.device-phone .auth-card label{margin:11px 0}
+body.device-phone .auth-card input{height:52px!important;font-size:16px}
+body.device-phone .auth-submit{height:54px!important;font-size:17px}
+body.device-phone .auth-note{font-size:10px;margin-top:15px}
+
+body.device-tablet .auth-card{
+  width:min(620px,calc(100vw - 48px))!important;padding:30px 38px!important
+}
+body.device-tablet .auth-logo{width:min(100%,500px)!important;max-height:145px!important}
+
+body.orientation-landscape.device-phone .auth-screen{padding-top:10px;padding-bottom:10px}
+body.orientation-landscape.device-phone .auth-card{max-width:700px!important;padding:14px 22px 16px!important}
+body.orientation-landscape.device-phone .auth-logo{max-height:78px!important;width:min(100%,360px)!important}
+body.orientation-landscape.device-phone .auth-divider{margin-bottom:10px}
+body.orientation-landscape.device-phone .auth-card .eyebrow{display:none}
+body.orientation-landscape.device-phone .auth-card h1{font-size:24px;margin:2px 0 6px}
+body.orientation-landscape.device-phone .auth-card p{font-size:12px;margin-bottom:8px}
+body.orientation-landscape.device-phone .auth-card label{margin:7px 0}
+body.orientation-landscape.device-phone .auth-card input{height:44px!important}
+body.orientation-landscape.device-phone .auth-submit{height:46px!important;margin-top:8px}
+body.orientation-landscape.device-phone .auth-note{display:none}
+
+@media(max-width:380px){
+  body.device-phone .auth-card{padding-left:14px!important;padding-right:14px!important}
+  body.device-phone .auth-logo{max-height:104px!important}
+  body.device-phone .page-head h1{font-size:24px}
+}
