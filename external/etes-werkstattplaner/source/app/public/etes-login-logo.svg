@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 430" role="img" aria-labelledby="t d">
+<title id="t">Ete's Autoservice Werkstattplaner</title>
+<desc id="d">Kompaktes Login-Logo für den Ete's Autoservice Werkstattplaner</desc>
+<rect width="1120" height="430" fill="#fff"/>
+<g transform="translate(28 32)">
+  <g transform="translate(0 8)">
+    <circle cx="135" cy="176" r="96" fill="none" stroke="#111" stroke-width="38"/>
+    <g fill="#111">
+      <rect x="117" y="4" width="36" height="54" rx="5"/><rect x="117" y="294" width="36" height="54" rx="5"/>
+      <rect x="0" y="158" width="54" height="36" rx="5"/><rect x="216" y="158" width="54" height="36" rx="5"/>
+      <rect x="39" y="40" width="49" height="34" rx="5" transform="rotate(-45 63 57)"/>
+      <rect x="182" y="278" width="49" height="34" rx="5" transform="rotate(-45 206 295)"/>
+      <rect x="39" y="278" width="49" height="34" rx="5" transform="rotate(45 63 295)"/>
+      <rect x="182" y="40" width="49" height="34" rx="5" transform="rotate(45 206 57)"/>
+    </g>
+    <g transform="translate(60 112)">
+      <path d="M8 76h14l14-33c6-14 17-23 31-23h36c13 0 24 7 31 19l9 14h10c9 0 16 7 16 16v35c0 10-8 18-18 18H25c-10 0-17-8-17-18z" fill="#ffc400"/>
+      <circle cx="45" cy="105" r="15" fill="#fff"/><circle cx="132" cy="105" r="15" fill="#fff"/>
+      <path d="M98 3c13 2 24 9 31 19l-13 19 10 18 22 1c3 12 1 24-6 34l-20-7-16 13 3 23c-11 6-23 9-35 6l-2-23-19-9-19 13c-9-9-14-20-14-32l22-6 7-20-16-17c7-11 17-18 29-22l10 20 21 1z" fill="#222"/>
+      <path d="M97 14c13 13 15 33 5 49l-4 6v93H74V69l-4-6c-10-16-8-36 5-49v27h22z" fill="#222"/>
+    </g>
+  </g>
+  <g transform="translate(300 22)">
+    <text x="0" y="132" font-family="Arial Narrow,Arial,sans-serif" font-size="126" font-weight="900" fill="#0a43a8">ETE’</text>
+    <path d="M0 160H262c49 0 78-24 78-62 0-34 30-58 69-58h651v38H438c-29 0-50 17-50 41 0 44-38 79-88 79H0z" fill="#ffc400"/>
+    <text x="370" y="186" font-family="Arial Narrow,Arial,sans-serif" font-size="105" font-weight="900" letter-spacing="-2" fill="#0a43a8">AUTOSERVICE</text>
+    <text x="372" y="235" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="700" fill="#111">Fachbetrieb für Kraftfahrzeugtechnik</text>
+    <g transform="translate(372 270)">
+      <rect width="420" height="72" rx="36" fill="#0a43a8"/>
+      <g transform="translate(24 13)" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round">
+        <rect x="0" y="7" width="52" height="43" rx="6"/><path d="M12 0v14M40 0v14M7 22h38M21 31l10 10M31 31L21 41"/>
+      </g>
+      <text x="92" y="48" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="700" fill="#fff">Werkstattplaner</text>
+    </g>
+  </g>
+</g>
+</svg>
