@@ -2,6 +2,10 @@ name: Setup Etes Werkstattplaner Subdomain
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/setup-etes-werkstattplaner-subdomain.yml'
 
 permissions:
   contents: read
