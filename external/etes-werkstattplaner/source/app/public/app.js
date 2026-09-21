@@ -3,6 +3,29 @@ let currentUser=null, appointments=[], config={resources:[],mechanics:[],statuse
 let events=null;
 const $=id=>document.getElementById(id);
 
+function applyDeviceProfile(){
+  const w=window.innerWidth||document.documentElement.clientWidth;
+  const h=window.innerHeight||document.documentElement.clientHeight;
+  const coarse=window.matchMedia&&window.matchMedia('(pointer: coarse)').matches;
+  const touch=coarse||navigator.maxTouchPoints>0;
+  const shortSide=Math.min(w,h);
+  let device='desktop';
+  if((touch&&shortSide<=600)||w<=700) device='phone';
+  else if((touch&&w<=1366)||w<=1100) device='tablet';
+  const orientation=w>h?'landscape':'portrait';
+  document.documentElement.dataset.device=device;
+  document.documentElement.dataset.orientation=orientation;
+  document.body.classList.remove('device-phone','device-tablet','device-desktop','orientation-portrait','orientation-landscape','touch-ui');
+  document.body.classList.add('device-'+device,'orientation-'+orientation);
+  if(touch) document.body.classList.add('touch-ui');
+  document.documentElement.style.setProperty('--app-vh',(h*0.01)+'px');
+}
+let deviceResizeTimer=null;
+function scheduleDeviceProfile(){
+  clearTimeout(deviceResizeTimer);
+  deviceResizeTimer=setTimeout(()=>{applyDeviceProfile();if(currentUser)render()},90);
+}
+
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function mins(t){const p=t.split(':').map(Number);return p[0]*60+p[1]}
 function timeLabel(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
@@ -26,6 +49,7 @@ async function api(url,opts={}){
 }
 
 async function init(){
+  applyDeviceProfile();
   $('datePicker').value=todayISO();
   bind();
   try{
@@ -73,6 +97,8 @@ function bind(){
   $('newUserForm').onsubmit=createUser;
   window.addEventListener('online',()=>setOnline(true));
   window.addEventListener('offline',()=>setOnline(false));
+  window.addEventListener('resize',scheduleDeviceProfile,{passive:true});
+  window.addEventListener('orientationchange',scheduleDeviceProfile,{passive:true});
 }
 
 async function enterApp(){
