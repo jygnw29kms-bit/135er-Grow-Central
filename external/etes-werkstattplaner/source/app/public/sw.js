@@ -1,5 +1,5 @@
-const CACHE='etes-planer-v1.2-logo9';
-const SHELL=['/','/index.html','/styles.css','/app.js','/manifest.webmanifest','/etes-logo-v9.png'];
+const CACHE='etes-planer-v1.2-logo-svg10';
+const SHELL=['/','/index.html','/styles.css','/app.js','/manifest.webmanifest','/etes-werkstattplaner-logo.svg'];
 self.addEventListener('install',e=>{
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));
