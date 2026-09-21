@@ -1,0 +1,39 @@
+name: Publish Etes Werkstattplaner APT
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'external/etes-werkstattplaner/**'
+      - '.github/workflows/publish-etes-werkstattplaner-apt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Build flat APT repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev
+          mkdir -p publish
+          base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64 > publish/etes-werkstattplaner_1.0.0-1_all.deb
+          dpkg-deb --info publish/etes-werkstattplaner_1.0.0-1_all.deb
+          (cd publish && dpkg-scanpackages . /dev/null > Packages && gzip -9 -k -f Packages)
+
+      - name: Deploy through existing dezender SFTP secrets
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './publish/*'
+          remote_path: '/var/www/vhosts/dezender.de/repo.dezender.de/apt/werkstattplaner/'
+          delete_remote_files: false
