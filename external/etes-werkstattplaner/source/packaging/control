@@ -1,11 +1,11 @@
 Package: etes-werkstattplaner
-Version: 1.1.0-1
+Version: 1.2.0-1
 Section: web
 Priority: optional
 Architecture: all
 Depends: python3 (>= 3.9), adduser
 Maintainer: Ete's Autoservice
 Description: Mehrbenutzer-Werkstattkalender fuer Ete's Autoservice
- Serverseitiger Werkstattplaner mit Ersteinrichtung, Benutzerverwaltung,
+ Serverseitiger Werkstattplaner im Ete's-Autoservice-Design mit Ersteinrichtung, Benutzerverwaltung,
  fuenf Hebebuehnen, Achsmessplatz, Rollenrechten, Live-Synchronisierung,
  PWA und SQLite-Datenbank.
