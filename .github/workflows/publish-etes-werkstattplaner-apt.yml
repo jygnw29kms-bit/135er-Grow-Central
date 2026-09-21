@@ -33,7 +33,8 @@ jobs:
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
-          password: ${{ secrets.SFTP_PASSWORD }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: './publish/*'
           remote_path: '/var/www/vhosts/dezender.de/repo.dezender.de/apt/werkstattplaner/'
           delete_remote_files: false
+          sftp_only: true
