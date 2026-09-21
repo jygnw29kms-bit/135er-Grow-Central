@@ -83,6 +83,10 @@ jobs:
 
           echo "=== LOCAL VHOST TEST ==="
           curl -sS -I -H "Host: $FQDN" http://127.0.0.1/ | head -20 || true
+
+          echo "=== WERKSTATTPLANER AUTH DEFAULTS ==="
+          /usr/sbin/etes-werkstattplaner-user --help 2>&1 || true
+          grep -RniE 'password|passwort|username|benutzer|admin|login|users' /opt/etes-werkstattplaner /etc/default/etes-werkstattplaner 2>/dev/null | head -120 || true
           REMOTE
 
           SCRIPT_B64="$(base64 -w0 /tmp/remote-setup.sh)"
