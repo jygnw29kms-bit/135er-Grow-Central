@@ -1,5 +1,5 @@
 name: Update Etes Werkstattplaner Server
-# deploy redesigned 1.2.0-5
+# deploy redesigned 1.2.0-6
 on:
   push:
     branches: [ master ]
