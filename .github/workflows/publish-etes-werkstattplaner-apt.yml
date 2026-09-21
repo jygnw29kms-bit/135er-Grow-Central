@@ -27,6 +27,18 @@ jobs:
           base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.0.0-1_all.deb.b64 > publish/etes-werkstattplaner_1.0.0-1_all.deb
           dpkg-deb --info publish/etes-werkstattplaner_1.0.0-1_all.deb
           (cd publish && dpkg-scanpackages . /dev/null > Packages && gzip -9 -k -f Packages)
+          cat > publish/.htaccess <<'EOF'
+          Options -Indexes
+          <IfModule mod_authz_core.c>
+            <FilesMatch "^(Packages|Packages\\.gz|etes-werkstattplaner_.*\\.deb)$">
+              Require all granted
+            </FilesMatch>
+          </IfModule>
+          <IfModule mod_mime.c>
+            AddType text/plain .gz
+            AddType application/vnd.debian.binary-package .deb
+          </IfModule>
+          EOF
 
       - name: Deploy through existing Grow Central SFTP secrets
         env:
@@ -46,6 +58,7 @@ jobs:
           -mkdir downloads
           -mkdir downloads/apt
           -mkdir downloads/apt/werkstattplaner
+          put publish/.htaccess downloads/apt/werkstattplaner/.htaccess
           put publish/Packages downloads/apt/werkstattplaner/Packages
           put publish/Packages.gz downloads/apt/werkstattplaner/Packages.gz
           put publish/etes-werkstattplaner_1.0.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.0.0-1_all.deb
