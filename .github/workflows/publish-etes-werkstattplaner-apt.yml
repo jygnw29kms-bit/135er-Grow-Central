@@ -103,7 +103,9 @@ jobs:
           chmod 600 ~/.ssh/etes_deploy
           ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-          cat > /tmp/sftp-batch <<'EOF'
+
+          DEB_NAME="$(cat publish/current-deb-name.txt)"
+          cat > /tmp/sftp-batch <<EOF
           cd /var/www/vhosts/grow-central.de/httpdocs
           -mkdir downloads
           -mkdir downloads/apt
@@ -112,20 +114,7 @@ jobs:
           put publish/Packages downloads/apt/werkstattplaner/Packages
           put publish/Packages.gz downloads/apt/werkstattplaner/Packages.gz
           put publish/etes-werkstattplaner_1.0.0-1_all.deb downloads/apt/werkstattplaner/etes-werkstattplaner_1.0.0-1_all.deb
-          lcd publish
-          put current-deb-name.txt /tmp/current-deb-name.txt
-          lcd ..
-          bye
-          EOF
-          DEB_NAME="$(cat publish/current-deb-name.txt)"
-          cat > /tmp/sftp-deb-batch <<EOF
-          cd /var/www/vhosts/grow-central.de/httpdocs/downloads/apt/werkstattplaner
-          put publish/${DEB_NAME} ${DEB_NAME}
-          bye
-          EOF
-          sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-deb-batch "$SFTP_USERNAME@$SFTP_HOST"
-          rm -f /tmp/sftp-deb-batch
-          #
+          put publish/${DEB_NAME} downloads/apt/werkstattplaner/${DEB_NAME}
           bye
           EOF
           sftp -i ~/.ssh/etes_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
