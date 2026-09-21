@@ -28,15 +28,28 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
           SCRIPT='set -euo pipefail
           FQDN="werkstattplaner.grow-central.de"
+          CONF="/var/www/vhosts/system/$FQDN/conf/vhost_nginx.conf"
+          BACKUP="/root/vhost_nginx.$FQDN.acme-backup"
+
+          echo "=== TEMPORARILY DISABLE CUSTOM PROXY FOR ACME ==="
+          if [ -f "$CONF" ]; then cp -a "$CONF" "$BACKUP"; rm -f "$CONF"; fi
+          plesk sbin httpdmng --reconfigure-domain "$FQDN"
+          nginx -t
+          systemctl reload nginx
+
           echo "=== ISSUE CERT ==="
           plesk ext sslit --certificate -issue -domain "$FQDN" -secure-domain
-          echo "=== RECONFIGURE ==="
+
+          echo "=== RESTORE REVERSE PROXY ==="
+          if [ -f "$BACKUP" ]; then cp -a "$BACKUP" "$CONF"; rm -f "$BACKUP"; fi
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
           nginx -t
           systemctl reload nginx
           sleep 2
+
           echo "=== TLS VERIFY ==="
           echo | openssl s_client -connect "$FQDN:443" -servername "$FQDN" 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+
           echo "=== PUBLIC LOGO ==="
           curl --http1.1 -fsSI "https://$FQDN/etes-logo.webp"
           curl --http1.1 -fsS -o /tmp/logo-check -w "HTTP=%{http_code} TYPE=%{content_type} SIZE=%{size_download}\n" "https://$FQDN/etes-logo.webp"
