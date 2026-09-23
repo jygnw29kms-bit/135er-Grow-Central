@@ -60,5 +60,7 @@ jobs:
       - name: Public smoke test
         run: |
           set -euo pipefail
-          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/ | grep -q 'Workshop Manager ERP'
-          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/api/health | grep -q 'Workshop Manager ERP'
+          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/ -o /tmp/staging.html
+          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/api/health -o /tmp/health.json
+          grep -q 'Workshop Manager ERP' /tmp/staging.html
+          grep -q 'Workshop Manager ERP' /tmp/health.json
