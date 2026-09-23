@@ -20,12 +20,9 @@ a{color:inherit;text-decoration:none}
   background:rgba(7,16,27,.92);backdrop-filter:blur(16px);
   border-bottom:1px solid rgba(255,255,255,.06)
 }
-.brand{display:flex;gap:12px;align-items:center;font-weight:700;font-size:.95rem;letter-spacing:-.01em}
-.mark{
-  font-family:"Segoe UI Variable Display","Segoe UI",Arial,sans-serif;
-  font-style:normal;font-weight:800;color:#fff;font-size:.92rem;letter-spacing:.04em;
-  border-bottom:2px solid var(--blue);padding-bottom:2px
-}
+.brand{display:flex;gap:12px;align-items:center;font-weight:700;font-size:.9rem;letter-spacing:-.01em;min-width:0}
+.brand-logo{width:176px;height:44px;object-fit:contain;object-position:left center;display:block}
+.brand-product{padding-left:12px;border-left:1px solid rgba(255,255,255,.12);color:#d9e5ef;white-space:nowrap}
 nav{display:flex;gap:26px;align-items:center;color:#c0cfdd;font-size:.9rem;font-weight:500}
 nav a{transition:color .15s ease}nav a:hover{color:#fff}
 .nav-cta{padding:9px 14px;border:1px solid #2d81c9;border-radius:8px;font-weight:650}
@@ -44,10 +41,10 @@ nav a{transition:color .15s ease}nav a:hover{color:#fff}
   margin:0;font-family:"Segoe UI Variable Display","Segoe UI",Arial,sans-serif;
   font-weight:720;letter-spacing:-.035em
 }
-.hero h1{font-size:clamp(3rem,5vw,5rem);line-height:1.02;max-width:760px}
+.hero h1{font-size:clamp(2.8rem,4.4vw,4.5rem);line-height:1.06;max-width:760px}
 .hero h1 span{color:var(--blue)}
 .lead{
-  font-size:clamp(1.05rem,1.35vw,1.2rem);line-height:1.65;color:#b4c5d5;
+  font-size:clamp(1rem,1.2vw,1.13rem);line-height:1.7;color:#b4c5d5;
   max-width:700px;margin:26px 0 30px
 }
 .actions{display:flex;gap:12px;flex-wrap:wrap}
@@ -88,9 +85,9 @@ nav a{transition:color .15s ease}nav a:hover{color:#fff}
   background:var(--surface);color:var(--ink)
 }
 .section-head{max-width:760px;margin-bottom:38px}
-.section h2,.dark-section h2,.cta h2{font-size:clamp(2.15rem,3.5vw,3.65rem);line-height:1.08}
+.section h2,.dark-section h2,.cta h2{font-size:clamp(2rem,3vw,3.15rem);line-height:1.12}
 .section-head>p,.section>div>p,.dark-section p,.cta p{
-  font-size:1.05rem;line-height:1.7
+  font-size:1rem;line-height:1.72
 }
 .section p{color:var(--body)}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -99,8 +96,8 @@ nav a{transition:color .15s ease}nav a:hover{color:#fff}
   padding:22px;box-shadow:var(--shadow)
 }
 .cards i{font-style:normal;color:#1d91e4;font-weight:800;font-size:.7rem;letter-spacing:.06em}
-.cards h3{margin:9px 0 8px;font-size:1.04rem;line-height:1.35;letter-spacing:-.015em}
-.cards p{font-size:.9rem;line-height:1.62;margin:0}
+.cards h3{margin:9px 0 8px;font-size:1rem;line-height:1.4;letter-spacing:-.01em}
+.cards p{font-size:.875rem;line-height:1.65;margin:0}
 
 .dark-section{
   padding:88px max(24px,calc((100vw - var(--max))/2));
@@ -122,8 +119,8 @@ nav a{transition:color .15s ease}nav a:hover{color:#fff}
 .pricecards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .pricecards article{min-height:170px}
 .pricecards span{font-size:.68rem;font-weight:800;color:#298edb;letter-spacing:.08em}
-.pricecards h3{font-size:1.32rem;line-height:1.3;margin:11px 0 8px;letter-spacing:-.02em}
-.pricecards p{font-size:.92rem;line-height:1.6}
+.pricecards h3{font-size:1.22rem;line-height:1.35;margin:11px 0 8px;letter-spacing:-.015em}
+.pricecards p{font-size:.88rem;line-height:1.65}
 .pricecards .featured{background:#0d1b28;color:#fff;border-color:#299df3;transform:translateY(-6px)}
 .pricecards .featured p{color:#a8bfd2}
 
@@ -146,11 +143,20 @@ footer{
 }
 @media(max-width:700px){
   body{font-size:15px}.nav{padding:12px 18px}.brand>span:last-child{display:none}
-  .hero{padding:56px 20px;gap:42px}.hero h1{font-size:clamp(2.6rem,12vw,3.6rem)}
+  .hero{padding:56px 20px;gap:42px}.hero h1{font-size:clamp(2.45rem,11vw,3.25rem)}
   .lead{font-size:1rem}.kpis{grid-template-columns:1fr 1fr}
   .cards,.pricecards,.platforms,.checkgrid{grid-template-columns:1fr}
-  .section,.dark-section{padding:64px 20px}
-  .section h2,.dark-section h2,.cta h2{font-size:2.25rem}
+  .section,.dark-section{padding:60px 20px}
+  .section h2,.dark-section h2,.cta h2{font-size:2rem}
   .job{flex-direction:column;gap:2px}.stripe{justify-content:flex-start;padding:18px 20px}
   .featured{transform:none!important}footer{padding:22px 20px}
+}
+
+@media(max-width:900px){
+  .brand-logo{width:150px;height:40px}
+  .brand-product{font-size:.82rem}
+}
+@media(max-width:700px){
+  .brand-logo{width:132px;height:36px}
+  .brand-product{display:none}
 }
