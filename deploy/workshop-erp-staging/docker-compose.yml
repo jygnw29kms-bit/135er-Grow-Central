@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: workshop_erp_staging
+      POSTGRES_USER: workshop_erp
+      POSTGRES_PASSWORD: ${ERP_DB_PASSWORD}
+    volumes:
+      - erp_pg:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U workshop_erp -d workshop_erp_staging"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [erpnet]
+
+  api:
+    build:
+      context: ./src
+      dockerfile: WorkshopManager.Erp.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Erp: Host=postgres;Port=5432;Database=workshop_erp_staging;Username=workshop_erp;Password=${ERP_DB_PASSWORD}
+      DemoSeed: "true"
+      WM_JWT_KEY: ${ERP_JWT_KEY}
+      WM_BOOTSTRAP_ADMIN: demo
+      WM_BOOTSTRAP_PASSWORD: WerkstattDemo!2026
+    ports:
+      - "127.0.0.1:5090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [erpnet]
+
+volumes:
+  erp_pg:
+
+networks:
+  erpnet:
