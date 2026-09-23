@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Workshop Manager Demo · JL 1976™</title>
+  <link rel="stylesheet" href="/jl/demo/demo.css">
+</head>
+<body>
+  <div id="loginView" class="login-shell">
+    <div class="login-card">
+      <div class="brand">JL 1976™</div>
+      <h1>Workshop Manager Demo</h1>
+      <p>Interaktive Demo mit Beispieldaten. Es werden keine echten Werkstattdaten verwendet.</p>
+      <form id="loginForm">
+        <label>Benutzername<input id="user" autocomplete="username" value="demo"></label>
+        <label>Passwort<input id="pass" type="password" autocomplete="current-password" value="WerkstattDemo!2026"></label>
+        <button type="submit">Demo starten</button>
+        <div class="credentials"><b>Demo-Login:</b> demo<br><b>Passwort:</b> WerkstattDemo!2026</div>
+        <p id="loginError" class="error"></p>
+      </form>
+      <a class="back" href="/jl/">← Zur Marketingseite</a>
+    </div>
+  </div>
+
+  <div id="appView" class="app hidden">
+    <header class="topbar">
+      <div>
+        <div class="brand small">JL 1976™</div>
+        <strong>Workshop Manager · DEMO</strong>
+      </div>
+      <div class="top-actions">
+        <span id="demoBadge">Demo · Beispieldaten</span>
+        <button id="resetBtn" class="secondary">Demo zurücksetzen</button>
+        <button id="logoutBtn" class="secondary">Abmelden</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside>
+        <button class="nav active" data-page="dashboard">Dashboard</button>
+        <button class="nav" data-page="planner">Werkstattplan</button>
+        <button class="nav" data-page="customers">Kunden & Fahrzeuge</button>
+        <button class="nav" data-page="personnel">Personal</button>
+        <button class="nav" data-page="tires">Reifenhotel</button>
+      </aside>
+
+      <main>
+        <section id="dashboard" class="page">
+          <div class="page-head"><div><span>DEMO</span><h2>Heute in der Werkstatt</h2></div><div id="todayLabel"></div></div>
+          <div class="kpis">
+            <article><b id="kpiAppointments">0</b><span>Termine</span></article>
+            <article><b>84%</b><span>Auslastung</span></article>
+            <article><b>2</b><span>Warten auf Teile</span></article>
+            <article><b>3</b><span>Fahrzeuge fertig</span></article>
+          </div>
+          <div class="panel">
+            <h3>Werkstatt-Leitstand</h3>
+            <div id="dashboardJobs" class="job-list"></div>
+          </div>
+        </section>
+
+        <section id="planner" class="page hidden">
+          <div class="page-head"><div><span>PLANUNG</span><h2>Werkstattplan</h2></div><button id="newDemoAppointment">+ Demo-Termin</button></div>
+          <div class="panel">
+            <table>
+              <thead><tr><th>Zeit</th><th>Ressource</th><th>Kennzeichen</th><th>Fahrzeug</th><th>Kunde</th><th>Mechaniker</th><th>Status</th><th>Auftrag</th></tr></thead>
+              <tbody id="plannerRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="customers" class="page hidden">
+          <div class="page-head"><div><span>STAMMDATEN</span><h2>Kunden & Fahrzeuge</h2></div></div>
+          <div class="cards" id="customerCards"></div>
+        </section>
+
+        <section id="personnel" class="page hidden">
+          <div class="page-head"><div><span>PERSONAL</span><h2>Kapazität & Abwesenheiten</h2></div></div>
+          <div class="panel">
+            <table>
+              <thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Heute</th><th>Qualifikation</th><th>Urlaub Rest</th></tr></thead>
+              <tbody>
+                <tr><td>Alex Berger</td><td>Werkstattleitung</td><td><span class="pill green">verfügbar</span></td><td>Diagnose · HV · Klima</td><td>14 Tage</td></tr>
+                <tr><td>Marco Stein</td><td>Mechaniker</td><td><span class="pill green">verfügbar</span></td><td>Mechanik · Reifen</td><td>11 Tage</td></tr>
+                <tr><td>Lea Hoffmann</td><td>Mechanikerin</td><td><span class="pill amber">bis 13:00</span></td><td>Diagnose · Achse</td><td>16 Tage</td></tr>
+                <tr><td>Ben Krüger</td><td>Azubi</td><td><span class="pill red">Berufsschule</span></td><td>unter Aufsicht</td><td>18 Tage</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="tires" class="page hidden">
+          <div class="page-head"><div><span>REIFENHOTEL</span><h2>Einlagerungen</h2></div></div>
+          <div class="cards">
+            <article><h3>WH-1028</h3><p>VW Golf VIII · B-WM 1028</p><p>205/55 R16 · Continental</p><small>Lager: Halle A / Regal 3 / Platz 12</small></article>
+            <article><h3>WH-1184</h3><p>Audi A4 · B-WM 1184</p><p>245/40 R18 · Michelin</p><small>Lager: Halle B / Regal 1 / Platz 04</small></article>
+            <article><h3>WH-1249</h3><p>Skoda Octavia · B-WM 1249</p><p>225/45 R17 · Goodyear</p><small>Lager: Halle A / Regal 6 / Platz 09</small></article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+<script src="/jl/demo/demo.js"></script>
+</body>
+</html>
