@@ -41,8 +41,9 @@ async function health(){
 }
 function showLogin(){$('appView').classList.add('hidden');$('loginView').classList.remove('hidden')}
 function showApp(){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden')}
-async function performLogin(username,password){
+async function performLogin(username,password,automatic=false){
  $('loginError').textContent='';
+ if($('loginStatus')) $('loginStatus').textContent=automatic?'Staging wird automatisch geöffnet…':'Anmeldung läuft…';
  try{
   const d=await api('/auth/login',{method:'POST',body:JSON.stringify({username,password})});
   token=d.access_token;
@@ -50,6 +51,8 @@ async function performLogin(username,password){
   showApp();
   await loadAll();
  }catch(err){
+  showLogin();
+  if($('loginStatus')) $('loginStatus').textContent='Automatische Anmeldung nicht möglich. Bitte Demo-Zugang verwenden.';
   $('loginError').textContent=err.message;
  }
 }
@@ -245,5 +248,15 @@ $('globalSearch').addEventListener('input',()=>{
 
 (async()=>{
  await health();
- if(token){showApp();await loadAll()}else showLogin();
+ if(token){
+  showApp();
+  try{await loadAll()}catch(e){
+   sessionStorage.removeItem('wm_erp_token');
+   token='';
+   await performLogin(DEMO_USER,DEMO_PASS,true);
+  }
+ }else{
+  showLogin();
+  await performLogin(DEMO_USER,DEMO_PASS,true);
+ }
 })();
