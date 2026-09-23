@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111b">
+<title>Workshop Manager ERP · STAGING</title>
+<link rel="icon" href="/jl/demo/jl-logo.svg">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging">
+</head>
+<body>
+<div id="loginView" class="login-shell">
+  <div class="login-grid">
+    <section class="brand-panel">
+      <img src="/jl/demo/jl-logo.svg" alt="JL Software Solutions">
+      <div>
+        <span class="eyebrow">WORKSHOP MANAGER ERP</span>
+        <h1>Entwicklungs- und Staging-System</h1>
+        <p>Aktueller, lauffähiger Entwicklungsstand des ERP. Ausschließlich synthetische Testdaten.</p>
+        <div class="build-pill">STAGING · <span id="loginBuild">ERP 4.0</span></div>
+      </div>
+    </section>
+    <section class="login-card">
+      <div>
+        <span class="eyebrow">ANMELDUNG</span>
+        <h2>Willkommen zurück</h2>
+        <p class="muted">Fester Entwicklungszugang</p>
+      </div>
+      <form id="loginForm">
+        <label>Benutzername<input id="user" value="demo" autocomplete="username" readonly></label>
+        <label>Passwort<input id="pass" type="password" value="WerkstattDemo!2026" autocomplete="current-password" readonly></label>
+        <button type="submit" class="primary wide">Staging öffnen</button>
+        <p id="loginError" class="error"></p>
+      </form>
+      <div class="login-note">Keine Produktivdaten · Einstellungen und Zugangsdaten sind geschützt.</div>
+    </section>
+  </div>
+</div>
+
+<div id="appView" class="app hidden">
+  <aside class="sidebar">
+    <div class="side-brand">
+      <img src="/jl/demo/jl-logo.svg" alt="JL Software">
+      <div><strong>WORKSHOP MANAGER</strong><span>ERP · STAGING</span></div>
+    </div>
+    <nav id="mainNav">
+      <div class="nav-group"><span>Arbeitsplatz</span>
+        <button class="nav active" data-page="dashboard">Übersicht</button>
+        <button class="nav" data-page="planner">Planung</button>
+        <button class="nav" data-page="orders">Leitstand & Aufträge</button>
+        <button class="nav" data-page="intake">Fahrzeugannahme</button>
+      </div>
+      <div class="nav-group"><span>Stammdaten</span>
+        <button class="nav" data-page="customers">Kunden</button>
+        <button class="nav" data-page="vehicles">Fahrzeuge</button>
+        <button class="nav" data-page="tires">Reifenhotel</button>
+      </div>
+      <div class="nav-group"><span>Betrieb</span>
+        <button class="nav" data-page="inventory">Lager</button>
+        <button class="nav" data-page="purchasing">Einkauf</button>
+        <button class="nav" data-page="personnel">Personal</button>
+        <button class="nav" data-page="billing">Rechnungen</button>
+      </div>
+      <div class="nav-group"><span>Steuerung</span>
+        <button class="nav" data-page="reports">Auswertungen</button>
+        <button class="nav" data-page="admin">Administration</button>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="apiState" class="status-dot">API wird geprüft…</span>
+      <small id="buildInfo">ERP 4.0 · STAGING</small>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="commandbar">
+      <button id="menuBtn" class="icon-btn mobile-only" aria-label="Navigation">☰</button>
+      <div class="context">
+        <strong id="pageTitle">Übersicht</strong>
+        <span id="siteContext">Standort wird geladen…</span>
+      </div>
+      <div class="global-search">
+        <input id="globalSearch" placeholder="Kunde, Kennzeichen, VIN, Auftrag, Rechnung …">
+        <div id="searchResults" class="search-results hidden"></div>
+      </div>
+      <div class="command-actions">
+        <button id="quickBtn" class="primary">+ Neu</button>
+        <button id="refreshBtn" class="secondary">Aktualisieren</button>
+        <div class="user-chip"><span>demo</span><small>Administrator</small></div>
+        <button id="logoutBtn" class="icon-btn" title="Abmelden">↪</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="dashboard" class="page">
+        <div class="page-head">
+          <div><span class="eyebrow">HEUTE</span><h2>Werkstatt im Blick</h2><p class="muted" id="todayLabel"></p></div>
+          <div class="page-actions"><button class="secondary" data-page-jump="planner">Planung öffnen</button><button class="primary" data-action="new-appointment">+ Termin</button></div>
+        </div>
+        <div class="kpis">
+          <article><span>Termine heute</span><b id="kpiAppointments">–</b><small>Staging-Daten</small></article>
+          <article><span>Offene Aufträge</span><b id="kpiOrders">–</b><small>nicht abgeschlossen</small></article>
+          <article><span>Lagerwarnungen</span><b id="kpiStock">–</b><small>≤ Mindestbestand</small></article>
+          <article><span>Offene Posten</span><b id="kpiReceivables">–</b><small>Brutto</small></article>
+        </div>
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Aktuelle Aufträge</h3><p>Operativer Werkstatt-Leitstand</p></div><button class="text-btn" data-page-jump="orders">Alle anzeigen →</button></div>
+            <div id="dashboardOrders" class="rows"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Heute geplant</h3><p>Termine und Ressourcen</p></div></div>
+            <div id="dashboardAppointments" class="rows"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="planner" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">PLANUNG</span><h2>Werkstattplanung</h2><p class="muted">Termine, Ressourcen und Mitarbeiter</p></div><button class="primary" data-action="new-appointment">+ Termin</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>Zeit</th><th>Betreff</th><th>Kunde</th><th>Fahrzeug</th><th>Ressource</th><th>Status</th><th></th></tr></thead><tbody id="appointmentRows"></tbody></table></div>
+      </section>
+
+      <section id="orders" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">WERKSTATT</span><h2>Leitstand & Aufträge</h2><p class="muted">Vom Termin bis zur Rechnung</p></div></div>
+        <div id="orderBoard" class="kanban"></div>
+        <div id="orderDetail" class="panel hidden"></div>
+      </section>
+
+      <section id="intake" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">ANNAHME</span><h2>Fahrzeugannahme</h2><p class="muted">Schnellaufnahme für den Service</p></div></div>
+        <div class="panel form-card">
+          <div class="form-grid">
+            <label>Auftrag<select id="intakeOrder"></select></label>
+            <label>Kilometerstand<input id="intakeMileage" type="number" placeholder="z. B. 84210"></label>
+            <label>Tank / Ladung<select id="intakeFuel"><option>voll</option><option>¾</option><option>½</option><option>¼</option><option>Reserve</option></select></label>
+            <label class="span2">Kundenaussage<textarea id="intakeRequest" placeholder="Fehlerbild / Kundenwunsch"></textarea></label>
+          </div>
+          <div class="check-grid" id="checkItems"></div>
+          <div class="form-actions"><button id="saveIntake" class="primary">Annahme speichern</button></div>
+        </div>
+      </section>
+
+      <section id="customers" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">STAMMDATEN</span><h2>Kunden</h2></div><button class="primary" data-action="new-customer">+ Kunde</button></div>
+        <div class="toolbar"><input id="customerSearch" placeholder="Kunden suchen…"><button id="customerSearchBtn" class="secondary">Suchen</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>Nr.</th><th>Name</th><th>Telefon</th><th>E-Mail</th><th>Ort</th></tr></thead><tbody id="customerRows"></tbody></table></div>
+      </section>
+
+      <section id="vehicles" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">STAMMDATEN</span><h2>Fahrzeuge</h2></div><button class="primary" data-action="new-vehicle">+ Fahrzeug</button></div>
+        <div class="toolbar"><input id="vehicleSearch" placeholder="Kennzeichen, VIN, Hersteller…"><button id="vehicleSearchBtn" class="secondary">Suchen</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>Kennzeichen</th><th>Fahrzeug</th><th>VIN</th><th>km</th><th>HU</th></tr></thead><tbody id="vehicleRows"></tbody></table></div>
+      </section>
+
+      <section id="tires" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">REIFENHOTEL</span><h2>Einlagerungen</h2></div><button class="primary" data-action="new-tire">+ Einlagern</button></div>
+        <div id="tireCards" class="cards"></div>
+      </section>
+
+      <section id="inventory" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">WARENWIRTSCHAFT</span><h2>Lager</h2></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>Artikel</th><th>Bezeichnung</th><th>Bestand</th><th>Min.</th><th>EK</th><th>VK</th><th>Lagerort</th></tr></thead><tbody id="inventoryRows"></tbody></table></div>
+      </section>
+
+      <section id="purchasing" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">EINKAUF</span><h2>Lieferanten & Bestellung</h2></div><button id="createPurchaseBtn" class="primary">Bestellung anlegen</button></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Lieferanten</h3></div></div><div id="supplierRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Schnellbestellung</h3><p>Direkt aus dem aktuellen Lagerbestand</p></div></div><div id="purchaseFormHost"></div></div>
+        </div>
+      </section>
+
+      <section id="personnel" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">PERSONAL</span><h2>Mitarbeiter & Kapazität</h2></div><button id="absenceBtn" class="primary">Abwesenheit</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
+      </section>
+
+      <section id="billing" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">FAKTURA</span><h2>Rechnungen & Zahlungen</h2></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+      </section>
+
+      <section id="reports" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">AUSWERTUNGEN</span><h2>ERP-Kennzahlen</h2></div></div>
+        <div class="kpis"><article><span>Termine</span><b id="reportAppointments">–</b></article><article><span>Aufträge offen</span><b id="reportOrders">–</b></article><article><span>Lagerwarnungen</span><b id="reportStock">–</b></article><article><span>Offene Posten</span><b id="reportReceivables">–</b></article></div>
+        <div class="panel"><h3>Entwicklungsstatus</h3><div class="release-grid"><div><b>ERP Core</b><span>aktiv</span></div><div><b>PostgreSQL</b><span>aktiv</span></div><div><b>JWT / RBAC</b><span>aktiv</span></div><div><b>Staging</b><span>aktiv</span></div><div><b>PDF / DATEV</b><span>Preview</span></div><div><b>Desktop ERP</b><span>Preview</span></div></div></div>
+      </section>
+
+      <section id="admin" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">ADMINISTRATION</span><h2>Systemstatus</h2><p class="muted">Geschützte Staging-Konfiguration</p></div></div>
+        <div class="cards">
+          <article><h3>JL Software Branding</h3><p>Primärmarke für Produkt, Login und Oberfläche.</p><span class="badge success">aktiv</span></article>
+          <article><h3>Authentifizierung</h3><p>JWT + serverseitige Rollen und Rechte.</p><span class="badge success">aktiv</span></article>
+          <article><h3>Datenbank</h3><p>Isolierte PostgreSQL-Staging-Datenbank.</p><span class="badge success">aktiv</span></article>
+          <article><h3>Umgebung</h3><p>Kein Zugriff auf Produktivdaten.</p><span class="badge warn">STAGING</span></article>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<script src="/jl/demo/demo.js?v=erp4-staging"></script>
+</body>
+</html>
