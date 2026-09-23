@@ -6,7 +6,10 @@
 <meta name="theme-color" content="#08111b">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging-mobilelogin2">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging-autologin3">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 </head>
 <body>
 <div id="loginView" class="login-shell">
@@ -24,7 +27,7 @@
       <div>
         <span class="eyebrow">ANMELDUNG</span>
         <h2>Willkommen zurück</h2>
-        <p class="muted">Fester Entwicklungszugang</p>
+        <p class="muted" id="loginStatus">Automatische Anmeldung wird vorbereitet…</p>
       </div>
       <form id="loginForm">
         <label>Benutzername<input id="user" value="demo" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
@@ -202,6 +205,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-staging-mobilelogin2"></script>
+<script src="/jl/demo/demo.js?v=erp4-staging-autologin3"></script>
 </body>
 </html>
