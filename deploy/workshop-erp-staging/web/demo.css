@@ -71,3 +71,8 @@ main{padding:24px;max-width:1700px;margin:0 auto}.page-head{display:flex;justify
   .kpi-wide{grid-column:auto}
   .bar-chart{overflow-x:auto;grid-template-columns:repeat(12,46px);padding-bottom:6px}
 }
+
+.perm-group{padding:12px 0;border-bottom:1px solid #1b3043}
+.perm-group:last-child{border-bottom:0}
+.perm-group>b{display:block;margin-bottom:8px;color:#8edff0;text-transform:uppercase;letter-spacing:.08em;font-size:.72rem}
+.perm-group .check-item{margin:6px 0}
