@@ -49,18 +49,23 @@ jobs:
           console.log('LOGIN VISIBLE BEFORE',await page.locator('#loginView').isVisible());
           console.log('APP VISIBLE BEFORE',await page.locator('#appView').isVisible());
 
-          await btn.click();
           await page.waitForTimeout(5000);
+          let appVisible=await page.locator('#appView').isVisible();
+          if(!appVisible && await page.locator('#loginView').isVisible()) {
+            console.log('AUTO LOGIN DID NOT OPEN APP, USING DEMO BUTTON');
+            await btn.click({timeout:10000});
+            await page.waitForTimeout(5000);
+            appVisible=await page.locator('#appView').isVisible();
+          }
 
           console.log('LOGIN VISIBLE AFTER',await page.locator('#loginView').isVisible());
-          console.log('APP VISIBLE AFTER',await page.locator('#appView').isVisible());
+          console.log('APP VISIBLE AFTER',appVisible);
           console.log('LOGIN ERROR',await page.locator('#loginError').textContent());
           console.log('API STATE',await page.locator('#apiState').textContent());
           console.log('PAGE TITLE AFTER',await page.locator('#pageTitle').textContent());
 
           for(const m of messages) console.log(m);
 
-          const appVisible=await page.locator('#appView').isVisible();
           if(!appVisible) process.exitCode=2;
           await browser.close();
           EOF
