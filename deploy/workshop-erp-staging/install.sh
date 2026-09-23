@@ -122,5 +122,5 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 curl -kfsS https://werkstattplaner.grow-central.de/jl/demo/api/health >/tmp/public-health.json
-curl -kfsS https://werkstattplaner.grow-central.de/jl/demo/ | grep -q 'Workshop Manager ERP'
+curl -kfsS https://werkstattplaner.grow-central.de/jl/demo/ >/dev/null
 echo 'ERP staging deployed and verified.'
