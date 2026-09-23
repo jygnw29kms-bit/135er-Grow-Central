@@ -56,6 +56,23 @@ jobs:
           cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=180 api || true
           echo "=== ERP Postgres logs ==="
           cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=80 postgres || true
+          echo "=== PUBLIC HEALTH ==="
+          curl -ksS -o /tmp/pubhealth -w "HTTP=%{http_code} TYPE=%{content_type}\n" https://werkstattplaner.grow-central.de/jl/demo/api/health
+          head -c 500 /tmp/pubhealth; echo
+          echo "=== PUBLIC LOGIN ==="
+          curl -ksS -o /tmp/publogin -w "HTTP=%{http_code} TYPE=%{content_type}\n" -H "Content-Type: application/json" -d '{"username":"demo","password":"WerkstattDemo!2026"}' https://werkstattplaner.grow-central.de/jl/demo/api/auth/login
+          python3 - <<'PY'
+import json
+p='/tmp/publogin'
+try:
+    d=json.load(open(p))
+    print("token_present=", bool(d.get("access_token")), "keys=", sorted(d.keys()))
+except Exception as e:
+    print(open(p).read()[:500])
+PY
+          echo "=== PAGE ASSET HEADERS ==="
+          curl -ksSI https://werkstattplaner.grow-central.de/jl/demo/ | sed -n '1,25p'
+          curl -ksSI https://werkstattplaner.grow-central.de/jl/demo/demo.js?v=erp4-staging | sed -n '1,20p'
           echo "=== custom vhost nginx ==="
           cat /var/www/vhosts/system/werkstattplaner.grow-central.de/conf/vhost_nginx.conf 2>/dev/null || true
           echo "=== generated nginx refs ==="
