@@ -84,7 +84,11 @@ import re,sys
 p=Path(sys.argv[1])
 old=p.read_text() if p.exists() else ""
 block="""# WORKSHOP_ERP_STAGING_BEGIN
-location ~ ^/jl/demo/api/(.*)$ {
+error_page 419 = @workshop_erp_staging;
+if ($request_uri ~ "^/jl/demo/api/") {
+    return 419;
+}
+location @workshop_erp_staging {
     rewrite ^/jl/demo/api/(.*)$ /api/$1 break;
     proxy_pass http://127.0.0.1:5090;
     proxy_http_version 1.1;
