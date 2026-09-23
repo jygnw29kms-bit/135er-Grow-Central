@@ -772,6 +772,168 @@ app.MapGet("/api/absences", async (DateOnly? from, DateOnly? to, ErpDbContext db
     return Results.Ok(await query.OrderByDescending(x => x.From).Take(500).ToListAsync(ct));
 });
 
+
+app.MapGet("/api/admin/users", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var users = await db.UserProfiles.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+        .OrderBy(x => x.DisplayName)
+        .ToListAsync(ct);
+    var assignments = await db.UserRoleAssignments.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+        .ToListAsync(ct);
+
+    return Results.Ok(users.Select(u => new
+    {
+        user = u,
+        roleIds = assignments.Where(x => x.UserProfileId == u.Id).Select(x => x.RoleDefinitionId).Distinct().ToList()
+    }));
+});
+
+app.MapGet("/api/admin/roles", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var roles = await db.RoleDefinitions.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+        .OrderBy(x => x.Name)
+        .ToListAsync(ct);
+    var rolePermissions = await db.RolePermissions.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+        .ToListAsync(ct);
+    var permissions = await db.PermissionDefinitions.AsNoTracking()
+        .Where(x => !x.IsDeleted)
+        .ToListAsync(ct);
+
+    return Results.Ok(roles.Select(r => new
+    {
+        role = r,
+        permissions = rolePermissions.Where(x => x.RoleDefinitionId == r.Id && x.Effect == PermissionEffect.Allow)
+            .Join(permissions, rp => rp.PermissionDefinitionId, p => p.Id, (_, p) => p.Key)
+            .OrderBy(x => x)
+            .ToList()
+    }));
+});
+
+app.MapGet("/api/admin/permissions", async (ErpDbContext db, CancellationToken ct) =>
+{
+    return Results.Ok(await db.PermissionDefinitions.AsNoTracking()
+        .Where(x => !x.IsDeleted)
+        .OrderBy(x => x.Module).ThenBy(x => x.Key)
+        .ToListAsync(ct));
+});
+
+app.MapPost("/api/admin/roles", async (RoleCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var name = req.Name.Trim();
+    if (string.IsNullOrWhiteSpace(name)) return Results.BadRequest(new { error = "Rollenname fehlt." });
+    if (await db.RoleDefinitions.AnyAsync(x => x.TenantId == tenantId && x.Name == name && !x.IsDeleted, ct))
+        return Results.Conflict(new { error = "Rolle existiert bereits." });
+
+    var role = new RoleDefinition
+    {
+        TenantId = tenantId, Name = name, Description = req.Description?.Trim() ?? "", SystemRole = false
+    };
+    db.RoleDefinitions.Add(role);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/admin/roles/{role.Id}", role);
+});
+
+app.MapPut("/api/admin/roles/{id:guid}/permissions", async (Guid id, RolePermissionsUpdate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var role = await db.RoleDefinitions.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (role is null) return Results.NotFound();
+
+    var defs = await db.PermissionDefinitions.Where(x => req.PermissionKeys.Contains(x.Key) && !x.IsDeleted).ToListAsync(ct);
+    var existing = await db.RolePermissions.Where(x => x.TenantId == tenantId && x.RoleDefinitionId == id).ToListAsync(ct);
+    db.RolePermissions.RemoveRange(existing);
+    foreach (var p in defs)
+        db.RolePermissions.Add(new RolePermission { TenantId = tenantId, RoleDefinitionId = id, PermissionDefinitionId = p.Id, Effect = PermissionEffect.Allow });
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { roleId = id, permissions = defs.Select(x => x.Key).OrderBy(x => x).ToList() });
+});
+
+app.MapPut("/api/admin/users/{profileId:guid}/roles", async (Guid profileId, UserRolesUpdate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    if (!await db.UserProfiles.AnyAsync(x => x.Id == profileId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.NotFound();
+
+    var validRoles = await db.RoleDefinitions
+        .Where(x => x.TenantId == tenantId && req.RoleIds.Contains(x.Id) && !x.IsDeleted)
+        .Select(x => x.Id).ToListAsync(ct);
+
+    var existing = await db.UserRoleAssignments
+        .Where(x => x.TenantId == tenantId && x.UserProfileId == profileId)
+        .ToListAsync(ct);
+    db.UserRoleAssignments.RemoveRange(existing);
+    foreach (var roleId in validRoles)
+        db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = tenantId, UserProfileId = profileId, RoleDefinitionId = roleId, SiteId = req.SiteId });
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { userProfileId = profileId, roleIds = validRoles });
+});
+
+app.MapPost("/api/employees", async (EmployeeCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var siteId = req.SiteId ?? await db.Sites.Where(x => x.TenantId == tenantId && x.Active).Select(x => x.Id).FirstAsync(ct);
+    if (await db.Employees.AnyAsync(x => x.TenantId == tenantId && x.PersonnelNumber == req.PersonnelNumber && !x.IsDeleted, ct))
+        return Results.Conflict(new { error = "Personalnummer existiert bereits." });
+
+    var e = new Employee
+    {
+        TenantId = tenantId, SiteId = siteId, PersonnelNumber = req.PersonnelNumber.Trim(),
+        Name = req.Name.Trim(), RoleName = req.RoleName?.Trim() ?? "", WeeklyHours = req.WeeklyHours,
+        ProductiveHourlyRate = req.ProductiveHourlyRate, ProductiveHourlyCost = req.ProductiveHourlyCost,
+        AnnualVacationDays = req.AnnualVacationDays, Active = true
+    };
+    db.Employees.Add(e);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/employees/{e.Id}", e);
+});
+
+app.MapPost("/api/resources", async (ResourceCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var siteId = req.SiteId ?? await db.Sites.Where(x => x.TenantId == tenantId && x.Active).Select(x => x.Id).FirstAsync(ct);
+    var r = new WorkshopResource
+    {
+        TenantId = tenantId, SiteId = siteId, Name = req.Name.Trim(), Kind = req.Kind,
+        MaxLoadKg = req.MaxLoadKg, MaxVehicleHeightM = req.MaxVehicleHeightM, SupportsEv = req.SupportsEv, Active = true
+    };
+    db.WorkshopResources.Add(r);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/resources/{r.Id}", r);
+});
+
+app.MapPost("/api/reminders", async (ReminderCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var reminder = new Reminder
+    {
+        TenantId = tenantId, CustomerId = req.CustomerId, VehicleId = req.VehicleId,
+        Type = req.Type.Trim(), Subject = req.Subject.Trim(), DueAt = req.DueAt,
+        Status = ReminderStatus.Open, PreferredChannel = req.PreferredChannel
+    };
+    db.Reminders.Add(reminder);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/reminders/{reminder.Id}", reminder);
+});
+
+app.MapPut("/api/reminders/{id:guid}/status", async (Guid id, ReminderStatusUpdate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var reminder = await db.Reminders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (reminder is null) return Results.NotFound();
+    reminder.Status = req.Status;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(reminder);
+});
+
 app.MapGet("/api/reports/overview", async (int? year, ErpDbContext db, CancellationToken ct) =>
 {
     var tenantId = await TenantId(db, ct);
@@ -880,3 +1042,10 @@ record PurchaseOrderLineCreate(Guid InventoryItemId, decimal Quantity, decimal U
 record PurchaseOrderCreate(Guid SupplierId, Guid SiteId, DateTimeOffset? ExpectedAt, List<PurchaseOrderLineCreate> Lines);
 record GoodsReceiptLine(Guid PurchaseOrderLineId, decimal Quantity);
 record GoodsReceiptRequest(List<GoodsReceiptLine> Lines);
+record RoleCreate(string Name, string? Description);
+record RolePermissionsUpdate(List<string> PermissionKeys);
+record UserRolesUpdate(List<Guid> RoleIds, Guid? SiteId);
+record EmployeeCreate(Guid? SiteId, string PersonnelNumber, string Name, string? RoleName, decimal WeeklyHours, decimal ProductiveHourlyCost, decimal ProductiveHourlyRate, int AnnualVacationDays);
+record ResourceCreate(Guid? SiteId, string Name, ResourceKind Kind, decimal? MaxLoadKg, decimal? MaxVehicleHeightM, bool SupportsEv);
+record ReminderCreate(Guid CustomerId, Guid? VehicleId, string Type, string Subject, DateTimeOffset DueAt, CommunicationChannel PreferredChannel);
+record ReminderStatusUpdate(ReminderStatus Status);
