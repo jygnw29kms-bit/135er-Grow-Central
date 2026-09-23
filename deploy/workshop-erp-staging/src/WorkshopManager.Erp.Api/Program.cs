@@ -403,6 +403,33 @@ app.MapGet("/api/work-orders/{id:guid}", async (Guid id, ErpDbContext db, Cancel
     return Results.Ok(new { order, lines, approvals, times });
 });
 
+app.MapPost("/api/work-orders/{id:guid}/intake", async (Guid id, IntakeRequest req, ErpDbContext db, WorkOrderWorkflowService workflow, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+    if (order is null) return Results.NotFound();
+
+    order.MileageIn = req.MileageIn;
+    order.FuelOrChargeLevel = req.FuelOrChargeLevel?.Trim() ?? "";
+    if (!string.IsNullOrWhiteSpace(req.CustomerRequest))
+        order.CustomerRequest = req.CustomerRequest.Trim();
+
+    try
+    {
+        if (order.Status == WorkOrderStatus.Scheduled)
+            workflow.Transition(order, WorkOrderStatus.Arrived);
+        if (order.Status == WorkOrderStatus.Arrived)
+            workflow.Transition(order, WorkOrderStatus.Intake);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(order);
+});
+
 app.MapPost("/api/work-orders/{id:guid}/transition", async (Guid id, TransitionRequest req, ErpDbContext db, WorkOrderWorkflowService workflow, CancellationToken ct) =>
 {
     var tenantId = await TenantId(db, ct);
@@ -724,6 +751,7 @@ record LoginRequest(string Username, string Password);
 record CustomerCreate(string DisplayName, string? CompanyName, string? FirstName, string? LastName, string? Email, string? Phone, string? Mobile, string? Street, string? PostalCode, string? City, string? Notes);
 record VehicleCreate(Guid CustomerId, string LicensePlate, string? Vin, string? Make, string? Model, string? Type, string? Hsn, string? Tsn, DateOnly? FirstRegistration, int? Mileage, DateOnly? NextHu, DateOnly? NextService);
 record AppointmentCreate(Guid? SiteId, Guid CustomerId, Guid VehicleId, Guid? ResourceId, Guid? EmployeeId, DateTimeOffset StartsAt, DateTimeOffset EndsAt, string Subject, string? CustomerRequest);
+record IntakeRequest(int? MileageIn, string? FuelOrChargeLevel, string? CustomerRequest);
 record TransitionRequest(WorkOrderStatus Status);
 record WorkOrderLineCreate(LineType Type, string? ItemNumber, string Description, decimal Quantity, decimal UnitNet, decimal VatRate, decimal DiscountPercent, Guid? InventoryItemId, Guid? EmployeeId);
 record ApprovalCreate(decimal OfferedGross, string? Channel);
