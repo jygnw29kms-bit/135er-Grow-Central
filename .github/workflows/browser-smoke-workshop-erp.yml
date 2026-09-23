@@ -29,7 +29,7 @@ jobs:
       - name: Test live login flow
         shell: bash
         run: |
-          cat > /tmp/test.mjs <<'EOF'
+          cat > test.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const browser = await chromium.launch({headless:true});
@@ -64,4 +64,4 @@ jobs:
           if(!appVisible) process.exitCode=2;
           await browser.close();
           EOF
-          node /tmp/test.mjs
+          node test.mjs
