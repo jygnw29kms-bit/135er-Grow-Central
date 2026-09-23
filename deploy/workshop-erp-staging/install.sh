@@ -84,8 +84,13 @@ import re,sys
 p=Path(sys.argv[1])
 old=p.read_text() if p.exists() else ""
 block="""# WORKSHOP_ERP_STAGING_BEGIN
-location ^~ /jl/demo/api/ {
-    proxy_pass http://127.0.0.1:5090/api/;
+error_page 419 = @workshop_erp_staging;
+if ($request_uri ~ "^/jl/demo/api/") {
+    return 419;
+}
+location @workshop_erp_staging {
+    rewrite ^/jl/demo/api/(.*)$ /api/$1 break;
+    proxy_pass http://127.0.0.1:5090;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -95,7 +100,7 @@ location ^~ /jl/demo/api/ {
 }
 # WORKSHOP_ERP_STAGING_END"""
 old=re.sub(r"# WORKSHOP_ERP_STAGING_BEGIN.*?# WORKSHOP_ERP_STAGING_END","",old,flags=re.S).strip()
-p.write_text((old+"\n\n"+block+"\n").lstrip())
+p.write_text((block+"\n\n"+old+"\n").lstrip())
 PY
 
 if command -v plesk >/dev/null 2>&1; then
