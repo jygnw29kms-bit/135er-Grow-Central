@@ -223,6 +223,8 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/resources")) return write ? "resources.write" : "resources.read";
     if (p.StartsWith("/api/reminders")) return write ? "crm.write" : "crm.read";
     if (p.StartsWith("/api/loaners")) return write ? "loaners.write" : "loaners.read";
+    if (p.StartsWith("/api/reports")) return "reports.read";
+    if (p.StartsWith("/api/admin")) return "admin.security";
     if (p.StartsWith("/api/dashboard")) return "reports.read";
     return null;
 }
@@ -737,6 +739,113 @@ app.MapGet("/api/loaners", async (ErpDbContext db, CancellationToken ct) =>
     return Results.Ok(await db.LoanerVehicles.AsNoTracking()
         .Where(x => x.TenantId == tenantId && x.Active && !x.IsDeleted)
         .OrderBy(x => x.Number).ToListAsync(ct));
+});
+
+
+app.MapGet("/api/purchase-orders", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var orders = await db.PurchaseOrders.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted)
+        .OrderByDescending(x => x.CreatedAt)
+        .Take(250)
+        .ToListAsync(ct);
+
+    var ids = orders.Select(x => x.Id).ToList();
+    var lines = await db.PurchaseOrderLines.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && ids.Contains(x.PurchaseOrderId) && !x.IsDeleted)
+        .ToListAsync(ct);
+
+    return Results.Ok(orders.Select(o => new
+    {
+        order = o,
+        lines = lines.Where(x => x.PurchaseOrderId == o.Id).ToList()
+    }));
+});
+
+app.MapGet("/api/absences", async (DateOnly? from, DateOnly? to, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var query = db.Absences.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (from is not null) query = query.Where(x => x.To >= from.Value);
+    if (to is not null) query = query.Where(x => x.From <= to.Value);
+    return Results.Ok(await query.OrderByDescending(x => x.From).Take(500).ToListAsync(ct));
+});
+
+app.MapGet("/api/reports/overview", async (int? year, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var targetYear = year ?? DateTime.UtcNow.Year - 1;
+    var from = new DateOnly(targetYear, 1, 1);
+    var to = new DateOnly(targetYear, 12, 31);
+
+    var invoices = await db.Invoices.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.IssueDate >= from && x.IssueDate <= to &&
+                    x.Status != InvoiceStatus.Cancelled && x.Status != InvoiceStatus.Credited && !x.IsDeleted)
+        .ToListAsync(ct);
+
+    var customerCount = await db.Customers.CountAsync(x => x.TenantId == tenantId && !x.IsDeleted, ct);
+    var vehicleCount = await db.Vehicles.CountAsync(x => x.TenantId == tenantId && !x.IsDeleted, ct);
+    var netRevenue = invoices.Sum(x => x.NetTotal);
+    var grossRevenue = invoices.Sum(x => x.GrossTotal);
+    var paid = invoices.Sum(x => x.PaidTotal);
+    var invoiceCount = invoices.Count;
+    var averageInvoiceNet = invoiceCount == 0 ? 0m : Math.Round(netRevenue / invoiceCount, 2);
+
+    var monthly = Enumerable.Range(1, 12).Select(month => new
+    {
+        month,
+        net = invoices.Where(x => x.IssueDate.Month == month).Sum(x => x.NetTotal),
+        gross = invoices.Where(x => x.IssueDate.Month == month).Sum(x => x.GrossTotal),
+        count = invoices.Count(x => x.IssueDate.Month == month)
+    }).ToList();
+
+    var topCustomerIds = invoices
+        .GroupBy(x => x.CustomerId)
+        .Select(g => new { customerId = g.Key, net = g.Sum(x => x.NetTotal), count = g.Count() })
+        .OrderByDescending(x => x.net)
+        .Take(8)
+        .ToList();
+
+    var customerIds = topCustomerIds.Select(x => x.customerId).ToList();
+    var customerNames = await db.Customers.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && customerIds.Contains(x.Id))
+        .ToDictionaryAsync(x => x.Id, x => x.DisplayName, ct);
+
+    var topCustomers = topCustomerIds.Select(x => new
+    {
+        x.customerId,
+        name = customerNames.GetValueOrDefault(x.customerId, "Unbekannt"),
+        x.net,
+        x.count
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        year = targetYear,
+        netRevenue,
+        grossRevenue,
+        paid,
+        invoiceCount,
+        averageInvoiceNet,
+        customerCount,
+        vehicleCount,
+        monthly,
+        topCustomers
+    });
+});
+
+app.MapGet("/api/admin/security-summary", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(new
+    {
+        users = await db.UserProfiles.CountAsync(x => x.TenantId == tenantId && x.Active && !x.IsDeleted, ct),
+        roles = await db.RoleDefinitions.CountAsync(x => x.TenantId == tenantId && !x.IsDeleted, ct),
+        permissions = await db.PermissionDefinitions.CountAsync(x => !x.IsDeleted, ct),
+        sites = await db.Sites.CountAsync(x => x.TenantId == tenantId && x.Active && !x.IsDeleted, ct),
+        auditEntries = await db.AuditEntries.CountAsync(x => x.TenantId == tenantId && !x.IsDeleted, ct)
+    });
 });
 
 app.MapGet("/api/dashboard", async (ErpDbContext db, CancellationToken ct) =>
