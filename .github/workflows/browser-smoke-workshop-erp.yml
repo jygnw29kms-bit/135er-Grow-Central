@@ -64,6 +64,17 @@ jobs:
           console.log('API STATE',await page.locator('#apiState').textContent());
           console.log('PAGE TITLE AFTER',await page.locator('#pageTitle').textContent());
 
+          if(appVisible) {
+            await page.locator('.nav[data-page="reports"]').click();
+            await page.waitForTimeout(800);
+            const revenue=await page.locator('#reportRevenue').textContent();
+            console.log('REPORT REVENUE',revenue);
+            if(!revenue.includes('980.900')) {
+              console.error('Unexpected 2025 revenue:',revenue);
+              process.exitCode=3;
+            }
+          }
+
           for(const m of messages) console.log(m);
 
           if(!appVisible) process.exitCode=2;
