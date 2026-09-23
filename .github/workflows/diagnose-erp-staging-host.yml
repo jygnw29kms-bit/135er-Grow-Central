@@ -50,6 +50,12 @@ jobs:
           free -h
           echo "=== ERP dirs ==="
           ls -ld /opt /opt/workshop* /var/www/vhosts/dezender.de/httpdocs 2>/dev/null || true
+          echo "=== ERP compose ps ==="
+          cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env ps -a || true
+          echo "=== ERP API logs ==="
+          cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=180 api || true
+          echo "=== ERP Postgres logs ==="
+          cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=80 postgres || true
           '
 
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
