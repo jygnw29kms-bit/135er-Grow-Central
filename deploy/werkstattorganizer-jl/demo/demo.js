@@ -5,7 +5,7 @@ const fmtMoney=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'
 const fmtDate=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'medium'}).format(new Date(v)):'–';
 const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(v)):'–';
 let token=sessionStorage.getItem('wm_erp_token')||'';
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],dashboard:null,report:null,security:null,selectedOrder:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -82,12 +82,13 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
    api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
-   api('/tires'),api('/invoices'),api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary')
+   api('/tires'),api('/invoices'),api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary'),
+   api('/admin/users'),api('/admin/roles'),api('/admin/permissions')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security,adminUsers,adminRoles,permissions});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
@@ -137,8 +138,10 @@ function renderAll(){
  $('purchaseOrderRows').innerHTML=state.purchaseOrders.map(x=>{
   const o=x.order||x, sup=state.suppliers.find(s=>s.id===o.supplierId), lines=x.lines||[];
   const ordered=lines.reduce((a,l)=>a+Number(l.quantity||0),0), received=lines.reduce((a,l)=>a+Number(l.receivedQuantity||0),0);
-  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(sup?.name||'Lieferant')+'</b><span>'+ordered+' bestellt · '+received+' eingegangen</span></div></div><span class="badge '+badge(o.status===3?'erhalten':o.status===2?'teil':'bestellt')+'">'+esc(o.status===3?'Erhalten':o.status===2?'Teilweise':'Bestellt')+'</span></div>'
+  const receive=o.status!==3?'<button class="secondary small" data-receive-po="'+o.id+'">Wareneingang</button>':'';
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(sup?.name||'Lieferant')+'</b><span>'+ordered+' bestellt · '+received+' eingegangen</span></div></div><div class="page-actions"><span class="badge '+badge(o.status===3?'erhalten':o.status===2?'teil':'bestellt')+'">'+esc(o.status===3?'Erhalten':o.status===2?'Teilweise':'Bestellt')+'</span>'+receive+'</div></div>'
  }).join('')||empty('Keine Bestellungen vorhanden.');
+ document.querySelectorAll('[data-receive-po]').forEach(b=>b.onclick=()=>goodsReceiptModal(b.dataset.receivePo));
  renderPurchaseForm();
  $('employeeRows').innerHTML=state.employees.map(e=>'<tr><td><b>'+esc(e.name)+'</b></td><td>'+esc(e.roleName)+'</td><td>'+esc(e.weeklyHours)+' h</td><td>'+esc(e.annualVacationDays)+' Tage</td><td>'+fmtMoney(e.productiveHourlyRate)+'/h</td></tr>').join('');
  $('absenceRows').innerHTML=state.absences.map(a=>{
@@ -164,6 +167,23 @@ function renderAll(){
  $('securitySummary').innerHTML=[
   ['Benutzer',sec.users??0],['Rollen',sec.roles??0],['Rechte',sec.permissions??0],['Standorte',sec.sites??0],['Audit-Einträge',sec.auditEntries??0]
  ].map(x=>'<div><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>').join('');
+
+ $('adminUserRows').innerHTML=state.adminUsers.map(x=>{
+  const u=x.user||x, roleNames=(x.roleIds||[]).map(id=>(state.adminRoles.find(r=>(r.role||r).id===id)?.role||state.adminRoles.find(r=>(r.role||r).id===id))?.name).filter(Boolean);
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(u.displayName||u.email||'Benutzer')+'</b><span>'+esc(roleNames.join(', ')||'Keine Rolle')+'</span></div></div><button class="secondary small" data-user-roles="'+u.id+'">Rollen</button></div>'
+ }).join('')||empty('Keine Benutzer.');
+
+ $('adminRoleRows').innerHTML=state.adminRoles.map(x=>{
+  const r=x.role||x, perms=x.permissions||[];
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(r.name)+'</b><span>'+perms.length+' Rechte · '+esc(r.description||'')+'</span></div></div><button class="secondary small" data-role-perms="'+r.id+'">Rechte</button></div>'
+ }).join('')||empty('Keine Rollen.');
+
+ $('resourceRows').innerHTML=state.resources.map(r=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(r.name)+'</b><span>'+esc(resourceKindName(r.kind))+(r.maxLoadKg?' · '+esc(r.maxLoadKg)+' kg':'')+(r.supportsEv?' · EV':'')+'</span></div></div><span class="badge success">aktiv</span></div>'
+ ).join('')||empty('Keine Ressourcen.');
+
+ document.querySelectorAll('[data-user-roles]').forEach(b=>b.onclick=()=>userRolesModal(b.dataset.userRoles));
+ document.querySelectorAll('[data-role-perms]').forEach(b=>b.onclick=()=>rolePermissionsModal(b.dataset.rolePerms));
  $('intakeOrder').innerHTML=state.orders.filter(o=>o.status<10&&o.status!==12).map(o=>'<option value="'+o.id+'">'+esc(o.number)+' · '+esc(vehicle(o.vehicleId)?.licensePlate||'')+'</option>').join('');
  if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
 }
@@ -187,13 +207,17 @@ async function openOrder(id){
   $('orderDetail').innerHTML='<div class="panel-head"><div><h3>'+esc(o.number)+' · '+esc(v?.licensePlate||'')+'</h3><p>'+esc(c?.displayName||'')+' · '+esc(v?((v.make||'')+' '+(v.model||'')):'')+'</p></div><span class="badge '+badge(workStatus[o.status])+'">'+esc(workStatus[o.status])+'</span></div>'+
    '<div class="release-grid"><div><b>Kundenwunsch</b><span>'+esc(o.customerRequest||'–')+'</span></div><div><b>Diagnose</b><span>'+esc(o.diagnosis||'–')+'</span></div><div><b>Fertig bis</b><span>'+fmtDateTime(o.promisedAt)+'</span></div></div>'+
    '<h3 style="margin-top:18px">Positionen</h3>'+(d.lines.length?'<div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+'</span></div><b>'+fmtMoney(l.netTotal)+'</b></div>').join('')+'</div>':'<p class="muted">Noch keine Positionen.</p>')+
-   '<div class="page-actions" style="margin-top:16px"><button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="approvalBtn">Freigabe</button>'+(next!==null?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+(o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
+   '<h3 style="margin-top:18px">Zeiterfassung</h3><div class="rows">'+(d.times.length?d.times.map(t=>'<div class="row-item"><div><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+fmtDateTime(t.startedAt)+' · '+esc(t.activity||'Arbeitszeit')+'</span></div><div>'+(t.endedAt?fmtDateTime(t.endedAt):'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div></div>').join(''):empty('Keine Zeiterfassung.'))+'</div>'+
+   '<div class="page-actions" style="margin-top:16px"><button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>'+(next!==null?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+(o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
   $('orderDetail').classList.remove('hidden');
   $('addLineBtn').onclick=()=>lineModal(id);$('approvalBtn').onclick=()=>approvalModal(id);
+  $('startTimeBtn').onclick=()=>timeStartModal(id);
+  document.querySelectorAll('[data-stop-time]').forEach(b=>b.onclick=()=>stopTime(id,b.dataset.stopTime));
   if($('nextStatusBtn'))$('nextStatusBtn').onclick=()=>transition(id,next);
   if($('invoiceBtn'))$('invoiceBtn').onclick=()=>createInvoice(id);
  }catch(e){toast(e.message,true)}
 }
+function resourceKindName(k){return ['Hebebühne','Grube','Diagnoseplatz','Achsvermessung','Klimastation','Reifenplatz','Parkplatz','Direktannahme','Leihwagen','Spezialwerkzeug','Sonstiges'][k]||'Ressource'}
 function nextStatus(s){const m={0:1,1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,10:11};return m[s]??null}
 async function transition(id,status){try{await api('/work-orders/'+id+'/transition',{method:'POST',body:JSON.stringify({status})});toast('Auftragsstatus aktualisiert.');await loadAll();await openOrder(id)}catch(e){toast(e.message,true)}}
 async function convertAppointment(id){try{await api('/work-orders/from-appointment/'+id,{method:'POST'});toast('Werkstattauftrag erzeugt.');await loadAll();page('orders')}catch(e){toast(e.message,true)}}
@@ -233,6 +257,70 @@ function tireModal(){modalForm('Radsatz einlagern',
 function absenceModal(){modalForm('Abwesenheit eintragen','<div class="form-grid"><label>Mitarbeiter<select name="employeeId">'+options(state.employees,e=>e.name)+'</select></label><label>Art<select name="type"><option value="0">Urlaub</option><option value="1">Krank</option><option value="2">Schulung</option><option value="3">Berufsschule</option></select></label><label>Von<input name="from" type="date" required></label><label>Bis<input name="to" type="date" required></label><label class="span2">Grund<input name="reason"></label></div>',
  async f=>api('/absences',{method:'POST',body:JSON.stringify({employeeId:f.get('employeeId'),type:Number(f.get('type')),from:f.get('from'),to:f.get('to'),reason:f.get('reason'),approved:true,affectsCapacity:true})})
 )}
+
+function goodsReceiptModal(purchaseOrderId){
+ const po=state.purchaseOrders.find(x=>(x.order||x).id===purchaseOrderId);
+ if(!po)return toast('Bestellung nicht gefunden.',true);
+ const lines=po.lines||[];
+ const body='<div class="rows">'+lines.map(l=>{
+  const item=state.inventory.find(i=>i.id===l.inventoryItemId), remaining=Math.max(0,Number(l.quantity)-Number(l.receivedQuantity));
+  return '<label>'+esc(item?.itemNumber||'Artikel')+' · '+esc(item?.description||'')+'<input name="'+l.id+'" type="number" min="0" max="'+remaining+'" step=".01" value="'+remaining+'"><small class="muted">offen '+remaining+'</small></label>'
+ }).join('')+'</div>';
+ modalForm('Wareneingang '+esc((po.order||po).number),body,async f=>{
+  const lines=po.lines.map(l=>({purchaseOrderLineId:l.id,quantity:Number(f.get(l.id)||0)})).filter(x=>x.quantity>0);
+  if(!lines.length)throw new Error('Keine Menge eingetragen.');
+  await api('/purchase-orders/'+purchaseOrderId+'/receive',{method:'POST',body:JSON.stringify({lines})});
+ });
+}
+
+function timeStartModal(workOrderId){
+ modalForm('Arbeitszeit starten','<label>Mitarbeiter<select name="employeeId">'+options(state.employees,e=>e.name+' · '+e.roleName)+'</select></label><label>Tätigkeit<input name="activity" value="Werkstattarbeit"></label>',
+  async f=>api('/time/start',{method:'POST',body:JSON.stringify({workOrderId,employeeId:f.get('employeeId'),activity:f.get('activity')})})
+ );
+}
+async function stopTime(workOrderId,timeId){
+ try{await api('/time/'+timeId+'/stop',{method:'POST'});toast('Arbeitszeit gestoppt.');await loadAll();await openOrder(workOrderId)}catch(e){toast(e.message,true)}
+}
+
+function employeeModal(){
+ modalForm('Mitarbeiter anlegen','<div class="form-grid"><label>Personalnummer<input name="personnelNumber" required></label><label>Name<input name="name" required></label><label>Rolle / Funktion<input name="roleName"></label><label>Wochenstunden<input name="weeklyHours" type="number" step=".5" value="40"></label><label>Stundensatz VK<input name="rate" type="number" step=".01" value="109"></label><label>Stundenkosten<input name="cost" type="number" step=".01" value="42"></label><label>Urlaubstage<input name="vacation" type="number" value="30"></label></div>',
+  async f=>api('/employees',{method:'POST',body:JSON.stringify({siteId:state.site?.id,personnelNumber:f.get('personnelNumber'),name:f.get('name'),roleName:f.get('roleName'),weeklyHours:Number(f.get('weeklyHours')),productiveHourlyCost:Number(f.get('cost')),productiveHourlyRate:Number(f.get('rate')),annualVacationDays:Number(f.get('vacation'))})})
+ );
+}
+
+function resourceModal(){
+ modalForm('Ressource anlegen','<div class="form-grid"><label>Name<input name="name" required></label><label>Art<select name="kind"><option value="0">Hebebühne</option><option value="2">Diagnoseplatz</option><option value="3">Achsvermessung</option><option value="5">Reifenplatz</option><option value="7">Direktannahme</option><option value="9">Spezialwerkzeug</option></select></label><label>Max. Last kg<input name="maxLoadKg" type="number"></label><label>Max. Fahrzeughöhe m<input name="maxHeight" type="number" step=".1"></label><label><input name="ev" type="checkbox" style="width:auto"> EV geeignet</label></div>',
+  async f=>api('/resources',{method:'POST',body:JSON.stringify({siteId:state.site?.id,name:f.get('name'),kind:Number(f.get('kind')),maxLoadKg:f.get('maxLoadKg')?Number(f.get('maxLoadKg')):null,maxVehicleHeightM:f.get('maxHeight')?Number(f.get('maxHeight')):null,supportsEv:f.get('ev')==='on'})})
+ );
+}
+
+function roleModal(){
+ modalForm('Rolle anlegen','<label>Name<input name="name" required></label><label>Beschreibung<input name="description"></label>',
+  async f=>api('/admin/roles',{method:'POST',body:JSON.stringify({name:f.get('name'),description:f.get('description')})})
+ );
+}
+
+function rolePermissionsModal(roleId){
+ const item=state.adminRoles.find(x=>(x.role||x).id===roleId); if(!item)return;
+ const selected=new Set(item.permissions||[]);
+ const groups={};
+ state.permissions.forEach(p=>(groups[p.module]??=[]).push(p));
+ const body=Object.entries(groups).map(([module,ps])=>'<div class="perm-group"><b>'+esc(module)+'</b>'+ps.map(p=>'<label class="check-item"><span>'+esc(p.key)+'</span><input type="checkbox" name="perm" value="'+esc(p.key)+'" '+(selected.has(p.key)?'checked':'')+'></label>').join('')+'</div>').join('');
+ modalForm('Rechte: '+esc((item.role||item).name),body,async f=>{
+  const permissionKeys=f.getAll('perm');
+  await api('/admin/roles/'+roleId+'/permissions',{method:'PUT',body:JSON.stringify({permissionKeys})});
+ });
+}
+
+function userRolesModal(userId){
+ const item=state.adminUsers.find(x=>(x.user||x).id===userId); if(!item)return;
+ const selected=new Set(item.roleIds||[]);
+ const body=state.adminRoles.map(x=>{const r=x.role||x;return '<label class="check-item"><span>'+esc(r.name)+'</span><input type="checkbox" name="role" value="'+r.id+'" '+(selected.has(r.id)?'checked':'')+'></label>'}).join('');
+ modalForm('Rollen: '+esc((item.user||item).displayName),body,async f=>{
+  await api('/admin/users/'+userId+'/roles',{method:'PUT',body:JSON.stringify({roleIds:f.getAll('role'),siteId:null})});
+ });
+}
+
 function renderPurchaseForm(){
  const host=$('purchaseFormHost');
  if(!state.suppliers.length||!state.inventory.length||!state.site){host.innerHTML='<p class="muted">Lieferant, Artikel oder Standort fehlt.</p>';return}
@@ -262,6 +350,9 @@ $('saveIntake').onclick=async()=>{
  }catch(e){toast(e.message,true)}
 };
 $('absenceBtn').onclick=absenceModal;
+$('newEmployeeBtn').onclick=employeeModal;
+$('newRoleBtn').onclick=roleModal;
+$('newResourceBtn').onclick=resourceModal;
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>({ 'new-customer':customerModal,'new-vehicle':vehicleModal,'new-appointment':appointmentModal,'new-tire':tireModal }[b.dataset.action]?.()));
 $('quickBtn').onclick=()=>appointmentModal();
 $('customerSearchBtn').onclick=async()=>{try{state.customers=await api('/customers?q='+encodeURIComponent($('customerSearch').value));renderAll()}catch(e){toast(e.message,true)}};
