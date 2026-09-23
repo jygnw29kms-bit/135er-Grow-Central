@@ -1,0 +1,58 @@
+name: Diagnose Werkstattplaner Service
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Diagnose service over existing SSH secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          SCRIPT='
+          set +e
+          echo "=== systemctl status ==="
+          systemctl status etes-werkstattplaner --no-pager -l
+          echo
+          echo "=== systemctl show ==="
+          systemctl show etes-werkstattplaner -p ActiveState -p SubState -p MainPID -p ExecStart -p WorkingDirectory -p Environment --no-pager
+          echo
+          echo "=== journal last 120 ==="
+          journalctl -u etes-werkstattplaner -n 120 --no-pager
+          echo
+          echo "=== listening ports ==="
+          ss -ltnp | grep -E "python|3080|3000|8000|8080" || true
+          echo
+          echo "=== process ==="
+          ps aux | grep -E "server.py|werkstattplaner|python" | grep -v grep || true
+          echo
+          echo "=== service file ==="
+          systemctl cat etes-werkstattplaner
+          echo
+          echo "=== public jl files ==="
+          find /opt/etes-werkstattplaner/public/jl -maxdepth 3 -type f -printf "%p %s bytes\n" 2>/dev/null | sort
+          '
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
