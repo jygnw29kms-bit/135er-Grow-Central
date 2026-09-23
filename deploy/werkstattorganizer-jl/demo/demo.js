@@ -1,4 +1,34 @@
 const DEMO_USER='demo', DEMO_PASS='WerkstattDemo!2026';
+const user=document.getElementById('user');
+const pass=document.getElementById('pass');
+const loginError=document.getElementById('loginError');
+const loginView=document.getElementById('loginView');
+const appView=document.getElementById('appView');
+const kpiAppointments=document.getElementById('kpiAppointments');
+const todayLabel=document.getElementById('todayLabel');
+const dashboardJobs=document.getElementById('dashboardJobs');
+const plannerRows=document.getElementById('plannerRows');
+const customerCards=document.getElementById('customerCards');
+const personnelRows=document.getElementById('personnelRows');
+const tireCards=document.getElementById('tireCards');
+const partRows=document.getElementById('partRows');
+const billingRows=document.getElementById('billingRows');
+const checkItems=document.getElementById('checkItems');
+const orderBoard=document.getElementById('orderBoard');
+const logoutBtn=document.getElementById('logoutBtn');
+const resetBtn=document.getElementById('resetBtn');
+const newDemoAppointment=document.getElementById('newDemoAppointment');
+const advanceOrder=document.getElementById('advanceOrder');
+const saveIntake=document.getElementById('saveIntake');
+const approveBtn=document.getElementById('approveBtn');
+const approvalState=document.getElementById('approvalState');
+const addAbsence=document.getElementById('addAbsence');
+const tireCheckin=document.getElementById('tireCheckin');
+const orderPart=document.getElementById('orderPart');
+const createInvoice=document.getElementById('createInvoice');
+const globalSearch=document.getElementById('globalSearch');
+const searchResults=document.getElementById('searchResults');
+
 const seed={
 appointments:[
  {id:1,start:'08:00',resource:'Bühne 1',plate:'B-WM 1028',vehicle:'VW Golf VIII',customer:'M. Weber',mechanic:'Marco Stein',status:'In Arbeit',job:'Inspektion + Ölservice'},
