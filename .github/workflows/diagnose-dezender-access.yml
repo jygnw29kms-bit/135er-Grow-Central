@@ -1,0 +1,64 @@
+name: Diagnose dezender.de access
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/diagnose-dezender-access.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Test existing server secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          : "${SSH_HOST:?SSH_HOST/SFTP_HOST fehlt}"
+          : "${SSH_USERNAME:?SSH_USERNAME fehlt}"
+          : "${SSH_PASSWORD:?SSH_PASSWORD fehlt}"
+          export SSHPASS="$SSH_PASSWORD"
+
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          SCRIPT='
+          set +e
+          echo "=== identity ==="
+          hostname
+          whoami
+          echo
+          echo "=== candidate dezender paths ==="
+          for p in             /var/www/vhosts/dezender.de             /var/www/vhosts/dezender.de/httpdocs             /var/www/vhosts/system/dezender.de             /srv/www/dezender.de             /var/www/dezender.de
+          do
+            if [ -e "$p" ]; then
+              echo "FOUND $p"
+            fi
+          done
+          echo
+          echo "=== vhosts containing dezender ==="
+          find /var/www/vhosts -maxdepth 2 -iname "*dezender*" -print 2>/dev/null | head -50
+          echo
+          echo "=== web configs mentioning dezender.de ==="
+          grep -RIl --exclude-dir=logs --exclude="*.log" "dezender.de" /etc/nginx /etc/apache2 /var/www/vhosts/system 2>/dev/null | head -50
+          '
+
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
