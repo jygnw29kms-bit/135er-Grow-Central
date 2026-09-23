@@ -69,6 +69,42 @@ jobs:
             printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
           fi
 
+      - name: Deploy ERP staging backend
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          tar -C deploy/workshop-erp-staging -czf /tmp/workshop-erp-staging.tar.gz .
+          sshpass -e scp -P "$SSH_PORT" /tmp/workshop-erp-staging.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/workshop-erp-staging.tar.gz"
+
+          REMOTE='set -e
+          rm -rf /tmp/workshop-erp-staging
+          mkdir -p /tmp/workshop-erp-staging
+          tar -xzf /tmp/workshop-erp-staging.tar.gz -C /tmp/workshop-erp-staging
+          cd /tmp/workshop-erp-staging
+          chmod +x install.sh
+          ./install.sh'
+
+          B64="$(printf '%s' "$REMOTE" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
+
       - name: Verify public URLs
         shell: bash
         run: |
@@ -79,5 +115,7 @@ jobs:
           curl -LfsS https://werkstattplaner.grow-central.de/jl/demo/ -o /tmp/demo.html
           grep -q "Workshop Manager ERP" /tmp/demo.html
           grep -q "STAGING" /tmp/demo.html
+          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/api/health -o /tmp/erp-health.json
+          grep -q "Workshop Manager ERP" /tmp/erp-health.json
 
-          echo "Marketingseite und Demo sind live."
+          echo "Marketingseite, ERP-Staging-GUI und API sind live."
