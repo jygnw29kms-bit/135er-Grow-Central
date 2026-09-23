@@ -1,0 +1,60 @@
+name: Diagnose ERP staging host
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/diagnose-erp-staging-host.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect staging host
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          SCRIPT='
+          set +e
+          echo "=== OS ==="
+          cat /etc/os-release
+          echo "=== DOTNET ==="
+          command -v dotnet && dotnet --info | head -40 || true
+          echo "=== POSTGRES ==="
+          command -v psql && psql --version || true
+          systemctl is-active postgresql 2>/dev/null || true
+          echo "=== DOCKER ==="
+          command -v docker && docker --version || true
+          echo "=== PORTS ==="
+          ss -ltnp | grep -E ":(3080|5080|5090|5432)" || true
+          echo "=== DISK ==="
+          df -h /
+          echo "=== RAM ==="
+          free -h
+          echo "=== ERP dirs ==="
+          ls -ld /opt /opt/workshop* /var/www/vhosts/dezender.de/httpdocs 2>/dev/null || true
+          '
+
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
