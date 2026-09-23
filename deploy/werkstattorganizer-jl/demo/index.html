@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08111b">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-ui5">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-ui6">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -177,7 +177,7 @@
       </section>
 
       <section id="personnel" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">PERSONAL</span><h2>Mitarbeiter & Kapazität</h2></div><button id="absenceBtn" class="primary">Abwesenheit</button></div>
+        <div class="page-head"><div><span class="eyebrow">PERSONAL</span><h2>Mitarbeiter & Kapazität</h2></div><div class="page-actions"><button id="newEmployeeBtn" class="secondary">+ Mitarbeiter</button><button id="absenceBtn" class="primary">Abwesenheit</button></div></div>
         <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
         <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Urlaub, Krankheit, Schulung und Berufsschule</p></div></div><div id="absenceRows" class="rows"></div></div>
       </section>
@@ -217,6 +217,11 @@
           <article><h3>Umgebung</h3><p>Kein Zugriff auf Produktivdaten.</p><span class="badge warn">STAGING</span></article>
         </div>
         <div class="panel"><div class="panel-head"><div><h3>Sicherheitsstatus</h3><p>Benutzer, Rollen, Rechte und Audit</p></div></div><div id="securitySummary" class="release-grid"></div></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Benutzer & Rollen</h3><p>Serverseitige Berechtigungen</p></div></div><div id="adminUserRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Rollen & Rechte</h3><p>Feingranulare Modulrechte</p></div><button id="newRoleBtn" class="secondary">+ Rolle</button></div><div id="adminRoleRows" class="rows"></div></div>
+        </div>
+        <div class="panel"><div class="panel-head"><div><h3>Werkstattressourcen</h3><p>Bühnen, Diagnose, Reifen, Direktannahme</p></div><button id="newResourceBtn" class="secondary">+ Ressource</button></div><div id="resourceRows" class="rows"></div></div>
       </section>
     </main>
   </div>
@@ -224,6 +229,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-ui5"></script>
+<script src="/jl/demo/demo.js?v=erp4-ui6"></script>
 </body>
 </html>
