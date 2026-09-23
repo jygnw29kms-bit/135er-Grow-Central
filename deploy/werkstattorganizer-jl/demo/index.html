@@ -1,107 +1,147 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Workshop Manager Demo · JL 1976™</title>
-  <link rel="stylesheet" href="/jl/demo/demo.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workshop Manager Demo · JL 1976™</title>
+<link rel="stylesheet" href="/jl/demo/demo.css">
 </head>
 <body>
-  <div id="loginView" class="login-shell">
-    <div class="login-card">
-      <div class="brand">JL 1976™</div>
-      <h1>Workshop Manager Demo</h1>
-      <p>Interaktive Demo mit Beispieldaten. Es werden keine echten Werkstattdaten verwendet.</p>
-      <form id="loginForm">
-        <label>Benutzername<input id="user" autocomplete="username" value="demo"></label>
-        <label>Passwort<input id="pass" type="password" autocomplete="current-password" value="WerkstattDemo!2026"></label>
-        <button type="submit">Demo starten</button>
-        <div class="credentials"><b>Demo-Login:</b> demo<br><b>Passwort:</b> WerkstattDemo!2026</div>
-        <p id="loginError" class="error"></p>
-      </form>
-      <a class="back" href="/jl/">← Zur Marketingseite</a>
-    </div>
+<div id="loginView" class="login-shell">
+  <div class="login-card">
+    <div class="brand">JL 1976™</div>
+    <h1>Workshop Manager Demo</h1>
+    <p>Vollständige interaktive Produktdemo mit rein künstlichen Beispieldaten.</p>
+    <form id="loginForm">
+      <label>Benutzername<input id="user" autocomplete="username" value="demo" readonly></label>
+      <label>Passwort<input id="pass" type="password" autocomplete="current-password" value="WerkstattDemo!2026" readonly></label>
+      <button type="submit">Demo starten</button>
+      <div class="credentials"><b>Demo-Login:</b> demo<br><b>Passwort:</b> WerkstattDemo!2026<br><small>Zugangsdaten und Systemeinstellungen sind in der Demo nicht änderbar.</small></div>
+      <p id="loginError" class="error"></p>
+    </form>
+    <a class="back" href="/jl/">← Zur Marketingseite</a>
   </div>
+</div>
 
-  <div id="appView" class="app hidden">
-    <header class="topbar">
-      <div>
-        <div class="brand small">JL 1976™</div>
-        <strong>Workshop Manager · DEMO</strong>
-      </div>
-      <div class="top-actions">
-        <span id="demoBadge">Demo · Beispieldaten</span>
-        <button id="resetBtn" class="secondary">Demo zurücksetzen</button>
-        <button id="logoutBtn" class="secondary">Abmelden</button>
-      </div>
-    </header>
+<div id="appView" class="app hidden">
+<header class="topbar">
+  <div><div class="brand small">JL 1976™</div><strong>Workshop Manager · VOLLDEMO</strong></div>
+  <div class="top-search"><input id="globalSearch" placeholder="Suche: Kunde, Kennzeichen, VIN, Auftrag …"><div id="searchResults" class="search-results hidden"></div></div>
+  <div class="top-actions"><span>DEMO · keine Echtdaten</span><button id="resetBtn" class="secondary">Zurücksetzen</button><button id="logoutBtn" class="secondary">Abmelden</button></div>
+</header>
 
-    <div class="layout">
-      <aside>
-        <button class="nav active" data-page="dashboard">Dashboard</button>
-        <button class="nav" data-page="planner">Werkstattplan</button>
-        <button class="nav" data-page="customers">Kunden & Fahrzeuge</button>
-        <button class="nav" data-page="personnel">Personal</button>
-        <button class="nav" data-page="tires">Reifenhotel</button>
-      </aside>
+<div class="layout">
+<aside>
+  <button class="nav active" data-page="dashboard">Dashboard</button>
+  <button class="nav" data-page="planner">Werkstattplanung</button>
+  <button class="nav" data-page="orders">Aufträge & Workflow</button>
+  <button class="nav" data-page="intake">Fahrzeugannahme</button>
+  <button class="nav" data-page="customers">Kunden & Fahrzeuge</button>
+  <button class="nav" data-page="personnel">Personal</button>
+  <button class="nav" data-page="tires">Reifenhotel</button>
+  <button class="nav" data-page="parts">Teile & Lager</button>
+  <button class="nav" data-page="billing">Angebote & Rechnungen</button>
+  <button class="nav" data-page="loaners">Leihwagen</button>
+  <button class="nav" data-page="reminders">Erinnerungen</button>
+  <button class="nav" data-page="reports">Auswertungen</button>
+  <button class="nav" data-page="admin">Administration</button>
+</aside>
 
-      <main>
-        <section id="dashboard" class="page">
-          <div class="page-head"><div><span>DEMO</span><h2>Heute in der Werkstatt</h2></div><div id="todayLabel"></div></div>
-          <div class="kpis">
-            <article><b id="kpiAppointments">0</b><span>Termine</span></article>
-            <article><b>84%</b><span>Auslastung</span></article>
-            <article><b>2</b><span>Warten auf Teile</span></article>
-            <article><b>3</b><span>Fahrzeuge fertig</span></article>
-          </div>
-          <div class="panel">
-            <h3>Werkstatt-Leitstand</h3>
-            <div id="dashboardJobs" class="job-list"></div>
-          </div>
-        </section>
-
-        <section id="planner" class="page hidden">
-          <div class="page-head"><div><span>PLANUNG</span><h2>Werkstattplan</h2></div><button id="newDemoAppointment">+ Demo-Termin</button></div>
-          <div class="panel">
-            <table>
-              <thead><tr><th>Zeit</th><th>Ressource</th><th>Kennzeichen</th><th>Fahrzeug</th><th>Kunde</th><th>Mechaniker</th><th>Status</th><th>Auftrag</th></tr></thead>
-              <tbody id="plannerRows"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="customers" class="page hidden">
-          <div class="page-head"><div><span>STAMMDATEN</span><h2>Kunden & Fahrzeuge</h2></div></div>
-          <div class="cards" id="customerCards"></div>
-        </section>
-
-        <section id="personnel" class="page hidden">
-          <div class="page-head"><div><span>PERSONAL</span><h2>Kapazität & Abwesenheiten</h2></div></div>
-          <div class="panel">
-            <table>
-              <thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Heute</th><th>Qualifikation</th><th>Urlaub Rest</th></tr></thead>
-              <tbody>
-                <tr><td>Alex Berger</td><td>Werkstattleitung</td><td><span class="pill green">verfügbar</span></td><td>Diagnose · HV · Klima</td><td>14 Tage</td></tr>
-                <tr><td>Marco Stein</td><td>Mechaniker</td><td><span class="pill green">verfügbar</span></td><td>Mechanik · Reifen</td><td>11 Tage</td></tr>
-                <tr><td>Lea Hoffmann</td><td>Mechanikerin</td><td><span class="pill amber">bis 13:00</span></td><td>Diagnose · Achse</td><td>16 Tage</td></tr>
-                <tr><td>Ben Krüger</td><td>Azubi</td><td><span class="pill red">Berufsschule</span></td><td>unter Aufsicht</td><td>18 Tage</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="tires" class="page hidden">
-          <div class="page-head"><div><span>REIFENHOTEL</span><h2>Einlagerungen</h2></div></div>
-          <div class="cards">
-            <article><h3>WH-1028</h3><p>VW Golf VIII · B-WM 1028</p><p>205/55 R16 · Continental</p><small>Lager: Halle A / Regal 3 / Platz 12</small></article>
-            <article><h3>WH-1184</h3><p>Audi A4 · B-WM 1184</p><p>245/40 R18 · Michelin</p><small>Lager: Halle B / Regal 1 / Platz 04</small></article>
-            <article><h3>WH-1249</h3><p>Skoda Octavia · B-WM 1249</p><p>225/45 R17 · Goodyear</p><small>Lager: Halle A / Regal 6 / Platz 09</small></article>
-          </div>
-        </section>
-      </main>
-    </div>
+<main>
+<section id="dashboard" class="page">
+  <div class="page-head"><div><span>LEITSTAND</span><h2>Heute in der Werkstatt</h2></div><div id="todayLabel"></div></div>
+  <div class="kpis">
+    <article><b id="kpiAppointments">0</b><span>Termine</span></article>
+    <article><b id="kpiLoad">84%</b><span>Auslastung</span></article>
+    <article><b id="kpiParts">2</b><span>Warten auf Teile</span></article>
+    <article><b id="kpiReady">3</b><span>Fahrzeuge fertig</span></article>
   </div>
+  <div class="grid2">
+    <div class="panel"><h3>Werkstatt-Leitstand</h3><div id="dashboardJobs" class="job-list"></div></div>
+    <div class="panel"><h3>Kapazität heute</h3><div class="capacity"><div><span>Bühnen</span><b>4 / 5 belegt</b></div><div class="bar"><i style="width:80%"></i></div><div><span>Mechaniker</span><b>3,5 / 4 verfügbar</b></div><div class="bar"><i style="width:88%"></i></div><div><span>Diagnose</span><b>70%</b></div><div class="bar"><i style="width:70%"></i></div></div></div>
+  </div>
+</section>
 
+<section id="planner" class="page hidden">
+  <div class="page-head"><div><span>PLANUNG</span><h2>Werkstattplan</h2></div><div class="actions"><button id="newDemoAppointment">+ Termin</button><button class="secondary" data-toast="Kapazitätsprüfung: nächster freier Slot heute 16:00 Uhr.">Heute möglich?</button></div></div>
+  <div class="panel"><table><thead><tr><th>Zeit</th><th>Ressource</th><th>Kennzeichen</th><th>Fahrzeug</th><th>Kunde</th><th>Mechaniker</th><th>Status</th><th>Auftrag</th></tr></thead><tbody id="plannerRows"></tbody></table></div>
+</section>
+
+<section id="orders" class="page hidden">
+  <div class="page-head"><div><span>WORKFLOW</span><h2>Aufträge & Status</h2></div><button id="advanceOrder">Ausgewählten Auftrag weiterführen</button></div>
+  <div id="orderBoard" class="kanban"></div>
+  <div class="panel"><h3>Demo-Ablauf</h3><p>Termin → Fahrzeug angekommen → Annahme → Diagnose → Zusatzarbeit → Kundenfreigabe → Arbeit → Qualitätskontrolle → Fertig → Rechnung.</p></div>
+</section>
+
+<section id="intake" class="page hidden">
+  <div class="page-head"><div><span>ANNAHME</span><h2>Digitale Fahrzeugannahme</h2></div><button id="saveIntake">Annahme speichern</button></div>
+  <div class="formgrid panel">
+    <label>Kennzeichen<input value="B-WM 1184"></label><label>Kilometerstand<input value="84.210 km"></label>
+    <label>Tank / Ladung<select><option>¾ voll</option><option>½ voll</option><option>¼ voll</option></select></label>
+    <label>Kundenaussage<input value="Motorkontrollleuchte sporadisch an"></label>
+    <label class="wide">Schadens-/Zustandsnotiz<textarea>kleine Kratzer Stoßfänger hinten rechts; 1 Schlüssel übergeben</textarea></label>
+  </div>
+  <div class="checklist panel"><h3>20-Minuten Vorprüfung / Checkliste</h3><div id="checkItems"></div></div>
+  <div class="panel"><h3>Digitale Kundenfreigabe</h3><p>Zusatzarbeit: Zündspule Zyl. 2 inkl. Einbau · <b>189,00 €</b></p><div class="actions"><button id="approveBtn">Freigabe simulieren</button><button class="secondary" data-toast="Kunde würde Rückruf wünschen.">Rückruf</button></div><p id="approvalState" class="muted">Status: noch nicht freigegeben</p></div>
+</section>
+
+<section id="customers" class="page hidden">
+  <div class="page-head"><div><span>STAMMDATEN</span><h2>Kunden & Fahrzeuge</h2></div><button data-toast="Demo: Neuer Kunde würde jetzt angelegt.">+ Kunde</button></div>
+  <div class="cards" id="customerCards"></div>
+  <div class="panel"><h3>Fahrzeughistorie · B-WM 1028</h3><ul class="timeline"><li><b>23.09.2026</b> Inspektion + Ölservice</li><li><b>12.04.2026</b> Räderwechsel Sommer</li><li><b>04.01.2026</b> Batterie ersetzt</li><li><b>19.09.2025</b> HU-Vorprüfung</li></ul></div>
+</section>
+
+<section id="personnel" class="page hidden">
+  <div class="page-head"><div><span>PERSONAL</span><h2>Kapazität, Urlaub & Qualifikation</h2></div><button id="addAbsence">Abwesenheit Von–Bis</button></div>
+  <div class="panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Heute</th><th>Qualifikation</th><th>Urlaub Rest</th></tr></thead><tbody id="personnelRows"></tbody></table></div>
+  <div class="panel"><h3>Rollen & Rechte</h3><p>Service, Werkstattleitung, Mechaniker, Azubi, Buchhaltung und Admin können mit Einzelrechten kombiniert werden.</p><button data-toast="Demo: Benutzerrechte lassen sich ansehen, aber nicht dauerhaft verändern.">Rechte-Matrix öffnen</button></div>
+</section>
+
+<section id="tires" class="page hidden">
+  <div class="page-head"><div><span>REIFENHOTEL</span><h2>Einlagerungen</h2></div><button id="tireCheckin">+ Einlagerung</button></div>
+  <div class="cards" id="tireCards"></div>
+</section>
+
+<section id="parts" class="page hidden">
+  <div class="page-head"><div><span>LAGER</span><h2>Teile & Beschaffung</h2></div><button id="orderPart">Teil bestellen</button></div>
+  <div class="panel"><table><thead><tr><th>Artikel</th><th>Bestand</th><th>Min.</th><th>Lagerort</th><th>Status</th></tr></thead><tbody id="partRows"></tbody></table></div>
+</section>
+
+<section id="billing" class="page hidden">
+  <div class="page-head"><div><span>ABRECHNUNG</span><h2>Angebote & Rechnungen</h2></div><button id="createInvoice">Rechnung aus Auftrag erzeugen</button></div>
+  <div class="panel"><table><thead><tr><th>Beleg</th><th>Kunde</th><th>Fahrzeug</th><th>Betrag</th><th>Status</th></tr></thead><tbody id="billingRows"></tbody></table></div>
+  <div class="panel"><h3>Dokument-Designer</h3><p>Logo, Adressblock, Positionen, Summen, Fußzeile und Zahlungsdaten sind konfigurierbar.</p><button data-toast="Live-Vorschau: Briefkopf, Positionen und Summen würden rechts angezeigt.">Designer öffnen</button></div>
+</section>
+
+<section id="loaners" class="page hidden">
+  <div class="page-head"><div><span>MOBILITÄT</span><h2>Leihwagen & Hol-/Bringservice</h2></div></div>
+  <div class="cards"><article><h3>VW up! · L-01</h3><p><span class="pill green">verfügbar</span></p><small>42.180 km · vollgetankt</small></article><article><h3>Skoda Fabia · L-02</h3><p><span class="pill amber">bis 17:00 vergeben</span></p><small>58.510 km · Kunde M. Weber</small></article><article><h3>Hol-/Bringservice</h3><p>14:00 · Falkensee → Werkstatt</p><small>Fahrer: Alex Berger</small></article></div>
+</section>
+
+<section id="reminders" class="page hidden">
+  <div class="page-head"><div><span>CRM</span><h2>Erinnerungen & Kommunikation</h2></div></div>
+  <div class="panel"><div class="reminders"><p><b>B-WM 1028</b> · HU in 28 Tagen <button data-toast="Demo: HU-Erinnerung wurde vorbereitet.">Erinnern</button></p><p><b>B-WM 1249</b> · Räderwechsel fällig <button data-toast="Demo: Terminlink wurde vorbereitet.">Terminlink</button></p><p><b>B-WM 1391</b> · Bremsenfreigabe offen <button data-toast="Demo: Freigabe-Erinnerung wurde vorbereitet.">Nachfassen</button></p></div></div>
+</section>
+
+<section id="reports" class="page hidden">
+  <div class="page-head"><div><span>KPI</span><h2>Auswertungen</h2></div></div>
+  <div class="kpis"><article><b>84%</b><span>Werkstattauslastung</span></article><article><b>91%</b><span>Produktivquote</span></article><article><b>486 €</b><span>Ø Auftragswert</span></article><article><b>12,4%</b><span>Teile-Rohertrag</span></article></div>
+  <div class="grid2"><div class="panel"><h3>Auslastung Woche</h3><div class="chart"><i style="height:70%"></i><i style="height:86%"></i><i style="height:92%"></i><i style="height:78%"></i><i style="height:88%"></i></div></div><div class="panel"><h3>Top Arbeitsarten</h3><ol><li>Inspektion / Service</li><li>Bremsen</li><li>Reifenservice</li><li>Diagnose</li><li>HU-Vorprüfung</li></ol></div></div>
+</section>
+
+<section id="admin" class="page hidden">
+  <div class="page-head"><div><span>ADMINISTRATION</span><h2>System & Konfiguration</h2></div></div>
+  <div class="cards">
+    <article><h3>Werkstatt-Branding</h3><p>Firmenname, Logo, Farben, Dokumente</p><button data-toast="Demo-Modus: Branding ist geschützt und wird nicht dauerhaft geändert.">Ansehen</button></article>
+    <article><h3>Ressourcen</h3><p>Hebebühnen, Diagnose, Achsmessplatz, Leihwagen</p><button data-toast="5 Ressourcen aktiv · frei konfigurierbar.">Ansehen</button></article>
+    <article><h3>Benutzer & Rollen</h3><p>Rollen, Einzelrechte, Audit</p><button data-toast="Demo-Benutzer ist fest und nicht änderbar.">Ansehen</button></article>
+    <article><h3>Import</h3><p>KFZ-Win CSV / Excel / Migrationsprofile</p><button data-toast="Demo: Importvorschau würde Feldzuordnung und Dubletten zeigen.">Import simulieren</button></article>
+    <article><h3>Backup</h3><p>Lokal, NAS, SFTP, Integritätsprüfung</p><button data-toast="Demo: Backupprüfung erfolgreich.">Backup prüfen</button></article>
+    <article><h3>Lizenz</h3><p>Edition, Module, Standorte, Benutzer</p><button data-toast="Demo-Lizenz · alle Demonstrationsmodule freigeschaltet.">Lizenzstatus</button></article>
+  </div>
+</section>
+</main>
+</div>
+</div>
+<div id="toast" class="toast hidden"></div>
 <script src="/jl/demo/demo.js"></script>
-</body>
-</html>
+</body></html>
