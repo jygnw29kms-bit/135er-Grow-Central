@@ -5,7 +5,7 @@ const fmtMoney=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'
 const fmtDate=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'medium'}).format(new Date(v)):'–';
 const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(v)):'–';
 let token=sessionStorage.getItem('wm_erp_token')||'';
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],tires:[],invoices:[],dashboard:null,selectedOrder:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],dashboard:null,report:null,security:null,selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -82,11 +82,12 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,tires,invoices,dashboard]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
-   api('/work-orders'),api('/inventory'),api('/suppliers'),api('/tires'),api('/invoices'),api('/dashboard')
+   api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
+   api('/tires'),api('/invoices'),api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,tires,invoices,dashboard});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,dashboard,report,security});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
@@ -102,7 +103,13 @@ function renderAll(){
  const d=state.dashboard||{};
  $('todayLabel').textContent=new Intl.DateTimeFormat('de-DE',{dateStyle:'full'}).format(new Date());
  $('kpiAppointments').textContent=d.appointments??0;$('kpiOrders').textContent=d.openOrders??0;$('kpiStock').textContent=d.lowStock??0;$('kpiReceivables').textContent=fmtMoney(d.receivables||0);
- $('reportAppointments').textContent=d.appointments??0;$('reportOrders').textContent=d.openOrders??0;$('reportStock').textContent=d.lowStock??0;$('reportReceivables').textContent=fmtMoney(d.receivables||0);
+ const rep=state.report||{};
+ $('kpiLastYearRevenue').textContent=fmtMoney(rep.netRevenue||0);
+ $('reportRevenue').textContent=fmtMoney(rep.netRevenue||0);
+ $('reportAverage').textContent=fmtMoney(rep.averageInvoiceNet||0);
+ $('reportCustomers').textContent=rep.customerCount??0;
+ $('reportVehicles').textContent=rep.vehicleCount??0;
+ $('reportInvoiceCount').textContent=(rep.invoiceCount??0)+' Rechnungen';
 
  $('dashboardOrders').innerHTML=state.orders.slice(0,7).map(o=>{
   const v=vehicle(o.vehicleId),c=customer(o.customerId);
@@ -127,10 +134,36 @@ function renderAll(){
  $('tireCards').innerHTML=state.tires.map(t=>'<article><div class="panel-head"><h3>'+esc(t.storageNumber)+'</h3><span class="badge '+badge(t.condition===0?'gut':t.condition===1?'beobachten':'ersetzen')+'">'+esc(t.condition===0?'gut':t.condition===1?'beobachten':'ersetzen')+'</span></div><p><b>'+esc(t.size)+'</b> · '+esc(t.brandModel)+'</p><p>'+esc(t.storageLocation)+' · DOT '+esc(t.dot||'–')+'</p><small>Profil '+[t.frontLeftMm,t.frontRightMm,t.rearLeftMm,t.rearRightMm].join(' / ')+' mm</small></article>').join('')||emptyCard('Noch keine Radsätze eingelagert.');
  $('inventoryRows').innerHTML=state.inventory.map(i=>'<tr><td><b>'+esc(i.itemNumber)+'</b></td><td>'+esc(i.description)+'</td><td><span class="badge '+badge(Number(i.stock)<=Number(i.minimumStock)?'kritisch':'vorhanden')+'">'+esc(i.stock)+'</span></td><td>'+esc(i.minimumStock)+'</td><td>'+fmtMoney(i.purchaseNet)+'</td><td>'+fmtMoney(i.saleNet)+'</td><td>'+esc(i.storageLocation||'')+'</td></tr>').join('');
  $('supplierRows').innerHTML=state.suppliers.map(s=>'<div class="row-item"><div class="row-main"><div><b>'+esc(s.name)+'</b><span>'+esc(s.supplierNumber)+' · '+esc(s.phone||s.email||'')+'</span></div></div></div>').join('')||empty('Noch keine Lieferanten.');
+ $('purchaseOrderRows').innerHTML=state.purchaseOrders.map(x=>{
+  const o=x.order||x, sup=state.suppliers.find(s=>s.id===o.supplierId), lines=x.lines||[];
+  const ordered=lines.reduce((a,l)=>a+Number(l.quantity||0),0), received=lines.reduce((a,l)=>a+Number(l.receivedQuantity||0),0);
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(sup?.name||'Lieferant')+'</b><span>'+ordered+' bestellt · '+received+' eingegangen</span></div></div><span class="badge '+badge(o.status===3?'erhalten':o.status===2?'teil':'bestellt')+'">'+esc(o.status===3?'Erhalten':o.status===2?'Teilweise':'Bestellt')+'</span></div>'
+ }).join('')||empty('Keine Bestellungen vorhanden.');
  renderPurchaseForm();
  $('employeeRows').innerHTML=state.employees.map(e=>'<tr><td><b>'+esc(e.name)+'</b></td><td>'+esc(e.roleName)+'</td><td>'+esc(e.weeklyHours)+' h</td><td>'+esc(e.annualVacationDays)+' Tage</td><td>'+fmtMoney(e.productiveHourlyRate)+'/h</td></tr>').join('');
+ $('absenceRows').innerHTML=state.absences.map(a=>{
+  const e=employee(a.employeeId), types=['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'];
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(e?.name||'Mitarbeiter')+' · '+esc(types[a.type]||'Abwesenheit')+'</b><span>'+esc(a.from)+' bis '+esc(a.to)+(a.reason?' · '+esc(a.reason):'')+'</span></div></div><span class="badge '+badge(a.approved?'aktiv':'offen')+'">'+(a.approved?'Freigegeben':'Offen')+'</span></div>'
+ }).join('')||empty('Keine Abwesenheiten eingetragen.');
  $('invoiceRows').innerHTML=state.invoices.map(i=>'<tr><td><b>'+esc(i.number)+'</b></td><td>'+esc(i.issueDate)+'</td><td>'+esc(i.dueDate)+'</td><td>'+fmtMoney(i.grossTotal)+'</td><td>'+fmtMoney(i.paidTotal)+'</td><td><span class="badge '+badge(invoiceStatus[i.status])+'">'+esc(invoiceStatus[i.status]||i.status)+'</span></td><td>'+(i.status!==3?'<button class="secondary" data-pay="'+i.id+'">Zahlung</button>':'')+'</td></tr>').join('');
  document.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>paymentModal(b.dataset.pay));
+
+ const monthly=(state.report?.monthly||[]);
+ const maxMonth=Math.max(1,...monthly.map(m=>Number(m.net||0)));
+ const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+ $('monthlyRevenue').innerHTML=monthly.map(m=>{
+  const pct=Math.max(3,Math.round(Number(m.net||0)/maxMonth*100));
+  return '<div class="bar-col"><span class="bar-value">'+esc(fmtMoney(m.net||0).replace(',00',''))+'</span><div class="bar" style="height:'+pct+'%"></div><span class="bar-label">'+monthNames[(m.month||1)-1]+'</span></div>'
+ }).join('');
+
+ $('topCustomers').innerHTML=(state.report?.topCustomers||[]).map((x,i)=>
+  '<div class="row-item"><div class="row-main"><div><b>'+(i+1)+'. '+esc(x.name)+'</b><span>'+esc(x.count)+' Rechnungen</span></div></div><b>'+fmtMoney(x.net)+'</b></div>'
+ ).join('')||empty('Keine Umsatzdaten.');
+
+ const sec=state.security||{};
+ $('securitySummary').innerHTML=[
+  ['Benutzer',sec.users??0],['Rollen',sec.roles??0],['Rechte',sec.permissions??0],['Standorte',sec.sites??0],['Audit-Einträge',sec.auditEntries??0]
+ ].map(x=>'<div><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>').join('');
  $('intakeOrder').innerHTML=state.orders.filter(o=>o.status<10&&o.status!==12).map(o=>'<option value="'+o.id+'">'+esc(o.number)+' · '+esc(vehicle(o.vehicleId)?.licensePlate||'')+'</option>').join('');
  if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
 }
