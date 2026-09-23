@@ -122,5 +122,7 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 curl -kfsS https://werkstattplaner.grow-central.de/jl/demo/api/health >/tmp/public-health.json
+curl -kfsS -H 'Content-Type: application/json' -d '{"username":"demo","password":"WerkstattDemo!2026"}' https://werkstattplaner.grow-central.de/jl/demo/api/auth/login >/tmp/public-login.json
+python3 -c 'import json; d=json.load(open("/tmp/public-login.json")); assert d.get("access_token")'
 curl -kfsS https://werkstattplaner.grow-central.de/jl/demo/ >/dev/null
-echo 'ERP staging deployed and verified.'
+echo 'ERP staging deployed and public login verified.'
