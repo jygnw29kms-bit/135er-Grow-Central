@@ -18,15 +18,30 @@ test -f web/demo.js
 test -f web/demo.css
 
 mkdir -p "$APP"
+DBPW=""
+JWT=""
 if [ -f "$APP/.env" ]; then
-  cp "$APP/.env" .env
-else
-  umask 077
-  DBPW="$(openssl rand -hex 24)"
-  JWT="$(openssl rand -hex 48)"
-  printf 'ERP_DB_PASSWORD=%s\nERP_JWT_KEY=%s\n' "$DBPW" "$JWT" > .env
+  set -a
+  . "$APP/.env"
+  set +a
+  DBPW="${POSTGRES_PASSWORD:-${ERP_DB_PASSWORD:-}}"
+  JWT="${WM_JWT_KEY:-${ERP_JWT_KEY:-}}"
 fi
+if [ "${#DBPW}" -lt 24 ]; then DBPW="$(openssl rand -hex 24)"; fi
+if [ "${#JWT}" -lt 32 ]; then JWT="$(openssl rand -hex 48)"; fi
+
+umask 077
+{
+  printf 'POSTGRES_PASSWORD=%s\n' "$DBPW"
+  printf 'WM_JWT_KEY=%s\n' "$JWT"
+  printf 'ConnectionStrings__Erp=Host=postgres;Port=5432;Database=workshop_erp_staging;Username=workshop_erp;Password=%s\n' "$DBPW"
+  printf 'WM_BOOTSTRAP_ADMIN=demo\n'
+  printf 'WM_BOOTSTRAP_PASSWORD=WerkstattDemo!2026\n'
+} > .env
 chmod 600 .env
+
+test "${#JWT}" -ge 32
+test "${#DBPW}" -ge 24
 
 rsync -a --delete src/ "$APP/src/"
 rsync -a --delete web/ "$APP/web/"
@@ -37,11 +52,19 @@ chmod 600 "$APP/.env"
 cd "$APP"
 docker compose --env-file .env up -d --build
 
+api_ok=0
 for _ in $(seq 1 90); do
-  if curl -fsS http://127.0.0.1:5090/api/health >/tmp/erp-health.json; then break; fi
+  if curl -fsS http://127.0.0.1:5090/api/health >/tmp/erp-health.json; then
+    api_ok=1
+    break
+  fi
   sleep 2
 done
-curl -fsS http://127.0.0.1:5090/api/health >/tmp/erp-health.json
+if [ "$api_ok" -ne 1 ]; then
+  docker compose --env-file .env ps -a || true
+  docker compose --env-file .env logs --tail=200 api postgres || true
+  exit 1
+fi
 
 LOGIN="$(curl -fsS -H 'Content-Type: application/json'   -d '{"username":"demo","password":"WerkstattDemo!2026"}'   http://127.0.0.1:5090/api/auth/login)"
 TOKEN="$(printf '%s' "$LOGIN" | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
