@@ -193,7 +193,24 @@ $('createPurchaseBtn').onclick=async()=>{
  try{await api('/purchase-orders',{method:'POST',body:JSON.stringify({supplierId:$('poSupplier').value,siteId:state.site.id,expectedAt:null,lines:[{inventoryItemId:$('poItem').value,quantity:Number($('poQty').value),unitPurchaseNet:Number($('poPrice').value)}]})});toast('Bestellung angelegt.')}catch(e){toast(e.message,true)}
 };
 
-$('saveIntake').onclick=async()=>{const id=$('intakeOrder').value;if(!id)return toast('Kein Auftrag gewählt.',true);try{await transition(id,3);toast('Fahrzeugannahme gespeichert.');page('orders')}catch(e){toast(e.message,true)}};
+$('saveIntake').onclick=async()=>{
+ const id=$('intakeOrder').value;
+ if(!id)return toast('Kein Auftrag gewählt.',true);
+ try{
+  await api('/work-orders/'+id+'/intake',{
+   method:'POST',
+   body:JSON.stringify({
+    mileageIn:$('intakeMileage').value?Number($('intakeMileage').value):null,
+    fuelOrChargeLevel:$('intakeFuel').value,
+    customerRequest:$('intakeRequest').value
+   })
+  });
+  toast('Fahrzeugannahme gespeichert.');
+  await loadAll();
+  page('orders');
+  await openOrder(id);
+ }catch(e){toast(e.message,true)}
+};
 $('absenceBtn').onclick=absenceModal;
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>({ 'new-customer':customerModal,'new-vehicle':vehicleModal,'new-appointment':appointmentModal,'new-tire':tireModal }[b.dataset.action]?.()));
 $('quickBtn').onclick=()=>appointmentModal();
