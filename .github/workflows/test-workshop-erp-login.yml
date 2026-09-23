@@ -1,0 +1,40 @@
+name: Test Workshop ERP Public Login
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/test-workshop-erp-login.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test public health and login
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/api/health -o /tmp/health.json
+          grep -q 'Workshop Manager ERP' /tmp/health.json
+
+          curl -sS -D /tmp/headers -o /tmp/login.json             -H 'Content-Type: application/json'             -d '{"username":"demo","password":"WerkstattDemo!2026"}'             https://werkstattplaner.grow-central.de/jl/demo/api/auth/login
+
+          code="$(awk 'NR==1{print $2}' /tmp/headers)"
+          echo "HTTP $code"
+          test "$code" = "200"
+
+          python3 - <<'PY'
+import json
+d=json.load(open('/tmp/login.json'))
+assert d.get('access_token'), d
+print('PUBLIC LOGIN OK')
+PY
+
+          curl -fsS https://werkstattplaner.grow-central.de/jl/demo/ -o /tmp/page.html
+          grep -q 'ERP 4.0' /tmp/page.html
+          curl -fsS 'https://werkstattplaner.grow-central.de/jl/demo/demo.js?v=erp4-staging' -o /tmp/demo.js
+          grep -q "const API='/jl/demo/api'" /tmp/demo.js
