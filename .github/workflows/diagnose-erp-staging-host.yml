@@ -56,6 +56,14 @@ jobs:
           cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=180 api || true
           echo "=== ERP Postgres logs ==="
           cd /opt/workshop-erp-staging 2>/dev/null && docker compose --env-file .env logs --tail=80 postgres || true
+          echo "=== custom vhost nginx ==="
+          cat /var/www/vhosts/system/werkstattplaner.grow-central.de/conf/vhost_nginx.conf 2>/dev/null || true
+          echo "=== generated nginx refs ==="
+          grep -Rni "jl/demo/api\|127.0.0.1:5090\|werkstattplaner.grow-central.de" /etc/nginx/plesk.conf.d/vhosts /var/www/vhosts/system/werkstattplaner.grow-central.de/conf 2>/dev/null | head -120 || true
+          echo "=== local API ==="
+          curl -i -sS http://127.0.0.1:5090/api/health | head -20 || true
+          echo "=== public API ==="
+          curl -k -i -sS https://werkstattplaner.grow-central.de/jl/demo/api/health | head -30 || true
           '
 
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
