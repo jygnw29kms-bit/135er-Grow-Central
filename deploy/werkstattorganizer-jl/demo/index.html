@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08111b">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging-autologin3">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-ui5">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -106,6 +106,7 @@
           <article><span>Offene Aufträge</span><b id="kpiOrders">–</b><small>nicht abgeschlossen</small></article>
           <article><span>Lagerwarnungen</span><b id="kpiStock">–</b><small>≤ Mindestbestand</small></article>
           <article><span>Offene Posten</span><b id="kpiReceivables">–</b><small>Brutto</small></article>
+          <article class="kpi-wide"><span>Umsatz Vorjahr</span><b id="kpiLastYearRevenue">–</b><small>Netto · 2025</small></article>
         </div>
         <div class="split">
           <div class="panel">
@@ -169,14 +170,16 @@
       <section id="purchasing" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">EINKAUF</span><h2>Lieferanten & Bestellung</h2></div><button id="createPurchaseBtn" class="primary">Bestellung anlegen</button></div>
         <div class="split">
-          <div class="panel"><div class="panel-head"><div><h3>Lieferanten</h3></div></div><div id="supplierRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Offene Bestellungen</h3><p>Bestellstatus und Wareneingang</p></div></div><div id="purchaseOrderRows" class="rows"></div></div>
           <div class="panel"><div class="panel-head"><div><h3>Schnellbestellung</h3><p>Direkt aus dem aktuellen Lagerbestand</p></div></div><div id="purchaseFormHost"></div></div>
         </div>
+        <div class="panel"><div class="panel-head"><div><h3>Lieferanten</h3></div></div><div id="supplierRows" class="rows"></div></div>
       </section>
 
       <section id="personnel" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">PERSONAL</span><h2>Mitarbeiter & Kapazität</h2></div><button id="absenceBtn" class="primary">Abwesenheit</button></div>
         <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Urlaub, Krankheit, Schulung und Berufsschule</p></div></div><div id="absenceRows" class="rows"></div></div>
       </section>
 
       <section id="billing" class="page hidden">
@@ -186,7 +189,22 @@
 
       <section id="reports" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">AUSWERTUNGEN</span><h2>ERP-Kennzahlen</h2></div></div>
-        <div class="kpis"><article><span>Termine</span><b id="reportAppointments">–</b></article><article><span>Aufträge offen</span><b id="reportOrders">–</b></article><article><span>Lagerwarnungen</span><b id="reportStock">–</b></article><article><span>Offene Posten</span><b id="reportReceivables">–</b></article></div>
+        <div class="kpis">
+          <article><span>Umsatz 2025 netto</span><b id="reportRevenue">–</b><small id="reportInvoiceCount">–</small></article>
+          <article><span>Ø Rechnung netto</span><b id="reportAverage">–</b><small>2025</small></article>
+          <article><span>Kunden</span><b id="reportCustomers">–</b><small>Stammdaten</small></article>
+          <article><span>Fahrzeuge</span><b id="reportVehicles">–</b><small>Stammdaten</small></article>
+        </div>
+        <div class="split analytics-split">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Monatsumsatz 2025</h3><p>Netto-Umsatz aus Rechnungen</p></div></div>
+            <div id="monthlyRevenue" class="bar-chart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Top-Kunden 2025</h3><p>nach Netto-Umsatz</p></div></div>
+            <div id="topCustomers" class="rows"></div>
+          </div>
+        </div>
         <div class="panel"><h3>Entwicklungsstatus</h3><div class="release-grid"><div><b>ERP Core</b><span>aktiv</span></div><div><b>PostgreSQL</b><span>aktiv</span></div><div><b>JWT / RBAC</b><span>aktiv</span></div><div><b>Staging</b><span>aktiv</span></div><div><b>PDF / DATEV</b><span>Preview</span></div><div><b>Desktop ERP</b><span>Preview</span></div></div></div>
       </section>
 
@@ -198,6 +216,7 @@
           <article><h3>Datenbank</h3><p>Isolierte PostgreSQL-Staging-Datenbank.</p><span class="badge success">aktiv</span></article>
           <article><h3>Umgebung</h3><p>Kein Zugriff auf Produktivdaten.</p><span class="badge warn">STAGING</span></article>
         </div>
+        <div class="panel"><div class="panel-head"><div><h3>Sicherheitsstatus</h3><p>Benutzer, Rollen, Rechte und Audit</p></div></div><div id="securitySummary" class="release-grid"></div></div>
       </section>
     </main>
   </div>
@@ -205,6 +224,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-staging-autologin3"></script>
+<script src="/jl/demo/demo.js?v=erp4-ui5"></script>
 </body>
 </html>
