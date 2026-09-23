@@ -99,7 +99,14 @@ p.write_text((old+"\n\n"+block+"\n").lstrip())
 PY
 
 if command -v plesk >/dev/null 2>&1; then
-  plesk bin httpdmng --reconfigure-domain werkstattplaner.grow-central.de
+  if plesk sbin httpdmng --reconfigure-domain werkstattplaner.grow-central.de; then
+    :
+  elif [ -x /usr/local/psa/admin/sbin/httpdmng ]; then
+    /usr/local/psa/admin/sbin/httpdmng --reconfigure-domain werkstattplaner.grow-central.de
+  else
+    nginx -t
+    systemctl reload nginx
+  fi
 else
   nginx -t
   systemctl reload nginx
