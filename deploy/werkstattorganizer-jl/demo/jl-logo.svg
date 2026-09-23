@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" role="img" aria-labelledby="t d">
+<title id="t">JL Software Solutions 1976</title><desc id="d">Cyan hexagon signet with JL wordmark</desc>
+<defs>
+ <filter id="g" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#65f4ff"/><stop offset=".55" stop-color="#00d8ff"/><stop offset="1" stop-color="#1687ff"/></linearGradient>
+</defs>
+<rect width="640" height="220" fill="none"/>
+<g transform="translate(18,12)">
+ <path d="M92 17 L164 58 L164 140 L92 181 L20 140 L20 58 Z" fill="#07111b" stroke="#103246" stroke-width="10" opacity=".65"/>
+ <path d="M92 17 L164 58 L164 140 L92 181 L20 140 L20 58 Z" fill="none" stroke="url(#c)" stroke-width="5" filter="url(#g)"/>
+ <circle cx="92" cy="7" r="8" fill="#07111b" stroke="#4feeff" stroke-width="4"/>
+ <line x1="92" y1="15" x2="92" y2="18" stroke="#4feeff" stroke-width="4"/>
+ <circle cx="92" cy="191" r="8" fill="#07111b" stroke="#4feeff" stroke-width="4"/>
+ <line x1="92" y1="181" x2="92" y2="183" stroke="#4feeff" stroke-width="4"/>
+ <text x="92" y="119" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="48" font-weight="800" fill="#fff">J.L.</text>
+</g>
+<g transform="translate(205,54)">
+ <text x="0" y="42" font-family="Segoe UI,Arial,sans-serif" font-size="40" font-weight="700" letter-spacing="8" fill="#f8fbff">JL SOFTWARE</text>
+ <line x1="0" y1="66" x2="68" y2="66" stroke="#19e2ff" stroke-width="2"/>
+ <text x="88" y="73" font-family="Segoe UI,Arial,sans-serif" font-size="20" letter-spacing="9" fill="#31dfff">SOLUTIONS</text>
+ <line x1="292" y1="66" x2="360" y2="66" stroke="#19e2ff" stroke-width="2"/>
+ <text x="150" y="111" font-family="Segoe UI,Arial,sans-serif" font-size="18" letter-spacing="8" fill="#79def3">1976</text>
+</g>
+</svg>
