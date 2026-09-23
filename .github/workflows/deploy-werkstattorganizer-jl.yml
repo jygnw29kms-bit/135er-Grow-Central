@@ -53,7 +53,15 @@ jobs:
           test -f "$TARGET/styles.css"
           systemctl restart etes-werkstattplaner
           systemctl is-active etes-werkstattplaner
-          curl -fsS http://127.0.0.1:3080/jl/ | grep -q "JL 1976"'
+          ok=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:3080/jl/ | grep -q "JL 1976"; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" -eq 1'
 
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
           if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
