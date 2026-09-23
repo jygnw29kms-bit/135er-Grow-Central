@@ -1,0 +1,66 @@
+name: Browser Smoke Test Workshop ERP Staging
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/browser-smoke-workshop-erp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright
+          npx playwright install --with-deps chromium
+
+      - name: Test live login flow
+        shell: bash
+        run: |
+          cat > /tmp/test.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+          const messages=[];
+          page.on('console', m => messages.push('console '+m.type()+': '+m.text()));
+          page.on('pageerror', e => messages.push('pageerror: '+e.message));
+          page.on('requestfailed', r => messages.push('requestfailed: '+r.url()+' '+(r.failure()?.errorText||'')));
+
+          const url='https://werkstattplaner.grow-central.de/jl/demo/?smoke='+Date.now();
+          const res=await page.goto(url,{waitUntil:'networkidle',timeout:60000});
+          console.log('PAGE HTTP',res?.status());
+          console.log('TITLE',await page.title());
+
+          const btn=page.locator('#demoLoginBtn');
+          console.log('DEMO BUTTON',await btn.count());
+          console.log('LOGIN VISIBLE BEFORE',await page.locator('#loginView').isVisible());
+          console.log('APP VISIBLE BEFORE',await page.locator('#appView').isVisible());
+
+          await btn.click();
+          await page.waitForTimeout(5000);
+
+          console.log('LOGIN VISIBLE AFTER',await page.locator('#loginView').isVisible());
+          console.log('APP VISIBLE AFTER',await page.locator('#appView').isVisible());
+          console.log('LOGIN ERROR',await page.locator('#loginError').textContent());
+          console.log('API STATE',await page.locator('#apiState').textContent());
+          console.log('PAGE TITLE AFTER',await page.locator('#pageTitle').textContent());
+
+          for(const m of messages) console.log(m);
+
+          const appVisible=await page.locator('#appView').isVisible();
+          if(!appVisible) process.exitCode=2;
+          await browser.close();
+          EOF
+          node /tmp/test.mjs
