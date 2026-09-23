@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: workshop-manager-jl-static
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-24.04
@@ -18,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy /jl/ to Werkstattplaner server
+      - name: Deploy static /jl/ files
         env:
           SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
@@ -40,28 +44,23 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
           tar -C deploy/werkstattorganizer-jl -czf /tmp/workshop-jl.tar.gz .
-
           sshpass -e scp -P "$SSH_PORT" -o BatchMode=no /tmp/workshop-jl.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/workshop-jl.tar.gz"
 
           SCRIPT='set -euo pipefail
           TARGET="/opt/etes-werkstattplaner/public/jl"
-          mkdir -p "$TARGET"
-          rm -rf "$TARGET"/*
-          tar -xzf /tmp/workshop-jl.tar.gz -C "$TARGET"
+          STAGE="/opt/etes-werkstattplaner/public/.jl-stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          tar -xzf /tmp/workshop-jl.tar.gz -C "$STAGE"
+          test -f "$STAGE/index.html"
+          test -f "$STAGE/styles.css"
+          test -f "$STAGE/demo/index.html"
+          test -f "$STAGE/demo/demo.css"
+          test -f "$STAGE/demo/demo.js"
+          rm -rf "$TARGET"
+          mv "$STAGE" "$TARGET"
           rm -f /tmp/workshop-jl.tar.gz
-          test -f "$TARGET/index.html"
-          test -f "$TARGET/styles.css"
-          systemctl restart etes-werkstattplaner
-          systemctl is-active etes-werkstattplaner
-          ok=0
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS http://127.0.0.1:3080/jl/ | grep -q "JL 1976"; then
-              ok=1
-              break
-            fi
-            sleep 2
-          done
-          test "$ok" -eq 1'
+          echo "Static files deployed without restarting the planner service."'
 
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
           if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
@@ -70,17 +69,16 @@ jobs:
             printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
           fi
 
-      - name: Verify public URL
+      - name: Verify public URLs
         shell: bash
         run: |
           set -euo pipefail
-          for i in 1 2 3 4 5 6; do
-            code="$(curl -L -sS -o /tmp/jl.html -w '%{http_code}' https://werkstattplaner.grow-central.de/jl/ || true)"
-            if [ "$code" = "200" ] && grep -q "JL 1976" /tmp/jl.html; then
-              echo "https://werkstattplaner.grow-central.de/jl/ ist live."
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "::error::Öffentliche Prüfung von /jl/ fehlgeschlagen."
-          exit 1
+          curl -LfsS https://werkstattplaner.grow-central.de/jl/ -o /tmp/jl.html
+          grep -q "JL 1976" /tmp/jl.html
+
+          curl -LfsS https://werkstattplaner.grow-central.de/jl/demo/ -o /tmp/demo.html
+          grep -q "Workshop Manager Demo" /tmp/demo.html
+          grep -q "demo" /tmp/demo.html
+          grep -q "WerkstattDemo!2026" /tmp/demo.html
+
+          echo "Marketingseite und Demo sind live."
