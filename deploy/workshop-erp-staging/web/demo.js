@@ -41,12 +41,26 @@ async function health(){
 }
 function showLogin(){$('appView').classList.add('hidden');$('loginView').classList.remove('hidden')}
 function showApp(){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden')}
-$('loginForm').onsubmit=async e=>{
- e.preventDefault();$('loginError').textContent='';
+async function performLogin(username,password){
+ $('loginError').textContent='';
  try{
-  const d=await api('/auth/login',{method:'POST',body:JSON.stringify({username:$('user').value,password:$('pass').value})});
-  token=d.access_token;sessionStorage.setItem('wm_erp_token',token);showApp();await loadAll();
- }catch(err){$('loginError').textContent=err.message}
+  const d=await api('/auth/login',{method:'POST',body:JSON.stringify({username,password})});
+  token=d.access_token;
+  sessionStorage.setItem('wm_erp_token',token);
+  showApp();
+  await loadAll();
+ }catch(err){
+  $('loginError').textContent=err.message;
+ }
+}
+$('loginForm').onsubmit=async e=>{
+ e.preventDefault();
+ await performLogin($('user').value.trim(),$('pass').value);
+};
+$('demoLoginBtn').onclick=async()=>{
+ $('user').value=DEMO_USER;
+ $('pass').value=DEMO_PASS;
+ await performLogin(DEMO_USER,DEMO_PASS);
 };
 $('logoutBtn').onclick=()=>{sessionStorage.removeItem('wm_erp_token');token='';location.reload()};
 $('refreshBtn').onclick=()=>loadAll(true);
