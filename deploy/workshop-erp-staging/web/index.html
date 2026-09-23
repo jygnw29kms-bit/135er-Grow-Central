@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08111b">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-staging-mobilelogin2">
 </head>
 <body>
 <div id="loginView" class="login-shell">
@@ -27,12 +27,13 @@
         <p class="muted">Fester Entwicklungszugang</p>
       </div>
       <form id="loginForm">
-        <label>Benutzername<input id="user" value="demo" autocomplete="username" readonly></label>
-        <label>Passwort<input id="pass" type="password" value="WerkstattDemo!2026" autocomplete="current-password" readonly></label>
-        <button type="submit" class="primary wide">Staging öffnen</button>
+        <label>Benutzername<input id="user" value="demo" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+        <label>Passwort<input id="pass" type="password" value="WerkstattDemo!2026" autocomplete="current-password"></label>
+        <button type="submit" class="primary wide">Anmelden</button>
+        <button type="button" id="demoLoginBtn" class="secondary wide">Mit Demo-Zugang anmelden</button>
         <p id="loginError" class="error"></p>
       </form>
-      <div class="login-note">Keine Produktivdaten · Einstellungen und Zugangsdaten sind geschützt.</div>
+      <div class="login-note">Keine Produktivdaten · Demo-Zugang ist vorausgefüllt. Auf iPhone/iPad können die Felder normal bearbeitet werden.</div>
     </section>
   </div>
 </div>
@@ -201,6 +202,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-staging"></script>
+<script src="/jl/demo/demo.js?v=erp4-staging-mobilelogin2"></script>
 </body>
 </html>
