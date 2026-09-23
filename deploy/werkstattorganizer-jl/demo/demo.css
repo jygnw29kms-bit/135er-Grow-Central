@@ -51,3 +51,23 @@ main{padding:24px;max-width:1700px;margin:0 auto}.page-head{display:flex;justify
 @media(max-width:1180px){.commandbar{grid-template-columns:1fr minmax(240px,420px)}.command-actions{grid-column:1/-1}.kpis{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{position:fixed;left:-260px;z-index:40;width:248px;transition:left .18s}.sidebar.open{left:0;box-shadow:30px 0 70px #0008}.mobile-only{display:grid}.commandbar{grid-template-columns:auto 1fr;gap:10px;height:auto}.global-search{grid-column:1/-1}.command-actions{grid-column:1/-1}.login-grid{grid-template-columns:1fr}.brand-panel{min-height:auto;padding:28px}.brand-panel img{width:360px;max-width:100%}.login-card{padding:28px}.form-grid,.check-grid{grid-template-columns:1fr}.span2{grid-column:auto}}
 @media(max-width:600px){main{padding:16px}.page-head{align-items:flex-start;flex-direction:column}.kpis,.cards,.release-grid{grid-template-columns:1fr}.command-actions{flex-wrap:wrap}.user-chip{display:none}.global-search input{font-size:16px}}
+
+.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+.kpi-wide{background:linear-gradient(145deg,#102638,#0d1a27)!important;border-color:#2b536a!important}
+.bar-chart{display:grid;grid-template-columns:repeat(12,minmax(34px,1fr));gap:8px;align-items:end;min-height:280px;padding:20px 4px 0}
+.bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;height:250px}
+.bar-value{font-size:.68rem;color:#9eb4c7;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);max-height:72px}
+.bar{width:min(38px,82%);min-height:4px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#42e8f8,#1687ff);box-shadow:0 6px 18px rgba(22,135,255,.18)}
+.bar-label{font-size:.68rem;color:#71889c;text-transform:uppercase}
+.analytics-split{grid-template-columns:1.35fr .65fr}
+.small{padding:6px 9px;font-size:.74rem}
+@media(max-width:1180px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-wide{grid-column:span 2}
+  .analytics-split{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .kpis{grid-template-columns:1fr}
+  .kpi-wide{grid-column:auto}
+  .bar-chart{overflow-x:auto;grid-template-columns:repeat(12,46px);padding-bottom:6px}
+}
