@@ -31,7 +31,9 @@ builder.Services.AddIdentityCore<ErpIdentityUser>(options =>
 .AddRoles<IdentityRole<Guid>>()
 .AddEntityFrameworkStores<ErpDbContext>();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("WM_JWT_KEY") ?? "";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    jwtKey = Environment.GetEnvironmentVariable("WM_JWT_KEY") ?? "";
 if (jwtKey.Length < 32)
     throw new InvalidOperationException("JWT-Schlüssel fehlt oder ist zu kurz. Setze Jwt:Key oder WM_JWT_KEY mit mindestens 32 Zeichen.");
 
@@ -115,8 +117,12 @@ if (builder.Configuration.GetValue<bool>("DemoSeed"))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ErpDbContext>();
     var users = scope.ServiceProvider.GetRequiredService<UserManager<ErpIdentityUser>>();
-    var bootstrapName = builder.Configuration["BootstrapAdmin:Username"] ?? Environment.GetEnvironmentVariable("WM_BOOTSTRAP_ADMIN");
-    var bootstrapPassword = builder.Configuration["BootstrapAdmin:Password"] ?? Environment.GetEnvironmentVariable("WM_BOOTSTRAP_PASSWORD");
+    var bootstrapName = builder.Configuration["BootstrapAdmin:Username"];
+    if (string.IsNullOrWhiteSpace(bootstrapName))
+        bootstrapName = Environment.GetEnvironmentVariable("WM_BOOTSTRAP_ADMIN");
+    var bootstrapPassword = builder.Configuration["BootstrapAdmin:Password"];
+    if (string.IsNullOrWhiteSpace(bootstrapPassword))
+        bootstrapPassword = Environment.GetEnvironmentVariable("WM_BOOTSTRAP_PASSWORD");
 
     if (!string.IsNullOrWhiteSpace(bootstrapName) && !string.IsNullOrWhiteSpace(bootstrapPassword))
     {
