@@ -1,0 +1,78 @@
+name: Deploy Workshop Manager JL Marketing
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'deploy/werkstattorganizer-jl/**'
+      - '.github/workflows/deploy-werkstattorganizer-jl.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy /jl/ to Werkstattplaner server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          : "${SSH_HOST:?SSH_HOST/SFTP_HOST fehlt}"
+          : "${SSH_USERNAME:?SSH_USERNAME fehlt}"
+          : "${SSH_PASSWORD:?SSH_PASSWORD fehlt}"
+          export SSHPASS="$SSH_PASSWORD"
+
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          tar -C deploy/werkstattorganizer-jl -czf /tmp/workshop-jl.tar.gz .
+
+          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no /tmp/workshop-jl.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/workshop-jl.tar.gz"
+
+          SCRIPT='set -euo pipefail
+          TARGET="/opt/etes-werkstattplaner/public/jl"
+          mkdir -p "$TARGET"
+          rm -rf "$TARGET"/*
+          tar -xzf /tmp/workshop-jl.tar.gz -C "$TARGET"
+          rm -f /tmp/workshop-jl.tar.gz
+          test -f "$TARGET/index.html"
+          test -f "$TARGET/styles.css"
+          systemctl restart etes-werkstattplaner
+          systemctl is-active etes-werkstattplaner
+          curl -fsS http://127.0.0.1:3080/jl/ | grep -q "JL 1976"'
+
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
+
+      - name: Verify public URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            code="$(curl -L -sS -o /tmp/jl.html -w '%{http_code}' https://werkstattplaner.grow-central.de/jl/ || true)"
+            if [ "$code" = "200" ] && grep -q "JL 1976" /tmp/jl.html; then
+              echo "https://werkstattplaner.grow-central.de/jl/ ist live."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Öffentliche Prüfung von /jl/ fehlgeschlagen."
+          exit 1
