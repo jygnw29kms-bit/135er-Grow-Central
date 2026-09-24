@@ -218,3 +218,99 @@ tbody tr:last-child td{border-bottom:0}
   .bar-chart{overflow-x:auto;grid-template-columns:repeat(12,44px);padding-bottom:8px}
   .modal{padding:8px}.modal-card{max-height:96vh;border-radius:10px}
 }
+
+/* Cross-platform planner + adaptive device UX */
+.planner-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.planner-nav{display:flex;align-items:center;gap:7px}
+.planner-nav strong{min-width:180px;text-align:center;font-size:.82rem}
+.segmented{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;background:#fff}
+.segmented button{border:0;border-right:1px solid var(--border);border-radius:0;background:#fff;color:#536575;min-height:34px;padding:7px 10px;font-size:.73rem}
+.segmented button:last-child{border-right:0}
+.segmented button.active{background:#eaf3fb;color:#185f99;font-weight:700}
+.planner-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.planner-summary>div{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.planner-summary span{display:block;color:var(--muted);font-size:.65rem;text-transform:uppercase;letter-spacing:.04em}
+.planner-summary b{display:block;margin-top:2px;font-size:1.04rem}
+.planner-panel{padding:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.scheduler{min-width:980px}
+.scheduler-head,.scheduler-row{display:grid;grid-template-columns:150px repeat(var(--planner-cols,5),minmax(150px,1fr))}
+.scheduler-head{position:sticky;top:0;z-index:3;background:#f5f7f9;border-bottom:1px solid var(--border)}
+.scheduler-head>div{padding:8px 9px;border-right:1px solid var(--border);font-size:.69rem;font-weight:700;color:#617280}
+.scheduler-row{min-height:58px;border-bottom:1px solid #e6ebef}
+.scheduler-row:last-child{border-bottom:0}
+.scheduler-label{padding:9px;border-right:1px solid var(--border);background:#fafbfc;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.scheduler-label b{font-size:.76rem}.scheduler-label span{font-size:.66rem;color:var(--muted)}
+.scheduler-cell{position:relative;min-height:58px;padding:4px;border-right:1px solid #edf1f4;background:#fff}
+.scheduler-cell.weekend{background:#fafbfc}.scheduler-cell.today{background:#f3f8fc}
+.scheduler-event{display:block;width:100%;padding:5px 6px;margin:0 0 3px;border-radius:5px;border-left:3px solid var(--brand);background:#eaf3fb;color:#23465f;font-size:.67rem;line-height:1.25;overflow:hidden}
+.scheduler-event b{display:block;font-size:.68rem}.scheduler-event span{display:block;color:#617587}
+.scheduler-event.absence{border-left-color:#c97828;background:#fff3e2;color:#6f4b21}
+.scheduler-event.success{border-left-color:#34875a;background:#ebf6ef}
+.personnel-scheduler{min-width:920px}
+.personnel-grid-head,.personnel-grid-row{display:grid;grid-template-columns:180px repeat(7,minmax(110px,1fr))}
+.personnel-grid-head{background:#f5f7f9;border-bottom:1px solid var(--border)}
+.personnel-grid-head>div{padding:8px;border-right:1px solid var(--border);font-size:.68rem;font-weight:700;color:#647584}
+.personnel-grid-row{border-bottom:1px solid #e7ecef;min-height:62px}
+.personnel-name{padding:9px;border-right:1px solid var(--border);background:#fafbfc}
+.personnel-name b{display:block;font-size:.78rem}.personnel-name span{display:block;color:var(--muted);font-size:.67rem}
+.personnel-day{padding:5px;border-right:1px solid #edf1f4;background:#fff}
+.capacity-pill{display:block;padding:4px 5px;border-radius:5px;background:#edf5fb;color:#326586;font-size:.64rem;margin-bottom:3px}
+.capacity-pill.absent{background:#fff0df;color:#8b5b21}
+.mobile-planner-list{display:none}
+
+/* iOS / Android / touch */
+@supports(padding:max(0px)){
+  body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  .commandbar{padding-top:max(9px,env(safe-area-inset-top))}
+  .sidebar{padding-bottom:env(safe-area-inset-bottom)}
+  .toast{bottom:max(20px,calc(env(safe-area-inset-bottom) + 10px))}
+}
+@media(pointer:coarse){
+  button,.nav{min-height:44px}
+  .small{min-height:38px;padding:7px 10px}
+  input,select,textarea{min-height:44px;font-size:16px}
+  .check-item{min-height:44px}
+  th,td{padding-top:11px;padding-bottom:11px}
+}
+@media(min-width:700px) and (max-width:1100px){
+  :root{--sidebar-w:214px}
+  main{padding:20px 18px 34px}
+  .sidebar .nav{font-size:.8rem}
+  .scheduler{min-width:840px}
+  .planner-toolbar{align-items:flex-start}
+}
+@media(max-width:699px){
+  .planner-toolbar{align-items:stretch}
+  .planner-nav{width:100%;justify-content:space-between}
+  .planner-nav strong{min-width:0;flex:1}
+  .segmented{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .segmented button{flex:1;white-space:nowrap;min-width:max-content}
+  .planner-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .planner-panel{border:0;background:transparent;box-shadow:none}
+  .scheduler,.personnel-scheduler{min-width:0}
+  .scheduler-head,.scheduler-row,.personnel-grid-head,.personnel-grid-row{display:none}
+  .mobile-planner-list{display:grid;gap:8px;padding:0}
+  .mobile-planner-card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:11px}
+  .mobile-planner-card h4{margin:0 0 5px;font-size:.86rem}
+  .mobile-planner-card p{margin:2px 0;color:var(--muted);font-size:.74rem}
+  .mobile-planner-card .scheduler-event{margin-top:7px}
+  .table-panel{border-radius:8px}
+  table{min-width:720px}
+  .commandbar{position:sticky;top:0}
+  main{padding-bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px))}
+}
+@media(max-width:420px){
+  main{padding-left:10px;padding-right:10px}
+  .commandbar{padding-left:9px;padding-right:9px}
+  .page-actions{width:100%}.page-actions>button{flex:1}
+  .planner-summary{grid-template-columns:1fr 1fr}
+  .login-shell{padding:0}
+  .login-grid{border-radius:0;min-height:100vh}
+  .brand-panel{padding:22px 20px}.login-card{padding:24px 20px}
+}
+@media(orientation:landscape) and (max-height:520px) and (pointer:coarse){
+  .commandbar{position:relative}
+  .brand-panel{display:none}
+  .login-grid{grid-template-columns:1fr;max-width:620px}
+  .login-card{padding:20px 28px}
+}
