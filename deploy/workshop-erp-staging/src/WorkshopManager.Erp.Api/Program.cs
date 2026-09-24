@@ -227,7 +227,7 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/purchase-orders") || p.StartsWith("/api/suppliers")) return write ? "purchasing.write" : "purchasing.read";
     if (p.StartsWith("/api/tires")) return write ? "tires.write" : "tires.read";
     if (p.StartsWith("/api/employees") || p.StartsWith("/api/absences") || p.StartsWith("/api/personnel")) return write ? "personnel.write" : "personnel.read";
-    if (p.StartsWith("/api/invoices") || p.StartsWith("/api/finance") || p.StartsWith("/api/quotes")) return write ? "billing.write" : "billing.read";
+    if (p.StartsWith("/api/invoices") || p.StartsWith("/api/finance") || p.StartsWith("/api/quotes") || p.StartsWith("/api/delivery-notes")) return write ? "billing.write" : "billing.read";
     if (p.StartsWith("/api/resources")) return write ? "resources.write" : "resources.read";
     if (p.StartsWith("/api/reminders") || p.StartsWith("/api/communications")) return write ? "crm.write" : "crm.read";
     if (p.StartsWith("/api/checklists")) return write ? "orders.write" : "orders.read";
@@ -2192,6 +2192,57 @@ app.MapGet("/api/reports/productivity", async (DateOnly? from, DateOnly? to, Erp
     }));
 });
 
+
+
+app.MapGet("/api/delivery-notes", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var docs = await db.DocumentRecords.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.Kind == DocumentKind.DeliveryNote && x.RelatedEntityType == "WorkOrder" && x.RelatedEntityId.HasValue && !x.IsDeleted)
+        .OrderByDescending(x => x.CreatedAt).Take(500).ToListAsync(ct);
+    var orderIds = docs.Select(x => x.RelatedEntityId!.Value).Distinct().ToList();
+    var orders = await db.WorkOrders.AsNoTracking().Where(x => x.TenantId == tenantId && orderIds.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
+    var customerIds = orders.Values.Select(x => x.CustomerId).Distinct().ToList();
+    var vehicleIds = orders.Values.Select(x => x.VehicleId).Distinct().ToList();
+    var customers = await db.Customers.AsNoTracking().Where(x => x.TenantId == tenantId && customerIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+    var vehicles = await db.Vehicles.AsNoTracking().Where(x => x.TenantId == tenantId && vehicleIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+    return Results.Ok(docs.Select(d =>
+    {
+        var o = orders.GetValueOrDefault(d.RelatedEntityId!.Value);
+        if (o is null) return null;
+        return new {
+            id = d.Id, number = d.FileName, createdAt = d.CreatedAt, workOrderId = o.Id, workOrderNumber = o.Number,
+            customerId = o.CustomerId, customerName = customers.GetValueOrDefault(o.CustomerId)?.DisplayName ?? "",
+            vehicleId = o.VehicleId, vehiclePlate = vehicles.GetValueOrDefault(o.VehicleId)?.LicensePlate ?? "",
+            vehicleName = vehicles.TryGetValue(o.VehicleId, out var v) ? $"{v.Make} {v.Model}".Trim() : ""
+        };
+    }).Where(x => x is not null));
+});
+
+app.MapPost("/api/work-orders/{id:guid}/delivery-note", async (Guid id, ErpDbContext db, NumberSequenceService numbers, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (order is null) return Results.NotFound();
+    var hasLines = await db.WorkOrderLines.AnyAsync(x => x.TenantId == tenantId && x.WorkOrderId == id && !x.IsDeleted, ct);
+    if (!hasLines) return Results.Conflict(new { error = "Lieferschein kann ohne Positionen nicht erstellt werden." });
+
+    var number = await numbers.NextAsync(tenantId, order.SiteId, "delivery-note", "LS-", 5, true, ct);
+    var doc = new DocumentRecord
+    {
+        TenantId = tenantId, SiteId = order.SiteId, Kind = DocumentKind.DeliveryNote, FileName = number,
+        MimeType = "application/vnd.workshop-manager.delivery-note", StorageKey = "",
+        RelatedEntityType = "WorkOrder", RelatedEntityId = order.Id, SizeBytes = 0
+    };
+    db.DocumentRecords.Add(doc);
+    db.AuditEntries.Add(new AuditEntry
+    {
+        TenantId = tenantId, EntityType = "DeliveryNote", EntityId = doc.Id, Action = "created",
+        NewJson = System.Text.Json.JsonSerializer.Serialize(new { number, workOrder = order.Number })
+    });
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/delivery-notes/{doc.Id}", new { id = doc.Id, number, workOrderId = order.Id, createdAt = doc.CreatedAt });
+});
 
 app.MapGet("/api/quotes", async (ErpDbContext db, CancellationToken ct) =>
 {
