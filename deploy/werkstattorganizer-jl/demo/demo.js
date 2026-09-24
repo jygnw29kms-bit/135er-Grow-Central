@@ -7,7 +7,8 @@ const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeSt
 let token=sessionStorage.getItem('wm_erp_token')||'';
 let plannerState={date:new Date(),view:'week',axis:'calendar'};
 let personnelPlannerState={date:new Date(),view:'week'};
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],openItems:[],qualifications:[],vacationBalances:[],company:null,numberSequences:[],customFields:[],documentTemplates:[],audit:[],productivity:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
+let serviceState={customerId:null,vehicleId:null,appointmentId:null,orderId:null,invoiceId:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],quotes:[],openItems:[],qualifications:[],vacationBalances:[],company:null,numberSequences:[],customFields:[],documentTemplates:[],audit:[],productivity:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -84,15 +85,15 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
    api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
-   api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),
+   api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),api('/quotes'),
    api('/finance/open-items'),api('/personnel/qualifications'),api('/personnel/vacation-balances?year=2026'),api('/admin/company'),api('/admin/number-sequences'),api('/admin/custom-fields'),api('/admin/document-templates'),api('/admin/audit?limit=100'),api('/reports/productivity'),
    api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary'),
    api('/admin/users'),api('/admin/roles'),api('/admin/permissions')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
@@ -140,6 +141,13 @@ function renderAll(){
  document.querySelectorAll('[data-cancel-appt]').forEach(b=>b.onclick=()=>cancelAppointment(b.dataset.cancelAppt));
 
  renderOrderBoard();
+
+ $('quoteRows').innerHTML=state.quotes.map(q=>{
+  const o=q.workOrder||{}, status=q.converted?'In Auftrag':'KV offen';
+  return '<tr><td><b>'+esc(q.quoteNumber)+'</b></td><td>'+esc(q.customerName||'')+'</td><td>'+esc(q.vehiclePlate||'')+'</td><td>'+fmtMoney(q.netTotal||0)+'</td><td>'+fmtMoney(q.grossTotal||0)+'</td><td><span class="badge '+badge(q.converted?'aktiv':'offen')+'">'+status+'</span></td><td><div class="page-actions"><button class="secondary small" data-quote-detail="'+q.quoteId+'">Öffnen</button>'+(!q.converted?'<button class="primary small" data-quote-convert="'+q.quoteId+'">In Auftrag</button>':'')+'</div></td></tr>';
+ }).join('')||'<tr><td colspan="7">Noch keine Kostenvoranschläge.</td></tr>';
+ document.querySelectorAll('[data-quote-detail]').forEach(b=>b.onclick=()=>openQuote(b.dataset.quoteDetail));
+ document.querySelectorAll('[data-quote-convert]').forEach(b=>b.onclick=()=>convertQuote(b.dataset.quoteConvert));
 
  $('customerRows').innerHTML=state.customers.map(x=>
   '<tr><td>'+esc(x.customerNumber)+'</td><td><b>'+esc(x.displayName)+'</b></td><td>'+esc(x.phone||x.mobile||'')+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(x.city||'')+'</td><td><div class="page-actions"><button class="secondary small" data-customer-history="'+x.id+'">Historie</button><button class="secondary small" data-edit-customer="'+x.id+'">Bearbeiten</button></div></td></tr>'
@@ -201,6 +209,14 @@ function renderAll(){
  document.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>paymentModal(b.dataset.pay));
  document.querySelectorAll('[data-invoice-detail]').forEach(b=>b.onclick=()=>invoiceDetail(b.dataset.invoiceDetail));
  document.querySelectorAll('[data-reverse]').forEach(b=>b.onclick=()=>reverseInvoiceModal(b.dataset.reverse));
+
+
+ $('quoteRows').innerHTML=state.quotes.map(q=>{
+  const o=q.workOrder;
+  const status=q.converted?'In Auftrag umgewandelt':workStatus[o.status]||'Entwurf';
+  return '<tr><td><b>'+esc(q.quoteNumber)+'</b></td><td>'+esc(q.customerName)+'</td><td>'+esc(q.vehiclePlate)+'</td><td>'+fmtMoney(q.netTotal)+'</td><td>'+fmtMoney(q.grossTotal)+'</td><td><span class="badge '+badge(q.converted?'aktiv':'offen')+'">'+esc(status)+'</span></td><td><button class="secondary small" data-open-quote="'+q.quoteId+'">Öffnen</button></td></tr>';
+ }).join('')||'<tr><td colspan="7">Noch keine Kostenvoranschläge.</td></tr>';
+ document.querySelectorAll('[data-open-quote]').forEach(b=>b.onclick=()=>openQuote(b.dataset.openQuote));
 
  $('reminderRows').innerHTML=state.reminders.map(r=>{
   const cu=customer(r.customerId),v=vehicle(r.vehicleId);
@@ -337,6 +353,7 @@ function renderAll(){
  if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
  renderWorkshopPlanner();
  renderPersonnelPlanner();
+ renderServiceDesk();
 }
 function empty(s){return '<div class="row-item"><div class="row-main"><div><span>'+esc(s)+'</span></div></div></div>'}
 function emptyCard(s){return '<article><p>'+esc(s)+'</p></article>'}
@@ -544,6 +561,72 @@ async function cancelAppointment(id){
  try{await api('/appointments/'+id+'/cancel',{method:'POST'});await loadAll();toast('Termin abgesagt.')}catch(e){toast(e.message,true)}
 }
 
+
+function quoteModal(){
+ modalForm('Kostenvoranschlag anlegen',
+  '<div class="form-grid"><label>Kunde<select name="customerId">'+options(state.customers,c=>c.customerNumber+' · '+c.displayName)+'</select></label>'+
+  '<label>Fahrzeug<select name="vehicleId">'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model)+'</select></label>'+
+  '<label class="span2">Kundenwunsch / Leistungsumfang<textarea name="customerRequest" required></textarea></label>'+
+  '<label class="span2">Hinweis / Kalkulationsnotiz<textarea name="note"></textarea></label></div>',
+  async fd=>{
+   const result=await api('/quotes',{method:'POST',body:JSON.stringify({
+    siteId:state.site?.id,customerId:fd.get('customerId'),vehicleId:fd.get('vehicleId'),
+    customerRequest:fd.get('customerRequest'),note:fd.get('note')
+   })});
+   await loadAll();page('quotes');await openQuote(result.quoteId);
+  },
+  'Kostenvoranschlag anlegen'
+ );
+}
+
+async function openQuote(quoteId){
+ const q=state.quotes.find(x=>x.quoteId===quoteId);if(!q)return;
+ try{
+  const d=await api('/work-orders/'+q.workOrder.id),o=d.order;
+  const editable=!q.converted;
+  $('quoteDetail').innerHTML=
+   '<div class="panel-head"><div><h3>'+esc(q.quoteNumber)+' · '+esc(q.vehiclePlate)+'</h3><p>'+esc(q.customerName)+' · '+esc(o.customerRequest||'')+'</p></div><span class="badge '+badge(q.converted?'aktiv':'offen')+'">'+(q.converted?'Auftrag '+esc(o.number):'Entwurf')+'</span></div>'+
+   '<div class="release-grid"><div><b>Netto</b><span>'+fmtMoney(q.netTotal)+'</span></div><div><b>Brutto</b><span>'+fmtMoney(q.grossTotal)+'</span></div><div><b>Positionen</b><span>'+d.lines.length+'</span></div></div>'+
+   '<h3 class="section-gap">Kalkulation</h3><div class="rows">'+
+   (d.lines.length?d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.itemNumber?l.itemNumber+' · ':'')+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' % USt</span></div><div class="page-actions"><b>'+fmtMoney(l.netTotal)+'</b>'+(editable?'<button class="secondary small" data-quote-edit-line="'+l.id+'">Bearbeiten</button><button class="secondary small" data-quote-delete-line="'+l.id+'">Löschen</button>':'')+'</div></div>').join(''):empty('Noch keine Positionen.'))+
+   '</div><h3 class="section-gap">Freigaben</h3><div class="rows">'+
+   (d.approvals?.length?d.approvals.map(a=>'<div class="row-item"><div><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(approvalStatus[a.status]||a.status)+'</span></div></div>').join(''):empty('Noch keine Kundenfreigabe.'))+
+   '</div><div class="page-actions actions-gap">'+
+   (editable?'<button id="quoteAddLineBtn" class="primary">+ Position</button><button id="quoteAddPartBtn" class="secondary">Teil aus Lager</button><button id="quoteApprovalBtn" class="secondary">Freigabe</button><button id="quoteConvertBtn" class="primary">In Auftrag umwandeln</button>':'<button id="quoteOpenOrderBtn" class="primary">Auftrag öffnen</button>')+
+   '<button id="quotePrintBtn" class="secondary">Druckansicht</button></div>';
+  $('quoteDetail').classList.remove('hidden');
+
+  if($('quoteAddLineBtn'))$('quoteAddLineBtn').onclick=()=>lineModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
+  if($('quoteAddPartBtn'))$('quoteAddPartBtn').onclick=()=>inventoryPartModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
+  if($('quoteApprovalBtn'))$('quoteApprovalBtn').onclick=()=>approvalModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
+  if($('quoteConvertBtn'))$('quoteConvertBtn').onclick=()=>convertQuote(quoteId);
+  if($('quoteOpenOrderBtn'))$('quoteOpenOrderBtn').onclick=()=>{page('orders');openOrder(o.id)};
+  $('quotePrintBtn').onclick=()=>printQuote(quoteId);
+  document.querySelectorAll('[data-quote-edit-line]').forEach(b=>b.onclick=()=>lineEditModal(o.id,d.lines.find(l=>l.id===b.dataset.quoteEditLine)));
+  document.querySelectorAll('[data-quote-delete-line]').forEach(b=>b.onclick=async()=>{await deleteOrderLine(o.id,b.dataset.quoteDeleteLine);await loadAll();await openQuote(quoteId)});
+ }catch(e){toast(e.message,true)}
+}
+
+async function convertQuote(id){
+ if(!confirm('Kostenvoranschlag in einen Werkstattauftrag umwandeln? Positionen werden vollständig übernommen.'))return;
+ try{
+  const r=await api('/quotes/'+id+'/convert',{method:'POST'});
+  await loadAll();toast('Auftrag '+r.workOrder.number+' erzeugt.');page('orders');await openOrder(r.workOrder.id);
+ }catch(e){toast(e.message,true)}
+}
+
+async function printQuote(id){
+ const q=state.quotes.find(x=>x.quoteId===id);if(!q)return;
+ const w=window.open('','_blank');
+ if(!w){toast('Popup wurde blockiert. Bitte Popups für die Staging-Seite erlauben.',true);return}
+ try{
+  const d=await api('/work-orders/'+q.workOrder.id);
+  const rows=d.lines.map(l=>'<tr><td>'+esc(l.itemNumber||'')+'</td><td>'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td><td>'+fmtMoney(l.unitNet)+'</td><td>'+fmtMoney(l.netTotal)+'</td></tr>').join('');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(q.quoteNumber)+'</title><style>body{font:14px Arial;padding:32px;color:#17212b}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}.totals{margin-top:24px;text-align:right;font-size:16px}</style></head><body><h1>Kostenvoranschlag '+esc(q.quoteNumber)+'</h1><p><b>'+esc(q.customerName)+'</b><br>'+esc(q.vehiclePlate)+'</p><p>'+esc(d.order.customerRequest||'')+'</p><table><thead><tr><th>Nr.</th><th>Position</th><th>Menge</th><th>Einzel netto</th><th>Gesamt netto</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><b>Netto '+fmtMoney(q.netTotal)+'</b><br><b>Brutto '+fmtMoney(q.grossTotal)+'</b></div></body></html>');
+  w.document.close();w.focus();setTimeout(()=>w.print(),250);
+ }catch(e){w.close();toast(e.message,true)}
+}
+
 function workOrderModal(){
  const customerOpts=options(state.customers,c=>c.customerNumber+' · '+c.displayName);
  const vehicleOpts=options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model);
@@ -556,24 +639,24 @@ function workOrderModal(){
  );
 }
 
-function lineModal(id){
+function lineModal(id,after=null){
  modalForm('Freie Auftragsposition',
  '<div class="form-grid"><label>Art<select name="type"><option value="0">Arbeit</option><option value="1">Teil</option><option value="2">Material</option><option value="3">Gebühr</option><option value="5">Text</option></select></label><label>Artikelnummer<input name="itemNumber"></label><label class="span2">Beschreibung<input name="description" required></label><label>Menge<input name="quantity" type="number" step=".01" value="1"></label><label>Netto Einzel<input name="unitNet" type="number" step=".01" value="0"></label><label>USt %<input name="vatRate" type="number" step=".01" value="19"></label><label>Rabatt %<input name="discountPercent" type="number" step=".01" value="0"></label></div>',
- async f=>{await api('/work-orders/'+id+'/lines',{method:'POST',body:JSON.stringify({type:Number(f.get('type')),itemNumber:f.get('itemNumber'),description:f.get('description'),quantity:Number(f.get('quantity')),unitNet:Number(f.get('unitNet')),vatRate:Number(f.get('vatRate')),discountPercent:Number(f.get('discountPercent'))})});await openOrder(id)}
+ async f=>{await api('/work-orders/'+id+'/lines',{method:'POST',body:JSON.stringify({type:Number(f.get('type')),itemNumber:f.get('itemNumber'),description:f.get('description'),quantity:Number(f.get('quantity')),unitNet:Number(f.get('unitNet')),vatRate:Number(f.get('vatRate')),discountPercent:Number(f.get('discountPercent'))})});if(after)await after();else await openOrder(id)}
  );
 }
 
-function inventoryPartModal(orderId){
+function inventoryPartModal(orderId,after=null){
  const rows=state.inventory.map(i=>'<option value="'+i.id+'">'+esc(i.itemNumber)+' · '+esc(i.description)+' · Bestand '+esc(i.stock)+' · '+esc(fmtMoney(i.saleNet))+'</option>').join('');
  modalForm('Zubehörteil aus Lager übernehmen',
  '<label>Artikel / Zubehörteilenummer<select name="inventoryItemId">'+rows+'</select></label><div class="form-grid"><label>Menge<input name="quantity" type="number" min=".01" step=".01" value="1"></label><label>VK netto (leer = Artikelpreis)<input name="unitNet" type="number" step=".01"></label><label>USt %<input name="vatRate" type="number" step=".01" value="19"></label><label>Rabatt %<input name="discountPercent" type="number" step=".01" value="0"></label></div><label class="check-item"><span>Vom Kunden freigegeben</span><input name="approved" type="checkbox" checked></label>',
- async f=>{await api('/work-orders/'+orderId+'/inventory-line',{method:'POST',body:JSON.stringify({inventoryItemId:f.get('inventoryItemId'),quantity:Number(f.get('quantity')),unitNet:f.get('unitNet')?Number(f.get('unitNet')):null,vatRate:Number(f.get('vatRate')),discountPercent:Number(f.get('discountPercent')),approvedByCustomer:f.get('approved')==='on'})});await openOrder(orderId)}
+ async f=>{await api('/work-orders/'+orderId+'/inventory-line',{method:'POST',body:JSON.stringify({inventoryItemId:f.get('inventoryItemId'),quantity:Number(f.get('quantity')),unitNet:f.get('unitNet')?Number(f.get('unitNet')):null,vatRate:Number(f.get('vatRate')),discountPercent:Number(f.get('discountPercent')),approvedByCustomer:f.get('approved')==='on'})});if(after)await after();else await openOrder(orderId)}
  );
 }
 
-function approvalModal(id){
+function approvalModal(id,after=null){
  modalForm('Kundenfreigabe','<label>Freigabebetrag brutto<input name="offeredGross" type="number" step=".01" required></label><label>Kanal<select name="channel"><option>Link</option><option>Telefon</option><option>E-Mail</option></select></label>',
- async f=>{const a=await api('/work-orders/'+id+'/approvals',{method:'POST',body:JSON.stringify({offeredGross:Number(f.get('offeredGross')),channel:f.get('channel')})});await api('/approvals/'+a.id+'/respond',{method:'POST',body:JSON.stringify({status:1,note:'Staging: Kundenfreigabe bestätigt'})});await openOrder(id)}
+ async f=>{const a=await api('/work-orders/'+id+'/approvals',{method:'POST',body:JSON.stringify({offeredGross:Number(f.get('offeredGross')),channel:f.get('channel')})});await api('/approvals/'+a.id+'/respond',{method:'POST',body:JSON.stringify({status:1,note:'Staging: Kundenfreigabe bestätigt'})});if(after)await after();else await openOrder(id)}
  );
 }
 async function createInvoice(id){try{await api('/invoices/from-work-order/'+id,{method:'POST'});toast('Rechnung erzeugt.');await loadAll();page('billing')}catch(e){toast(e.message,true)}}
@@ -866,9 +949,10 @@ function dialogIntakeModal(){
       customerRequest:fd.get('request')
     })});
 
+    serviceState={customerId,vehicleId,appointmentId:null,orderId:order.id,invoiceId:null};
     await loadAll();
-    page('orders');
-    await openOrder(order.id);
+    page('service-desk');
+    renderServiceDesk();
   },
   'Vorgang anlegen'
  );
@@ -1086,6 +1170,7 @@ $('saveIntake').onclick=async()=>{
 $('absenceBtn').onclick=absenceModal;
 $('dialogIntakeBtn').onclick=dialogIntakeModal;
 $('newOrderBtn').onclick=workOrderModal;
+$('newQuoteBtn').onclick=quoteModal;
 $('newInventoryBtn').onclick=()=>inventoryModal();
 $('newSupplierBtn').onclick=supplierModal;
 $('newReminderBtn').onclick=()=>reminderModal();
@@ -1107,6 +1192,110 @@ $('quickBtn').onclick=()=>appointmentModal();
 $('customerSearchBtn').onclick=async()=>{try{state.customers=await api('/customers?q='+encodeURIComponent($('customerSearch').value));renderAll()}catch(e){toast(e.message,true)}};
 $('vehicleSearchBtn').onclick=async()=>{try{state.vehicles=await api('/vehicles?q='+encodeURIComponent($('vehicleSearch').value));renderAll()}catch(e){toast(e.message,true)}};
 
+
+
+function serviceCurrent(){
+ const order=state.orders.find(o=>o.id===serviceState.orderId)||null;
+ const appointment=state.appointments.find(a=>a.id===serviceState.appointmentId)||null;
+ const customerObj=customer(serviceState.customerId||order?.customerId||appointment?.customerId);
+ const vehicleObj=vehicle(serviceState.vehicleId||order?.vehicleId||appointment?.vehicleId);
+ const invoice=state.invoices.find(i=>i.id===serviceState.invoiceId)||
+  state.invoices.find(i=>order&&i.workOrderId===order.id&&Number(i.grossTotal)>=0&&i.status!==5&&i.status!==6)||null;
+ return {order,appointment,customer:customerObj,vehicle:vehicleObj,invoice};
+}
+function serviceStatusStep(order,invoice){
+ if(invoice&&invoice.status===3)return 10;
+ if(invoice)return 9;
+ if(!order)return 1;
+ if(order.status>=9)return 9;
+ if(order.status>=7)return 8;
+ if(order.status>=6)return 7;
+ if(order.status>=5)return 7;
+ if(order.status>=4)return 6;
+ if(order.status>=3)return 5;
+ return 4;
+}
+function renderServiceDesk(){
+ if(!$('serviceContext'))return;
+ const x=serviceCurrent();
+ const activeStep=serviceStatusStep(x.order,x.invoice);
+ document.querySelectorAll('[data-service-step]').forEach((b,idx)=>b.classList.toggle('active',idx+1===activeStep));
+
+ $('serviceContext').innerHTML=
+  '<div class="context-card"><span>Kunde</span><b>'+esc(x.customer?.displayName||'Noch nicht gewählt')+'</b></div>'+
+  '<div class="context-card"><span>Fahrzeug</span><b>'+esc(x.vehicle?x.vehicle.licensePlate+' · '+(x.vehicle.make||'')+' '+(x.vehicle.model||''):'Noch nicht gewählt')+'</b></div>'+
+  '<div class="context-card"><span>Termin</span><b>'+esc(x.appointment?fmtDateTime(x.appointment.startsAt)+' · '+x.appointment.subject:'Direktannahme / kein Termin')+'</b></div>'+
+  '<div class="context-card"><span>Auftrag</span><b>'+esc(x.order?x.order.number+' · '+workStatus[x.order.status]:'Noch kein Auftrag')+'</b></div>'+
+  '<div class="context-card"><span>Rechnung</span><b>'+esc(x.invoice?x.invoice.number+' · '+invoiceStatus[x.invoice.status]:'Noch keine Rechnung')+'</b></div>';
+
+ const actions=[];
+ actions.push(['Kunde suchen / anlegen',()=>customerModal(x.customer||null),'secondary']);
+ if(x.customer)actions.push(['Fahrzeug anlegen / ändern',()=>vehicleModal(x.vehicle||null),'secondary']);
+ if(x.customer&&x.vehicle&&!x.order)actions.push(['Direktauftrag eröffnen',()=>workOrderModal(),'primary']);
+ if(!x.order)actions.push(['Dialogannahme komplett',dialogIntakeModal,'primary']);
+ if(x.order){
+  actions.push(['Auftrag öffnen',()=>{page('orders');openOrder(x.order.id)},'primary']);
+  if(x.order.status<=3)actions.push(['Fahrzeugannahme',()=>{page('intake');$('intakeOrder').value=x.order.id},'secondary']);
+  actions.push(['Teil / Zubehör hinzufügen',()=>inventoryPartModal(x.order.id,async()=>{await loadAll();renderServiceDesk()}),'secondary']);
+  actions.push(['Arbeitsposition hinzufügen',()=>lineModal(x.order.id,async()=>{await loadAll();renderServiceDesk()}),'secondary']);
+  if(x.order.status>=4&&x.order.status<=6)actions.push(['Kundenfreigabe',()=>approvalModal(x.order.id,async()=>{await loadAll();renderServiceDesk()}),'secondary']);
+  if(x.order.status>=6&&x.order.status<9)actions.push(['Arbeitszeit starten',()=>timeStartModal(x.order.id),'secondary']);
+  if(x.order.status===9&&!x.invoice)actions.push(['Rechnung erzeugen',()=>createInvoice(x.order.id),'primary']);
+ }
+ if(x.invoice){
+  actions.push(['Rechnung öffnen',()=>invoiceDetail(x.invoice.id),'primary']);
+  if(x.invoice.status!==3&&x.invoice.status!==5&&x.invoice.status!==6)actions.push(['Zahlung erfassen',()=>paymentModal(x.invoice.id),'primary']);
+  if(x.invoice.status!==5&&x.invoice.status!==6)actions.push(['Storno / Gutschrift',()=>reverseInvoiceModal(x.invoice.id),'secondary']);
+ }
+ $('serviceActions').innerHTML=actions.map((a,i)=>'<button class="'+a[2]+'" data-service-action="'+i+'">'+esc(a[0])+'</button>').join('');
+ document.querySelectorAll('[data-service-action]').forEach(b=>b.onclick=actions[Number(b.dataset.serviceAction)][1]);
+
+ const today=keyDate(new Date());
+ const todaysAppointments=state.appointments.filter(a=>String(a.startsAt).slice(0,10)===today&&a.status!==4);
+ const openOrders=state.orders.filter(o=>o.status!==11&&o.status!==12).slice(0,12);
+ const appointmentRows=todaysAppointments.map(a=>{
+  const cu=customer(a.customerId),v=vehicle(a.vehicleId);
+  return '<div class="row-item"><div class="row-main"><div><b>'+fmtDateTime(a.startsAt)+' · '+esc(a.subject)+'</b><span>'+esc(cu?.displayName||'')+' · '+esc(v?.licensePlate||'')+'</span></div></div><button class="secondary small" data-service-appt="'+a.id+'">Übernehmen</button></div>';
+ });
+ const orderRows=openOrders.map(o=>{
+  const cu=customer(o.customerId),v=vehicle(o.vehicleId);
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(v?.licensePlate||'')+'</b><span>'+esc(cu?.displayName||'')+' · '+esc(workStatus[o.status])+'</span></div></div><button class="secondary small" data-service-order="'+o.id+'">Weiterarbeiten</button></div>';
+ });
+ $('serviceTodayRows').innerHTML=[...appointmentRows,...orderRows].join('')||empty('Heute keine offenen Vorgänge.');
+ document.querySelectorAll('[data-service-order]').forEach(b=>b.onclick=()=>{
+  const o=state.orders.find(x=>x.id===b.dataset.serviceOrder);if(!o)return;
+  serviceState={customerId:o.customerId,vehicleId:o.vehicleId,appointmentId:o.appointmentId||null,orderId:o.id,invoiceId:null};
+  renderServiceDesk();
+ });
+ document.querySelectorAll('[data-service-appt]').forEach(b=>b.onclick=async()=>{
+  const a=state.appointments.find(x=>x.id===b.dataset.serviceAppt);if(!a)return;
+  if(a.workOrderId){
+   serviceState={customerId:a.customerId,vehicleId:a.vehicleId,appointmentId:a.id,orderId:a.workOrderId,invoiceId:null};
+   renderServiceDesk();return;
+  }
+  try{
+   const o=await api('/work-orders/from-appointment/'+a.id,{method:'POST'});
+   serviceState={customerId:a.customerId,vehicleId:a.vehicleId,appointmentId:a.id,orderId:o.id,invoiceId:null};
+   await loadAll();renderServiceDesk();
+  }catch(e){toast(e.message,true)}
+ });
+}
+
+$('serviceStartBtn').onclick=()=>{serviceState={customerId:null,vehicleId:null,appointmentId:null,orderId:null,invoiceId:null};dialogIntakeModal()};
+document.querySelectorAll('[data-service-step]').forEach(b=>b.onclick=()=>{
+ const step=b.dataset.serviceStep,x=serviceCurrent();
+ if(step==='customer')return customerModal(x.customer||null);
+ if(step==='vehicle')return x.customer?vehicleModal(x.vehicle||null):customerModal();
+ if(step==='appointment')return appointmentModal(x.appointment||null);
+ if(step==='order')return x.order?(page('orders'),openOrder(x.order.id)):workOrderModal();
+ if(step==='intake')return x.order?(page('intake'),$('intakeOrder').value=x.order.id):dialogIntakeModal();
+ if(step==='parts')return x.order?inventoryPartModal(x.order.id,async()=>{await loadAll();renderServiceDesk()}):toast('Zuerst Auftrag anlegen.',true);
+ if(step==='approval')return x.order?approvalModal(x.order.id,async()=>{await loadAll();renderServiceDesk()}):toast('Zuerst Auftrag anlegen.',true);
+ if(step==='work')return x.order?(page('orders'),openOrder(x.order.id)):toast('Zuerst Auftrag anlegen.',true);
+ if(step==='invoice')return x.invoice?invoiceDetail(x.invoice.id):(x.order&&x.order.status===9?createInvoice(x.order.id):toast('Auftrag muss zuerst fertiggestellt werden.',true));
+ if(step==='payment')return x.invoice?paymentModal(x.invoice.id):toast('Noch keine Rechnung vorhanden.',true);
+});
+$('newQuoteBtn').onclick=quoteModal;
 
 function platformAdapt(){
  const ua=navigator.userAgent||'';
