@@ -350,7 +350,9 @@ function renderAll(){
  document.querySelectorAll('[data-edit-resource]').forEach(b=>b.onclick=()=>resourceModal(state.resources.find(r=>r.id===b.dataset.editResource)));
 
  $('intakeOrder').innerHTML=state.orders.filter(o=>o.status<10&&o.status!==12).map(o=>'<option value="'+o.id+'">'+esc(o.number)+' · '+esc(vehicle(o.vehicleId)?.licensePlate||'')+'</option>').join('');
- if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
+ const intakeTemplate=state.checklists.find(x=>String((x.template||x).context||'').toLowerCase()==='intake')||state.checklists.find(x=>String((x.template||x).name||'').toLowerCase().includes('annahme'));
+ const intakeFields=intakeTemplate?.fields||[];
+ $('checkItems').innerHTML=(intakeFields.length?intakeFields.map(f=>'<label class="check-item"><span>'+esc(f.label)+(f.required?' *':'')+'</span><select data-intake-field="'+f.id+'"><option value="ok">OK</option><option value="defect">Mangel</option><option value="na">n/a</option></select></label>'):['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><select><option value="ok">OK</option><option value="defect">Mangel</option><option value="na">n/a</option></select></label>')).join('');
  renderWorkshopPlanner();
  renderPersonnelPlanner();
  renderServiceDesk();
@@ -383,8 +385,9 @@ async function openOrder(id){
    (d.lines.length?'<div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.itemNumber?l.itemNumber+' · ':'')+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' % USt'+(l.approvedByCustomer?' · freigegeben':'')+'</span></div><div class="page-actions"><b>'+fmtMoney(l.netTotal)+'</b>'+(editable?'<button class="secondary small" data-edit-line="'+l.id+'">Bearbeiten</button><button class="secondary small" data-delete-line="'+l.id+'">Löschen</button>':'')+'</div></div>').join('')+'</div>':'<p class="muted">Noch keine Positionen.</p>')+
    '<h3 class="section-gap">Zeiterfassung</h3><div class="rows">'+(d.times.length?d.times.map(t=>'<div class="row-item"><div><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+fmtDateTime(t.startedAt)+' · '+esc(t.activity||'Arbeitszeit')+'</span></div><div>'+(t.endedAt?fmtDateTime(t.endedAt):'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div></div>').join(''):empty('Keine Zeiterfassung.'))+'</div>'+
    '<h3 class="section-gap">Kundenfreigaben</h3><div class="rows">'+(d.approvals?.length?d.approvals.map(a=>'<div class="row-item"><div><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(['Offen','Freigegeben','Abgelehnt','Abgelaufen'][a.status]||a.status)+'</span></div></div>').join(''):empty('Keine Freigaben.'))+'</div>'+
+   '<h3 class="section-gap">Prüfprotokolle</h3><div class="rows">'+((state.checklistRuns||[]).filter(r=>r.workOrderId===o.id).length?(state.checklistRuns||[]).filter(r=>r.workOrderId===o.id).map(r=>{const t=state.checklists.find(x=>(x.template||x).id===r.checklistTemplateId);return'<div class="row-item"><div><b>'+esc((t?.template||t)?.name||'Checkliste')+'</b><span>'+fmtDateTime(r.startedAt)+(r.completedAt?' · abgeschlossen':' · offen')+'</span></div><span class="badge '+badge(r.completedAt?'fertig':'offen')+'">'+(r.completedAt?'Fertig':'Offen')+'</span></div>'}).join(''):empty('Noch kein Prüfprotokoll.'))+'</div>'+
    '<div class="page-actions actions-gap">'+
-   (editable?'<button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="addPartBtn">Teil aus Lager</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>':'')+
+   (editable?'<button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="addPartBtn">Teil aus Lager</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>'+(o.status===8?'<button class="secondary" id="qcChecklistBtn">QC-Checkliste</button>':''):'')+
    (next!==null&&o.status<10?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+
    (o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
 
@@ -394,6 +397,10 @@ async function openOrder(id){
   if($('addPartBtn'))$('addPartBtn').onclick=()=>inventoryPartModal(id);
   if($('approvalBtn'))$('approvalBtn').onclick=()=>approvalModal(id);
   if($('startTimeBtn'))$('startTimeBtn').onclick=()=>timeStartModal(id);
+  if($('qcChecklistBtn')){
+   const qc=state.checklists.find(x=>String((x.template||x).context||'').toLowerCase().includes('quality'))||state.checklists.find(x=>String((x.template||x).name||'').toLowerCase().includes('qualität'));
+   $('qcChecklistBtn').onclick=()=>qc?checklistModal((qc.template||qc).id,id):toast('Keine QC-Checkliste konfiguriert.',true);
+  }
   document.querySelectorAll('[data-edit-line]').forEach(b=>b.onclick=()=>lineEditModal(id,d.lines.find(l=>l.id===b.dataset.editLine)));
   document.querySelectorAll('[data-delete-line]').forEach(b=>b.onclick=()=>deleteOrderLine(id,b.dataset.deleteLine));
   document.querySelectorAll('[data-stop-time]').forEach(b=>b.onclick=()=>stopTime(id,b.dataset.stopTime));
@@ -760,7 +767,7 @@ async function cancelReminder(id){
 function communicationModal(){
  modalForm('Kundenkontakt dokumentieren',
   '<div class="form-grid"><label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName)+'</select></label>'+
-  '<label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model)+'</select></label>'+
+  '<label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model,presetOrder?.vehicleId||null)+'</select></label>'+
   '<label>Auftrag<select name="workOrderId"><option value="">–</option>'+options(state.orders,o=>o.number+' · '+(vehicle(o.vehicleId)?.licensePlate||''))+'</select></label>'+
   '<label>Kanal<select name="channel"><option value="2">Telefon</option><option value="0">E-Mail</option><option value="1">SMS</option><option value="3">WhatsApp</option><option value="4">Brief</option><option value="5">In-App</option></select></label>'+
   '<label>Richtung<select name="direction"><option value="outbound">Ausgehend</option><option value="inbound">Eingehend</option></select></label>'+
@@ -821,10 +828,11 @@ function checklistTemplateModal(existing=null){
  );
 }
 
-function checklistModal(templateId){
+function checklistModal(templateId,presetOrderId=null){
  const item=state.checklists.find(x=>(x.template||x).id===templateId); if(!item)return;
  const t=item.template||item,fields=item.fields||[];
- const body='<label>Auftrag<select name="workOrderId"><option value="">–</option>'+options(state.orders,o=>o.number+' · '+(vehicle(o.vehicleId)?.licensePlate||''))+'</select></label>'+
+ const presetOrder=state.orders.find(o=>o.id===presetOrderId);
+ const body='<label>Auftrag<select name="workOrderId"><option value="">–</option>'+options(state.orders,o=>o.number+' · '+(vehicle(o.vehicleId)?.licensePlate||''),presetOrderId)+'</select></label>'+
  '<label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model)+'</select></label>'+
  '<label>Mitarbeiter<select name="employeeId"><option value="">–</option>'+options(state.employees,e=>e.name)+'</select></label>'+
  fields.map(f=>'<label class="check-item"><span>'+esc(f.label)+(f.required?' *':'')+'</span><select name="field_'+f.id+'"><option value="ok">OK</option><option value="defect">Mangel</option><option value="na">n/a</option></select></label>').join('');
@@ -1161,7 +1169,15 @@ $('saveIntake').onclick=async()=>{
     customerRequest:$('intakeRequest').value
    })
   });
-  toast('Fahrzeugannahme gespeichert.');
+  const intakeTemplate=state.checklists.find(x=>String((x.template||x).context||'').toLowerCase()==='intake')||state.checklists.find(x=>String((x.template||x).name||'').toLowerCase().includes('annahme'));
+  if(intakeTemplate){
+   const t=intakeTemplate.template||intakeTemplate;
+   const order=state.orders.find(o=>o.id===id);
+   const run=await api('/checklists/run',{method:'POST',body:JSON.stringify({checklistTemplateId:t.id,workOrderId:id,vehicleId:order?.vehicleId||null,employeeId:null})});
+   const answers=[...document.querySelectorAll('[data-intake-field]')].map(el=>({fieldId:el.dataset.intakeField,valueJson:JSON.stringify(el.value)}));
+   await api('/checklists/run/'+run.id+'/complete',{method:'POST',body:JSON.stringify({answers})});
+  }
+  toast('Fahrzeugannahme und Prüfprotokoll gespeichert.');
   await loadAll();
   page('orders');
   await openOrder(id);
