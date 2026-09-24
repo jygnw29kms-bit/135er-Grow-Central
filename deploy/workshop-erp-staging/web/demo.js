@@ -375,29 +375,58 @@ async function openOrder(id){
  try{
   const d=await api('/work-orders/'+id),o=d.order,v=vehicle(o.vehicleId),cu=customer(o.customerId);
   const next=nextStatus(o.status),editable=o.status<10;
-  const steps=[['Anlage',0],['Geplant',1],['Ankunft',2],['Annahme',3],['Diagnose',4],['Freigabe',5],['Freigegeben',6],['Arbeit',7],['QC',8],['Fertig',9],['Rechnung',10],['Abgeschlossen',11]];
-  const stepper='<div class="workflow-strip">'+steps.map(([name,code])=>'<span class="'+(o.status===code?'current':o.status>code?'done':'')+'">'+esc(name)+'</span>').join('')+'</div>';
+  const net=d.lines.reduce((s,l)=>s+Number(l.netTotal||0),0);
+  const vat=d.lines.reduce((s,l)=>s+Number(l.netTotal||0)*Number(l.vatRate||0)/100,0);
+  const gross=net+vat;
+  const released=(d.approvals||[]).some(a=>Number(a.status)===1);
+  const activeTimes=(d.times||[]).filter(t=>!t.endedAt).length;
+  const docs='<button class="secondary small" id="orderPrintBtn">Auftrag drucken</button><button class="secondary small" id="deliveryNoteBtn">Lieferschein</button>';
+  const lineRows=d.lines.map((l,idx)=>'<tr><td class="pos-no">'+(idx+1)+'</td><td><b>'+esc(l.itemNumber||'')+'</b></td><td class="desc-cell">'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td><td>'+fmtMoney(l.unitNet)+'</td><td>'+esc(l.discountPercent||0)+' %</td><td>'+esc(l.vatRate)+' %</td><td><b>'+fmtMoney(l.netTotal)+'</b></td><td>'+(l.approvedByCustomer?'<span class="mini-ok">✓</span>':'')+'</td><td>'+(editable?'<button class="icon-mini" data-edit-line="'+l.id+'" title="Bearbeiten">✎</button><button class="icon-mini danger" data-delete-line="'+l.id+'" title="Löschen">×</button>':'')+'</td></tr>').join('');
+  const timeline=(d.times||[]).map(t=>'<div class="compact-event"><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+esc(t.activity||'Arbeitszeit')+' · '+fmtDateTime(t.startedAt)+(t.endedAt?' – '+fmtDateTime(t.endedAt):' · läuft')+'</span>'+(t.endedAt?'':'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div>').join('')||'<p class="muted">Keine Zeiten erfasst.</p>';
+  const approvals=(d.approvals||[]).map(a=>'<div class="compact-event"><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(approvalStatus[a.status]||a.status)+'</span></div>').join('')||'<p class="muted">Keine Kundenfreigabe.</p>';
 
   $('orderDetail').innerHTML=
-   '<div class="panel-head"><div><h3>'+esc(o.number)+' · '+esc(v?.licensePlate||'')+'</h3><p>'+esc(cu?.displayName||'')+' · '+esc(v?((v.make||'')+' '+(v.model||'')):'')+'</p></div><div class="page-actions"><span class="badge '+badge(workStatus[o.status])+'">'+esc(workStatus[o.status])+'</span>'+(editable?'<button class="secondary small" id="editOrderBtn">Auftrag bearbeiten</button>':'')+'</div></div>'+
-   stepper+
-   '<div class="release-grid"><div><b>Kundenwunsch</b><span>'+esc(o.customerRequest||'–')+'</span></div><div><b>Diagnose</b><span>'+esc(o.diagnosis||'–')+'</span></div><div><b>Fertig bis</b><span>'+fmtDateTime(o.promisedAt)+'</span></div><div><b>Kilometer</b><span>'+esc(o.mileageIn??'–')+'</span></div><div><b>Tank/Ladung</b><span>'+esc(o.fuelOrChargeLevel||'–')+'</span></div></div>'+
-   '<h3 class="section-gap">Positionen</h3>'+
-   (d.lines.length?'<div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.itemNumber?l.itemNumber+' · ':'')+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' % USt'+(l.approvedByCustomer?' · freigegeben':'')+'</span></div><div class="page-actions"><b>'+fmtMoney(l.netTotal)+'</b>'+(editable?'<button class="secondary small" data-edit-line="'+l.id+'">Bearbeiten</button><button class="secondary small" data-delete-line="'+l.id+'">Löschen</button>':'')+'</div></div>').join('')+'</div>':'<p class="muted">Noch keine Positionen.</p>')+
-   '<h3 class="section-gap">Zeiterfassung</h3><div class="rows">'+(d.times.length?d.times.map(t=>'<div class="row-item"><div><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+fmtDateTime(t.startedAt)+' · '+esc(t.activity||'Arbeitszeit')+'</span></div><div>'+(t.endedAt?fmtDateTime(t.endedAt):'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div></div>').join(''):empty('Keine Zeiterfassung.'))+'</div>'+
-   '<h3 class="section-gap">Kundenfreigaben</h3><div class="rows">'+(d.approvals?.length?d.approvals.map(a=>'<div class="row-item"><div><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(['Offen','Freigegeben','Abgelehnt','Abgelaufen'][a.status]||a.status)+'</span></div></div>').join(''):empty('Keine Freigaben.'))+'</div>'+
-   '<h3 class="section-gap">Prüfprotokolle</h3><div class="rows">'+((state.checklistRuns||[]).filter(r=>r.workOrderId===o.id).length?(state.checklistRuns||[]).filter(r=>r.workOrderId===o.id).map(r=>{const t=state.checklists.find(x=>(x.template||x).id===r.checklistTemplateId);return'<div class="row-item"><div><b>'+esc((t?.template||t)?.name||'Checkliste')+'</b><span>'+fmtDateTime(r.startedAt)+(r.completedAt?' · abgeschlossen':' · offen')+'</span></div><span class="badge '+badge(r.completedAt?'fertig':'offen')+'">'+(r.completedAt?'Fertig':'Offen')+'</span></div>'}).join(''):empty('Noch kein Prüfprotokoll.'))+'</div>'+
-   '<div class="page-actions actions-gap">'+
-   (editable?'<button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="addPartBtn">Teil aus Lager</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>'+(o.status===8?'<button class="secondary" id="qcChecklistBtn">QC-Checkliste</button>':''):'')+
-   (next!==null&&o.status<10?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+
-   (o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
+   '<div class="doc-workbench">'+
+    '<header class="doc-command-header">'+
+      '<div class="doc-title-block"><span class="doc-type">WERKSTATTAUFTRAG</span><h2>'+esc(o.number)+'</h2><div class="doc-ident"><strong>'+esc(v?.licensePlate||'–')+'</strong><span>'+esc(cu?.displayName||'–')+'</span><span>'+esc([v?.make,v?.model,v?.type].filter(Boolean).join(' '))+'</span></div></div>'+
+      '<div class="doc-header-status"><span class="badge '+badge(workStatus[o.status])+'">'+esc(workStatus[o.status])+'</span><small>Fertig bis '+fmtDateTime(o.promisedAt)+'</small></div>'+
+      '<div class="doc-header-actions">'+docs+(editable?'<button class="secondary small" id="editOrderBtn">Kopfdaten</button>':'')+'</div>'+
+    '</header>'+
+    '<div class="doc-progress">'+[['Anlage',0],['Annahme',3],['Diagnose',4],['Freigabe',5],['Arbeit',7],['QC',8],['Fertig',9],['Rechnung',10]].map(([n,s])=>'<span class="'+(o.status===s?'current':o.status>s?'done':'')+'">'+n+'</span>').join('')+'</div>'+
+    '<div class="doc-main-grid">'+
+      '<main class="doc-center">'+
+        '<section class="doc-info-grid">'+
+          '<div><label>Kundenwunsch</label><p>'+esc(o.customerRequest||'–')+'</p></div>'+
+          '<div><label>Diagnose / Werkstatthinweis</label><p>'+esc(o.diagnosis||'–')+'</p></div>'+
+          '<div><label>Kilometer</label><p>'+esc(o.mileageIn??v?.mileage??'–')+'</p></div>'+
+          '<div><label>Tank/Ladung</label><p>'+esc(o.fuelOrChargeLevel||'–')+'</p></div>'+
+        '</section>'+
+        '<section class="doc-lines-section"><div class="doc-section-head"><div><h3>Positionen</h3><span>'+d.lines.length+' Positionen</span></div><div class="doc-section-actions">'+(editable?'<button class="primary small" id="addLineBtn">+ freie Position</button><button class="secondary small" id="addPartBtn">+ Lagerteil</button><button class="secondary small" id="openCatalogBtn">AAG-Katalog</button>':'')+'</div></div>'+
+        '<div class="doc-table-wrap"><table class="doc-lines-table"><thead><tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einzel netto</th><th>Rabatt</th><th>USt</th><th>Gesamt</th><th>OK</th><th></th></tr></thead><tbody>'+lineRows+'</tbody></table></div></section>'+
+        '<section class="doc-bottom-tabs"><details open><summary>Zeiten <span class="count-pill">'+(d.times||[]).length+'</span></summary>'+timeline+'</details><details><summary>Freigaben <span class="count-pill">'+(d.approvals||[]).length+'</span></summary>'+approvals+'</details><details><summary>Prüfprotokolle <span class="count-pill">'+(state.checklistRuns||[]).filter(r=>r.workOrderId===o.id).length+'</span></summary><div class="compact-event"><span>QC/Annahme-Checklisten zum Auftrag</span></div></details></section>'+
+      '</main>'+
+      '<aside class="doc-side">'+
+        '<div class="doc-side-card"><h4>Kalkulation</h4><div><span>Netto</span><b>'+fmtMoney(net)+'</b></div><div><span>USt</span><b>'+fmtMoney(vat)+'</b></div><div class="grand"><span>Brutto</span><b>'+fmtMoney(gross)+'</b></div></div>'+
+        '<div class="doc-side-card"><h4>Auftragsstatus</h4><div><span>Kundenfreigabe</span><b>'+(released?'✓ erteilt':'offen')+'</b></div><div><span>laufende Zeiten</span><b>'+activeTimes+'</b></div><div><span>Positionen</span><b>'+d.lines.length+'</b></div></div>'+
+        '<div class="doc-side-actions">'+
+          (editable?'<button class="secondary wide" id="approvalBtn">Kundenfreigabe</button><button class="secondary wide" id="startTimeBtn">Zeit starten</button>':'')+
+          (o.status===8?'<button class="secondary wide" id="qcChecklistBtn">QC-Checkliste</button>':'')+
+          (next!==null&&o.status<10?'<button class="primary wide" id="nextStatusBtn">Weiter: '+esc(workStatus[next])+'</button>':'')+
+          (o.status===9?'<button class="primary wide" id="invoiceBtn">Rechnung erstellen</button>':'')+
+        '</div>'+
+      '</aside>'+
+    '</div>'+
+   '</div>';
 
   $('orderDetail').classList.remove('hidden');
   if($('editOrderBtn'))$('editOrderBtn').onclick=()=>workOrderEditModal(o);
   if($('addLineBtn'))$('addLineBtn').onclick=()=>lineModal(id);
   if($('addPartBtn'))$('addPartBtn').onclick=()=>inventoryPartModal(id);
+  if($('openCatalogBtn'))$('openCatalogBtn').onclick=()=>page('catalog');
   if($('approvalBtn'))$('approvalBtn').onclick=()=>approvalModal(id);
   if($('startTimeBtn'))$('startTimeBtn').onclick=()=>timeStartModal(id);
+  if($('orderPrintBtn'))$('orderPrintBtn').onclick=()=>printWorkOrder(id);
+  if($('deliveryNoteBtn'))$('deliveryNoteBtn').onclick=()=>printDeliveryNote(id);
   if($('qcChecklistBtn')){
    const qc=state.checklists.find(x=>String((x.template||x).context||'').toLowerCase().includes('quality'))||state.checklists.find(x=>String((x.template||x).name||'').toLowerCase().includes('qualität'));
    $('qcChecklistBtn').onclick=()=>qc?checklistModal((qc.template||qc).id,id):toast('Keine QC-Checkliste konfiguriert.',true);
@@ -408,6 +437,17 @@ async function openOrder(id){
   if($('nextStatusBtn'))$('nextStatusBtn').onclick=()=>transition(id,next);
   if($('invoiceBtn'))$('invoiceBtn').onclick=()=>createInvoice(id);
  }catch(e){toast(e.message,true)}
+}
+
+async function printWorkOrder(id){return printOperationalDocument(id,'Werkstattauftrag')}
+async function printDeliveryNote(id){return printOperationalDocument(id,'Lieferschein')}
+async function printOperationalDocument(id,title){
+ const w=window.open('','_blank');if(!w)return toast('Popup blockiert.',true);
+ try{
+  const d=await api('/work-orders/'+id),o=d.order,cu=customer(o.customerId),v=vehicle(o.vehicleId);
+  const rows=d.lines.filter(l=>title!=='Lieferschein'||Number(l.type)!==0).map((l,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(l.itemNumber||'')+'</td><td>'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td>'+(title==='Lieferschein'?'':'<td>'+fmtMoney(l.unitNet)+'</td><td>'+fmtMoney(l.netTotal)+'</td>')+'</tr>').join('');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+' '+esc(o.number)+'</title><style>body{font:14px Arial;padding:30px;color:#17212b}h1{margin:0 0 4px}.head{display:flex;justify-content:space-between}.box{margin:25px 0;padding:15px 0;border-top:1px solid #bbb;border-bottom:1px solid #bbb}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}.sign{margin-top:60px;display:flex;gap:80px}.sign div{border-top:1px solid #555;padding-top:8px;width:260px}</style></head><body><div class="head"><div><h1>'+esc(title)+'</h1><b>'+esc(o.number)+'</b></div><div>'+new Date().toLocaleDateString('de-DE')+'</div></div><div class="box"><b>'+esc(cu?.displayName||'')+'</b><br>Fahrzeug: '+esc(v?.licensePlate||'')+' · '+esc([v?.make,v?.model].filter(Boolean).join(' '))+'<br>VIN: '+esc(v?.vin||'–')+' · km: '+esc(o.mileageIn??v?.mileage??'–')+'</div><p><b>Kundenwunsch:</b> '+esc(o.customerRequest||'–')+'</p><table><thead><tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th>'+(title==='Lieferschein'?'':'<th>Einzel</th><th>Gesamt</th>')+'</tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div>Werkstatt</div><div>Kunde / Empfang</div></div></body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),250);
+ }catch(e){w.close();toast(e.message,true)}
 }
 
 function workOrderEditModal(order){
@@ -607,25 +647,25 @@ function quoteModal(){
 async function openQuote(quoteId){
  const q=state.quotes.find(x=>x.quoteId===quoteId);if(!q)return;
  try{
-  const d=await api('/work-orders/'+q.workOrder.id),o=d.order;
-  const editable=!q.converted;
+  const d=await api('/work-orders/'+q.workOrder.id),o=d.order,editable=!q.converted;
+  const v=vehicle(o.vehicleId),cu=customer(o.customerId);
+  const vat=Math.max(0,Number(q.grossTotal||0)-Number(q.netTotal||0));
+  const rows=d.lines.map((l,idx)=>'<tr><td>'+(idx+1)+'</td><td><b>'+esc(l.itemNumber||'')+'</b></td><td class="desc-cell">'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td><td>'+fmtMoney(l.unitNet)+'</td><td>'+esc(l.discountPercent||0)+' %</td><td>'+esc(l.vatRate)+' %</td><td><b>'+fmtMoney(l.netTotal)+'</b></td><td>'+(editable?'<button class="icon-mini" data-quote-edit-line="'+l.id+'">✎</button><button class="icon-mini danger" data-quote-delete-line="'+l.id+'">×</button>':'')+'</td></tr>').join('');
   $('quoteDetail').innerHTML=
-   '<div class="panel-head"><div><h3>'+esc(q.quoteNumber)+' · '+esc(q.vehiclePlate)+'</h3><p>'+esc(q.customerName)+' · '+esc(o.customerRequest||'')+'</p></div><span class="badge '+badge(q.converted?'aktiv':'offen')+'">'+(q.converted?'Auftrag '+esc(o.number):'Entwurf')+'</span></div>'+
-   '<div class="release-grid"><div><b>Netto</b><span>'+fmtMoney(q.netTotal)+'</span></div><div><b>Brutto</b><span>'+fmtMoney(q.grossTotal)+'</span></div><div><b>Positionen</b><span>'+d.lines.length+'</span></div></div>'+
-   '<h3 class="section-gap">Kalkulation</h3><div class="rows">'+
-   (d.lines.length?d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.itemNumber?l.itemNumber+' · ':'')+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' % USt</span></div><div class="page-actions"><b>'+fmtMoney(l.netTotal)+'</b>'+(editable?'<button class="secondary small" data-quote-edit-line="'+l.id+'">Bearbeiten</button><button class="secondary small" data-quote-delete-line="'+l.id+'">Löschen</button>':'')+'</div></div>').join(''):empty('Noch keine Positionen.'))+
-   '</div><h3 class="section-gap">Freigaben</h3><div class="rows">'+
-   (d.approvals?.length?d.approvals.map(a=>'<div class="row-item"><div><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(approvalStatus[a.status]||a.status)+'</span></div></div>').join(''):empty('Noch keine Kundenfreigabe.'))+
-   '</div><div class="page-actions actions-gap">'+
-   (editable?'<button id="quoteAddLineBtn" class="primary">+ Position</button><button id="quoteAddPartBtn" class="secondary">Teil aus Lager</button><button id="quoteApprovalBtn" class="secondary">Freigabe</button><button id="quoteConvertBtn" class="primary">In Auftrag umwandeln</button>':'<button id="quoteOpenOrderBtn" class="primary">Auftrag öffnen</button>')+
-   '<button id="quotePrintBtn" class="secondary">Druckansicht</button></div>';
+   '<div class="doc-workbench"><header class="doc-command-header"><div class="doc-title-block"><span class="doc-type">ANGEBOT / KOSTENVORANSCHLAG</span><h2>'+esc(q.quoteNumber)+'</h2><div class="doc-ident"><strong>'+esc(q.vehiclePlate||'–')+'</strong><span>'+esc(q.customerName||'–')+'</span><span>'+esc([v?.make,v?.model].filter(Boolean).join(' '))+'</span></div></div><div class="doc-header-status"><span class="badge '+badge(q.converted?'aktiv':'offen')+'">'+(q.converted?'In Auftrag umgewandelt':'Entwurf / offen')+'</span></div><div class="doc-header-actions"><button id="quotePrintBtn" class="secondary small">Drucken</button>'+(q.converted?'<button id="quoteOpenOrderBtn" class="primary small">Auftrag öffnen</button>':'')+'</div></header>'+
+   '<div class="doc-main-grid"><main class="doc-center"><section class="doc-info-grid"><div><label>Kundenwunsch</label><p>'+esc(o.customerRequest||'–')+'</p></div><div><label>Gültigkeit / Hinweis</label><p>Preisbindung gemäß Angebotsdatum · Änderungen nach Rücksprache.</p></div></section>'+
+   '<section class="doc-lines-section"><div class="doc-section-head"><div><h3>Kalkulation</h3><span>'+d.lines.length+' Positionen</span></div><div class="doc-section-actions">'+(editable?'<button id="quoteAddLineBtn" class="primary small">+ Position</button><button id="quoteAddPartBtn" class="secondary small">+ Lagerteil</button><button id="quoteCatalogBtn" class="secondary small">AAG-Katalog</button>':'')+'</div></div><div class="doc-table-wrap"><table class="doc-lines-table"><thead><tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einzel netto</th><th>Rabatt</th><th>USt</th><th>Gesamt</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+   '<section class="doc-bottom-tabs"><details open><summary>Kundenfreigaben <span class="count-pill">'+(d.approvals?.length||0)+'</span></summary>'+(d.approvals?.length?d.approvals.map(a=>'<div class="compact-event"><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(approvalStatus[a.status]||a.status)+'</span></div>').join(''):'<p class="muted">Noch keine Freigabe.</p>')+'</details></section></main>'+
+   '<aside class="doc-side"><div class="doc-side-card"><h4>Summen</h4><div><span>Netto</span><b>'+fmtMoney(q.netTotal)+'</b></div><div><span>USt</span><b>'+fmtMoney(vat)+'</b></div><div class="grand"><span>Brutto</span><b>'+fmtMoney(q.grossTotal)+'</b></div></div><div class="doc-side-actions">'+(editable?'<button id="quoteApprovalBtn" class="secondary wide">Kundenfreigabe</button><button id="quoteConvertBtn" class="primary wide">In Auftrag umwandeln</button>':'<button id="quoteOpenOrderSideBtn" class="primary wide">Auftrag öffnen</button>')+'</div></aside></div></div>';
   $('quoteDetail').classList.remove('hidden');
-
   if($('quoteAddLineBtn'))$('quoteAddLineBtn').onclick=()=>lineModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
   if($('quoteAddPartBtn'))$('quoteAddPartBtn').onclick=()=>inventoryPartModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
+  if($('quoteCatalogBtn'))$('quoteCatalogBtn').onclick=()=>page('catalog');
   if($('quoteApprovalBtn'))$('quoteApprovalBtn').onclick=()=>approvalModal(o.id,async()=>{await loadAll();await openQuote(quoteId)});
   if($('quoteConvertBtn'))$('quoteConvertBtn').onclick=()=>convertQuote(quoteId);
-  if($('quoteOpenOrderBtn'))$('quoteOpenOrderBtn').onclick=()=>{page('orders');openOrder(o.id)};
+  const open=()=>{page('orders');openOrder(o.id)};
+  if($('quoteOpenOrderBtn'))$('quoteOpenOrderBtn').onclick=open;
+  if($('quoteOpenOrderSideBtn'))$('quoteOpenOrderSideBtn').onclick=open;
   $('quotePrintBtn').onclick=()=>printQuote(quoteId);
   document.querySelectorAll('[data-quote-edit-line]').forEach(b=>b.onclick=()=>lineEditModal(o.id,d.lines.find(l=>l.id===b.dataset.quoteEditLine)));
   document.querySelectorAll('[data-quote-delete-line]').forEach(b=>b.onclick=async()=>{await deleteOrderLine(o.id,b.dataset.quoteDeleteLine);await loadAll();await openQuote(quoteId)});
@@ -749,13 +789,17 @@ function paymentModal(id){
 
 async function invoiceDetail(id){
  try{
-  const d=await api('/invoices/'+id),i=d.invoice;
-  showModal('Beleg '+i.number,
-   '<div class="release-grid"><div><b>Netto</b><span>'+fmtMoney(i.netTotal)+'</span></div><div><b>USt</b><span>'+fmtMoney(i.vatTotal)+'</span></div><div><b>Brutto</b><span>'+fmtMoney(i.grossTotal)+'</span></div></div>'+
-   '<h3 class="section-gap">Positionen</h3><div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' %</span></div><b>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</b></div>').join('')+'</div>'+
-   '<h3 class="section-gap">Zahlungen</h3><div class="rows">'+(d.payments.length?d.payments.map(p=>'<div class="row-item"><div><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'')+'</span></div></div>').join(''):empty('Keine Zahlungen.'))+'</div>'+
-   '<div class="modal-actions"><button class="secondary" id="printInvoiceBtn">Drucken / als PDF sichern</button></div>');
+  const d=await api('/invoices/'+id),i=d.invoice,cu=customer(i.customerId),v=vehicle(i.vehicleId);
+  const open=Math.max(0,Number(i.grossTotal||0)-Number(i.paidTotal||0));
+  const rows=d.lines.map((l,idx)=>'<tr><td>'+(idx+1)+'</td><td class="desc-cell">'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td><td>'+fmtMoney(l.unitNet)+'</td><td>'+esc(l.vatRate)+' %</td><td><b>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</b></td></tr>').join('');
+  showModal('Rechnung '+i.number,
+   '<div class="doc-workbench invoice-workbench"><header class="doc-command-header"><div class="doc-title-block"><span class="doc-type">RECHNUNG</span><h2>'+esc(i.number)+'</h2><div class="doc-ident"><strong>'+esc(v?.licensePlate||'–')+'</strong><span>'+esc(cu?.displayName||'–')+'</span><span>'+esc([v?.make,v?.model].filter(Boolean).join(' '))+'</span></div></div><div class="doc-header-status"><span class="badge '+badge(invoiceStatus[i.status])+'">'+esc(invoiceStatus[i.status]||i.status)+'</span><small>Fällig '+esc(i.dueDate)+'</small></div><div class="doc-header-actions"><button class="secondary small" id="printInvoiceBtn">Drucken / PDF</button></div></header>'+
+   '<div class="doc-main-grid"><main class="doc-center"><section class="doc-lines-section"><div class="doc-section-head"><div><h3>Rechnungspositionen</h3><span>'+d.lines.length+' Positionen</span></div></div><div class="doc-table-wrap"><table class="doc-lines-table"><thead><tr><th>Pos.</th><th>Bezeichnung</th><th>Menge</th><th>Einzel netto</th><th>USt</th><th>Gesamt</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+   '<section class="doc-bottom-tabs"><details open><summary>Zahlungen <span class="count-pill">'+d.payments.length+'</span></summary>'+(d.payments.length?d.payments.map(p=>'<div class="compact-event"><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'ohne Referenz')+'</span></div>').join(''):'<p class="muted">Noch keine Zahlungen.</p>')+'</details></section></main>'+
+   '<aside class="doc-side"><div class="doc-side-card"><h4>Rechnungssumme</h4><div><span>Netto</span><b>'+fmtMoney(i.netTotal)+'</b></div><div><span>USt</span><b>'+fmtMoney(i.vatTotal)+'</b></div><div class="grand"><span>Brutto</span><b>'+fmtMoney(i.grossTotal)+'</b></div><div><span>Bezahlt</span><b>'+fmtMoney(i.paidTotal)+'</b></div><div><span>Offen</span><b>'+fmtMoney(open)+'</b></div></div><div class="doc-side-actions">'+(open>0&&i.status!==5&&i.status!==6?'<button class="primary wide" id="invoicePayBtn">Zahlung erfassen</button>':'')+(!i.number.startsWith('ST-')&&!i.number.startsWith('GS-')&&i.status!==5&&i.status!==6?'<button class="secondary wide" id="invoiceCorrectionBtn">Storno / Gutschrift</button>':'')+'</div></aside></div></div>');
   $('printInvoiceBtn').onclick=()=>printInvoice(id);
+  if($('invoicePayBtn'))$('invoicePayBtn').onclick=()=>{closeModal();paymentModal(id)};
+  if($('invoiceCorrectionBtn'))$('invoiceCorrectionBtn').onclick=()=>{closeModal();reverseInvoiceModal(id)};
  }catch(e){toast(e.message,true)}
 }
 
