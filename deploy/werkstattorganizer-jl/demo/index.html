@@ -10,11 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workshop ERP">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui3">
+<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui4">
 <link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui3">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui4">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -221,8 +221,11 @@
       </section>
 
       <section id="crm" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">CRM</span><h2>Wiedervorlagen & Kundenkontakt</h2><p class="muted">Service-, HU- und Kunden-Erinnerungen</p></div><button id="newReminderBtn" class="primary">+ Wiedervorlage</button></div>
-        <div class="panel"><div class="panel-head"><div><h3>Offene Wiedervorlagen</h3><p>Fällige Kundenkontakte und Erinnerungen</p></div></div><div id="reminderRows" class="rows"></div></div>
+        <div class="page-head"><div><span class="eyebrow">CRM</span><h2>Wiedervorlagen & Kundenkontakt</h2><p class="muted">Service-, HU- und Kunden-Erinnerungen sowie Kontaktverlauf</p></div><div class="page-actions"><button id="newCommunicationBtn" class="secondary">+ Kontakt</button><button id="newReminderBtn" class="primary">+ Wiedervorlage</button></div></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Wiedervorlagen</h3><p>Fällige Kundenkontakte und Erinnerungen</p></div></div><div id="reminderRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Kommunikationshistorie</h3><p>Telefon, E-Mail, SMS, WhatsApp und Briefe</p></div></div><div id="communicationRows" class="rows"></div></div>
+        </div>
       </section>
 
       <section id="loaners" class="page hidden">
@@ -234,8 +237,11 @@
       </section>
 
       <section id="checklists" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">CHECKLISTEN</span><h2>Prüfung & Dokumentation</h2><p class="muted">Annahme, Werkstattprüfung und Qualitätskontrolle</p></div></div>
-        <div class="panel"><div class="panel-head"><div><h3>Verfügbare Checklisten</h3></div></div><div id="checklistRows" class="rows"></div></div>
+        <div class="page-head"><div><span class="eyebrow">CHECKLISTEN</span><h2>Prüfung & Dokumentation</h2><p class="muted">Annahme, Werkstattprüfung und Qualitätskontrolle</p></div><button id="newChecklistTemplateBtn" class="primary">+ Vorlage</button></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Checklisten-Vorlagen</h3></div></div><div id="checklistRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Letzte Prüfläufe</h3></div></div><div id="checklistRunRows" class="rows"></div></div>
+        </div>
       </section>
 
       <section id="reports" class="page hidden">
@@ -280,6 +286,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui3"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui4"></script>
 </body>
 </html>
