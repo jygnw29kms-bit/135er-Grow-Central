@@ -1,5 +1,5 @@
 name: Browser Smoke Test Workshop ERP Staging
-# forced run 2026-09-24 pro-ui
+# forced run 2026-09-24 cross-platform
 
 on:
   push:
@@ -24,58 +24,71 @@ jobs:
         run: |
           npm init -y >/dev/null 2>&1
           npm install --silent playwright
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
 
-      - name: Test live login flow
+      - name: Test live ERP on desktop Android and iPhone class browsers
         shell: bash
         run: |
           cat > test.mjs <<'EOF'
-          import { chromium } from 'playwright';
+          import { chromium, webkit, devices } from 'playwright';
 
-          const browser = await chromium.launch({headless:true});
-          const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
-          const messages=[];
-          page.on('console', m => messages.push('console '+m.type()+': '+m.text()));
-          page.on('pageerror', e => messages.push('pageerror: '+e.message));
-          page.on('requestfailed', r => messages.push('requestfailed: '+r.url()+' '+(r.failure()?.errorText||'')));
+          const targets = [
+            {name:'Desktop Chromium', browser:chromium, context:{viewport:{width:1440,height:1000}}},
+            {name:'Android Chromium', browser:chromium, context:{...devices['Pixel 7']}},
+            {name:'iPhone WebKit', browser:webkit, context:{...devices['iPhone 15 Pro']}}
+          ];
 
-          const url='https://werkstattplaner.grow-central.de/jl/demo/?smoke='+Date.now();
-          const res=await page.goto(url,{waitUntil:'networkidle',timeout:60000});
-          console.log('PAGE HTTP',res?.status());
-          console.log('TITLE',await page.title());
+          let failed=false;
+          for (const target of targets) {
+            const browser=await target.browser.launch({headless:true});
+            const context=await browser.newContext(target.context);
+            const page=await context.newPage();
+            const messages=[];
+            page.on('console',m=>messages.push('console '+m.type()+': '+m.text()));
+            page.on('pageerror',e=>messages.push('pageerror: '+e.message));
+            page.on('requestfailed',r=>messages.push('requestfailed: '+r.url()+' '+(r.failure()?.errorText||'')));
 
-          const btn=page.locator('#demoLoginBtn');
-          console.log('DEMO BUTTON',await btn.count());
-          console.log('LOGIN VISIBLE BEFORE',await page.locator('#loginView').isVisible());
-          console.log('APP VISIBLE BEFORE',await page.locator('#appView').isVisible());
+            try {
+              const url='https://werkstattplaner.grow-central.de/jl/demo/?smoke='+Date.now();
+              const res=await page.goto(url,{waitUntil:'networkidle',timeout:60000});
+              console.log('\n=== '+target.name+' ===');
+              console.log('HTTP',res?.status(),'TITLE',await page.title());
+              await page.waitForTimeout(4500);
 
-          await page.waitForTimeout(5000);
-          let appVisible=await page.locator('#appView').isVisible();
-          if(!appVisible && await page.locator('#loginView').isVisible()) {
-            console.log('AUTO LOGIN DID NOT OPEN APP, USING DEMO BUTTON');
-            await btn.click({timeout:10000});
-            await page.waitForTimeout(5000);
-            appVisible=await page.locator('#appView').isVisible();
-          }
+              let appVisible=await page.locator('#appView').isVisible();
+              if(!appVisible && await page.locator('#loginView').isVisible()) {
+                await page.locator('#demoLoginBtn').click({timeout:10000});
+                await page.waitForTimeout(3500);
+                appVisible=await page.locator('#appView').isVisible();
+              }
 
-          console.log('LOGIN VISIBLE AFTER',await page.locator('#loginView').isVisible());
-          console.log('APP VISIBLE AFTER',appVisible);
-          console.log('LOGIN ERROR',await page.locator('#loginError').textContent());
-          console.log('API STATE',await page.locator('#apiState').textContent());
-          console.log('PAGE TITLE AFTER',await page.locator('#pageTitle').textContent());
+              console.log('APP VISIBLE',appVisible);
+              console.log('API',await page.locator('#apiState').textContent());
+              console.log('BODY CLASS',await page.locator('body').getAttribute('class'));
 
-          if(appVisible) {
-            const revenue=await page.locator('#reportRevenue').textContent();
-            console.log('REPORT REVENUE',revenue);
-            if(!revenue.includes('980.900')) {
-              console.error('Unexpected 2025 revenue:',revenue);
-              process.exitCode=3;
+              const revenue=await page.locator('#reportRevenue').textContent();
+              console.log('REVENUE',revenue);
+
+              await page.evaluate(()=>document.querySelector('[data-page="planner"]')?.click());
+              await page.waitForTimeout(400);
+              console.log('PLANNER VISIBLE',await page.locator('#planner').isVisible());
+              console.log('PLANNER CONTENT',await page.locator('#workshopPlannerGrid').innerText().then(x=>x.slice(0,180)));
+
+              await page.evaluate(()=>document.querySelector('[data-page="personnel"]')?.click());
+              await page.waitForTimeout(400);
+              console.log('PERSONNEL VISIBLE',await page.locator('#personnel').isVisible());
+              console.log('PERSONNEL PLANNER',await page.locator('#personnelPlannerGrid').innerText().then(x=>x.slice(0,180)));
+
+              if(!appVisible || !revenue.includes('980.900')) failed=true;
+              if(messages.some(m=>m.startsWith('pageerror:'))) failed=true;
+              for(const m of messages) console.log(m);
+            } catch(e) {
+              console.error(target.name+' FAILED',e);
+              failed=true;
+            } finally {
+              await browser.close();
             }
           }
-
-          for(const m of messages) console.log(m);
-
-          if(!appVisible) process.exitCode=2;
-          await browser.close();
+          if(failed) process.exit(2);
           EOF
           node test.mjs
