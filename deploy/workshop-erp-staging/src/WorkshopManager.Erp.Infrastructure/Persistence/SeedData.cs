@@ -32,6 +32,7 @@ public static class SeedData
         }
 
         await EnsureOperationalDemoAsync(db, tenant, site, ct);
+        await EnsureSupportModulesAsync(db, tenant, site, ct);
         await EnsureHistoricalRevenue2025Async(db, tenant, site, ct);
     }
 
@@ -246,6 +247,107 @@ public static class SeedData
             result.Add((c, v));
         }
         return result;
+    }
+
+    private static async Task EnsureSupportModulesAsync(ErpDbContext db, Tenant tenant, Site site, CancellationToken ct)
+    {
+        var customers = await db.Customers.Where(x => x.TenantId == tenant.Id && !x.IsDeleted).OrderBy(x => x.CustomerNumber).Take(8).ToListAsync(ct);
+        var vehicles = await db.Vehicles.Where(x => x.TenantId == tenant.Id && !x.IsDeleted).OrderBy(x => x.LicensePlate).Take(8).ToListAsync(ct);
+
+        if (customers.Count > 0 && vehicles.Count > 0 && !await db.TireSets.AnyAsync(x => x.TenantId == tenant.Id && !x.IsDeleted, ct))
+        {
+            for (var i = 0; i < Math.Min(6, Math.Min(customers.Count, vehicles.Count)); i++)
+            {
+                db.TireSets.Add(new TireSet
+                {
+                    TenantId = tenant.Id,
+                    CustomerId = customers[i].Id,
+                    VehicleId = vehicles[i].Id,
+                    StorageNumber = $"RH-{1001+i}",
+                    Season = i % 2 == 0 ? TireSeason.Winter : TireSeason.Summer,
+                    BrandModel = i % 2 == 0 ? "Continental WinterContact TS 870" : "Michelin Primacy 4+",
+                    Size = i % 3 == 0 ? "205/55 R16" : "225/45 R17",
+                    Dot = $"24{30+i:00}",
+                    FrontLeftMm = 6.4m - i * .2m,
+                    FrontRightMm = 6.2m - i * .15m,
+                    RearLeftMm = 6.0m - i * .12m,
+                    RearRightMm = 6.1m - i * .11m,
+                    Condition = i == 5 ? TireCondition.Replace : i == 4 ? TireCondition.Monitor : TireCondition.Good,
+                    StorageLocation = $"R-{i+1:00}-{(i%3)+1:00}",
+                    HasTpms = i % 2 == 0
+                });
+            }
+        }
+
+        if (customers.Count > 0 && !await db.Reminders.AnyAsync(x => x.TenantId == tenant.Id && !x.IsDeleted, ct))
+        {
+            for (var i = 0; i < Math.Min(5, customers.Count); i++)
+            {
+                db.Reminders.Add(new Reminder
+                {
+                    TenantId = tenant.Id,
+                    CustomerId = customers[i].Id,
+                    VehicleId = vehicles.ElementAtOrDefault(i)?.Id,
+                    Type = i % 2 == 0 ? "HU" : "Service",
+                    Subject = i % 2 == 0 ? "HU-Erinnerung" : "Service-Erinnerung",
+                    DueAt = DateTimeOffset.UtcNow.AddDays(i * 4 - 3),
+                    Status = ReminderStatus.Open,
+                    PreferredChannel = i % 3 == 0 ? CommunicationChannel.Phone : CommunicationChannel.Email
+                });
+            }
+        }
+
+        if (!await db.LoanerVehicles.AnyAsync(x => x.TenantId == tenant.Id && !x.IsDeleted, ct))
+        {
+            db.LoanerVehicles.AddRange(
+                new LoanerVehicle { TenantId = tenant.Id, SiteId = site.Id, Number = "LW-01", LicensePlate = "HVL-WM 901", VehicleName = "Volkswagen Polo", Mileage = 34210, FuelOrChargeLevel = "¾", Active = true },
+                new LoanerVehicle { TenantId = tenant.Id, SiteId = site.Id, Number = "LW-02", LicensePlate = "HVL-WM 902", VehicleName = "Škoda Fabia", Mileage = 28140, FuelOrChargeLevel = "voll", Active = true },
+                new LoanerVehicle { TenantId = tenant.Id, SiteId = site.Id, Number = "LW-03", LicensePlate = "HVL-WM 903", VehicleName = "Volkswagen ID.3", Mileage = 19420, FuelOrChargeLevel = "82 %", Active = true }
+            );
+        }
+
+        if (!await db.ChecklistTemplates.AnyAsync(x => x.TenantId == tenant.Id && !x.IsDeleted, ct))
+        {
+            var intake = new ChecklistTemplate { TenantId = tenant.Id, Name = "Fahrzeugannahme Standard", Context = "intake", Active = true };
+            var qc = new ChecklistTemplate { TenantId = tenant.Id, Name = "Qualitätskontrolle", Context = "quality-control", Active = true };
+            db.ChecklistTemplates.AddRange(intake, qc);
+            var intakeFields = new[]
+            {
+                ("Beleuchtung geprüft", ChecklistFieldType.OkDefect),
+                ("Bereifung geprüft", ChecklistFieldType.OkDefect),
+                ("Karosserieschäden dokumentiert", ChecklistFieldType.Checkbox),
+                ("Warnleuchten vorhanden", ChecklistFieldType.OkDefect),
+                ("Kilometerstand plausibel", ChecklistFieldType.Checkbox),
+                ("Fotos aufgenommen", ChecklistFieldType.Checkbox)
+            };
+            for (var i=0;i<intakeFields.Length;i++)
+                db.ChecklistFields.Add(new ChecklistField { TenantId = tenant.Id, ChecklistTemplateId = intake.Id, Label = intakeFields[i].Item1, Type = intakeFields[i].Item2, SortOrder = i+1, Required = i < 4 });
+
+            var qcFields = new[]
+            {
+                ("Arbeitsumfang vollständig", ChecklistFieldType.Checkbox),
+                ("Fehlerspeicher geprüft", ChecklistFieldType.OkDefect),
+                ("Probefahrt durchgeführt", ChecklistFieldType.Checkbox),
+                ("Flüssigkeitsstände geprüft", ChecklistFieldType.OkDefect),
+                ("Arbeitsplatz/Fahrzeug sauber", ChecklistFieldType.Checkbox)
+            };
+            for (var i=0;i<qcFields.Length;i++)
+                db.ChecklistFields.Add(new ChecklistField { TenantId = tenant.Id, ChecklistTemplateId = qc.Id, Label = qcFields[i].Item1, Type = qcFields[i].Item2, SortOrder = i+1, Required = true });
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        if (customers.Count > 0 && !await db.LoanerBookings.AnyAsync(x => x.TenantId == tenant.Id && !x.IsDeleted, ct))
+        {
+            var car = await db.LoanerVehicles.FirstAsync(x => x.TenantId == tenant.Id && x.Number == "LW-01", ct);
+            db.LoanerBookings.Add(new LoanerBooking
+            {
+                TenantId = tenant.Id, LoanerVehicleId = car.Id, CustomerId = customers[0].Id,
+                From = DateTimeOffset.UtcNow.Date.AddHours(8), To = DateTimeOffset.UtcNow.Date.AddDays(2).AddHours(16),
+                Status = LoanerBookingStatus.Reserved
+            });
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     private static async Task EnsureHistoricalRevenue2025Async(ErpDbContext db, Tenant tenant, Site site, CancellationToken ct)
