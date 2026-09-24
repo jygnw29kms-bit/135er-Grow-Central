@@ -19,6 +19,10 @@ builder.Services.AddScoped<WorkOrderWorkflowService>();
 builder.Services.AddScoped<NumberSequenceService>();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<CatalogStore>();
+// Catalog build trigger
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 400_000_000);
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 400_000_000);
 builder.Services.AddIdentityCore<ErpIdentityUser>(options =>
 {
     options.Password.RequiredLength = 12;
@@ -213,6 +217,10 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/sites")) return "resources.read";
     if (p.StartsWith("/api/customers")) return write ? "customers.write" : "customers.read";
     if (p.StartsWith("/api/vehicles")) return write ? "vehicles.write" : "vehicles.read";
+    if (p.StartsWith("/api/catalog/import")) return "admin.security";
+    if (p.StartsWith("/api/catalog/kba")) return write ? "vehicles.write" : "vehicles.read";
+    if (p.StartsWith("/api/catalog/aag")) return write ? "inventory.write" : "inventory.read";
+    if (p.StartsWith("/api/catalog/status")) return "inventory.read";
     if (p.StartsWith("/api/appointments")) return write ? "appointments.write" : "appointments.read";
     if (p.StartsWith("/api/work-orders") || p.StartsWith("/api/approvals") || p.StartsWith("/api/time")) return write ? "orders.write" : "orders.read";
     if (p.StartsWith("/api/inventory")) return write ? "inventory.write" : "inventory.read";
@@ -384,6 +392,28 @@ app.MapGet("/api/appointments", async (DateOnly? date, ErpDbContext db, Cancella
 app.MapPost("/api/appointments", async (AppointmentCreate req, ErpDbContext db, CancellationToken ct) =>
 {
     var tenantId = await TenantId(db, ct);
+    if (req.EndsAt <= req.StartsAt)
+        return Results.BadRequest(new { error = "Terminende muss nach dem Terminbeginn liegen." });
+    if (!await db.Customers.AnyAsync(x => x.Id == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Kunde nicht gefunden." });
+    if (!await db.Vehicles.AnyAsync(x => x.Id == req.VehicleId && x.CustomerId == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Fahrzeug passt nicht zum Kunden." });
+
+    if (req.ResourceId.HasValue)
+    {
+        var conflict = await db.Appointments.AnyAsync(x => x.TenantId == tenantId && !x.IsDeleted &&
+            x.ResourceId == req.ResourceId && x.Status != AppointmentStatus.Cancelled && x.Status != AppointmentStatus.NoShow &&
+            x.StartsAt < req.EndsAt && x.EndsAt > req.StartsAt, ct);
+        if (conflict) return Results.Conflict(new { error = "Die gewählte Ressource ist in diesem Zeitraum bereits belegt." });
+    }
+    if (req.EmployeeId.HasValue)
+    {
+        var conflict = await db.Appointments.AnyAsync(x => x.TenantId == tenantId && !x.IsDeleted &&
+            x.EmployeeId == req.EmployeeId && x.Status != AppointmentStatus.Cancelled && x.Status != AppointmentStatus.NoShow &&
+            x.StartsAt < req.EndsAt && x.EndsAt > req.StartsAt, ct);
+        if (conflict) return Results.Conflict(new { error = "Der gewählte Mitarbeiter ist in diesem Zeitraum bereits verplant." });
+    }
+
     var siteId = req.SiteId ?? await db.Sites.Where(x => x.TenantId == tenantId).Select(x => x.Id).FirstAsync(ct);
     var entity = new Appointment
     {
@@ -409,6 +439,28 @@ app.MapPut("/api/appointments/{id:guid}", async (Guid id, AppointmentCreate req,
     var tenantId = await TenantId(db, ct);
     var a = await db.Appointments.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
     if (a is null) return Results.NotFound();
+    if (req.EndsAt <= req.StartsAt)
+        return Results.BadRequest(new { error = "Terminende muss nach dem Terminbeginn liegen." });
+    if (!await db.Customers.AnyAsync(x => x.Id == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Kunde nicht gefunden." });
+    if (!await db.Vehicles.AnyAsync(x => x.Id == req.VehicleId && x.CustomerId == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Fahrzeug passt nicht zum Kunden." });
+
+    if (req.ResourceId.HasValue)
+    {
+        var conflict = await db.Appointments.AnyAsync(x => x.Id != id && x.TenantId == tenantId && !x.IsDeleted &&
+            x.ResourceId == req.ResourceId && x.Status != AppointmentStatus.Cancelled && x.Status != AppointmentStatus.NoShow &&
+            x.StartsAt < req.EndsAt && x.EndsAt > req.StartsAt, ct);
+        if (conflict) return Results.Conflict(new { error = "Die gewählte Ressource ist in diesem Zeitraum bereits belegt." });
+    }
+    if (req.EmployeeId.HasValue)
+    {
+        var conflict = await db.Appointments.AnyAsync(x => x.Id != id && x.TenantId == tenantId && !x.IsDeleted &&
+            x.EmployeeId == req.EmployeeId && x.Status != AppointmentStatus.Cancelled && x.Status != AppointmentStatus.NoShow &&
+            x.StartsAt < req.EndsAt && x.EndsAt > req.StartsAt, ct);
+        if (conflict) return Results.Conflict(new { error = "Der gewählte Mitarbeiter ist in diesem Zeitraum bereits verplant." });
+    }
+
     a.SiteId = req.SiteId ?? a.SiteId;
     a.CustomerId = req.CustomerId;
     a.VehicleId = req.VehicleId;
@@ -827,10 +879,14 @@ app.MapPost("/api/invoices/from-work-order/{workOrderId:guid}", async (Guid work
     var tenantId = await TenantId(db, ct);
     var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == workOrderId && x.TenantId == tenantId, ct);
     if (order is null) return Results.NotFound();
+    if (order.Status != WorkOrderStatus.Ready)
+        return Results.Conflict(new { error = "Eine Rechnung kann erst erzeugt werden, wenn der Auftrag den Status Fertig erreicht hat." });
     var existing = await db.Invoices.FirstOrDefaultAsync(x => x.WorkOrderId == workOrderId && x.TenantId == tenantId && x.Status != InvoiceStatus.Cancelled, ct);
     if (existing is not null) return Results.Conflict(new { error = "Für diesen Auftrag existiert bereits eine Rechnung.", invoiceId = existing.Id });
 
-    var orderLines = await db.WorkOrderLines.AsNoTracking().Where(x => x.WorkOrderId == workOrderId && x.TenantId == tenantId).ToListAsync(ct);
+    var orderLines = await db.WorkOrderLines.AsNoTracking().Where(x => x.WorkOrderId == workOrderId && x.TenantId == tenantId && !x.IsDeleted).ToListAsync(ct);
+    if (orderLines.Count == 0)
+        return Results.Conflict(new { error = "Ein Auftrag ohne Positionen kann nicht berechnet werden." });
     var net = orderLines.Sum(x => x.NetTotal);
     var vat = orderLines.Sum(x => Math.Round(x.NetTotal * x.VatRate / 100m, 2));
     var invoiceNumber = await numbers.NextAsync(tenantId, order.SiteId, "invoice", "RE-", 5, true, ct);
@@ -934,16 +990,26 @@ app.MapPost("/api/invoices/{id:guid}/reverse", async (Guid id, InvoiceReverseReq
 app.MapPost("/api/invoices/{id:guid}/payments", async (Guid id, PaymentCreate req, ErpDbContext db, CancellationToken ct) =>
 {
     var tenantId = await TenantId(db, ct);
-    var invoice = await db.Invoices.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+    var invoice = await db.Invoices.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
     if (invoice is null) return Results.NotFound();
+    if (invoice.Status is InvoiceStatus.Cancelled or InvoiceStatus.Credited)
+        return Results.Conflict(new { error = "Auf stornierte oder gutgeschriebene Belege kann keine Zahlung gebucht werden." });
+    if (invoice.GrossTotal <= 0)
+        return Results.Conflict(new { error = "Zahlungen sind nur auf positive Rechnungsbeträge zulässig." });
     if (req.Amount <= 0) return Results.BadRequest(new { error = "Zahlbetrag muss positiv sein." });
 
-    var payment = new Payment { TenantId = tenantId, InvoiceId = id, Amount = req.Amount, Method = req.Method, Reference = req.Reference ?? "" };
+    var openAmount = Math.Round(invoice.GrossTotal - invoice.PaidTotal, 2);
+    if (openAmount <= 0)
+        return Results.Conflict(new { error = "Die Rechnung ist bereits vollständig bezahlt." });
+    if (req.Amount > openAmount)
+        return Results.BadRequest(new { error = $"Zahlbetrag überschreitet den offenen Betrag von {openAmount:0.00} EUR." });
+
+    var payment = new Payment { TenantId = tenantId, InvoiceId = id, Amount = req.Amount, Method = req.Method, Reference = req.Reference?.Trim() ?? "" };
     db.Payments.Add(payment);
-    invoice.PaidTotal += req.Amount;
+    invoice.PaidTotal = Math.Round(invoice.PaidTotal + req.Amount, 2);
     invoice.Status = invoice.PaidTotal >= invoice.GrossTotal ? InvoiceStatus.Paid : InvoiceStatus.PartiallyPaid;
     await db.SaveChangesAsync(ct);
-    return Results.Ok(new { invoice, payment });
+    return Results.Ok(new { invoice, payment, openAmount = Math.Max(0m, invoice.GrossTotal - invoice.PaidTotal) });
 });
 
 
@@ -2245,6 +2311,53 @@ app.MapPost("/api/quotes/{quoteId:guid}/convert", async (Guid quoteId, ErpDbCont
     });
     await db.SaveChangesAsync(ct);
     return Results.Ok(new { quoteId, quoteNumber = doc.FileName, workOrder = order });
+});
+
+
+app.MapGet("/api/catalog/status", async (CatalogStore catalog, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(await catalog.StatusAsync(tenantId, ct));
+});
+
+app.MapGet("/api/catalog/kba", async (string? hsn, string? tsn, string? q, int? limit, CatalogStore catalog, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(await catalog.SearchKbaAsync(tenantId, hsn, tsn, q, limit ?? 50, ct));
+});
+
+app.MapGet("/api/catalog/aag", async (string? q, string? brand, string? status, int? limit, CatalogStore catalog, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(await catalog.SearchAagAsync(tenantId, q, brand, status, limit ?? 50, ct));
+});
+
+app.MapPost("/api/catalog/import/kba", async (HttpRequest request, CatalogStore catalog, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var form = await request.ReadFormAsync(ct);
+    var file = form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest(new { error = "KBA-ZIP fehlt." });
+    try
+    {
+        await using var stream = file.OpenReadStream();
+        return Results.Ok(await catalog.ImportKbaZipAsync(tenantId, stream, file.FileName, ct));
+    }
+    catch (InvalidDataException ex) { return Results.BadRequest(new { error = ex.Message }); }
+});
+
+app.MapPost("/api/catalog/import/aag", async (HttpRequest request, CatalogStore catalog, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var form = await request.ReadFormAsync(ct);
+    var file = form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest(new { error = "AAG-Preisdatei fehlt." });
+    try
+    {
+        await using var stream = file.OpenReadStream();
+        return Results.Ok(await catalog.ImportAagAsync(tenantId, stream, file.FileName, ct));
+    }
+    catch (InvalidDataException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
 
 app.Run();
