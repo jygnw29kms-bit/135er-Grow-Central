@@ -27,6 +27,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
       DemoSeed: "true"
+      WM_CATALOG_DATA: /data/catalog
+    volumes:
+      - erp_catalog:/data/catalog
     ports:
       - "127.0.0.1:5090:8080"
     depends_on:
@@ -36,6 +39,7 @@ services:
 
 volumes:
   erp_pg:
+  erp_catalog:
 
 networks:
   erpnet:
