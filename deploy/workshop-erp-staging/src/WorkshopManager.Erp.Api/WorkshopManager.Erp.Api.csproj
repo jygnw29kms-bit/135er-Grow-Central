@@ -4,5 +4,6 @@
     <ProjectReference Include="../WorkshopManager.Erp.Core/WorkshopManager.Erp.Core.csproj" />
     <ProjectReference Include="../WorkshopManager.Erp.Infrastructure/WorkshopManager.Erp.Infrastructure.csproj" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
   </ItemGroup>
 </Project>
