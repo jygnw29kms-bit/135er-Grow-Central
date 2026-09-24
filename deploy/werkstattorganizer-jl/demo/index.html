@@ -10,11 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workshop ERP">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui2">
+<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui3">
 <link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui2">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui3">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -157,7 +157,7 @@
       </section>
 
       <section id="intake" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">ANNAHME</span><h2>Fahrzeugannahme</h2><p class="muted">Schnellaufnahme für den Service</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">ANNAHME</span><h2>Fahrzeugannahme</h2><p class="muted">Vom Kundenkontakt bis zum angelegten Werkstattauftrag</p></div><div class="page-actions"><button id="dialogIntakeBtn" class="primary">Dialogannahme starten</button></div></div>
         <div class="panel form-card">
           <div class="form-grid">
             <label>Auftrag<select id="intakeOrder"></select></label>
@@ -210,7 +210,7 @@
         <div class="planner-summary" id="personnelSummary"></div>
         <div class="panel planner-panel"><div id="personnelPlannerGrid" class="personnel-scheduler"></div></div>
         <div class="split">
-          <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
+          <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th><th></th></tr></thead><tbody id="employeeRows"></tbody></table></div>
           <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Von–Bis oder einzelner Tag</p></div></div><div id="absenceRows" class="rows"></div></div>
         </div>
       </section>
@@ -280,6 +280,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui2"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui3"></script>
 </body>
 </html>
