@@ -219,7 +219,7 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/purchase-orders") || p.StartsWith("/api/suppliers")) return write ? "purchasing.write" : "purchasing.read";
     if (p.StartsWith("/api/tires")) return write ? "tires.write" : "tires.read";
     if (p.StartsWith("/api/employees") || p.StartsWith("/api/absences") || p.StartsWith("/api/personnel")) return write ? "personnel.write" : "personnel.read";
-    if (p.StartsWith("/api/invoices") || p.StartsWith("/api/finance")) return write ? "billing.write" : "billing.read";
+    if (p.StartsWith("/api/invoices") || p.StartsWith("/api/finance") || p.StartsWith("/api/quotes")) return write ? "billing.write" : "billing.read";
     if (p.StartsWith("/api/resources")) return write ? "resources.write" : "resources.read";
     if (p.StartsWith("/api/reminders") || p.StartsWith("/api/communications")) return write ? "crm.write" : "crm.read";
     if (p.StartsWith("/api/checklists")) return write ? "orders.write" : "orders.read";
@@ -2120,6 +2120,94 @@ app.MapGet("/api/reports/productivity", async (DateOnly? from, DateOnly? to, Erp
     }));
 });
 
+
+app.MapGet("/api/quotes", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var docs = await db.DocumentRecords.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.Kind == DocumentKind.Quote && x.RelatedEntityType == "WorkOrder" && x.RelatedEntityId.HasValue && !x.IsDeleted)
+        .OrderByDescending(x => x.CreatedAt).Take(250).ToListAsync(ct);
+    var orderIds = docs.Select(x => x.RelatedEntityId!.Value).Distinct().ToList();
+    var orders = await db.WorkOrders.AsNoTracking().Where(x => x.TenantId == tenantId && orderIds.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
+    var lines = await db.WorkOrderLines.AsNoTracking().Where(x => x.TenantId == tenantId && orderIds.Contains(x.WorkOrderId) && !x.IsDeleted).ToListAsync(ct);
+    var customerIds = orders.Values.Select(x => x.CustomerId).Distinct().ToList();
+    var vehicleIds = orders.Values.Select(x => x.VehicleId).Distinct().ToList();
+    var customers = await db.Customers.AsNoTracking().Where(x => x.TenantId == tenantId && customerIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+    var vehicles = await db.Vehicles.AsNoTracking().Where(x => x.TenantId == tenantId && vehicleIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+
+    return Results.Ok(docs.Select(d =>
+    {
+        var o = orders.GetValueOrDefault(d.RelatedEntityId!.Value);
+        if (o is null) return null;
+        var ol = lines.Where(x => x.WorkOrderId == o.Id).ToList();
+        var net = ol.Sum(x => x.NetTotal);
+        var gross = ol.Sum(x => x.NetTotal * (1m + x.VatRate / 100m));
+        return new
+        {
+            quoteId = d.Id,
+            quoteNumber = d.FileName,
+            workOrder = o,
+            customerName = customers.GetValueOrDefault(o.CustomerId)?.DisplayName ?? "",
+            vehiclePlate = vehicles.GetValueOrDefault(o.VehicleId)?.LicensePlate ?? "",
+            netTotal = Math.Round(net, 2),
+            grossTotal = Math.Round(gross, 2),
+            converted = !o.Number.StartsWith("KV-")
+        };
+    }).Where(x => x is not null));
+});
+
+app.MapPost("/api/quotes", async (QuoteCreate req, ErpDbContext db, NumberSequenceService numbers, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var siteId = req.SiteId ?? await db.Sites.Where(x => x.TenantId == tenantId && x.Active && !x.IsDeleted).Select(x => x.Id).FirstAsync(ct);
+    if (!await db.Customers.AnyAsync(x => x.Id == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Kunde nicht gefunden." });
+    if (!await db.Vehicles.AnyAsync(x => x.Id == req.VehicleId && x.CustomerId == req.CustomerId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Fahrzeug passt nicht zum Kunden." });
+
+    var quoteNumber = await numbers.NextAsync(tenantId, siteId, "quote", "KV-", 5, true, ct);
+    var order = new WorkOrder
+    {
+        TenantId = tenantId, SiteId = siteId, CustomerId = req.CustomerId, VehicleId = req.VehicleId,
+        Number = quoteNumber, Status = WorkOrderStatus.Draft,
+        CustomerRequest = req.CustomerRequest?.Trim() ?? "", Diagnosis = req.Note?.Trim() ?? ""
+    };
+    db.WorkOrders.Add(order);
+    var doc = new DocumentRecord
+    {
+        TenantId = tenantId, SiteId = siteId, Kind = DocumentKind.Quote, FileName = quoteNumber,
+        MimeType = "application/vnd.workshop-manager.quote", StorageKey = "",
+        RelatedEntityType = "WorkOrder", RelatedEntityId = order.Id, SizeBytes = 0
+    };
+    db.DocumentRecords.Add(doc);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/quotes/{doc.Id}", new { quoteId = doc.Id, quoteNumber, workOrder = order });
+});
+
+app.MapPost("/api/quotes/{quoteId:guid}/convert", async (Guid quoteId, ErpDbContext db, NumberSequenceService numbers, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var doc = await db.DocumentRecords.FirstOrDefaultAsync(x => x.Id == quoteId && x.TenantId == tenantId && x.Kind == DocumentKind.Quote && !x.IsDeleted, ct);
+    if (doc?.RelatedEntityId is null) return Results.NotFound();
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == doc.RelatedEntityId.Value && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (order is null) return Results.NotFound();
+    if (!order.Number.StartsWith("KV-")) return Results.Conflict(new { error = "Kostenvoranschlag wurde bereits in einen Auftrag umgewandelt." });
+
+    var oldNumber = order.Number;
+    var newNumber = await numbers.NextAsync(tenantId, order.SiteId, "work-order", "AU-", 5, true, ct);
+    order.Number = newNumber;
+    order.Status = WorkOrderStatus.Scheduled;
+    db.AuditEntries.Add(new AuditEntry
+    {
+        TenantId = tenantId, Actor = "staging-user", Action = "quote-converted",
+        EntityType = "WorkOrder", EntityId = order.Id,
+        OldJson = System.Text.Json.JsonSerializer.Serialize(new { number = oldNumber }),
+        NewJson = System.Text.Json.JsonSerializer.Serialize(new { number = newNumber, quote = doc.FileName })
+    });
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { quoteId, quoteNumber = doc.FileName, workOrder = order });
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
@@ -2156,6 +2244,7 @@ record ReminderCreate(Guid CustomerId, Guid? VehicleId, string Type, string Subj
 record CommunicationCreate(Guid CustomerId, Guid? VehicleId, Guid? WorkOrderId, CommunicationChannel Channel, string Subject, string? Body, string? Direction);
 record ChecklistFieldWrite(string Label, ChecklistFieldType Type, int SortOrder, bool Required);
 record ChecklistTemplateWrite(string Name, string? Context, List<ChecklistFieldWrite> Fields);
+record QuoteCreate(Guid? SiteId, Guid CustomerId, Guid VehicleId, string? CustomerRequest, string? Note);
 record DunningCreate(decimal Fee, string? Note);
 record QualificationWrite(Guid EmployeeId, string Name, int Level, DateOnly? ValidUntil);
 record CompanyWrite(string Name, string? LegalName, string? TaxNumber, string? VatId, string? Email, string? Phone, string? PrimaryColor);
