@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui7">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-docs1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -75,7 +75,7 @@
         <button class="nav" data-page="inventory">Lager</button>
         <button class="nav" data-page="purchasing">Einkauf</button>
         <button class="nav" data-page="personnel">Personal</button>
-        <button class="nav" data-page="billing">Rechnungen</button>
+        <button class="nav" data-page="billing">Belege & Faktura</button>
         <button class="nav" data-page="finance">Finanzen & OP</button>
         <button class="nav" data-page="loaners">Leihwagen</button>
         <button class="nav" data-page="checklists">Checklisten</button>
@@ -194,9 +194,10 @@
       </section>
 
       <section id="quotes" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">VERKAUF</span><h2>Kostenvoranschläge</h2><p class="muted">KV erstellen, kalkulieren, freigeben und ohne Doppelerfassung in Auftrag wandeln</p></div><button id="newQuoteBtn" class="primary">+ Kostenvoranschlag</button></div>
-        <div class="panel table-panel"><table><thead><tr><th>KV</th><th>Kunde</th><th>Fahrzeug</th><th>Netto</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody id="quoteRows"></tbody></table></div>
-        <div id="quoteDetail" class="panel hidden"></div>
+        <div class="page-head"><div><span class="eyebrow">VERKAUF</span><h2>Angebote & Kostenvoranschläge</h2><p class="muted">Schnell kalkulieren, freigeben und ohne Doppelerfassung in einen Auftrag wandeln.</p></div><button id="newQuoteBtn" class="primary">+ Angebot</button></div>
+        <div class="doc-list-toolbar"><div class="toolbar-search"><span>⌕</span><input id="quoteSearch" placeholder="Angebot, Kunde, Kennzeichen durchsuchen …"></div><div class="doc-toolbar-note">Doppelklick/Öffnen → vollständige Kalkulationsmaske</div></div>
+        <div class="panel table-panel quote-list"><table><thead><tr><th>Beleg</th><th>Kunde</th><th>Fahrzeug</th><th>Netto</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody id="quoteRows"></tbody></table></div>
+        <div id="quoteDetail" class="panel document-panel hidden"></div>
       </section>
 
       <section id="intake" class="page hidden">
@@ -322,8 +323,13 @@
       </section>
 
       <section id="billing" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">FAKTURA</span><h2>Rechnungen & Zahlungen</h2><p class="muted">Rechnung, Zahlung, Storno und Gutschrift</p></div></div>
-        <div class="panel table-panel"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+        <div class="page-head"><div><span class="eyebrow">BELEGVERWALTUNG</span><h2>Faktura & Lieferscheine</h2><p class="muted">Rechnungen, Zahlungen, Storno/Gutschrift und Lieferscheine zentral bearbeiten.</p></div></div>
+        <div class="doc-section-head"><div><h3>Rechnungen</h3><p>Offene, bezahlte und korrigierte Rechnungen</p></div><div class="toolbar-search compact"><span>⌕</span><input id="invoiceSearch" placeholder="Rechnung durchsuchen …"></div></div>
+        <div class="panel table-panel invoice-list"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+        <div id="invoiceDetailPanel" class="panel document-panel hidden"></div>
+
+        <div class="doc-section-head section-gap"><div><h3>Lieferscheine</h3><p>Aus Werkstattaufträgen erzeugte, nummerierte Übergabebelege</p></div><div class="toolbar-search compact"><span>⌕</span><input id="deliverySearch" placeholder="Lieferschein, Auftrag, Kunde …"></div></div>
+        <div class="panel table-panel delivery-list"><table><thead><tr><th>Lieferschein</th><th>Datum</th><th>Auftrag</th><th>Kunde</th><th>Fahrzeug</th><th></th></tr></thead><tbody id="deliveryNoteRows"></tbody></table></div>
       </section>
 
       <section id="finance" class="page hidden">
@@ -416,7 +422,8 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui8"></script>
+<script src="/jl/demo/demo.js?v=erp4-docs1"></script>
 <script src="/jl/demo/catalog.js?v=erp4-pro-ui8"></script>
+<script src="/jl/demo/documents-ui.js?v=erp4-docs1"></script>
 </body>
 </html>
