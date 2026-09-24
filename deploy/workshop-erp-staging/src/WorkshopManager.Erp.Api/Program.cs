@@ -592,19 +592,25 @@ app.MapPost("/api/work-orders/{id:guid}/inventory-line", async (Guid id, Invento
         ApprovedByCustomer = req.ApprovedByCustomer
     };
     db.WorkOrderLines.Add(line);
-    item.Stock -= req.Quantity;
-    db.StockMovements.Add(new StockMovement
+
+    var isQuote = order.Number.StartsWith("KV-", StringComparison.OrdinalIgnoreCase);
+    if (!isQuote)
     {
-        TenantId = tenantId,
-        InventoryItemId = item.Id,
-        SiteId = order.SiteId,
-        Type = StockMovementType.Consumption,
-        Quantity = req.Quantity,
-        Reference = $"Auftrag {order.Number}"
-    });
+        item.Stock -= req.Quantity;
+        db.StockMovements.Add(new StockMovement
+        {
+            TenantId = tenantId,
+            InventoryItemId = item.Id,
+            SiteId = order.SiteId,
+            Type = StockMovementType.Consumption,
+            Quantity = req.Quantity,
+            Reference = $"Auftrag {order.Number}"
+        });
+    }
+
     await db.SaveChangesAsync(ct);
     await tx.CommitAsync(ct);
-    return Results.Created($"/api/work-orders/{order.Id}/lines/{line.Id}", new { line, stock = item.Stock });
+    return Results.Created($"/api/work-orders/{order.Id}/lines/{line.Id}", new { line, stock = item.Stock, reservedOnly = isQuote });
 });
 
 app.MapPost("/api/work-orders/{id:guid}/approvals", async (Guid id, ApprovalCreate req, ErpDbContext db, CancellationToken ct) =>
@@ -2195,8 +2201,41 @@ app.MapPost("/api/quotes/{quoteId:guid}/convert", async (Guid quoteId, ErpDbCont
 
     var oldNumber = order.Number;
     var newNumber = await numbers.NextAsync(tenantId, order.SiteId, "work-order", "AU-", 5, true, ct);
+
+    var quoteLines = await db.WorkOrderLines
+        .Where(x => x.TenantId == tenantId && x.WorkOrderId == order.Id && x.InventoryItemId.HasValue && !x.IsDeleted)
+        .ToListAsync(ct);
+    var itemIds = quoteLines.Select(x => x.InventoryItemId!.Value).Distinct().ToList();
+    var items = await db.InventoryItems
+        .Where(x => x.TenantId == tenantId && itemIds.Contains(x.Id) && !x.IsDeleted)
+        .ToDictionaryAsync(x => x.Id, ct);
+
+    foreach (var line in quoteLines)
+    {
+        var item = items.GetValueOrDefault(line.InventoryItemId!.Value);
+        if (item is null) return Results.Conflict(new { error = $"Artikel {line.ItemNumber} ist nicht mehr im Lagerstamm vorhanden." });
+        if (item.Stock < line.Quantity)
+            return Results.Conflict(new { error = $"Bestand für {item.ItemNumber} reicht nicht aus. Verfügbar: {item.Stock}, benötigt: {line.Quantity}." });
+    }
+
     order.Number = newNumber;
     order.Status = WorkOrderStatus.Scheduled;
+
+    foreach (var line in quoteLines)
+    {
+        var item = items[line.InventoryItemId!.Value];
+        item.Stock -= line.Quantity;
+        db.StockMovements.Add(new StockMovement
+        {
+            TenantId = tenantId,
+            InventoryItemId = item.Id,
+            SiteId = order.SiteId,
+            Type = StockMovementType.Consumption,
+            Quantity = line.Quantity,
+            Reference = $"KV {oldNumber} → Auftrag {newNumber}"
+        });
+    }
+
     db.AuditEntries.Add(new AuditEntry
     {
         TenantId = tenantId, Actor = "staging-user", Action = "quote-converted",
