@@ -11,6 +11,8 @@ on:
       - 'local/**'
       - 'cloud/**'
       - 'deploy/**'
+      - '!deploy/workshop-erp-staging/**'
+      - '!deploy/werkstattorganizer-jl/**'
       - 'web/**'
       - 'requirements.txt'
       - 'image-builder/brand/**'
@@ -18,6 +20,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: grow-central-pi3-image
+  cancel-in-progress: true
 
 jobs:
   build:
