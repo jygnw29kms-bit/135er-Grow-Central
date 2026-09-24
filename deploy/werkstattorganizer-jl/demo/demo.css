@@ -336,3 +336,26 @@ tbody tr:last-child td{border-bottom:0}
 .workflow-strip span{flex:0 0 auto;padding:5px 8px;border-radius:5px;background:#eef2f5;color:#778794;font-size:.64rem;font-weight:650;border:1px solid #e0e6eb}
 .workflow-strip span.done{background:#eaf6ef;color:#2f7650;border-color:#cfe8d8}
 .workflow-strip span.current{background:#eaf3fb;color:#1f659d;border-color:#bfd9ed;box-shadow:inset 0 -2px 0 #2e7fbf}
+
+.workflow-strip{display:grid;grid-template-columns:repeat(10,minmax(92px,1fr));gap:7px;margin-bottom:14px;overflow-x:auto;padding-bottom:3px}
+.workflow-strip button{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:2px;min-height:84px;padding:10px;border:1px solid var(--border);background:#fff;color:var(--text);text-align:left}
+.workflow-strip button span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#e8f1f8;color:#2d6d9f;font-size:.66rem;font-weight:800}
+.workflow-strip button b{font-size:.76rem}.workflow-strip button small{font-size:.64rem;color:var(--muted)}
+.workflow-strip button:hover,.workflow-strip button.active{border-color:#74a7cf;background:#f4f9fd}
+.service-desk-grid{grid-template-columns:1fr 1fr}
+.service-context{display:grid;gap:7px}
+.service-context .context-card{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #e8edf1}
+.service-context .context-card:last-child{border-bottom:0}
+.service-context .context-card span{font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.service-context .context-card b{font-size:.82rem}
+.service-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.service-actions button{justify-content:flex-start;text-align:left;min-height:46px}
+@media(max-width:1100px){
+  .workflow-strip{grid-template-columns:repeat(10,110px)}
+  .service-desk-grid{grid-template-columns:1fr}
+}
+@media(max-width:699px){
+  .workflow-strip{grid-template-columns:repeat(10,104px)}
+  .workflow-strip button{min-height:76px}
+  .service-actions{grid-template-columns:1fr}
+}
