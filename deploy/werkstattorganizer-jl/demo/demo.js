@@ -5,6 +5,8 @@ const fmtMoney=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'
 const fmtDate=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'medium'}).format(new Date(v)):'–';
 const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(v)):'–';
 let token=sessionStorage.getItem('wm_erp_token')||'';
+let plannerState={date:new Date(),view:'week',axis:'calendar'};
+let personnelPlannerState={date:new Date(),view:'week'};
 let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],loaners:[],loanerBookings:[],checklists:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
@@ -250,6 +252,8 @@ function renderAll(){
 
  $('intakeOrder').innerHTML=state.orders.filter(o=>o.status<10&&o.status!==12).map(o=>'<option value="'+o.id+'">'+esc(o.number)+' · '+esc(vehicle(o.vehicleId)?.licensePlate||'')+'</option>').join('');
  if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
+ renderWorkshopPlanner();
+ renderPersonnelPlanner();
 }
 function empty(s){return '<div class="row-item"><div class="row-main"><div><span>'+esc(s)+'</span></div></div></div>'}
 function emptyCard(s){return '<article><p>'+esc(s)+'</p></article>'}
@@ -616,6 +620,143 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>({ 'new-cust
 $('quickBtn').onclick=()=>appointmentModal();
 $('customerSearchBtn').onclick=async()=>{try{state.customers=await api('/customers?q='+encodeURIComponent($('customerSearch').value));renderAll()}catch(e){toast(e.message,true)}};
 $('vehicleSearchBtn').onclick=async()=>{try{state.vehicles=await api('/vehicles?q='+encodeURIComponent($('vehicleSearch').value));renderAll()}catch(e){toast(e.message,true)}};
+
+
+function platformAdapt(){
+ const ua=navigator.userAgent||'';
+ const touch=navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;
+ document.body.classList.toggle('is-touch',touch);
+ document.body.classList.toggle('is-ios',/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));
+ document.body.classList.toggle('is-android',/Android/i.test(ua));
+ document.body.classList.toggle('is-desktop',!touch&&innerWidth>=900);
+ document.body.classList.toggle('is-tablet',touch&&innerWidth>=700);
+ document.body.classList.toggle('is-phone',innerWidth<700);
+ document.body.classList.toggle('is-standalone',matchMedia('(display-mode: standalone)').matches||navigator.standalone===true);
+ document.documentElement.style.setProperty('--app-height',(window.visualViewport?.height||innerHeight)+'px');
+}
+platformAdapt();
+window.addEventListener('resize',()=>{platformAdapt();renderWorkshopPlanner();renderPersonnelPlanner()},{passive:true});
+window.visualViewport?.addEventListener('resize',platformAdapt,{passive:true});
+
+function localDay(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function startOfWeek(d){const x=localDay(d),day=(x.getDay()+6)%7;return addDays(x,-day)}
+function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0)}
+function keyDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function sameDay(a,b){return keyDate(new Date(a))===keyDate(new Date(b))}
+function dateLabel(d,opts={weekday:'short',day:'2-digit',month:'2-digit'}){return new Intl.DateTimeFormat('de-DE',opts).format(d)}
+function appointmentForDay(a,d){return sameDay(a.startsAt,d)&&a.status!==4}
+function absenceForDay(a,d){const k=keyDate(d);return k>=String(a.from).slice(0,10)&&k<=String(a.to).slice(0,10)}
+function plannerRange(){
+ const d=localDay(plannerState.date);
+ if(plannerState.view==='day')return[d];
+ if(plannerState.view==='workweek'){const s=startOfWeek(d);return Array.from({length:5},(_,i)=>addDays(s,i))}
+ if(plannerState.view==='week'){const s=startOfWeek(d);return Array.from({length:7},(_,i)=>addDays(s,i))}
+ if(plannerState.view==='month'){const first=new Date(d.getFullYear(),d.getMonth(),1),last=endOfMonth(d);return Array.from({length:last.getDate()},(_,i)=>addDays(first,i))}
+ const s=startOfWeek(d);return Array.from({length:14},(_,i)=>addDays(s,i));
+}
+function plannerRangeText(days){
+ if(!days.length)return'–';
+ if(plannerState.view==='month')return new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(days[0]);
+ if(days.length===1)return new Intl.DateTimeFormat('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(days[0]);
+ return dateLabel(days[0],{day:'2-digit',month:'2-digit'})+' – '+dateLabel(days.at(-1),{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function plannerEventHtml(a){
+ const v=vehicle(a.vehicleId),cu=customer(a.customerId);
+ return '<button class="scheduler-event" data-planner-appt="'+a.id+'"><b>'+new Date(a.startsAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' · '+esc(a.subject)+'</b><span>'+esc(v?.licensePlate||'')+' · '+esc(cu?.displayName||'')+'</span></button>';
+}
+function renderWorkshopPlanner(){
+ if(!$('workshopPlannerGrid'))return;
+ const days=plannerRange();
+ $('plannerRangeLabel').textContent=plannerRangeText(days);
+ document.querySelectorAll('[data-planner-view]').forEach(b=>b.classList.toggle('active',b.dataset.plannerView===plannerState.view));
+ document.querySelectorAll('[data-planner-axis]').forEach(b=>b.classList.toggle('active',b.dataset.plannerAxis===plannerState.axis));
+
+ const inRange=state.appointments.filter(a=>days.some(d=>appointmentForDay(a,d)));
+ const totalHours=inRange.reduce((sum,a)=>sum+Math.max(0,(new Date(a.endsAt)-new Date(a.startsAt))/3600000),0);
+ const occupiedResources=new Set(inRange.map(a=>a.resourceId).filter(Boolean)).size;
+ const occupiedEmployees=new Set(inRange.map(a=>a.employeeId).filter(Boolean)).size;
+ $('plannerSummary').innerHTML=[
+  ['Termine',inRange.length],['Geplante Stunden',totalHours.toLocaleString('de-DE',{maximumFractionDigits:1})+' h'],['Ressourcen belegt',occupiedResources+' / '+state.resources.length],['Mitarbeiter geplant',occupiedEmployees+' / '+state.employees.length]
+ ].map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+
+ const mobile=innerWidth<700;
+ if(mobile||plannerState.view==='agenda'||plannerState.view==='month'){
+  const grouped=days.map(d=>({d,events:inRange.filter(a=>appointmentForDay(a,d))})).filter(x=>x.events.length||plannerState.view!=='agenda');
+  $('workshopPlannerGrid').style.minWidth='0';
+  $('workshopPlannerGrid').innerHTML='<div class="mobile-planner-list" style="display:grid">'+grouped.map(g=>
+   '<div class="mobile-planner-card"><h4>'+dateLabel(g.d,{weekday:'long',day:'2-digit',month:'2-digit'})+'</h4>'+
+   (g.events.length?g.events.map(plannerEventHtml).join(''):'<p>Keine Termine</p>')+'</div>'
+  ).join('')+'</div>';
+ }else if(plannerState.axis==='calendar'){
+  const slots=Array.from({length:11},(_,i)=>7+i);
+  $('workshopPlannerGrid').style.setProperty('--planner-cols',days.length);
+  $('workshopPlannerGrid').innerHTML='<div class="scheduler-head"><div>Zeit</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
+   slots.map(hour=>'<div class="scheduler-row"><div class="scheduler-label"><b>'+String(hour).padStart(2,'0')+':00</b><span>'+String(hour+1).padStart(2,'0')+':00</span></div>'+
+    days.map(d=>{const ev=inRange.filter(a=>appointmentForDay(a,d)&&new Date(a.startsAt).getHours()===hour);return'<div class="scheduler-cell '+(sameDay(d,new Date())?'today ':'')+([0,6].includes(d.getDay())?'weekend':'')+'">'+ev.map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
+ }else{
+  const rows=plannerState.axis==='resources'?state.resources:state.employees;
+  $('workshopPlannerGrid').style.setProperty('--planner-cols',days.length);
+  $('workshopPlannerGrid').innerHTML='<div class="scheduler-head"><div>'+(plannerState.axis==='resources'?'Ressource':'Mitarbeiter')+'</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
+   rows.map(row=>'<div class="scheduler-row"><div class="scheduler-label"><b>'+esc(row.name)+'</b><span>'+esc(plannerState.axis==='resources'?resourceKindName(row.kind):row.roleName)+'</span></div>'+
+    days.map(d=>{const ev=inRange.filter(a=>appointmentForDay(a,d)&&(plannerState.axis==='resources'?a.resourceId===row.id:a.employeeId===row.id));return'<div class="scheduler-cell '+(sameDay(d,new Date())?'today':'')+'">'+ev.map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
+ }
+ document.querySelectorAll('[data-planner-appt]').forEach(b=>b.onclick=()=>appointmentModal(state.appointments.find(a=>a.id===b.dataset.plannerAppt)));
+}
+
+function personnelRange(){
+ const d=localDay(personnelPlannerState.date);
+ if(personnelPlannerState.view==='month'){
+  const first=new Date(d.getFullYear(),d.getMonth(),1),last=endOfMonth(d);
+  return Array.from({length:last.getDate()},(_,i)=>addDays(first,i));
+ }
+ const s=startOfWeek(d);return Array.from({length:7},(_,i)=>addDays(s,i));
+}
+function renderPersonnelPlanner(){
+ if(!$('personnelPlannerGrid'))return;
+ const days=personnelRange();
+ $('personnelRangeLabel').textContent=personnelPlannerState.view==='month'
+  ?new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(days[0])
+  :dateLabel(days[0],{day:'2-digit',month:'2-digit'})+' – '+dateLabel(days.at(-1),{day:'2-digit',month:'2-digit',year:'numeric'});
+ $('personnelWeekBtn').classList.toggle('active',personnelPlannerState.view==='week');
+ $('personnelMonthBtn').classList.toggle('active',personnelPlannerState.view==='month');
+
+ const abs=state.absences.filter(a=>days.some(d=>absenceForDay(a,d)));
+ const planned=state.appointments.filter(a=>days.some(d=>appointmentForDay(a,d)));
+ const weeklyCapacity=state.employees.reduce((s,e)=>s+Number(e.weeklyHours||0),0);
+ const plannedHours=planned.reduce((s,a)=>s+Math.max(0,(new Date(a.endsAt)-new Date(a.startsAt))/3600000),0);
+ const absentDays=abs.reduce((s,a)=>s+days.filter(d=>absenceForDay(a,d)).length,0);
+ $('personnelSummary').innerHTML=[
+  ['Mitarbeiter',state.employees.length],['Sollkapazität',weeklyCapacity.toLocaleString('de-DE',{maximumFractionDigits:1})+' h'],['Geplant',plannedHours.toLocaleString('de-DE',{maximumFractionDigits:1})+' h'],['Abwesenheitstage',absentDays]
+ ].map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+
+ if(innerWidth<700){
+  $('personnelPlannerGrid').style.minWidth='0';
+  $('personnelPlannerGrid').innerHTML='<div class="mobile-planner-list" style="display:grid">'+state.employees.map(e=>{
+   const eAbs=abs.filter(a=>a.employeeId===e.id),eAp=planned.filter(a=>a.employeeId===e.id);
+   return'<div class="mobile-planner-card"><h4>'+esc(e.name)+'</h4><p>'+esc(e.roleName)+' · '+esc(e.weeklyHours)+' h/Woche</p>'+
+    eAbs.map(a=>'<div class="scheduler-event absence"><b>'+esc(['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'][a.type]||'Abwesenheit')+'</b><span>'+esc(a.from)+' – '+esc(a.to)+'</span></div>').join('')+
+    eAp.slice(0,6).map(plannerEventHtml).join('')+'</div>';
+  }).join('')+'</div>';
+  return;
+ }
+ const cols='180px repeat('+days.length+',minmax(96px,1fr))';
+ $('personnelPlannerGrid').innerHTML='<div class="personnel-grid-head" style="grid-template-columns:'+cols+'"><div>Mitarbeiter</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
+  state.employees.map(e=>'<div class="personnel-grid-row" style="grid-template-columns:'+cols+'"><div class="personnel-name"><b>'+esc(e.name)+'</b><span>'+esc(e.roleName)+' · '+esc(e.weeklyHours)+' h</span></div>'+
+   days.map(d=>{const a=state.absences.find(x=>x.employeeId===e.id&&absenceForDay(x,d));const ap=state.appointments.filter(x=>x.employeeId===e.id&&appointmentForDay(x,d));return'<div class="personnel-day">'+(a?'<span class="capacity-pill absent">'+esc(['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'][a.type]||'Abwesend')+'</span>':'<span class="capacity-pill">'+(ap.length?ap.length+' Termin'+(ap.length>1?'e':''):'verfügbar')+'</span>')+ap.slice(0,2).map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
+ document.querySelectorAll('[data-planner-appt]').forEach(b=>b.onclick=()=>appointmentModal(state.appointments.find(a=>a.id===b.dataset.plannerAppt)));
+}
+
+document.querySelectorAll('[data-planner-view]').forEach(b=>b.onclick=()=>{plannerState.view=b.dataset.plannerView;renderWorkshopPlanner()});
+document.querySelectorAll('[data-planner-axis]').forEach(b=>b.onclick=()=>{plannerState.axis=b.dataset.plannerAxis;renderWorkshopPlanner()});
+$('plannerPrevBtn').onclick=()=>{plannerState.date=plannerState.view==='month'?new Date(plannerState.date.getFullYear(),plannerState.date.getMonth()-1,1):addDays(plannerState.date,plannerState.view==='day'?-1:-7);renderWorkshopPlanner()};
+$('plannerNextBtn').onclick=()=>{plannerState.date=plannerState.view==='month'?new Date(plannerState.date.getFullYear(),plannerState.date.getMonth()+1,1):addDays(plannerState.date,plannerState.view==='day'?1:7);renderWorkshopPlanner()};
+$('plannerTodayBtn').onclick=()=>{plannerState.date=new Date();renderWorkshopPlanner()};
+$('personnelPrevBtn').onclick=()=>{personnelPlannerState.date=personnelPlannerState.view==='month'?new Date(personnelPlannerState.date.getFullYear(),personnelPlannerState.date.getMonth()-1,1):addDays(personnelPlannerState.date,-7);renderPersonnelPlanner()};
+$('personnelNextBtn').onclick=()=>{personnelPlannerState.date=personnelPlannerState.view==='month'?new Date(personnelPlannerState.date.getFullYear(),personnelPlannerState.date.getMonth()+1,1):addDays(personnelPlannerState.date,7);renderPersonnelPlanner()};
+$('personnelTodayBtn').onclick=()=>{personnelPlannerState.date=new Date();renderPersonnelPlanner()};
+$('personnelWeekBtn').onclick=()=>{personnelPlannerState.view='week';renderPersonnelPlanner()};
+$('personnelMonthBtn').onclick=()=>{personnelPlannerState.view='month';renderPersonnelPlanner()};
 
 $('globalSearch').addEventListener('input',()=>{
  const q=$('globalSearch').value.trim().toLowerCase();if(q.length<2){$('searchResults').classList.add('hidden');return}
