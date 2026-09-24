@@ -218,8 +218,8 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/inventory")) return write ? "inventory.write" : "inventory.read";
     if (p.StartsWith("/api/purchase-orders") || p.StartsWith("/api/suppliers")) return write ? "purchasing.write" : "purchasing.read";
     if (p.StartsWith("/api/tires")) return write ? "tires.write" : "tires.read";
-    if (p.StartsWith("/api/employees") || p.StartsWith("/api/absences")) return write ? "personnel.write" : "personnel.read";
-    if (p.StartsWith("/api/invoices")) return write ? "billing.write" : "billing.read";
+    if (p.StartsWith("/api/employees") || p.StartsWith("/api/absences") || p.StartsWith("/api/personnel")) return write ? "personnel.write" : "personnel.read";
+    if (p.StartsWith("/api/invoices") || p.StartsWith("/api/finance")) return write ? "billing.write" : "billing.read";
     if (p.StartsWith("/api/resources")) return write ? "resources.write" : "resources.read";
     if (p.StartsWith("/api/reminders") || p.StartsWith("/api/communications")) return write ? "crm.write" : "crm.read";
     if (p.StartsWith("/api/checklists")) return write ? "orders.write" : "orders.read";
@@ -1763,6 +1763,363 @@ app.MapPut("/api/checklists/templates/{id:guid}", async (Guid id, ChecklistTempl
     return Results.Ok(t);
 });
 
+
+app.MapGet("/api/finance/open-items", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var invoices = await db.Invoices.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && !x.IsDeleted &&
+                    x.Status != InvoiceStatus.Paid && x.Status != InvoiceStatus.Cancelled && x.Status != InvoiceStatus.Credited &&
+                    x.GrossTotal - x.PaidTotal > 0m)
+        .OrderBy(x => x.DueDate)
+        .ToListAsync(ct);
+
+    var customerIds = invoices.Select(x => x.CustomerId).Distinct().ToList();
+    var vehicleIds = invoices.Select(x => x.VehicleId).Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
+    var customers = await db.Customers.AsNoTracking().Where(x => x.TenantId == tenantId && customerIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+    var vehicles = await db.Vehicles.AsNoTracking().Where(x => x.TenantId == tenantId && vehicleIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+    var invoiceIds = invoices.Select(x => x.Id).ToList();
+    var dunnings = await db.AuditEntries.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.EntityType == "Invoice" && x.EntityId.HasValue && invoiceIds.Contains(x.EntityId.Value) && x.Action == "dunning-notice" && !x.IsDeleted)
+        .ToListAsync(ct);
+
+    return Results.Ok(invoices.Select(i =>
+    {
+        var daysOverdue = Math.Max(0, today.DayNumber - i.DueDate.DayNumber);
+        var customer = customers.GetValueOrDefault(i.CustomerId);
+        Vehicle? vehicle = i.VehicleId.HasValue ? vehicles.GetValueOrDefault(i.VehicleId.Value) : null;
+        var notices = dunnings.Where(x => x.EntityId == i.Id).OrderBy(x => x.CreatedAt).ToList();
+        return new
+        {
+            invoice = i,
+            customerName = customer?.DisplayName ?? "",
+            vehiclePlate = vehicle?.LicensePlate ?? "",
+            openGross = i.GrossTotal - i.PaidTotal,
+            daysOverdue,
+            dunningLevel = notices.Count,
+            lastDunningAt = notices.LastOrDefault()?.CreatedAt
+        };
+    }));
+});
+
+app.MapPost("/api/finance/invoices/{id:guid}/dunning", async (Guid id, DunningCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var invoice = await db.Invoices.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (invoice is null) return Results.NotFound();
+    if (invoice.Status is InvoiceStatus.Paid or InvoiceStatus.Cancelled or InvoiceStatus.Credited)
+        return Results.Conflict(new { error = "Für diesen Beleg kann keine Mahnung erstellt werden." });
+
+    var level = await db.AuditEntries.CountAsync(x => x.TenantId == tenantId && x.EntityType == "Invoice" && x.EntityId == id && x.Action == "dunning-notice" && !x.IsDeleted, ct) + 1;
+    invoice.Status = InvoiceStatus.Overdue;
+    var audit = new AuditEntry
+    {
+        TenantId = tenantId,
+        Actor = "staging-user",
+        Action = "dunning-notice",
+        EntityType = "Invoice",
+        EntityId = invoice.Id,
+        NewJson = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            level,
+            fee = req.Fee,
+            note = req.Note ?? "",
+            openGross = invoice.GrossTotal - invoice.PaidTotal,
+            dueDate = invoice.DueDate
+        })
+    };
+    db.AuditEntries.Add(audit);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { invoiceId = invoice.Id, level, fee = req.Fee, createdAt = audit.CreatedAt });
+});
+
+app.MapGet("/api/finance/datev", async (int? year, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var targetYear = year ?? DateTime.UtcNow.Year;
+    var from = new DateOnly(targetYear, 1, 1);
+    var to = new DateOnly(targetYear, 12, 31);
+    var invoices = await db.Invoices.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.IssueDate >= from && x.IssueDate <= to && !x.IsDeleted)
+        .OrderBy(x => x.IssueDate).ThenBy(x => x.Number).ToListAsync(ct);
+
+    var customerIds = invoices.Select(x => x.CustomerId).Distinct().ToList();
+    var customers = await db.Customers.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && customerIds.Contains(x.Id))
+        .ToDictionaryAsync(x => x.Id, ct);
+
+    static string Csv(string? value) => "\"" + (value ?? "").Replace("\"", "\"\"") + "\"";
+    var sb = new StringBuilder();
+    sb.AppendLine("Belegdatum;Belegnummer;Kundennummer;Kunde;Netto;USt;Brutto;Bezahlt;Status");
+    foreach (var i in invoices)
+    {
+        var cu = customers.GetValueOrDefault(i.CustomerId);
+        sb.Append(i.IssueDate.ToString("dd.MM.yyyy")).Append(';')
+          .Append(Csv(i.Number)).Append(';')
+          .Append(Csv(cu?.CustomerNumber)).Append(';')
+          .Append(Csv(cu?.DisplayName)).Append(';')
+          .Append(i.NetTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).Append(';')
+          .Append(i.VatTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).Append(';')
+          .Append(i.GrossTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).Append(';')
+          .Append(i.PaidTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).Append(';')
+          .Append(i.Status).AppendLine();
+    }
+    return Results.Text(sb.ToString(), "text/csv; charset=utf-8");
+});
+
+app.MapGet("/api/personnel/qualifications", async (Guid? employeeId, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = db.EmployeeQualifications.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (employeeId.HasValue) q = q.Where(x => x.EmployeeId == employeeId.Value);
+    return Results.Ok(await q.OrderBy(x => x.Name).ToListAsync(ct));
+});
+
+app.MapPost("/api/personnel/qualifications", async (QualificationWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    if (!await db.Employees.AnyAsync(x => x.Id == req.EmployeeId && x.TenantId == tenantId && !x.IsDeleted, ct))
+        return Results.BadRequest(new { error = "Mitarbeiter nicht gefunden." });
+    var q = new EmployeeQualification { TenantId = tenantId, EmployeeId = req.EmployeeId, Name = req.Name.Trim(), Level = req.Level, ValidUntil = req.ValidUntil };
+    db.EmployeeQualifications.Add(q);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/personnel/qualifications/{q.Id}", q);
+});
+
+app.MapPut("/api/personnel/qualifications/{id:guid}", async (Guid id, QualificationWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = await db.EmployeeQualifications.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (q is null) return Results.NotFound();
+    q.EmployeeId = req.EmployeeId;
+    q.Name = req.Name.Trim();
+    q.Level = req.Level;
+    q.ValidUntil = req.ValidUntil;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(q);
+});
+
+app.MapDelete("/api/personnel/qualifications/{id:guid}", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = await db.EmployeeQualifications.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (q is null) return Results.NotFound();
+    q.IsDeleted = true;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { id, deleted = true });
+});
+
+app.MapGet("/api/personnel/vacation-balances", async (int? year, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var targetYear = year ?? DateTime.UtcNow.Year;
+    var employees = await db.Employees.AsNoTracking().Where(x => x.TenantId == tenantId && x.Active && !x.IsDeleted).OrderBy(x => x.Name).ToListAsync(ct);
+    var from = new DateOnly(targetYear, 1, 1);
+    var to = new DateOnly(targetYear, 12, 31);
+    var absences = await db.Absences.AsNoTracking()
+        .Where(x => x.TenantId == tenantId && x.Type == AbsenceType.Vacation && x.Approved && x.From <= to && x.To >= from && !x.IsDeleted)
+        .ToListAsync(ct);
+
+    int BusinessDays(DateOnly a, DateOnly b)
+    {
+        var start = a < from ? from : a;
+        var end = b > to ? to : b;
+        var count = 0;
+        for (var d = start; d <= end; d = d.AddDays(1))
+            if (d.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday) count++;
+        return count;
+    }
+
+    return Results.Ok(employees.Select(e =>
+    {
+        var used = absences.Where(a => a.EmployeeId == e.Id).Sum(a => BusinessDays(a.From, a.To));
+        return new { employeeId = e.Id, e.Name, e.AnnualVacationDays, used, remaining = e.AnnualVacationDays - used, year = targetYear };
+    }));
+});
+
+app.MapGet("/api/admin/company", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var tenant = await db.Tenants.AsNoTracking().FirstAsync(x => x.Id == tenantId, ct);
+    return Results.Ok(tenant);
+});
+
+app.MapPut("/api/admin/company", async (CompanyWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var t = await db.Tenants.FirstAsync(x => x.Id == tenantId, ct);
+    t.Name = req.Name.Trim();
+    t.LegalName = req.LegalName?.Trim() ?? "";
+    t.TaxNumber = req.TaxNumber?.Trim() ?? "";
+    t.VatId = req.VatId?.Trim() ?? "";
+    t.Email = req.Email?.Trim() ?? "";
+    t.Phone = req.Phone?.Trim() ?? "";
+    t.PrimaryColor = req.PrimaryColor?.Trim() ?? "#1976D2";
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(t);
+});
+
+app.MapPost("/api/admin/sites", async (SiteWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var s = new Site
+    {
+        TenantId = tenantId, Name = req.Name.Trim(), Street = req.Street?.Trim() ?? "",
+        PostalCode = req.PostalCode?.Trim() ?? "", City = req.City?.Trim() ?? "",
+        State = req.State?.Trim() ?? "Brandenburg", CountryCode = req.CountryCode?.Trim().ToUpperInvariant() ?? "DE", Active = req.Active
+    };
+    db.Sites.Add(s);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/admin/sites/{s.Id}", s);
+});
+
+app.MapPut("/api/admin/sites/{id:guid}", async (Guid id, SiteWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var s = await db.Sites.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (s is null) return Results.NotFound();
+    s.Name = req.Name.Trim();
+    s.Street = req.Street?.Trim() ?? "";
+    s.PostalCode = req.PostalCode?.Trim() ?? "";
+    s.City = req.City?.Trim() ?? "";
+    s.State = req.State?.Trim() ?? "Brandenburg";
+    s.CountryCode = req.CountryCode?.Trim().ToUpperInvariant() ?? "DE";
+    s.Active = req.Active;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(s);
+});
+
+app.MapGet("/api/admin/number-sequences", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(await db.NumberSequences.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted).OrderBy(x => x.Key).ToListAsync(ct));
+});
+
+app.MapPut("/api/admin/number-sequences/{id:guid}", async (Guid id, NumberSequenceWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var n = await db.NumberSequences.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (n is null) return Results.NotFound();
+    n.Prefix = req.Prefix?.Trim() ?? "";
+    n.Suffix = req.Suffix?.Trim() ?? "";
+    n.Padding = Math.Clamp(req.Padding, 1, 12);
+    n.ResetYearly = req.ResetYearly;
+    if (req.NextValue.HasValue && req.NextValue.Value > 0) n.NextValue = req.NextValue.Value;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(n);
+});
+
+app.MapGet("/api/admin/audit", async (string? entityType, int? limit, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = db.AuditEntries.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (!string.IsNullOrWhiteSpace(entityType)) q = q.Where(x => x.EntityType == entityType);
+    var take = Math.Clamp(limit ?? 250, 1, 1000);
+    return Results.Ok(await q.OrderByDescending(x => x.CreatedAt).Take(take).ToListAsync(ct));
+});
+
+app.MapGet("/api/admin/custom-fields", async (string? entityType, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = db.CustomFieldDefinitions.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (!string.IsNullOrWhiteSpace(entityType)) q = q.Where(x => x.EntityType == entityType);
+    return Results.Ok(await q.OrderBy(x => x.EntityType).ThenBy(x => x.Label).ToListAsync(ct));
+});
+
+app.MapPost("/api/admin/custom-fields", async (CustomFieldWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var d = new CustomFieldDefinition
+    {
+        TenantId = tenantId, EntityType = req.EntityType.Trim(), Key = req.Key.Trim(),
+        Label = req.Label.Trim(), FieldType = req.FieldType?.Trim() ?? "text", Required = req.Required,
+        OptionsJson = string.IsNullOrWhiteSpace(req.OptionsJson) ? "[]" : req.OptionsJson
+    };
+    db.CustomFieldDefinitions.Add(d);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/admin/custom-fields/{d.Id}", d);
+});
+
+app.MapPut("/api/admin/custom-fields/{id:guid}", async (Guid id, CustomFieldWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var d = await db.CustomFieldDefinitions.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (d is null) return Results.NotFound();
+    d.EntityType = req.EntityType.Trim();
+    d.Key = req.Key.Trim();
+    d.Label = req.Label.Trim();
+    d.FieldType = req.FieldType?.Trim() ?? "text";
+    d.Required = req.Required;
+    d.OptionsJson = string.IsNullOrWhiteSpace(req.OptionsJson) ? "[]" : req.OptionsJson;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(d);
+});
+
+app.MapGet("/api/admin/document-templates", async (ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    return Results.Ok(await db.DocumentTemplates.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted).OrderBy(x => x.Name).ToListAsync(ct));
+});
+
+app.MapPost("/api/admin/document-templates", async (DocumentTemplateWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var d = new DocumentTemplate
+    {
+        TenantId = tenantId, SiteId = req.SiteId, Kind = req.Kind, Name = req.Name.Trim(),
+        DefinitionJson = string.IsNullOrWhiteSpace(req.DefinitionJson) ? "{}" : req.DefinitionJson, Active = req.Active
+    };
+    db.DocumentTemplates.Add(d);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/admin/document-templates/{d.Id}", d);
+});
+
+app.MapPut("/api/admin/document-templates/{id:guid}", async (Guid id, DocumentTemplateWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var d = await db.DocumentTemplates.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (d is null) return Results.NotFound();
+    d.SiteId = req.SiteId;
+    d.Kind = req.Kind;
+    d.Name = req.Name.Trim();
+    d.DefinitionJson = string.IsNullOrWhiteSpace(req.DefinitionJson) ? "{}" : req.DefinitionJson;
+    d.Active = req.Active;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(d);
+});
+
+app.MapGet("/api/reports/productivity", async (DateOnly? from, DateOnly? to, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var start = from ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+    var end = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    var fromDt = new DateTimeOffset(start.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    var toDt = new DateTimeOffset(end.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    var employees = await db.Employees.AsNoTracking().Where(x => x.TenantId == tenantId && x.Active && !x.IsDeleted).OrderBy(x => x.Name).ToListAsync(ct);
+    var times = await db.TimeEntries.AsNoTracking().Where(x => x.TenantId == tenantId && x.StartedAt >= fromDt && x.StartedAt < toDt && !x.IsDeleted).ToListAsync(ct);
+    var orderIds = times.Select(x => x.WorkOrderId).Distinct().ToList();
+    var lines = await db.WorkOrderLines.AsNoTracking().Where(x => x.TenantId == tenantId && orderIds.Contains(x.WorkOrderId) && x.Type == LineType.Labor && !x.IsDeleted).ToListAsync(ct);
+
+    return Results.Ok(employees.Select(e =>
+    {
+        var entries = times.Where(x => x.EmployeeId == e.Id).ToList();
+        var actualHours = entries.Where(x => x.EndedAt.HasValue).Sum(x => (x.EndedAt!.Value - x.StartedAt).TotalHours);
+        var relatedOrders = entries.Select(x => x.WorkOrderId).Distinct().ToList();
+        var soldHours = lines.Where(x => relatedOrders.Contains(x.WorkOrderId)).Sum(x => x.Quantity);
+        return new
+        {
+            employeeId = e.Id,
+            e.Name,
+            e.RoleName,
+            actualHours = Math.Round(actualHours, 2),
+            soldHours,
+            efficiencyPercent = actualHours <= 0 ? 0m : Math.Round((decimal)soldHours / (decimal)actualHours * 100m, 1),
+            hourlyRate = e.ProductiveHourlyRate
+        };
+    }));
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
@@ -1799,6 +2156,13 @@ record ReminderCreate(Guid CustomerId, Guid? VehicleId, string Type, string Subj
 record CommunicationCreate(Guid CustomerId, Guid? VehicleId, Guid? WorkOrderId, CommunicationChannel Channel, string Subject, string? Body, string? Direction);
 record ChecklistFieldWrite(string Label, ChecklistFieldType Type, int SortOrder, bool Required);
 record ChecklistTemplateWrite(string Name, string? Context, List<ChecklistFieldWrite> Fields);
+record DunningCreate(decimal Fee, string? Note);
+record QualificationWrite(Guid EmployeeId, string Name, int Level, DateOnly? ValidUntil);
+record CompanyWrite(string Name, string? LegalName, string? TaxNumber, string? VatId, string? Email, string? Phone, string? PrimaryColor);
+record SiteWrite(string Name, string? Street, string? PostalCode, string? City, string? State, string? CountryCode, bool Active);
+record NumberSequenceWrite(string? Prefix, string? Suffix, int Padding, bool ResetYearly, long? NextValue);
+record CustomFieldWrite(string EntityType, string Key, string Label, string? FieldType, bool Required, string? OptionsJson);
+record DocumentTemplateWrite(Guid? SiteId, DocumentKind Kind, string Name, string? DefinitionJson, bool Active);
 record LoanerCreate(Guid? SiteId, string Number, string LicensePlate, string VehicleName, int Mileage, string? FuelOrChargeLevel);
 record LoanerBookingCreate(Guid LoanerVehicleId, Guid CustomerId, Guid? WorkOrderId, DateTimeOffset From, DateTimeOffset To);
 record LoanerHandover(int? Mileage, string? FuelOrChargeLevel, string? Damage);
