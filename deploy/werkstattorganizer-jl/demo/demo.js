@@ -141,14 +141,16 @@ function renderAll(){
  renderOrderBoard();
 
  $('customerRows').innerHTML=state.customers.map(x=>
-  '<tr><td>'+esc(x.customerNumber)+'</td><td><b>'+esc(x.displayName)+'</b></td><td>'+esc(x.phone||x.mobile||'')+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(x.city||'')+'</td><td><button class="secondary small" data-edit-customer="'+x.id+'">Bearbeiten</button></td></tr>'
+  '<tr><td>'+esc(x.customerNumber)+'</td><td><b>'+esc(x.displayName)+'</b></td><td>'+esc(x.phone||x.mobile||'')+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(x.city||'')+'</td><td><div class="page-actions"><button class="secondary small" data-customer-history="'+x.id+'">Historie</button><button class="secondary small" data-edit-customer="'+x.id+'">Bearbeiten</button></div></td></tr>'
  ).join('');
  document.querySelectorAll('[data-edit-customer]').forEach(b=>b.onclick=()=>customerModal(customer(b.dataset.editCustomer)));
+ document.querySelectorAll('[data-customer-history]').forEach(b=>b.onclick=()=>customerHistoryModal(b.dataset.customerHistory));
 
  $('vehicleRows').innerHTML=state.vehicles.map(v=>
-  '<tr><td><b>'+esc(v.licensePlate)+'</b></td><td>'+esc((v.make||'')+' '+(v.model||''))+'</td><td>'+esc(v.vin||'')+'</td><td>'+esc(v.mileage??'–')+'</td><td>'+esc(v.nextHu||'–')+'</td><td><button class="secondary small" data-edit-vehicle="'+v.id+'">Bearbeiten</button></td></tr>'
+  '<tr><td><b>'+esc(v.licensePlate)+'</b></td><td>'+esc((v.make||'')+' '+(v.model||''))+'</td><td>'+esc(v.vin||'')+'</td><td>'+esc(v.mileage??'–')+'</td><td>'+esc(v.nextHu||'–')+'</td><td><div class="page-actions"><button class="secondary small" data-vehicle-history="'+v.id+'">Historie</button><button class="secondary small" data-edit-vehicle="'+v.id+'">Bearbeiten</button></div></td></tr>'
  ).join('');
  document.querySelectorAll('[data-edit-vehicle]').forEach(b=>b.onclick=()=>vehicleModal(vehicle(b.dataset.editVehicle)));
+ document.querySelectorAll('[data-vehicle-history]').forEach(b=>b.onclick=()=>vehicleHistoryModal(b.dataset.vehicleHistory));
 
  $('tireCards').innerHTML=state.tires.map(t=>{
   const v=vehicle(t.vehicleId),cu=customer(t.customerId);
@@ -165,8 +167,9 @@ function renderAll(){
  document.querySelectorAll('[data-stock-item]').forEach(b=>b.onclick=()=>stockMovementModal(b.dataset.stockItem));
 
  $('supplierRows').innerHTML=state.suppliers.map(s=>
-  '<div class="row-item"><div class="row-main"><div><b>'+esc(s.name)+'</b><span>'+esc(s.supplierNumber)+' · '+esc(s.phone||s.email||'')+'</span></div></div></div>'
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(s.name)+'</b><span>'+esc(s.supplierNumber)+' · '+esc(s.phone||s.email||'')+'</span></div></div><button class="secondary small" data-edit-supplier="'+s.id+'">Bearbeiten</button></div>'
  ).join('')||empty('Noch keine Lieferanten.');
+ document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.onclick=()=>supplierModal(state.suppliers.find(s=>s.id===b.dataset.editSupplier)));
 
  $('purchaseOrderRows').innerHTML=state.purchaseOrders.map(x=>{
   const o=x.order||x,sup=state.suppliers.find(s=>s.id===o.supplierId),lines=x.lines||[];
@@ -178,12 +181,15 @@ function renderAll(){
  renderPurchaseForm();
 
  $('employeeRows').innerHTML=state.employees.map(e=>
-  '<tr><td><b>'+esc(e.name)+'</b></td><td>'+esc(e.roleName)+'</td><td>'+esc(e.weeklyHours)+' h</td><td>'+esc(e.annualVacationDays)+' Tage</td><td>'+fmtMoney(e.productiveHourlyRate)+'/h</td></tr>'
+  '<tr><td><b>'+esc(e.name)+'</b></td><td>'+esc(e.roleName)+'</td><td>'+esc(e.weeklyHours)+' h</td><td>'+esc(e.annualVacationDays)+' Tage</td><td>'+fmtMoney(e.productiveHourlyRate)+'/h</td><td><button class="secondary small" data-edit-employee="'+e.id+'">Bearbeiten</button></td></tr>'
  ).join('');
+ document.querySelectorAll('[data-edit-employee]').forEach(b=>b.onclick=()=>employeeModal(employee(b.dataset.editEmployee)));
  $('absenceRows').innerHTML=state.absences.map(a=>{
   const e=employee(a.employeeId),types=['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'];
-  return '<div class="row-item"><div class="row-main"><div><b>'+esc(e?.name||'Mitarbeiter')+' · '+esc(types[a.type]||'Abwesenheit')+'</b><span>'+esc(a.from)+' bis '+esc(a.to)+(a.reason?' · '+esc(a.reason):'')+'</span></div></div><span class="badge '+badge(a.approved?'aktiv':'offen')+'">'+(a.approved?'Freigegeben':'Offen')+'</span></div>';
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(e?.name||'Mitarbeiter')+' · '+esc(types[a.type]||'Abwesenheit')+'</b><span>'+esc(a.from)+' bis '+esc(a.to)+(a.reason?' · '+esc(a.reason):'')+'</span></div></div><div class="page-actions"><span class="badge '+badge(a.approved?'aktiv':'offen')+'">'+(a.approved?'Freigegeben':'Offen')+'</span><button class="secondary small" data-edit-absence="'+a.id+'">Bearbeiten</button><button class="secondary small" data-delete-absence="'+a.id+'">Löschen</button></div></div>';
  }).join('')||empty('Keine Abwesenheiten eingetragen.');
+ document.querySelectorAll('[data-edit-absence]').forEach(b=>b.onclick=()=>absenceModal(state.absences.find(a=>a.id===b.dataset.editAbsence)));
+ document.querySelectorAll('[data-delete-absence]').forEach(b=>b.onclick=()=>deleteAbsence(b.dataset.deleteAbsence));
 
  $('invoiceRows').innerHTML=state.invoices.map(i=>{
   const actions='<button class="secondary small" data-invoice-detail="'+i.id+'">Details</button>'+(i.status!==3&&i.status!==5&&i.status!==6?'<button class="secondary small" data-pay="'+i.id+'">Zahlung</button>':'')+(!i.number.startsWith('ST-')&&!i.number.startsWith('GS-')&&i.status!==5&&i.status!==6?'<button class="secondary small" data-reverse="'+i.id+'">Korrektur</button>':'');
@@ -223,7 +229,7 @@ function renderAll(){
  const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
  $('monthlyRevenue').innerHTML=monthly.map(m=>{
   const pct=Math.max(3,Math.round(Number(m.net||0)/maxMonth*100));
-  return '<div class="bar-col"><span class="bar-value">'+esc(fmtMoney(m.net||0).replace(',00',''))+'</span><div class="bar" style="height:'+pct+'%"></div><span class="bar-label">'+monthNames[(m.month||1)-1]+'</span></div>';
+  return '<div class="bar-col"><span class="bar-value">'+esc(fmtMoney(m.net||0).replace(',00',''))+'</span><progress class="revenue-progress" max="100" value="'+pct+'"></progress><span class="bar-label">'+monthNames[(m.month||1)-1]+'</span></div>';
  }).join('');
 
  $('topCustomers').innerHTML=(state.report?.topCustomers||[]).map((x,i)=>
@@ -245,10 +251,11 @@ function renderAll(){
  }).join('')||empty('Keine Rollen.');
 
  $('resourceRows').innerHTML=state.resources.map(r=>
-  '<div class="row-item"><div class="row-main"><div><b>'+esc(r.name)+'</b><span>'+esc(resourceKindName(r.kind))+(r.maxLoadKg?' · '+esc(r.maxLoadKg)+' kg':'')+(r.supportsEv?' · EV':'')+'</span></div></div><span class="badge success">aktiv</span></div>'
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(r.name)+'</b><span>'+esc(resourceKindName(r.kind))+(r.maxLoadKg?' · '+esc(r.maxLoadKg)+' kg':'')+(r.supportsEv?' · EV':'')+'</span></div></div><div class="page-actions"><span class="badge success">aktiv</span><button class="secondary small" data-edit-resource="'+r.id+'">Bearbeiten</button></div></div>'
  ).join('')||empty('Keine Ressourcen.');
  document.querySelectorAll('[data-user-roles]').forEach(b=>b.onclick=()=>userRolesModal(b.dataset.userRoles));
  document.querySelectorAll('[data-role-perms]').forEach(b=>b.onclick=()=>rolePermissionsModal(b.dataset.rolePerms));
+ document.querySelectorAll('[data-edit-resource]').forEach(b=>b.onclick=()=>resourceModal(state.resources.find(r=>r.id===b.dataset.editResource)));
 
  $('intakeOrder').innerHTML=state.orders.filter(o=>o.status<10&&o.status!==12).map(o=>'<option value="'+o.id+'">'+esc(o.number)+' · '+esc(vehicle(o.vehicleId)?.licensePlate||'')+'</option>').join('');
  if(!$('checkItems').children.length)$('checkItems').innerHTML=['Beleuchtung','Bremsen','Bereifung','Flüssigkeiten','Warnleuchten','Wischer/Wascher','Unterboden','Fehlerspeicher'].map(x=>'<label class="check-item"><span>'+x+'</span><input type="checkbox"></label>').join('');
@@ -270,23 +277,77 @@ function renderOrderBoard(){
 async function openOrder(id){
  state.selectedOrder=id;renderOrderBoard();
  try{
-  const d=await api('/work-orders/'+id);const o=d.order,v=vehicle(o.vehicleId),c=customer(o.customerId);
-  const next=nextStatus(o.status);
-  $('orderDetail').innerHTML='<div class="panel-head"><div><h3>'+esc(o.number)+' · '+esc(v?.licensePlate||'')+'</h3><p>'+esc(c?.displayName||'')+' · '+esc(v?((v.make||'')+' '+(v.model||'')):'')+'</p></div><span class="badge '+badge(workStatus[o.status])+'">'+esc(workStatus[o.status])+'</span></div>'+
-   '<div class="release-grid"><div><b>Kundenwunsch</b><span>'+esc(o.customerRequest||'–')+'</span></div><div><b>Diagnose</b><span>'+esc(o.diagnosis||'–')+'</span></div><div><b>Fertig bis</b><span>'+fmtDateTime(o.promisedAt)+'</span></div></div>'+
-   '<h3 style="margin-top:18px">Positionen</h3>'+(d.lines.length?'<div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+'</span></div><b>'+fmtMoney(l.netTotal)+'</b></div>').join('')+'</div>':'<p class="muted">Noch keine Positionen.</p>')+
-   '<h3 style="margin-top:18px">Zeiterfassung</h3><div class="rows">'+(d.times.length?d.times.map(t=>'<div class="row-item"><div><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+fmtDateTime(t.startedAt)+' · '+esc(t.activity||'Arbeitszeit')+'</span></div><div>'+(t.endedAt?fmtDateTime(t.endedAt):'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div></div>').join(''):empty('Keine Zeiterfassung.'))+'</div>'+
-   '<div class="page-actions" style="margin-top:16px"><button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="addPartBtn">Teil aus Lager</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>'+(next!==null?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+(o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
+  const d=await api('/work-orders/'+id),o=d.order,v=vehicle(o.vehicleId),cu=customer(o.customerId);
+  const next=nextStatus(o.status),editable=o.status<10;
+  const steps=[['Anlage',0],['Geplant',1],['Ankunft',2],['Annahme',3],['Diagnose',4],['Freigabe',5],['Freigegeben',6],['Arbeit',7],['QC',8],['Fertig',9],['Rechnung',10],['Abgeschlossen',11]];
+  const stepper='<div class="workflow-strip">'+steps.map(([name,code])=>'<span class="'+(o.status===code?'current':o.status>code?'done':'')+'">'+esc(name)+'</span>').join('')+'</div>';
+
+  $('orderDetail').innerHTML=
+   '<div class="panel-head"><div><h3>'+esc(o.number)+' · '+esc(v?.licensePlate||'')+'</h3><p>'+esc(cu?.displayName||'')+' · '+esc(v?((v.make||'')+' '+(v.model||'')):'')+'</p></div><div class="page-actions"><span class="badge '+badge(workStatus[o.status])+'">'+esc(workStatus[o.status])+'</span>'+(editable?'<button class="secondary small" id="editOrderBtn">Auftrag bearbeiten</button>':'')+'</div></div>'+
+   stepper+
+   '<div class="release-grid"><div><b>Kundenwunsch</b><span>'+esc(o.customerRequest||'–')+'</span></div><div><b>Diagnose</b><span>'+esc(o.diagnosis||'–')+'</span></div><div><b>Fertig bis</b><span>'+fmtDateTime(o.promisedAt)+'</span></div><div><b>Kilometer</b><span>'+esc(o.mileageIn??'–')+'</span></div><div><b>Tank/Ladung</b><span>'+esc(o.fuelOrChargeLevel||'–')+'</span></div></div>'+
+   '<h3 class="section-gap">Positionen</h3>'+
+   (d.lines.length?'<div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.itemNumber?l.itemNumber+' · ':'')+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' % USt'+(l.approvedByCustomer?' · freigegeben':'')+'</span></div><div class="page-actions"><b>'+fmtMoney(l.netTotal)+'</b>'+(editable?'<button class="secondary small" data-edit-line="'+l.id+'">Bearbeiten</button><button class="secondary small" data-delete-line="'+l.id+'">Löschen</button>':'')+'</div></div>').join('')+'</div>':'<p class="muted">Noch keine Positionen.</p>')+
+   '<h3 class="section-gap">Zeiterfassung</h3><div class="rows">'+(d.times.length?d.times.map(t=>'<div class="row-item"><div><b>'+esc(employee(t.employeeId)?.name||'Mitarbeiter')+'</b><span>'+fmtDateTime(t.startedAt)+' · '+esc(t.activity||'Arbeitszeit')+'</span></div><div>'+(t.endedAt?fmtDateTime(t.endedAt):'<button class="secondary small" data-stop-time="'+t.id+'">Stop</button>')+'</div></div>').join(''):empty('Keine Zeiterfassung.'))+'</div>'+
+   '<h3 class="section-gap">Kundenfreigaben</h3><div class="rows">'+(d.approvals?.length?d.approvals.map(a=>'<div class="row-item"><div><b>'+fmtMoney(a.offeredGross)+'</b><span>'+esc(a.channel||'')+' · '+esc(['Offen','Freigegeben','Abgelehnt','Abgelaufen'][a.status]||a.status)+'</span></div></div>').join(''):empty('Keine Freigaben.'))+'</div>'+
+   '<div class="page-actions actions-gap">'+
+   (editable?'<button class="primary" id="addLineBtn">+ Position</button><button class="secondary" id="addPartBtn">Teil aus Lager</button><button class="secondary" id="approvalBtn">Freigabe</button><button class="secondary" id="startTimeBtn">Zeit starten</button>':'')+
+   (next!==null&&o.status<10?'<button class="secondary" id="nextStatusBtn">→ '+esc(workStatus[next])+'</button>':'')+
+   (o.status===9?'<button class="primary" id="invoiceBtn">Rechnung erzeugen</button>':'')+'</div>';
+
   $('orderDetail').classList.remove('hidden');
-  $('addLineBtn').onclick=()=>lineModal(id);
-  $('addPartBtn').onclick=()=>inventoryPartModal(id);
-  $('approvalBtn').onclick=()=>approvalModal(id);
-  $('startTimeBtn').onclick=()=>timeStartModal(id);
+  if($('editOrderBtn'))$('editOrderBtn').onclick=()=>workOrderEditModal(o);
+  if($('addLineBtn'))$('addLineBtn').onclick=()=>lineModal(id);
+  if($('addPartBtn'))$('addPartBtn').onclick=()=>inventoryPartModal(id);
+  if($('approvalBtn'))$('approvalBtn').onclick=()=>approvalModal(id);
+  if($('startTimeBtn'))$('startTimeBtn').onclick=()=>timeStartModal(id);
+  document.querySelectorAll('[data-edit-line]').forEach(b=>b.onclick=()=>lineEditModal(id,d.lines.find(l=>l.id===b.dataset.editLine)));
+  document.querySelectorAll('[data-delete-line]').forEach(b=>b.onclick=()=>deleteOrderLine(id,b.dataset.deleteLine));
   document.querySelectorAll('[data-stop-time]').forEach(b=>b.onclick=()=>stopTime(id,b.dataset.stopTime));
   if($('nextStatusBtn'))$('nextStatusBtn').onclick=()=>transition(id,next);
   if($('invoiceBtn'))$('invoiceBtn').onclick=()=>createInvoice(id);
  }catch(e){toast(e.message,true)}
 }
+
+function workOrderEditModal(order){
+ const local=order.promisedAt?new Date(order.promisedAt).toISOString().slice(0,16):'';
+ modalForm('Auftrag '+esc(order.number)+' bearbeiten',
+  '<div class="form-grid"><label class="span2">Kundenwunsch<textarea name="customerRequest">'+esc(order.customerRequest||'')+'</textarea></label>'+
+  '<label class="span2">Diagnose<textarea name="diagnosis">'+esc(order.diagnosis||'')+'</textarea></label>'+
+  '<label>Fertig bis<input name="promisedAt" type="datetime-local" value="'+local+'"></label>'+
+  '<label>Kilometer<input name="mileageIn" type="number" value="'+esc(order.mileageIn??'')+'"></label>'+
+  '<label>Tank/Ladung<input name="fuel" value="'+esc(order.fuelOrChargeLevel||'')+'"></label></div>',
+  async fd=>{await api('/work-orders/'+order.id,{method:'PUT',body:JSON.stringify({
+   customerRequest:fd.get('customerRequest'),diagnosis:fd.get('diagnosis'),
+   promisedAt:fd.get('promisedAt')?new Date(fd.get('promisedAt')).toISOString():null,
+   mileageIn:fd.get('mileageIn')?Number(fd.get('mileageIn')):null,fuelOrChargeLevel:fd.get('fuel')
+  })});await openOrder(order.id)}
+ );
+}
+
+function lineEditModal(workOrderId,line){
+ if(!line)return;
+ modalForm('Auftragsposition bearbeiten',
+  '<div class="form-grid"><label>Art<select name="type">'+[['0','Arbeit'],['1','Teil'],['2','Material'],['3','Gebühr'],['5','Text']].map(([v,n])=>'<option value="'+v+'" '+(Number(v)===line.type?'selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
+  '<label>Artikelnummer<input name="itemNumber" value="'+esc(line.itemNumber||'')+'"></label>'+
+  '<label class="span2">Beschreibung<input name="description" required value="'+esc(line.description||'')+'"></label>'+
+  '<label>Menge<input name="quantity" type="number" step=".01" min=".01" value="'+esc(line.quantity)+'"></label>'+
+  '<label>Netto Einzel<input name="unitNet" type="number" step=".01" value="'+esc(line.unitNet)+'"></label>'+
+  '<label>USt %<input name="vatRate" type="number" step=".01" value="'+esc(line.vatRate)+'"></label>'+
+  '<label>Rabatt %<input name="discountPercent" type="number" step=".01" value="'+esc(line.discountPercent||0)+'"></label>'+
+  '<label class="check-item"><span>Kundenfreigabe</span><input class="inline-check" name="approved" type="checkbox" '+(line.approvedByCustomer?'checked':'')+'></label></div>',
+  async fd=>{await api('/work-orders/'+workOrderId+'/lines/'+line.id,{method:'PUT',body:JSON.stringify({
+   type:Number(fd.get('type')),itemNumber:fd.get('itemNumber'),description:fd.get('description'),
+   quantity:Number(fd.get('quantity')),unitNet:Number(fd.get('unitNet')),vatRate:Number(fd.get('vatRate')),
+   discountPercent:Number(fd.get('discountPercent')),approvedByCustomer:fd.get('approved')==='on'
+  })});await openOrder(workOrderId)}
+ );
+}
+async function deleteOrderLine(workOrderId,lineId){
+ if(!confirm('Position wirklich löschen? Bei Lagerteilen wird der Bestand zurückgebucht.'))return;
+ try{await api('/work-orders/'+workOrderId+'/lines/'+lineId,{method:'DELETE'});await loadAll();await openOrder(workOrderId);toast('Position gelöscht.')}catch(e){toast(e.message,true)}
+}
+
 function resourceKindName(k){return ['Hebebühne','Grube','Diagnoseplatz','Achsvermessung','Klimastation','Reifenplatz','Parkplatz','Direktannahme','Leihwagen','Spezialwerkzeug','Sonstiges'][k]||'Ressource'}
 function nextStatus(s){const m={0:1,1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,10:11};return m[s]??null}
 async function transition(id,status){try{await api('/work-orders/'+id+'/transition',{method:'POST',body:JSON.stringify({status})});toast('Auftragsstatus aktualisiert.');await loadAll();await openOrder(id)}catch(e){toast(e.message,true)}}
@@ -307,6 +368,38 @@ function modalForm(title,body,onSubmit,submitLabel='Speichern'){
    toast('Gespeichert.');
   }catch(err){toast(err.message,true)}
  };
+}
+
+
+async function customerHistoryModal(id){
+ try{
+  const d=await api('/customers/'+id+'/history'),x=d.customer;
+  showModal('Kundenhistorie · '+esc(x.displayName),
+   '<div class="release-grid"><div><b>Kundennummer</b><span>'+esc(x.customerNumber)+'</span></div><div><b>Telefon</b><span>'+esc(x.phone||x.mobile||'–')+'</span></div><div><b>Ort</b><span>'+esc(x.city||'–')+'</span></div></div>'+
+   '<h3 class="section-gap">Fahrzeuge</h3><div class="rows">'+(d.vehicles.length?d.vehicles.map(v=>'<div class="row-item"><div><b>'+esc(v.licensePlate)+'</b><span>'+esc(v.make+' '+v.model)+' · '+esc(v.mileage??'–')+' km</span></div><button class="secondary small" data-hist-vehicle="'+v.id+'">Historie</button></div>').join(''):empty('Keine Fahrzeuge.'))+'</div>'+
+   '<h3 class="section-gap">Aufträge</h3><div class="rows">'+(d.orders.length?d.orders.slice(0,20).map(o=>'<div class="row-item"><div><b>'+esc(o.number)+'</b><span>'+esc(workStatus[o.status])+' · '+esc(o.customerRequest||'')+'</span></div><button class="secondary small" data-hist-order="'+o.id+'">Öffnen</button></div>').join(''):empty('Keine Aufträge.'))+'</div>'+
+   '<h3 class="section-gap">Rechnungen</h3><div class="rows">'+(d.invoices.length?d.invoices.slice(0,20).map(i=>'<div class="row-item"><div><b>'+esc(i.number)+'</b><span>'+esc(i.issueDate)+' · '+fmtMoney(i.grossTotal)+'</span></div><button class="secondary small" data-hist-invoice="'+i.id+'">Öffnen</button></div>').join(''):empty('Keine Rechnungen.'))+'</div>'+
+   '<h3 class="section-gap">Reifenhotel / Wiedervorlagen</h3><div class="rows">'+
+   d.tires.map(t=>'<div class="row-item"><div><b>'+esc(t.storageNumber)+' · '+esc(t.size)+'</b><span>'+esc(t.storageLocation)+'</span></div></div>').join('')+
+   d.reminders.map(r=>'<div class="row-item"><div><b>'+esc(r.subject)+'</b><span>'+fmtDateTime(r.dueAt)+'</span></div></div>').join('')+'</div>');
+  document.querySelectorAll('[data-hist-order]').forEach(b=>b.onclick=()=>{closeModal();page('orders');openOrder(b.dataset.histOrder)});
+  document.querySelectorAll('[data-hist-invoice]').forEach(b=>b.onclick=()=>invoiceDetail(b.dataset.histInvoice));
+  document.querySelectorAll('[data-hist-vehicle]').forEach(b=>b.onclick=()=>vehicleHistoryModal(b.dataset.histVehicle));
+ }catch(e){toast(e.message,true)}
+}
+async function vehicleHistoryModal(id){
+ try{
+  const d=await api('/vehicles/'+id+'/history'),v=d.vehicle;
+  showModal('Fahrzeughistorie · '+esc(v.licensePlate),
+   '<div class="release-grid"><div><b>Fahrzeug</b><span>'+esc((v.make||'')+' '+(v.model||''))+'</span></div><div><b>VIN</b><span>'+esc(v.vin||'–')+'</span></div><div><b>Kilometer</b><span>'+esc(v.mileage??'–')+'</span></div></div>'+
+   '<h3 class="section-gap">Werkstattaufträge</h3><div class="rows">'+(d.orders.length?d.orders.map(o=>'<div class="row-item"><div><b>'+esc(o.number)+'</b><span>'+esc(workStatus[o.status])+' · '+esc(o.customerRequest||'')+'</span></div><button class="secondary small" data-hist-order="'+o.id+'">Öffnen</button></div>').join(''):empty('Keine Aufträge.'))+'</div>'+
+   '<h3 class="section-gap">Rechnungen</h3><div class="rows">'+(d.invoices.length?d.invoices.map(i=>'<div class="row-item"><div><b>'+esc(i.number)+'</b><span>'+esc(i.issueDate)+' · '+fmtMoney(i.grossTotal)+'</span></div><button class="secondary small" data-hist-invoice="'+i.id+'">Öffnen</button></div>').join(''):empty('Keine Rechnungen.'))+'</div>'+
+   '<h3 class="section-gap">Reifen / Termine</h3><div class="rows">'+
+   d.tires.map(t=>'<div class="row-item"><div><b>'+esc(t.storageNumber)+' · '+esc(t.size)+'</b><span>'+esc(t.storageLocation)+'</span></div></div>').join('')+
+   d.appointments.slice(0,20).map(a=>'<div class="row-item"><div><b>'+esc(a.subject)+'</b><span>'+fmtDateTime(a.startsAt)+'</span></div></div>').join('')+'</div>');
+  document.querySelectorAll('[data-hist-order]').forEach(b=>b.onclick=()=>{closeModal();page('orders');openOrder(b.dataset.histOrder)});
+  document.querySelectorAll('[data-hist-invoice]').forEach(b=>b.onclick=()=>invoiceDetail(b.dataset.histInvoice));
+ }catch(e){toast(e.message,true)}
 }
 
 function customerModal(existing=null){
@@ -422,8 +515,8 @@ async function invoiceDetail(id){
   const d=await api('/invoices/'+id),i=d.invoice;
   showModal('Beleg '+i.number,
    '<div class="release-grid"><div><b>Netto</b><span>'+fmtMoney(i.netTotal)+'</span></div><div><b>USt</b><span>'+fmtMoney(i.vatTotal)+'</span></div><div><b>Brutto</b><span>'+fmtMoney(i.grossTotal)+'</span></div></div>'+
-   '<h3 style="margin-top:18px">Positionen</h3><div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' %</span></div><b>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</b></div>').join('')+'</div>'+
-   '<h3 style="margin-top:18px">Zahlungen</h3><div class="rows">'+(d.payments.length?d.payments.map(p=>'<div class="row-item"><div><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'')+'</span></div></div>').join(''):empty('Keine Zahlungen.'))+'</div>');
+   '<h3 class="section-gap">Positionen</h3><div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' %</span></div><b>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</b></div>').join('')+'</div>'+
+   '<h3 class="section-gap">Zahlungen</h3><div class="rows">'+(d.payments.length?d.payments.map(p=>'<div class="row-item"><div><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'')+'</span></div></div>').join(''):empty('Keine Zahlungen.'))+'</div>');
  }catch(e){toast(e.message,true)}
 }
 
@@ -470,9 +563,16 @@ function stockMovementModal(itemId){
  );
 }
 
-function supplierModal(){
- modalForm('Lieferant anlegen','<div class="form-grid"><label>Lieferantennummer<input name="supplierNumber"></label><label>Name<input name="name" required></label><label>E-Mail<input name="email" type="email"></label><label>Telefon<input name="phone"></label></div>',
- async f=>api('/suppliers',{method:'POST',body:JSON.stringify({supplierNumber:f.get('supplierNumber'),name:f.get('name'),email:f.get('email'),phone:f.get('phone')})})
+function supplierModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Lieferant bearbeiten':'Lieferant anlegen',
+  '<div class="form-grid"><label>Lieferantennummer<input name="supplierNumber" value="'+esc(x.supplierNumber||'')+'"></label>'+
+  '<label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>E-Mail<input name="email" type="email" value="'+esc(x.email||'')+'"></label>'+
+  '<label>Telefon<input name="phone" value="'+esc(x.phone||'')+'"></label></div>',
+  async fd=>api(existing?'/suppliers/'+existing.id:'/suppliers',{method:existing?'PUT':'POST',body:JSON.stringify({
+   supplierNumber:fd.get('supplierNumber'),name:fd.get('name'),email:fd.get('email'),phone:fd.get('phone')
+  })})
  );
 }
 
@@ -539,15 +639,129 @@ async function stopTime(workOrderId,timeId){
  try{await api('/time/'+timeId+'/stop',{method:'POST'});toast('Arbeitszeit gestoppt.');await loadAll();await openOrder(workOrderId)}catch(e){toast(e.message,true)}
 }
 
-function employeeModal(){
- modalForm('Mitarbeiter anlegen','<div class="form-grid"><label>Personalnummer<input name="personnelNumber" required></label><label>Name<input name="name" required></label><label>Rolle / Funktion<input name="roleName"></label><label>Wochenstunden<input name="weeklyHours" type="number" step=".5" value="40"></label><label>Stundensatz VK<input name="rate" type="number" step=".01" value="109"></label><label>Stundenkosten<input name="cost" type="number" step=".01" value="42"></label><label>Urlaubstage<input name="vacation" type="number" value="30"></label></div>',
-  async f=>api('/employees',{method:'POST',body:JSON.stringify({siteId:state.site?.id,personnelNumber:f.get('personnelNumber'),name:f.get('name'),roleName:f.get('roleName'),weeklyHours:Number(f.get('weeklyHours')),productiveHourlyCost:Number(f.get('cost')),productiveHourlyRate:Number(f.get('rate')),annualVacationDays:Number(f.get('vacation'))})})
+
+function absenceModal(existing=null){
+ const x=existing||{},types=['Urlaub','Krankheit','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'];
+ const today=keyDate(new Date());
+ modalForm(existing?'Abwesenheit bearbeiten':'Abwesenheit eintragen',
+  '<div class="form-grid">'+
+  '<label>Mitarbeiter<select name="employeeId">'+options(state.employees,e=>e.name+' · '+e.roleName,x.employeeId||state.employees[0]?.id)+'</select></label>'+
+  '<label>Art<select name="type">'+types.map((n,i)=>'<option value="'+i+'" '+(i===x.type?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+
+  '<label>Von<input name="from" type="date" value="'+esc(x.from||today)+'" required></label>'+
+  '<label>Bis<input name="to" type="date" value="'+esc(x.to||x.from||today)+'"></label>'+
+  '<label class="span2">Grund / Hinweis<input name="reason" value="'+esc(x.reason||'')+'" placeholder="optional"></label>'+
+  '<label class="check-item"><span>Freigegeben</span><input class="inline-check" name="approved" type="checkbox" '+((existing?x.approved:true)?'checked':'')+'></label>'+
+  '<label class="check-item"><span>Kapazität reduzieren</span><input class="inline-check" name="affectsCapacity" type="checkbox" '+((existing?x.affectsCapacity:true)?'checked':'')+'></label>'+
+  '</div>',
+  async fd=>api(existing?'/absences/'+existing.id:'/absences',{method:existing?'PUT':'POST',body:JSON.stringify({
+    employeeId:fd.get('employeeId'),type:Number(fd.get('type')),from:fd.get('from'),to:fd.get('to')||fd.get('from'),
+    reason:fd.get('reason'),approved:fd.get('approved')==='on',affectsCapacity:fd.get('affectsCapacity')==='on'
+  })})
+ );
+}
+async function deleteAbsence(id){
+ if(!confirm('Abwesenheit wirklich löschen?'))return;
+ try{await api('/absences/'+id,{method:'DELETE'});await loadAll();toast('Abwesenheit gelöscht.')}catch(e){toast(e.message,true)}
+}
+
+function dialogIntakeModal(){
+ const customerOptions='<option value="">Neuen Kunden anlegen</option>'+options(state.customers,c=>c.customerNumber+' · '+c.displayName);
+ const vehicleOptions='<option value="">Neues Fahrzeug anlegen</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model);
+ modalForm('Dialogannahme · kompletter Vorgang',
+  '<p class="muted">Vorhandene Stammdaten auswählen oder die Felder für einen neuen Kunden bzw. ein neues Fahrzeug ausfüllen. Anschließend wird direkt ein Werkstattauftrag mit Fahrzeugannahme angelegt.</p>'+
+  '<div class="dialog-intake-grid">'+
+  '<label class="span2">Vorhandener Kunde<select name="customerId">'+customerOptions+'</select></label>'+
+  '<label>Neuer Kunde / Anzeigename<input name="customerName" placeholder="nur bei Neukunde"></label>'+
+  '<label>Telefon<input name="customerPhone" inputmode="tel"></label>'+
+  '<label>E-Mail<input name="customerEmail" type="email"></label>'+
+  '<label>Ort<input name="customerCity"></label>'+
+  '<label class="span2">Vorhandenes Fahrzeug<select name="vehicleId">'+vehicleOptions+'</select></label>'+
+  '<label>Kennzeichen neu<input name="licensePlate" autocapitalize="characters"></label>'+
+  '<label>VIN neu<input name="vin" autocapitalize="characters"></label>'+
+  '<label>Hersteller<input name="make"></label>'+
+  '<label>Modell<input name="model"></label>'+
+  '<label>Kilometerstand<input name="mileage" type="number" inputmode="numeric"></label>'+
+  '<label>Tank / Ladung<select name="fuel"><option>voll</option><option>¾</option><option selected>½</option><option>¼</option><option>Reserve</option></select></label>'+
+  '<label class="span2">Kundenwunsch / Beanstandung<textarea name="request" required placeholder="Was soll durchgeführt bzw. geprüft werden?"></textarea></label>'+
+  '<label>Fertigstellung geplant<input name="promisedAt" type="datetime-local"></label>'+
+  '<label>Erste Diagnose / Hinweis<input name="diagnosis"></label>'+
+  '</div>',
+  async fd=>{
+    let customerId=fd.get('customerId');
+    if(!customerId){
+      const name=String(fd.get('customerName')||'').trim();
+      if(!name)throw new Error('Bei einem Neukunden ist der Name erforderlich.');
+      const cu=await api('/customers',{method:'POST',body:JSON.stringify({
+        displayName:name,companyName:'',firstName:'',lastName:'',email:fd.get('customerEmail')||'',
+        phone:fd.get('customerPhone')||'',mobile:'',street:'',postalCode:'',city:fd.get('customerCity')||'',notes:''
+      })});
+      customerId=cu.id;
+    }
+
+    let vehicleId=fd.get('vehicleId');
+    if(vehicleId){
+      const existing=state.vehicles.find(v=>v.id===vehicleId);
+      if(existing&&existing.customerId!==customerId)throw new Error('Das gewählte Fahrzeug gehört nicht zum gewählten Kunden.');
+    }else{
+      const plate=String(fd.get('licensePlate')||'').trim();
+      if(!plate)throw new Error('Bei einem Neufahrzeug ist das Kennzeichen erforderlich.');
+      const ve=await api('/vehicles',{method:'POST',body:JSON.stringify({
+        customerId,licensePlate:plate,vin:fd.get('vin')||'',make:fd.get('make')||'',model:fd.get('model')||'',
+        type:'',hsn:'',tsn:'',firstRegistration:null,mileage:fd.get('mileage')?Number(fd.get('mileage')):null,nextHu:null,nextService:null
+      })});
+      vehicleId=ve.id;
+    }
+
+    const order=await api('/work-orders',{method:'POST',body:JSON.stringify({
+      siteId:state.site?.id,customerId,vehicleId,customerRequest:fd.get('request'),
+      diagnosis:fd.get('diagnosis')||'',promisedAt:fd.get('promisedAt')?new Date(fd.get('promisedAt')).toISOString():null
+    })});
+    await api('/work-orders/'+order.id+'/transition',{method:'POST',body:JSON.stringify({status:1})});
+    await api('/work-orders/'+order.id+'/transition',{method:'POST',body:JSON.stringify({status:2})});
+    await api('/work-orders/'+order.id+'/intake',{method:'POST',body:JSON.stringify({
+      mileageIn:fd.get('mileage')?Number(fd.get('mileage')):null,
+      fuelOrChargeLevel:fd.get('fuel'),
+      customerRequest:fd.get('request')
+    })});
+
+    await loadAll();
+    page('orders');
+    await openOrder(order.id);
+  },
+  'Vorgang anlegen'
  );
 }
 
-function resourceModal(){
- modalForm('Ressource anlegen','<div class="form-grid"><label>Name<input name="name" required></label><label>Art<select name="kind"><option value="0">Hebebühne</option><option value="2">Diagnoseplatz</option><option value="3">Achsvermessung</option><option value="5">Reifenplatz</option><option value="7">Direktannahme</option><option value="9">Spezialwerkzeug</option></select></label><label>Max. Last kg<input name="maxLoadKg" type="number"></label><label>Max. Fahrzeughöhe m<input name="maxHeight" type="number" step=".1"></label><label><input name="ev" type="checkbox" style="width:auto"> EV geeignet</label></div>',
-  async f=>api('/resources',{method:'POST',body:JSON.stringify({siteId:state.site?.id,name:f.get('name'),kind:Number(f.get('kind')),maxLoadKg:f.get('maxLoadKg')?Number(f.get('maxLoadKg')):null,maxVehicleHeightM:f.get('maxHeight')?Number(f.get('maxHeight')):null,supportsEv:f.get('ev')==='on'})})
+function employeeModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Mitarbeiter bearbeiten':'Mitarbeiter anlegen',
+  '<div class="form-grid"><label>Personalnummer<input name="personnelNumber" required value="'+esc(x.personnelNumber||'')+'"></label>'+
+  '<label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>Rolle / Funktion<input name="roleName" value="'+esc(x.roleName||'')+'"></label>'+
+  '<label>Wochenstunden<input name="weeklyHours" type="number" step=".5" value="'+esc(x.weeklyHours??40)+'"></label>'+
+  '<label>Stundensatz VK<input name="rate" type="number" step=".01" value="'+esc(x.productiveHourlyRate??109)+'"></label>'+
+  '<label>Stundenkosten<input name="cost" type="number" step=".01" value="'+esc(x.productiveHourlyCost??42)+'"></label>'+
+  '<label>Urlaubstage<input name="vacation" type="number" value="'+esc(x.annualVacationDays??30)+'"></label></div>',
+  async fd=>api(existing?'/employees/'+existing.id:'/employees',{method:existing?'PUT':'POST',body:JSON.stringify({
+   siteId:x.siteId||state.site?.id,personnelNumber:fd.get('personnelNumber'),name:fd.get('name'),roleName:fd.get('roleName'),
+   weeklyHours:Number(fd.get('weeklyHours')),productiveHourlyCost:Number(fd.get('cost')),productiveHourlyRate:Number(fd.get('rate')),annualVacationDays:Number(fd.get('vacation'))
+  })})
+ );
+}
+
+function resourceModal(existing=null){
+ const x=existing||{};
+ const kinds=[['0','Hebebühne'],['1','Grube'],['2','Diagnoseplatz'],['3','Achsvermessung'],['4','Klimastation'],['5','Reifenplatz'],['6','Parkplatz'],['7','Direktannahme'],['8','Leihwagen'],['9','Spezialwerkzeug'],['10','Sonstiges']];
+ modalForm(existing?'Ressource bearbeiten':'Ressource anlegen',
+  '<div class="form-grid"><label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>Art<select name="kind">'+kinds.map(([v,n])=>'<option value="'+v+'" '+(Number(v)===x.kind?'selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
+  '<label>Max. Last kg<input name="maxLoadKg" type="number" value="'+esc(x.maxLoadKg??'')+'"></label>'+
+  '<label>Max. Fahrzeughöhe m<input name="maxHeight" type="number" step=".1" value="'+esc(x.maxVehicleHeightM??'')+'"></label>'+
+  '<label class="check-item"><span>EV geeignet</span><input name="ev" type="checkbox" class="inline-check" '+(x.supportsEv?'checked':'')+'></label></div>',
+  async fd=>api(existing?'/resources/'+existing.id:'/resources',{method:existing?'PUT':'POST',body:JSON.stringify({
+   siteId:x.siteId||state.site?.id,name:fd.get('name'),kind:Number(fd.get('kind')),
+   maxLoadKg:fd.get('maxLoadKg')?Number(fd.get('maxLoadKg')):null,maxVehicleHeightM:fd.get('maxHeight')?Number(fd.get('maxHeight')):null,supportsEv:fd.get('ev')==='on'
+  })})
  );
 }
 
@@ -607,6 +821,7 @@ $('saveIntake').onclick=async()=>{
  }catch(e){toast(e.message,true)}
 };
 $('absenceBtn').onclick=absenceModal;
+$('dialogIntakeBtn').onclick=dialogIntakeModal;
 $('newOrderBtn').onclick=workOrderModal;
 $('newInventoryBtn').onclick=()=>inventoryModal();
 $('newSupplierBtn').onclick=supplierModal;
@@ -632,7 +847,6 @@ function platformAdapt(){
  document.body.classList.toggle('is-tablet',touch&&innerWidth>=700);
  document.body.classList.toggle('is-phone',innerWidth<700);
  document.body.classList.toggle('is-standalone',matchMedia('(display-mode: standalone)').matches||navigator.standalone===true);
- document.documentElement.style.setProperty('--app-height',(window.visualViewport?.height||innerHeight)+'px');
 }
 platformAdapt();
 window.addEventListener('resize',()=>{platformAdapt();renderWorkshopPlanner();renderPersonnelPlanner()},{passive:true});
@@ -683,20 +897,20 @@ function renderWorkshopPlanner(){
  const mobile=innerWidth<700;
  if(mobile||plannerState.view==='agenda'||plannerState.view==='month'){
   const grouped=days.map(d=>({d,events:inRange.filter(a=>appointmentForDay(a,d))})).filter(x=>x.events.length||plannerState.view!=='agenda');
-  $('workshopPlannerGrid').style.minWidth='0';
-  $('workshopPlannerGrid').innerHTML='<div class="mobile-planner-list" style="display:grid">'+grouped.map(g=>
+  $('workshopPlannerGrid').className='scheduler';
+  $('workshopPlannerGrid').innerHTML='<div class="mobile-planner-list">'+grouped.map(g=>
    '<div class="mobile-planner-card"><h4>'+dateLabel(g.d,{weekday:'long',day:'2-digit',month:'2-digit'})+'</h4>'+
    (g.events.length?g.events.map(plannerEventHtml).join(''):'<p>Keine Termine</p>')+'</div>'
   ).join('')+'</div>';
  }else if(plannerState.axis==='calendar'){
   const slots=Array.from({length:11},(_,i)=>7+i);
-  $('workshopPlannerGrid').style.setProperty('--planner-cols',days.length);
+  $('workshopPlannerGrid').className='scheduler planner-cols-'+days.length;
   $('workshopPlannerGrid').innerHTML='<div class="scheduler-head"><div>Zeit</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
    slots.map(hour=>'<div class="scheduler-row"><div class="scheduler-label"><b>'+String(hour).padStart(2,'0')+':00</b><span>'+String(hour+1).padStart(2,'0')+':00</span></div>'+
     days.map(d=>{const ev=inRange.filter(a=>appointmentForDay(a,d)&&new Date(a.startsAt).getHours()===hour);return'<div class="scheduler-cell '+(sameDay(d,new Date())?'today ':'')+([0,6].includes(d.getDay())?'weekend':'')+'">'+ev.map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
  }else{
   const rows=plannerState.axis==='resources'?state.resources:state.employees;
-  $('workshopPlannerGrid').style.setProperty('--planner-cols',days.length);
+  $('workshopPlannerGrid').className='scheduler planner-cols-'+days.length;
   $('workshopPlannerGrid').innerHTML='<div class="scheduler-head"><div>'+(plannerState.axis==='resources'?'Ressource':'Mitarbeiter')+'</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
    rows.map(row=>'<div class="scheduler-row"><div class="scheduler-label"><b>'+esc(row.name)+'</b><span>'+esc(plannerState.axis==='resources'?resourceKindName(row.kind):row.roleName)+'</span></div>'+
     days.map(d=>{const ev=inRange.filter(a=>appointmentForDay(a,d)&&(plannerState.axis==='resources'?a.resourceId===row.id:a.employeeId===row.id));return'<div class="scheduler-cell '+(sameDay(d,new Date())?'today':'')+'">'+ev.map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
@@ -731,8 +945,8 @@ function renderPersonnelPlanner(){
  ].map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
 
  if(innerWidth<700){
-  $('personnelPlannerGrid').style.minWidth='0';
-  $('personnelPlannerGrid').innerHTML='<div class="mobile-planner-list" style="display:grid">'+state.employees.map(e=>{
+  $('personnelPlannerGrid').className='personnel-scheduler';
+  $('personnelPlannerGrid').innerHTML='<div class="mobile-planner-list">'+state.employees.map(e=>{
    const eAbs=abs.filter(a=>a.employeeId===e.id),eAp=planned.filter(a=>a.employeeId===e.id);
    return'<div class="mobile-planner-card"><h4>'+esc(e.name)+'</h4><p>'+esc(e.roleName)+' · '+esc(e.weeklyHours)+' h/Woche</p>'+
     eAbs.map(a=>'<div class="scheduler-event absence"><b>'+esc(['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'][a.type]||'Abwesenheit')+'</b><span>'+esc(a.from)+' – '+esc(a.to)+'</span></div>').join('')+
@@ -740,9 +954,9 @@ function renderPersonnelPlanner(){
   }).join('')+'</div>';
   return;
  }
- const cols='180px repeat('+days.length+',minmax(96px,1fr))';
- $('personnelPlannerGrid').innerHTML='<div class="personnel-grid-head" style="grid-template-columns:'+cols+'"><div>Mitarbeiter</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
-  state.employees.map(e=>'<div class="personnel-grid-row" style="grid-template-columns:'+cols+'"><div class="personnel-name"><b>'+esc(e.name)+'</b><span>'+esc(e.roleName)+' · '+esc(e.weeklyHours)+' h</span></div>'+
+ $('personnelPlannerGrid').className='personnel-scheduler personnel-cols-'+days.length;
+ $('personnelPlannerGrid').innerHTML='<div class="personnel-grid-head"><div>Mitarbeiter</div>'+days.map(d=>'<div>'+dateLabel(d,{weekday:'short',day:'2-digit',month:'2-digit'})+'</div>').join('')+'</div>'+
+  state.employees.map(e=>'<div class="personnel-grid-row"><div class="personnel-name"><b>'+esc(e.name)+'</b><span>'+esc(e.roleName)+' · '+esc(e.weeklyHours)+' h</span></div>'+
    days.map(d=>{const a=state.absences.find(x=>x.employeeId===e.id&&absenceForDay(x,d));const ap=state.appointments.filter(x=>x.employeeId===e.id&&appointmentForDay(x,d));return'<div class="personnel-day">'+(a?'<span class="capacity-pill absent">'+esc(['Urlaub','Krank','Schulung','Berufsschule','Überstundenabbau','Sonderurlaub','Elternzeit','Dienstreise','Sonstiges'][a.type]||'Abwesend')+'</span>':'<span class="capacity-pill">'+(ap.length?ap.length+' Termin'+(ap.length>1?'e':''):'verfügbar')+'</span>')+ap.slice(0,2).map(plannerEventHtml).join('')+'</div>'}).join('')+'</div>').join('');
  document.querySelectorAll('[data-planner-appt]').forEach(b=>b.onclick=()=>appointmentModal(state.appointments.find(a=>a.id===b.dataset.plannerAppt)));
 }
