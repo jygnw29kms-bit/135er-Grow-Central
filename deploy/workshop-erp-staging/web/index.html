@@ -10,11 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workshop ERP">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui4">
+<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui5">
 <link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui4">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui5">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -73,6 +73,7 @@
         <button class="nav" data-page="purchasing">Einkauf</button>
         <button class="nav" data-page="personnel">Personal</button>
         <button class="nav" data-page="billing">Rechnungen</button>
+        <button class="nav" data-page="finance">Finanzen & OP</button>
         <button class="nav" data-page="loaners">Leihwagen</button>
         <button class="nav" data-page="checklists">Checklisten</button>
       </div>
@@ -213,11 +214,26 @@
           <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th><th></th></tr></thead><tbody id="employeeRows"></tbody></table></div>
           <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Von–Bis oder einzelner Tag</p></div></div><div id="absenceRows" class="rows"></div></div>
         </div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Urlaubskonten</h3><p>Anspruch, genommen und Rest</p></div></div><div id="vacationBalanceRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Qualifikationen</h3><p>Kompetenzen, Stufen und Gültigkeiten</p></div><button id="newQualificationBtn" class="secondary">+ Qualifikation</button></div><div id="qualificationRows" class="rows"></div></div>
+        </div>
       </section>
 
       <section id="billing" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">FAKTURA</span><h2>Rechnungen & Zahlungen</h2><p class="muted">Rechnung, Zahlung, Storno und Gutschrift</p></div></div>
         <div class="panel table-panel"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+      </section>
+
+      <section id="finance" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">FINANZEN</span><h2>Offene Posten & Mahnwesen</h2><p class="muted">Fälligkeiten, Mahnstufen, Zahlungsstände und DATEV-Ausgabe</p></div><div class="page-actions"><button id="datevExportBtn" class="secondary">DATEV CSV 2025</button></div></div>
+        <div class="kpis">
+          <article><span>Offene Posten</span><b id="financeOpenTotal">–</b><small>Brutto</small></article>
+          <article><span>Überfällig</span><b id="financeOverdueCount">–</b><small>Rechnungen</small></article>
+          <article><span>Gemahnt</span><b id="financeDunnedCount">–</b><small>mit Mahnstufe</small></article>
+          <article><span>Ø Zahlungsziel</span><b>14 Tage</b><small>Staging</small></article>
+        </div>
+        <div class="panel table-panel"><table><thead><tr><th>Rechnung</th><th>Kunde</th><th>Fällig</th><th>Offen</th><th>Tage</th><th>Mahnstufe</th><th></th></tr></thead><tbody id="openItemRows"></tbody></table></div>
       </section>
 
       <section id="crm" class="page hidden">
@@ -262,6 +278,7 @@
             <div id="topCustomers" class="rows"></div>
           </div>
         </div>
+        <div class="panel"><div class="panel-head"><div><h3>Produktivität & Zeiterfassung</h3><p>Ist-Zeit gegenüber verkauften Arbeitsstunden</p></div></div><div id="productivityRows" class="rows"></div></div>
         <div class="panel"><h3>Entwicklungsstatus</h3><div class="release-grid"><div><b>ERP Core</b><span>aktiv</span></div><div><b>PostgreSQL</b><span>aktiv</span></div><div><b>JWT / RBAC</b><span>aktiv</span></div><div><b>Staging</b><span>aktiv</span></div><div><b>PDF / DATEV</b><span>Preview</span></div><div><b>Desktop ERP</b><span>Preview</span></div></div></div>
       </section>
 
@@ -279,6 +296,18 @@
           <div class="panel"><div class="panel-head"><div><h3>Rollen & Rechte</h3><p>Feingranulare Modulrechte</p></div><button id="newRoleBtn" class="secondary">+ Rolle</button></div><div id="adminRoleRows" class="rows"></div></div>
         </div>
         <div class="panel"><div class="panel-head"><div><h3>Werkstattressourcen</h3><p>Bühnen, Diagnose, Reifen, Direktannahme</p></div><button id="newResourceBtn" class="secondary">+ Ressource</button></div><div id="resourceRows" class="rows"></div></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Firma & Branding</h3><p>Rechtliche und kommunikative Stammdaten</p></div><button id="editCompanyBtn" class="secondary">Bearbeiten</button></div><div id="companySummary" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Standorte</h3><p>Werkstattbetriebe und Regionen</p></div><button id="newSiteBtn" class="secondary">+ Standort</button></div><div id="siteRows" class="rows"></div></div>
+        </div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Nummernkreise</h3><p>Auftrag, Rechnung, Bestellung, Gutschrift</p></div></div><div id="numberSequenceRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Benutzerdefinierte Felder</h3><p>Zusatzfelder für Stammdaten und Vorgänge</p></div><button id="newCustomFieldBtn" class="secondary">+ Feld</button></div><div id="customFieldRows" class="rows"></div></div>
+        </div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Dokumentvorlagen</h3><p>Beleg- und Dokumentdefinitionen</p></div><button id="newDocumentTemplateBtn" class="secondary">+ Vorlage</button></div><div id="documentTemplateRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Audit-Protokoll</h3><p>Nachvollziehbare kritische Änderungen</p></div></div><div id="auditRows" class="rows"></div></div>
+        </div>
       </section>
     </main>
   </div>
@@ -286,6 +315,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui4"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui5"></script>
 </body>
 </html>
