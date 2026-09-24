@@ -189,6 +189,7 @@
 
       <section id="orders" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">WERKSTATT</span><h2>Leitstand & Aufträge</h2><p class="muted">Vom Termin bis zur Rechnung</p></div><div class="page-actions"><button id="newOrderBtn" class="primary">+ Auftrag</button></div></div>
+        <div class="doc-list-toolbar"><div class="toolbar-search"><span>⌕</span><input id="orderSearch" placeholder="Auftrag, Kunde, Kennzeichen durchsuchen …"></div><div class="doc-toolbar-note">Statusspalten bleiben als Werkstatt-Leitstand erhalten.</div></div>
         <div id="orderBoard" class="kanban"></div>
         <div id="orderDetail" class="panel hidden"></div>
       </section>
@@ -325,7 +326,7 @@
       <section id="billing" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">BELEGVERWALTUNG</span><h2>Faktura & Lieferscheine</h2><p class="muted">Rechnungen, Zahlungen, Storno/Gutschrift und Lieferscheine zentral bearbeiten.</p></div></div>
         <div class="doc-section-head"><div><h3>Rechnungen</h3><p>Offene, bezahlte und korrigierte Rechnungen</p></div><div class="toolbar-search compact"><span>⌕</span><input id="invoiceSearch" placeholder="Rechnung durchsuchen …"></div></div>
-        <div class="panel table-panel invoice-list"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+        <div class="panel table-panel invoice-list"><table><thead><tr><th>Rechnung</th><th>Kunde</th><th>Fahrzeug</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
         <div id="invoiceDetailPanel" class="panel document-panel hidden"></div>
 
         <div class="doc-section-head section-gap"><div><h3>Lieferscheine</h3><p>Aus Werkstattaufträgen erzeugte, nummerierte Übergabebelege</p></div><div class="toolbar-search compact"><span>⌕</span><input id="deliverySearch" placeholder="Lieferschein, Auftrag, Kunde …"></div></div>
