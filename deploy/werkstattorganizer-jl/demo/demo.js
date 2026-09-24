@@ -654,11 +654,59 @@ function lineModal(id,after=null){
 }
 
 function inventoryPartModal(orderId,after=null){
- const rows=state.inventory.map(i=>'<option value="'+i.id+'">'+esc(i.itemNumber)+' · '+esc(i.description)+' · Bestand '+esc(i.stock)+' · '+esc(fmtMoney(i.saleNet))+'</option>').join('');
- modalForm('Zubehörteil aus Lager übernehmen',
- '<label>Artikel / Zubehörteilenummer<select name="inventoryItemId">'+rows+'</select></label><div class="form-grid"><label>Menge<input name="quantity" type="number" min=".01" step=".01" value="1"></label><label>VK netto (leer = Artikelpreis)<input name="unitNet" type="number" step=".01"></label><label>USt %<input name="vatRate" type="number" step=".01" value="19"></label><label>Rabatt %<input name="discountPercent" type="number" step=".01" value="0"></label></div><label class="check-item"><span>Vom Kunden freigegeben</span><input name="approved" type="checkbox" checked></label>',
- async f=>{await api('/work-orders/'+orderId+'/inventory-line',{method:'POST',body:JSON.stringify({inventoryItemId:f.get('inventoryItemId'),quantity:Number(f.get('quantity')),unitNet:f.get('unitNet')?Number(f.get('unitNet')):null,vatRate:Number(f.get('vatRate')),discountPercent:Number(f.get('discountPercent')),approvedByCustomer:f.get('approved')==='on'})});if(after)await after();else await openOrder(orderId)}
- );
+ let selectedItem=state.inventory[0]||null;
+ const renderResults=q=>{
+  const term=String(q||'').trim().toLowerCase();
+  const hits=state.inventory.filter(i=>{
+   const hay=[i.itemNumber,i.ean,i.manufacturer,i.description,i.storageLocation].join(' ').toLowerCase();
+   return !term||hay.includes(term);
+  }).slice(0,40);
+  $('partSearchResults').innerHTML=hits.map(i=>
+   '<button type="button" class="part-result '+(selectedItem?.id===i.id?'active':'')+'" data-part-id="'+i.id+'">'+
+   '<b>'+esc(i.itemNumber)+'</b><span>'+esc(i.manufacturer||'')+' · '+esc(i.description)+'</span>'+
+   '<small>Bestand '+esc(i.stock)+' · Lager '+esc(i.storageLocation||'–')+' · VK '+fmtMoney(i.saleNet)+'</small></button>'
+  ).join('')||'<p class="muted">Kein Artikel gefunden.</p>';
+  document.querySelectorAll('[data-part-id]').forEach(b=>b.onclick=()=>{
+   selectedItem=state.inventory.find(i=>i.id===b.dataset.partId)||null;
+   if(selectedItem){
+    $('selectedPart').innerHTML='<b>'+esc(selectedItem.itemNumber)+' · '+esc(selectedItem.description)+'</b><span>Bestand '+esc(selectedItem.stock)+' · VK netto '+fmtMoney(selectedItem.saleNet)+'</span>';
+    $('partUnitNet').value=selectedItem.saleNet??0;
+    renderResults($('partSearch').value);
+   }
+  });
+ };
+ showModal('Zubehörteil / Artikel zum Auftrag',
+  '<form id="partForm">'+
+  '<label>Artikelnummer, EAN, Hersteller oder Bezeichnung suchen<input id="partSearch" autocomplete="off" placeholder="z. B. BR-1042, Bosch, Ölfilter …"></label>'+
+  '<div id="partSearchResults" class="part-search-results"></div>'+
+  '<div id="selectedPart" class="selected-part">'+(selectedItem?'<b>'+esc(selectedItem.itemNumber)+' · '+esc(selectedItem.description)+'</b><span>Bestand '+esc(selectedItem.stock)+' · VK netto '+fmtMoney(selectedItem.saleNet)+'</span>':'<span>Kein Artikel gewählt.</span>')+'</div>'+
+  '<div class="form-grid"><label>Menge<input id="partQty" name="quantity" type="number" min=".01" step=".01" value="1" required></label>'+
+  '<label>VK netto<input id="partUnitNet" name="unitNet" type="number" step=".01" value="'+esc(selectedItem?.saleNet??0)+'"></label>'+
+  '<label>USt %<input name="vatRate" type="number" step=".01" value="19"></label>'+
+  '<label>Rabatt %<input name="discountPercent" type="number" step=".01" value="0"></label></div>'+
+  '<label class="check-item"><span>Vom Kunden freigegeben</span><input name="approved" type="checkbox" checked></label>'+
+  '<div class="modal-actions"><button type="button" class="secondary" id="cancelPartModal">Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>');
+ $('cancelPartModal').onclick=closeModal;
+ $('partSearch').oninput=e=>renderResults(e.target.value);
+ renderResults('');
+ $('partForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(!selectedItem)return toast('Bitte zuerst einen Artikel auswählen.',true);
+  const fd=new FormData(e.target);
+  const qty=Number(fd.get('quantity'));
+  if(!Number.isFinite(qty)||qty<=0)return toast('Ungültige Menge.',true);
+  try{
+   const result=await api('/work-orders/'+orderId+'/inventory-line',{method:'POST',body:JSON.stringify({
+    inventoryItemId:selectedItem.id,quantity:qty,unitNet:fd.get('unitNet')?Number(fd.get('unitNet')):null,
+    vatRate:Number(fd.get('vatRate')),discountPercent:Number(fd.get('discountPercent')),
+    approvedByCustomer:fd.get('approved')==='on'
+   })});
+   closeModal();
+   await loadAll();
+   toast(result.reservedOnly?'Teil im Kostenvoranschlag kalkuliert. Bestand bleibt unverändert.':'Teil übernommen und Lagerbestand gebucht.');
+   if(after)await after();else await openOrder(orderId);
+  }catch(err){toast(err.message,true)}
+ };
 }
 
 function approvalModal(id,after=null){
