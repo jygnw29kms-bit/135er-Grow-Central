@@ -730,8 +730,27 @@ async function invoiceDetail(id){
   showModal('Beleg '+i.number,
    '<div class="release-grid"><div><b>Netto</b><span>'+fmtMoney(i.netTotal)+'</span></div><div><b>USt</b><span>'+fmtMoney(i.vatTotal)+'</span></div><div><b>Brutto</b><span>'+fmtMoney(i.grossTotal)+'</span></div></div>'+
    '<h3 class="section-gap">Positionen</h3><div class="rows">'+d.lines.map(l=>'<div class="row-item"><div><b>'+esc(l.description)+'</b><span>'+esc(l.quantity)+' × '+fmtMoney(l.unitNet)+' · '+esc(l.vatRate)+' %</span></div><b>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</b></div>').join('')+'</div>'+
-   '<h3 class="section-gap">Zahlungen</h3><div class="rows">'+(d.payments.length?d.payments.map(p=>'<div class="row-item"><div><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'')+'</span></div></div>').join(''):empty('Keine Zahlungen.'))+'</div>');
+   '<h3 class="section-gap">Zahlungen</h3><div class="rows">'+(d.payments.length?d.payments.map(p=>'<div class="row-item"><div><b>'+fmtMoney(p.amount)+'</b><span>'+fmtDateTime(p.paidAt)+' · '+esc(p.reference||'')+'</span></div></div>').join(''):empty('Keine Zahlungen.'))+'</div>'+
+   '<div class="modal-actions"><button class="secondary" id="printInvoiceBtn">Drucken / als PDF sichern</button></div>');
+  $('printInvoiceBtn').onclick=()=>printInvoice(id);
  }catch(e){toast(e.message,true)}
+}
+
+async function printInvoice(id){
+ const w=window.open('','_blank');
+ if(!w){toast('Popup wurde blockiert. Bitte Popups erlauben.',true);return}
+ try{
+  const d=await api('/invoices/'+id),i=d.invoice;
+  const cu=customer(i.customerId),v=vehicle(i.vehicleId),co=state.company||{};
+  const lines=d.lines.map(l=>'<tr><td>'+esc(l.description)+'</td><td>'+esc(l.quantity)+'</td><td>'+fmtMoney(l.unitNet)+'</td><td>'+esc(l.vatRate)+' %</td><td>'+fmtMoney(Number(l.quantity)*Number(l.unitNet))+'</td></tr>').join('');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(i.number)+'</title><style>body{font:14px Arial,sans-serif;padding:30px;color:#17212b}h1{font-size:24px;margin:0 0 6px}.muted{color:#657585}.head{display:flex;justify-content:space-between;gap:30px}.box{margin-top:24px;padding-top:14px;border-top:1px solid #bbb}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}.totals{margin-top:22px;margin-left:auto;width:300px}.totals div{display:flex;justify-content:space-between;padding:4px 0}.gross{font-size:17px;font-weight:bold}@media print{button{display:none}}</style></head><body>'+
+  '<div class="head"><div><h1>'+esc(co.legalName||co.name||'Workshop Manager')+'</h1><div class="muted">'+esc(co.email||'')+' '+esc(co.phone||'')+'</div></div><div><b>'+esc(i.number)+'</b><br>Datum '+esc(i.issueDate)+'<br>Fällig '+esc(i.dueDate)+'</div></div>'+
+  '<div class="box"><b>'+esc(cu?.displayName||'')+'</b><br>'+esc(cu?.street||'')+'<br>'+esc((cu?.postalCode||'')+' '+(cu?.city||''))+'<p>Fahrzeug: '+esc(v?.licensePlate||'')+' · '+esc((v?.make||'')+' '+(v?.model||''))+'</p></div>'+
+  '<table><thead><tr><th>Position</th><th>Menge</th><th>Einzel netto</th><th>USt</th><th>Gesamt netto</th></tr></thead><tbody>'+lines+'</tbody></table>'+
+  '<div class="totals"><div><span>Netto</span><b>'+fmtMoney(i.netTotal)+'</b></div><div><span>USt</span><b>'+fmtMoney(i.vatTotal)+'</b></div><div class="gross"><span>Brutto</span><b>'+fmtMoney(i.grossTotal)+'</b></div><div><span>Bezahlt</span><b>'+fmtMoney(i.paidTotal)+'</b></div></div>'+
+  '<p class="muted">Staging-Dokument · Druckdialog kann auf iOS, Android und Desktop als PDF gespeichert werden.</p></body></html>');
+  w.document.close();w.focus();setTimeout(()=>w.print(),250);
+ }catch(e){w.close();toast(e.message,true)}
 }
 
 function reverseInvoiceModal(id){
