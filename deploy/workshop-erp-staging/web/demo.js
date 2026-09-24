@@ -8,7 +8,7 @@ let token=sessionStorage.getItem('wm_erp_token')||'';
 let plannerState={date:new Date(),view:'week',axis:'calendar'};
 let personnelPlannerState={date:new Date(),view:'week'};
 let serviceState={customerId:null,vehicleId:null,appointmentId:null,orderId:null,invoiceId:null};
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],quotes:[],openItems:[],qualifications:[],vacationBalances:[],company:null,numberSequences:[],customFields:[],documentTemplates:[],audit:[],productivity:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],quotes:[],deliveryNotes:[],openItems:[],qualifications:[],vacationBalances:[],company:null,numberSequences:[],customFields:[],documentTemplates:[],audit:[],productivity:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -85,15 +85,15 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,deliveryNotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
    api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
-   api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),api('/quotes'),
+   api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),api('/quotes'),api('/delivery-notes'),
    api('/finance/open-items'),api('/personnel/qualifications'),api('/personnel/vacation-balances?year=2026'),api('/admin/company'),api('/admin/number-sequences'),api('/admin/custom-fields'),api('/admin/document-templates'),api('/admin/audit?limit=100'),api('/reports/productivity'),
    api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary'),
    api('/admin/users'),api('/admin/roles'),api('/admin/permissions')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,quotes,deliveryNotes,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
