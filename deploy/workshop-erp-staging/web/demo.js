@@ -204,7 +204,8 @@ function renderAll(){
 
  $('invoiceRows').innerHTML=state.invoices.map(i=>{
   const actions='<button class="secondary small" data-invoice-detail="'+i.id+'">Details</button>'+(i.status!==3&&i.status!==5&&i.status!==6?'<button class="secondary small" data-pay="'+i.id+'">Zahlung</button>':'')+(!i.number.startsWith('ST-')&&!i.number.startsWith('GS-')&&i.status!==5&&i.status!==6?'<button class="secondary small" data-reverse="'+i.id+'">Korrektur</button>':'');
-  return '<tr><td><b>'+esc(i.number)+'</b></td><td>'+esc(i.issueDate)+'</td><td>'+esc(i.dueDate)+'</td><td>'+fmtMoney(i.grossTotal)+'</td><td>'+fmtMoney(i.paidTotal)+'</td><td><span class="badge '+badge(invoiceStatus[i.status])+'">'+esc(invoiceStatus[i.status]||i.status)+'</span></td><td><div class="page-actions">'+actions+'</div></td></tr>';
+  const cu=customer(i.customerId),v=vehicle(i.vehicleId);
+  return '<tr><td><b>'+esc(i.number)+'</b></td><td>'+esc(cu?.displayName||'–')+'</td><td><b>'+esc(v?.licensePlate||'–')+'</b><br><span class="muted">'+esc([v?.make,v?.model].filter(Boolean).join(' '))+'</span></td><td>'+esc(i.issueDate)+'</td><td>'+esc(i.dueDate)+'</td><td>'+fmtMoney(i.grossTotal)+'</td><td>'+fmtMoney(i.paidTotal)+'</td><td><span class="badge '+badge(invoiceStatus[i.status])+'">'+esc(invoiceStatus[i.status]||i.status)+'</span></td><td><div class="page-actions">'+actions+'</div></td></tr>';
  }).join('');
  document.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>paymentModal(b.dataset.pay));
  document.querySelectorAll('[data-invoice-detail]').forEach(b=>b.onclick=()=>invoiceDetail(b.dataset.invoiceDetail));
