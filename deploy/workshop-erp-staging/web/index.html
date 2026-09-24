@@ -3,10 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#08111b">
+<meta name="theme-color" content="#17212b">
+<meta name="color-scheme" content="light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Workshop ERP">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui2">
+<link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui1">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui2">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -124,8 +132,22 @@
       </section>
 
       <section id="planner" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">PLANUNG</span><h2>Werkstattplanung</h2><p class="muted">Termine, Ressourcen und Mitarbeiter</p></div><button class="primary" data-action="new-appointment">+ Termin</button></div>
-        <div class="panel table-panel"><table><thead><tr><th>Zeit</th><th>Betreff</th><th>Kunde</th><th>Fahrzeug</th><th>Ressource</th><th>Status</th><th></th></tr></thead><tbody id="appointmentRows"></tbody></table></div>
+        <div class="page-head">
+          <div><span class="eyebrow">WERKSTATTPLANER</span><h2>Werkstattplanung</h2><p class="muted">Termine, Auslastung, Ressourcen und Mitarbeiter in einer Ansicht</p></div>
+          <div class="page-actions"><button class="secondary" id="plannerTodayBtn">Heute</button><button class="primary" data-action="new-appointment">+ Termin</button></div>
+        </div>
+        <div class="planner-toolbar">
+          <div class="planner-nav"><button id="plannerPrevBtn" class="secondary">‹</button><strong id="plannerRangeLabel">–</strong><button id="plannerNextBtn" class="secondary">›</button></div>
+          <div class="segmented" id="plannerViewMode">
+            <button data-planner-view="day">Tag</button><button data-planner-view="week" class="active">Woche</button><button data-planner-view="workweek">Arbeitswoche</button><button data-planner-view="month">Monat</button><button data-planner-view="agenda">Agenda</button>
+          </div>
+          <div class="segmented" id="plannerAxisMode">
+            <button data-planner-axis="calendar" class="active">Kalender</button><button data-planner-axis="resources">Ressourcen</button><button data-planner-axis="employees">Mitarbeiter</button>
+          </div>
+        </div>
+        <div class="planner-summary" id="plannerSummary"></div>
+        <div class="panel planner-panel"><div id="workshopPlannerGrid" class="scheduler"></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>Zeit</th><th>Betreff</th><th>Kunde</th><th>Fahrzeug</th><th>Ressource</th><th>Mitarbeiter</th><th>Status</th><th></th></tr></thead><tbody id="appointmentRows"></tbody></table></div>
       </section>
 
       <section id="orders" class="page hidden">
@@ -180,9 +202,17 @@
       </section>
 
       <section id="personnel" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">PERSONAL</span><h2>Mitarbeiter & Kapazität</h2></div><div class="page-actions"><button id="newEmployeeBtn" class="secondary">+ Mitarbeiter</button><button id="absenceBtn" class="primary">Abwesenheit</button></div></div>
-        <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
-        <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Urlaub, Krankheit, Schulung und Berufsschule</p></div></div><div id="absenceRows" class="rows"></div></div>
+        <div class="page-head"><div><span class="eyebrow">PERSONALPLANER</span><h2>Personal & Kapazität</h2><p class="muted">Anwesenheit, Urlaub, Krankheit, Schulung und produktive Kapazität</p></div><div class="page-actions"><button id="newEmployeeBtn" class="secondary">+ Mitarbeiter</button><button id="absenceBtn" class="primary">+ Abwesenheit</button></div></div>
+        <div class="planner-toolbar">
+          <div class="planner-nav"><button id="personnelPrevBtn" class="secondary">‹</button><strong id="personnelRangeLabel">–</strong><button id="personnelNextBtn" class="secondary">›</button><button id="personnelTodayBtn" class="secondary">Diese Woche</button></div>
+          <div class="segmented"><button id="personnelWeekBtn" class="active">Woche</button><button id="personnelMonthBtn">Monat</button></div>
+        </div>
+        <div class="planner-summary" id="personnelSummary"></div>
+        <div class="panel planner-panel"><div id="personnelPlannerGrid" class="personnel-scheduler"></div></div>
+        <div class="split">
+          <div class="panel table-panel"><table><thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Wochenstunden</th><th>Urlaub</th><th>Verrechnung</th></tr></thead><tbody id="employeeRows"></tbody></table></div>
+          <div class="panel"><div class="panel-head"><div><h3>Abwesenheiten</h3><p>Von–Bis oder einzelner Tag</p></div></div><div id="absenceRows" class="rows"></div></div>
+        </div>
       </section>
 
       <section id="billing" class="page hidden">
@@ -250,6 +280,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui1"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui2"></script>
 </body>
 </html>
