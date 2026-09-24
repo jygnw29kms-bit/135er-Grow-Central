@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace WorkshopManager.Erp.Core.Domain;
 
 public enum PermissionEffect { Allow, Deny }
-public enum DocumentKind { Quote, WorkOrder, Intake, Approval, Invoice, CreditNote, Checklist, Photo, Attachment, Other }
+public enum DocumentKind { Quote = 0, WorkOrder = 1, Intake = 2, Approval = 3, Invoice = 4, CreditNote = 5, Checklist = 6, Photo = 7, Attachment = 8, Other = 9, DeliveryNote = 10 }
 public enum CommunicationChannel { Email, Sms, Phone, WhatsApp, Letter, InApp }
 public enum ReminderStatus { Open, Sent, Completed, Cancelled }
 public enum ChecklistFieldType { Checkbox, OkDefect, Text, Number, Measurement, Photo, Signature, Select }
