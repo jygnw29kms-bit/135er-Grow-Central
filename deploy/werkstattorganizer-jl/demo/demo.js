@@ -7,7 +7,7 @@ const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeSt
 let token=sessionStorage.getItem('wm_erp_token')||'';
 let plannerState={date:new Date(),view:'week',axis:'calendar'};
 let personnelPlannerState={date:new Date(),view:'week'};
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],openItems:[],qualifications:[],vacationBalances:[],company:null,numberSequences:[],customFields:[],documentTemplates:[],audit:[],productivity:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -84,14 +84,15 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
    api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
    api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),
+   api('/finance/open-items'),api('/personnel/qualifications'),api('/personnel/vacation-balances?year=2026'),api('/admin/company'),api('/admin/number-sequences'),api('/admin/custom-fields'),api('/admin/document-templates'),api('/admin/audit?limit=100'),api('/reports/productivity'),
    api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary'),
    api('/admin/users'),api('/admin/roles'),api('/admin/permissions')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,dashboard,report,security,adminUsers,adminRoles,permissions});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,openItems,qualifications,vacationBalances,company,numberSequences,customFields,documentTemplates,audit,productivity,dashboard,report,security,adminUsers,adminRoles,permissions});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
@@ -242,6 +243,62 @@ function renderAll(){
   const t=state.checklists.find(x=>(x.template||x).id===r.checklistTemplateId),o=state.orders.find(x=>x.id===r.workOrderId),v=vehicle(r.vehicleId),e=employee(r.employeeId);
   return '<div class="row-item"><div class="row-main"><div><b>'+esc((t?.template||t)?.name||'Checkliste')+'</b><span>'+fmtDateTime(r.startedAt)+(r.completedAt?' · abgeschlossen':' · offen')+(o?' · '+esc(o.number):'')+(v?' · '+esc(v.licensePlate):'')+(e?' · '+esc(e.name):'')+'</span></div></div><span class="badge '+badge(r.completedAt?'fertig':'offen')+'">'+(r.completedAt?'Fertig':'Offen')+'</span></div>';
  }).join('')||empty('Noch keine Prüfläufe.');
+
+
+ const openTotal=state.openItems.reduce((s,x)=>s+Number(x.openGross||0),0);
+ $('financeOpenTotal').textContent=fmtMoney(openTotal);
+ $('financeOverdueCount').textContent=state.openItems.filter(x=>Number(x.daysOverdue)>0).length;
+ $('financeDunnedCount').textContent=state.openItems.filter(x=>Number(x.dunningLevel)>0).length;
+ $('openItemRows').innerHTML=state.openItems.map(x=>{
+  const i=x.invoice;
+  return '<tr><td><b>'+esc(i.number)+'</b></td><td>'+esc(x.customerName)+(x.vehiclePlate?' · '+esc(x.vehiclePlate):'')+'</td><td>'+esc(i.dueDate)+'</td><td><b>'+fmtMoney(x.openGross)+'</b></td><td>'+esc(x.daysOverdue)+'</td><td>'+esc(x.dunningLevel||0)+'</td><td><div class="page-actions"><button class="secondary small" data-op-detail="'+i.id+'">Beleg</button><button class="secondary small" data-dunning="'+i.id+'">Mahnen</button><button class="secondary small" data-op-pay="'+i.id+'">Zahlung</button></div></td></tr>';
+ }).join('')||'<tr><td colspan="7">Keine offenen Posten.</td></tr>';
+ document.querySelectorAll('[data-op-detail]').forEach(b=>b.onclick=()=>invoiceDetail(b.dataset.opDetail));
+ document.querySelectorAll('[data-dunning]').forEach(b=>b.onclick=()=>dunningModal(b.dataset.dunning));
+ document.querySelectorAll('[data-op-pay]').forEach(b=>b.onclick=()=>paymentModal(b.dataset.opPay));
+
+ $('vacationBalanceRows').innerHTML=state.vacationBalances.map(x=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(x.name)+'</b><span>'+esc(x.used)+' genommen · '+esc(x.annualVacationDays)+' Anspruch</span></div></div><b>'+esc(x.remaining)+' Tage Rest</b></div>'
+ ).join('')||empty('Keine Urlaubskonten.');
+
+ $('qualificationRows').innerHTML=state.qualifications.map(q=>{
+  const e=employee(q.employeeId);
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(q.name)+'</b><span>'+esc(e?.name||'Mitarbeiter')+' · Stufe '+esc(q.level)+(q.validUntil?' · gültig bis '+esc(q.validUntil):'')+'</span></div></div><div class="page-actions"><button class="secondary small" data-edit-qualification="'+q.id+'">Bearbeiten</button><button class="secondary small" data-delete-qualification="'+q.id+'">Löschen</button></div></div>';
+ }).join('')||empty('Keine Qualifikationen hinterlegt.');
+ document.querySelectorAll('[data-edit-qualification]').forEach(b=>b.onclick=()=>qualificationModal(state.qualifications.find(q=>q.id===b.dataset.editQualification)));
+ document.querySelectorAll('[data-delete-qualification]').forEach(b=>b.onclick=()=>deleteQualification(b.dataset.deleteQualification));
+
+ $('productivityRows').innerHTML=state.productivity.map(x=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(x.name)+' · '+esc(x.roleName)+'</b><span>'+esc(x.actualHours)+' h Ist · '+esc(x.soldHours)+' h verkauft · '+fmtMoney(x.hourlyRate)+'/h</span></div></div><span class="badge '+badge(Number(x.efficiencyPercent)>=90?'aktiv':Number(x.efficiencyPercent)>=70?'offen':'kritisch')+'">'+esc(x.efficiencyPercent)+' %</span></div>'
+ ).join('')||empty('Noch keine produktiven Zeiten im Auswertungszeitraum.');
+
+ const co=state.company||{};
+ $('companySummary').innerHTML='<div class="row-item"><div class="row-main"><div><b>'+esc(co.legalName||co.name||'Firma')+'</b><span>'+esc(co.taxNumber?'Steuernr. '+co.taxNumber:'')+(co.vatId?' · USt-ID '+esc(co.vatId):'')+'</span></div></div></div>'+
+  '<div class="row-item"><div class="row-main"><div><b>Kontakt</b><span>'+esc(co.email||'–')+' · '+esc(co.phone||'–')+'</span></div></div></div>';
+
+ $('siteRows').innerHTML=state.sites.map(s=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(s.name)+'</b><span>'+esc(s.street)+' · '+esc(s.postalCode)+' '+esc(s.city)+' · '+esc(s.state)+'</span></div></div><button class="secondary small" data-edit-site="'+s.id+'">Bearbeiten</button></div>'
+ ).join('');
+ document.querySelectorAll('[data-edit-site]').forEach(b=>b.onclick=()=>siteModal(state.sites.find(s=>s.id===b.dataset.editSite)));
+
+ $('numberSequenceRows').innerHTML=state.numberSequences.map(n=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(n.key)+'</b><span>'+esc(n.prefix)+'…'+esc(n.suffix)+' · nächster Wert '+esc(n.nextValue)+' · '+esc(n.padding)+' Stellen</span></div></div><button class="secondary small" data-edit-sequence="'+n.id+'">Bearbeiten</button></div>'
+ ).join('')||empty('Nummernkreise werden beim ersten Beleg automatisch angelegt.');
+ document.querySelectorAll('[data-edit-sequence]').forEach(b=>b.onclick=()=>numberSequenceModal(state.numberSequences.find(n=>n.id===b.dataset.editSequence)));
+
+ $('customFieldRows').innerHTML=state.customFields.map(x=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(x.label)+'</b><span>'+esc(x.entityType)+' · '+esc(x.key)+' · '+esc(x.fieldType)+(x.required?' · Pflicht':'')+'</span></div></div><button class="secondary small" data-edit-custom-field="'+x.id+'">Bearbeiten</button></div>'
+ ).join('')||empty('Keine Zusatzfelder.');
+ document.querySelectorAll('[data-edit-custom-field]').forEach(b=>b.onclick=()=>customFieldModal(state.customFields.find(x=>x.id===b.dataset.editCustomField)));
+
+ $('documentTemplateRows').innerHTML=state.documentTemplates.map(x=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(x.name)+'</b><span>Typ '+esc(x.kind)+' · '+(x.active?'aktiv':'inaktiv')+'</span></div></div><button class="secondary small" data-edit-document-template="'+x.id+'">Bearbeiten</button></div>'
+ ).join('')||empty('Keine Dokumentvorlagen.');
+ document.querySelectorAll('[data-edit-document-template]').forEach(b=>b.onclick=()=>documentTemplateModal(state.documentTemplates.find(x=>x.id===b.dataset.editDocumentTemplate)));
+
+ $('auditRows').innerHTML=state.audit.slice(0,100).map(a=>
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(a.action)+' · '+esc(a.entityType)+'</b><span>'+fmtDateTime(a.createdAt)+' · '+esc(a.actor||'System')+'</span></div></div></div>'
+ ).join('')||empty('Noch keine Audit-Einträge.');
 
  const monthly=(state.report?.monthly||[]);
  const maxMonth=Math.max(1,...monthly.map(m=>Number(m.net||0)));
@@ -850,6 +907,127 @@ function resourceModal(existing=null){
  );
 }
 
+
+function dunningModal(invoiceId){
+ const item=state.openItems.find(x=>x.invoice.id===invoiceId);
+ const next=(item?.dunningLevel||0)+1;
+ modalForm('Mahnung Stufe '+next,
+  '<p class="muted">Offener Betrag: <b>'+fmtMoney(item?.openGross||0)+'</b> · '+esc(item?.customerName||'')+'</p>'+
+  '<label>Mahngebühr<input name="fee" type="number" step=".01" value="'+(next===1?'0.00':next===2?'5.00':'10.00')+'"></label>'+
+  '<label>Notiz<textarea name="note">Mahnung Stufe '+next+'</textarea></label>',
+  async fd=>api('/finance/invoices/'+invoiceId+'/dunning',{method:'POST',body:JSON.stringify({fee:Number(fd.get('fee')||0),note:fd.get('note')})}),
+  'Mahnung erstellen'
+ );
+}
+
+async function downloadDatev(){
+ try{
+  const res=await fetch(API+'/finance/datev?year=2025',{headers:{Authorization:'Bearer '+token}});
+  if(!res.ok)throw new Error('DATEV-Export fehlgeschlagen: HTTP '+res.status);
+  const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='Workshop_Manager_DATEV_2025.csv';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);toast('DATEV-CSV erstellt.');
+ }catch(e){toast(e.message,true)}
+}
+
+function qualificationModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Qualifikation bearbeiten':'Qualifikation anlegen',
+  '<div class="form-grid"><label>Mitarbeiter<select name="employeeId">'+options(state.employees,e=>e.name+' · '+e.roleName,x.employeeId||state.employees[0]?.id)+'</select></label>'+
+  '<label>Qualifikation<input name="name" required value="'+esc(x.name||'')+'" placeholder="z. B. Hochvolt Stufe 3"></label>'+
+  '<label>Stufe<input name="level" type="number" min="1" max="10" value="'+esc(x.level??1)+'"></label>'+
+  '<label>Gültig bis<input name="validUntil" type="date" value="'+esc(x.validUntil||'')+'"></label></div>',
+  async fd=>api(existing?'/personnel/qualifications/'+existing.id:'/personnel/qualifications',{method:existing?'PUT':'POST',body:JSON.stringify({
+   employeeId:fd.get('employeeId'),name:fd.get('name'),level:Number(fd.get('level')),validUntil:fd.get('validUntil')||null
+  })})
+ );
+}
+async function deleteQualification(id){
+ if(!confirm('Qualifikation wirklich löschen?'))return;
+ try{await api('/personnel/qualifications/'+id,{method:'DELETE'});await loadAll();toast('Qualifikation gelöscht.')}catch(e){toast(e.message,true)}
+}
+
+function companyModal(){
+ const x=state.company||{};
+ modalForm('Firma & Branding bearbeiten',
+  '<div class="form-grid"><label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>Rechtlicher Name<input name="legalName" value="'+esc(x.legalName||'')+'"></label>'+
+  '<label>Steuernummer<input name="taxNumber" value="'+esc(x.taxNumber||'')+'"></label>'+
+  '<label>USt-ID<input name="vatId" value="'+esc(x.vatId||'')+'"></label>'+
+  '<label>E-Mail<input name="email" type="email" value="'+esc(x.email||'')+'"></label>'+
+  '<label>Telefon<input name="phone" value="'+esc(x.phone||'')+'"></label>'+
+  '<label>Primärfarbe<input name="primaryColor" type="color" value="'+esc(x.primaryColor||'#1976D2')+'"></label></div>',
+  async fd=>api('/admin/company',{method:'PUT',body:JSON.stringify({
+   name:fd.get('name'),legalName:fd.get('legalName'),taxNumber:fd.get('taxNumber'),vatId:fd.get('vatId'),
+   email:fd.get('email'),phone:fd.get('phone'),primaryColor:fd.get('primaryColor')
+  })})
+ );
+}
+
+function siteModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Standort bearbeiten':'Standort anlegen',
+  '<div class="form-grid"><label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>Straße<input name="street" value="'+esc(x.street||'')+'"></label>'+
+  '<label>PLZ<input name="postalCode" value="'+esc(x.postalCode||'')+'"></label>'+
+  '<label>Ort<input name="city" value="'+esc(x.city||'')+'"></label>'+
+  '<label>Bundesland<input name="state" value="'+esc(x.state||'Brandenburg')+'"></label>'+
+  '<label>Land<input name="countryCode" maxlength="2" value="'+esc(x.countryCode||'DE')+'"></label>'+
+  '<label class="check-item"><span>Aktiv</span><input class="inline-check" name="active" type="checkbox" '+(existing?!x.active?'':'checked':'checked')+'></label></div>',
+  async fd=>api(existing?'/admin/sites/'+existing.id:'/admin/sites',{method:existing?'PUT':'POST',body:JSON.stringify({
+   name:fd.get('name'),street:fd.get('street'),postalCode:fd.get('postalCode'),city:fd.get('city'),
+   state:fd.get('state'),countryCode:fd.get('countryCode'),active:fd.get('active')==='on'
+  })})
+ );
+}
+
+function numberSequenceModal(existing){
+ if(!existing)return;
+ modalForm('Nummernkreis · '+esc(existing.key),
+  '<div class="form-grid"><label>Präfix<input name="prefix" value="'+esc(existing.prefix||'')+'"></label>'+
+  '<label>Suffix<input name="suffix" value="'+esc(existing.suffix||'')+'"></label>'+
+  '<label>Stellen<input name="padding" type="number" min="1" max="12" value="'+esc(existing.padding)+'"></label>'+
+  '<label>Nächster Wert<input name="nextValue" type="number" min="1" value="'+esc(existing.nextValue)+'"></label>'+
+  '<label class="check-item"><span>Jährlich zurücksetzen</span><input class="inline-check" name="resetYearly" type="checkbox" '+(existing.resetYearly?'checked':'')+'></label></div>',
+  async fd=>api('/admin/number-sequences/'+existing.id,{method:'PUT',body:JSON.stringify({
+   prefix:fd.get('prefix'),suffix:fd.get('suffix'),padding:Number(fd.get('padding')),resetYearly:fd.get('resetYearly')==='on',nextValue:Number(fd.get('nextValue'))
+  })})
+ );
+}
+
+function customFieldModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Zusatzfeld bearbeiten':'Zusatzfeld anlegen',
+  '<div class="form-grid"><label>Bereich<select name="entityType">'+['Customer','Vehicle','WorkOrder','Invoice','Employee','TireSet'].map(v=>'<option '+(x.entityType===v?'selected':'')+'>'+v+'</option>').join('')+'</select></label>'+
+  '<label>Schlüssel<input name="key" required value="'+esc(x.key||'')+'" placeholder="z. B. fleet_number"></label>'+
+  '<label>Bezeichnung<input name="label" required value="'+esc(x.label||'')+'"></label>'+
+  '<label>Feldtyp<select name="fieldType">'+['text','number','date','select','checkbox'].map(v=>'<option '+(x.fieldType===v?'selected':'')+'>'+v+'</option>').join('')+'</select></label>'+
+  '<label class="span2">Optionen JSON<textarea name="optionsJson">'+esc(x.optionsJson||'[]')+'</textarea></label>'+
+  '<label class="check-item"><span>Pflichtfeld</span><input class="inline-check" name="required" type="checkbox" '+(x.required?'checked':'')+'></label></div>',
+  async fd=>api(existing?'/admin/custom-fields/'+existing.id:'/admin/custom-fields',{method:existing?'PUT':'POST',body:JSON.stringify({
+   entityType:fd.get('entityType'),key:fd.get('key'),label:fd.get('label'),fieldType:fd.get('fieldType'),required:fd.get('required')==='on',optionsJson:fd.get('optionsJson')
+  })})
+ );
+}
+
+function documentTemplateModal(existing=null){
+ const x=existing||{};
+ const kinds=['Angebot','Auftrag','Annahme','Freigabe','Rechnung','Gutschrift','Checkliste','Foto','Anhang','Sonstiges'];
+ modalForm(existing?'Dokumentvorlage bearbeiten':'Dokumentvorlage anlegen',
+  '<div class="form-grid"><label>Name<input name="name" required value="'+esc(x.name||'')+'"></label>'+
+  '<label>Dokumentart<select name="kind">'+kinds.map((n,i)=>'<option value="'+i+'" '+(x.kind===i?'selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
+  '<label>Standort<select name="siteId"><option value="">Alle Standorte</option>'+options(state.sites,s=>s.name,x.siteId)+'</select></label>'+
+  '<label class="check-item"><span>Aktiv</span><input class="inline-check" name="active" type="checkbox" '+(existing?!x.active?'':'checked':'checked')+'></label>'+
+  '<label class="span2">Definition JSON<textarea name="definitionJson" rows="10">'+esc(x.definitionJson||'{}')+'</textarea></label></div>',
+  async fd=>{
+   try{JSON.parse(fd.get('definitionJson')||'{}')}catch{throw new Error('Definition JSON ist ungültig.')}
+   return api(existing?'/admin/document-templates/'+existing.id:'/admin/document-templates',{method:existing?'PUT':'POST',body:JSON.stringify({
+    siteId:fd.get('siteId')||null,kind:Number(fd.get('kind')),name:fd.get('name'),definitionJson:fd.get('definitionJson'),active:fd.get('active')==='on'
+   })})
+  }
+ );
+}
+
 function roleModal(){
  modalForm('Rolle anlegen','<label>Name<input name="name" required></label><label>Beschreibung<input name="description"></label>',
   async f=>api('/admin/roles',{method:'POST',body:JSON.stringify({name:f.get('name'),description:f.get('description')})})
@@ -917,6 +1095,12 @@ $('newLoanerBookingBtn').onclick=loanerBookingModal;
 $('newChecklistTemplateBtn').onclick=()=>checklistTemplateModal();
 $('newEmployeeBtn').onclick=employeeModal;
 $('newRoleBtn').onclick=roleModal;
+$('datevExportBtn').onclick=downloadDatev;
+$('newQualificationBtn').onclick=()=>qualificationModal();
+$('editCompanyBtn').onclick=companyModal;
+$('newSiteBtn').onclick=()=>siteModal();
+$('newCustomFieldBtn').onclick=()=>customFieldModal();
+$('newDocumentTemplateBtn').onclick=()=>documentTemplateModal();
 $('newResourceBtn').onclick=resourceModal;
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>({ 'new-customer':customerModal,'new-vehicle':vehicleModal,'new-appointment':appointmentModal,'new-tire':tireModal }[b.dataset.action]?.()));
 $('quickBtn').onclick=()=>appointmentModal();
