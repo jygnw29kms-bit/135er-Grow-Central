@@ -170,6 +170,7 @@ function wireDocSearch(inputId,rowSelector){
  const i=$(inputId);if(!i)return;
  i.oninput=()=>{const q=i.value.trim().toLowerCase();document.querySelectorAll(rowSelector).forEach(r=>r.style.display=!q||r.textContent.toLowerCase().includes(q)?'':'none')};
 }
+wireDocSearch('orderSearch','#orderBoard .ticket');
 wireDocSearch('quoteSearch','.quote-list tbody tr');
 wireDocSearch('invoiceSearch','.invoice-list tbody tr');
 wireDocSearch('deliverySearch','.delivery-list tbody tr');
