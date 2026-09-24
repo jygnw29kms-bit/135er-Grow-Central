@@ -10,11 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workshop ERP">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui5">
+<link rel="manifest" href="/jl/demo/manifest.webmanifest?v=erp4-pro-ui7">
 <link rel="apple-touch-icon" href="/jl/demo/jl-logo.svg">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui5">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui7">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -58,8 +58,10 @@
     <nav id="mainNav">
       <div class="nav-group"><span>Arbeitsplatz</span>
         <button class="nav active" data-page="dashboard">Übersicht</button>
+        <button class="nav" data-page="service-desk">Serviceberater</button>
         <button class="nav" data-page="planner">Planung</button>
         <button class="nav" data-page="orders">Leitstand & Aufträge</button>
+        <button class="nav" data-page="quotes">Kostenvoranschläge</button>
         <button class="nav" data-page="intake">Fahrzeugannahme</button>
       </div>
       <div class="nav-group"><span>Stammdaten</span>
@@ -132,6 +134,39 @@
         </div>
       </section>
 
+      <section id="service-desk" class="page hidden">
+        <div class="page-head">
+          <div><span class="eyebrow">SERVICEBERATER</span><h2>Tagesablauf & Dialogannahme</h2><p class="muted">Vom ersten Kundenkontakt bis zur bezahlten Rechnung – ohne Medienbruch.</p></div>
+          <div class="page-actions"><button id="serviceStartBtn" class="primary">Neuen Vorgang starten</button></div>
+        </div>
+        <div class="workflow-strip" id="serviceWorkflowStrip">
+          <button data-service-step="customer"><span>1</span><b>Kunde</b><small>suchen / anlegen</small></button>
+          <button data-service-step="vehicle"><span>2</span><b>Fahrzeug</b><small>zuordnen / anlegen</small></button>
+          <button data-service-step="appointment"><span>3</span><b>Termin</b><small>planen oder direkt</small></button>
+          <button data-service-step="order"><span>4</span><b>Auftrag</b><small>eröffnen / KV</small></button>
+          <button data-service-step="intake"><span>5</span><b>Annahme</b><small>km / Schäden / Check</small></button>
+          <button data-service-step="parts"><span>6</span><b>Teile & Arbeit</b><small>kalkulieren</small></button>
+          <button data-service-step="approval"><span>7</span><b>Freigabe</b><small>Kunde bestätigen</small></button>
+          <button data-service-step="work"><span>8</span><b>Werkstatt</b><small>Zeit / Status / QC</small></button>
+          <button data-service-step="invoice"><span>9</span><b>Rechnung</b><small>fakturieren</small></button>
+          <button data-service-step="payment"><span>10</span><b>Zahlung</b><small>bezahlen / korrigieren</small></button>
+        </div>
+        <div class="split service-desk-grid">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Aktiver Vorgang</h3><p>Auswahl bleibt beim Wechsel zwischen den Arbeitsschritten erhalten.</p></div></div>
+            <div id="serviceContext" class="service-context"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Nächste Aktionen</h3><p>Kontextabhängig aus dem aktuellen Vorgang.</p></div></div>
+            <div id="serviceActions" class="service-actions"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Heute im Service</h3><p>Termine, angekommene Fahrzeuge und offene Kundenfreigaben.</p></div></div>
+          <div id="serviceTodayRows" class="rows"></div>
+        </div>
+      </section>
+
       <section id="planner" class="page hidden">
         <div class="page-head">
           <div><span class="eyebrow">WERKSTATTPLANER</span><h2>Werkstattplanung</h2><p class="muted">Termine, Auslastung, Ressourcen und Mitarbeiter in einer Ansicht</p></div>
@@ -155,6 +190,12 @@
         <div class="page-head"><div><span class="eyebrow">WERKSTATT</span><h2>Leitstand & Aufträge</h2><p class="muted">Vom Termin bis zur Rechnung</p></div><div class="page-actions"><button id="newOrderBtn" class="primary">+ Auftrag</button></div></div>
         <div id="orderBoard" class="kanban"></div>
         <div id="orderDetail" class="panel hidden"></div>
+      </section>
+
+      <section id="quotes" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">VERKAUF</span><h2>Kostenvoranschläge</h2><p class="muted">KV erstellen, kalkulieren, freigeben und ohne Doppelerfassung in Auftrag wandeln</p></div><button id="newQuoteBtn" class="primary">+ Kostenvoranschlag</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>KV</th><th>Kunde</th><th>Fahrzeug</th><th>Netto</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody id="quoteRows"></tbody></table></div>
+        <div id="quoteDetail" class="panel hidden"></div>
       </section>
 
       <section id="intake" class="page hidden">
@@ -315,6 +356,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui5"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui7"></script>
 </body>
 </html>
