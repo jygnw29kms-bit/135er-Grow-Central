@@ -221,7 +221,7 @@ string? ResolvePermission(string method, PathString path)
     if (p.StartsWith("/api/employees") || p.StartsWith("/api/absences")) return write ? "personnel.write" : "personnel.read";
     if (p.StartsWith("/api/invoices")) return write ? "billing.write" : "billing.read";
     if (p.StartsWith("/api/resources")) return write ? "resources.write" : "resources.read";
-    if (p.StartsWith("/api/reminders")) return write ? "crm.write" : "crm.read";
+    if (p.StartsWith("/api/reminders") || p.StartsWith("/api/communications")) return write ? "crm.write" : "crm.read";
     if (p.StartsWith("/api/checklists")) return write ? "orders.write" : "orders.read";
     if (p.StartsWith("/api/loaner-bookings") || p.StartsWith("/api/loaners")) return write ? "loaners.write" : "loaners.read";
     if (p.StartsWith("/api/reports")) return "reports.read";
@@ -1634,6 +1634,135 @@ app.MapPut("/api/resources/{id:guid}", async (Guid id, ResourceCreate req, ErpDb
     return Results.Ok(r);
 });
 
+
+app.MapPut("/api/reminders/{id:guid}", async (Guid id, ReminderCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var r = await db.Reminders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (r is null) return Results.NotFound();
+    r.CustomerId = req.CustomerId;
+    r.VehicleId = req.VehicleId;
+    r.Type = req.Type.Trim();
+    r.Subject = req.Subject.Trim();
+    r.DueAt = req.DueAt;
+    r.PreferredChannel = req.PreferredChannel;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(r);
+});
+
+app.MapPost("/api/reminders/{id:guid}/cancel", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var r = await db.Reminders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (r is null) return Results.NotFound();
+    r.Status = ReminderStatus.Cancelled;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(r);
+});
+
+app.MapPut("/api/loaners/{id:guid}", async (Guid id, LoanerCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var l = await db.LoanerVehicles.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (l is null) return Results.NotFound();
+    l.SiteId = req.SiteId ?? l.SiteId;
+    l.Number = req.Number.Trim();
+    l.LicensePlate = req.LicensePlate.Trim().ToUpperInvariant();
+    l.VehicleName = req.VehicleName.Trim();
+    l.Mileage = req.Mileage;
+    l.FuelOrChargeLevel = req.FuelOrChargeLevel?.Trim() ?? "";
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(l);
+});
+
+app.MapPost("/api/loaner-bookings/{id:guid}/cancel", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var b = await db.LoanerBookings.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (b is null) return Results.NotFound();
+    if (b.Status == LoanerBookingStatus.Returned) return Results.Conflict(new { error = "Eine bereits zurückgegebene Buchung kann nicht storniert werden." });
+    b.Status = LoanerBookingStatus.Cancelled;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(b);
+});
+
+app.MapPost("/api/purchase-orders/{id:guid}/cancel", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var po = await db.PurchaseOrders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (po is null) return Results.NotFound();
+    if (po.Status == PurchaseOrderStatus.Received) return Results.Conflict(new { error = "Eine vollständig eingegangene Bestellung kann nicht storniert werden." });
+    po.Status = PurchaseOrderStatus.Cancelled;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(po);
+});
+
+app.MapGet("/api/communications", async (Guid? customerId, Guid? vehicleId, Guid? workOrderId, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = db.CommunicationLogs.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (customerId is not null) q = q.Where(x => x.CustomerId == customerId.Value);
+    if (vehicleId is not null) q = q.Where(x => x.VehicleId == vehicleId.Value);
+    if (workOrderId is not null) q = q.Where(x => x.WorkOrderId == workOrderId.Value);
+    return Results.Ok(await q.OrderByDescending(x => x.OccurredAt).Take(500).ToListAsync(ct));
+});
+
+app.MapPost("/api/communications", async (CommunicationCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var log = new CommunicationLog
+    {
+        TenantId = tenantId,
+        CustomerId = req.CustomerId,
+        VehicleId = req.VehicleId,
+        WorkOrderId = req.WorkOrderId,
+        Channel = req.Channel,
+        Subject = req.Subject.Trim(),
+        Body = req.Body?.Trim() ?? "",
+        Direction = string.IsNullOrWhiteSpace(req.Direction) ? "outbound" : req.Direction.Trim(),
+        OccurredAt = DateTimeOffset.UtcNow
+    };
+    db.CommunicationLogs.Add(log);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/communications/{log.Id}", log);
+});
+
+app.MapGet("/api/checklists/runs", async (Guid? workOrderId, Guid? vehicleId, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var q = db.ChecklistRuns.AsNoTracking().Where(x => x.TenantId == tenantId && !x.IsDeleted);
+    if (workOrderId is not null) q = q.Where(x => x.WorkOrderId == workOrderId.Value);
+    if (vehicleId is not null) q = q.Where(x => x.VehicleId == vehicleId.Value);
+    return Results.Ok(await q.OrderByDescending(x => x.StartedAt).Take(250).ToListAsync(ct));
+});
+
+app.MapPost("/api/checklists/templates", async (ChecklistTemplateWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    if (string.IsNullOrWhiteSpace(req.Name)) return Results.BadRequest(new { error = "Name fehlt." });
+    var t = new ChecklistTemplate { TenantId = tenantId, Name = req.Name.Trim(), Context = req.Context?.Trim() ?? "intake", Active = true };
+    db.ChecklistTemplates.Add(t);
+    foreach (var f in req.Fields.OrderBy(x => x.SortOrder))
+        db.ChecklistFields.Add(new ChecklistField { TenantId = tenantId, ChecklistTemplateId = t.Id, Label = f.Label.Trim(), Type = f.Type, SortOrder = f.SortOrder, Required = f.Required });
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/checklists/templates/{t.Id}", t);
+});
+
+app.MapPut("/api/checklists/templates/{id:guid}", async (Guid id, ChecklistTemplateWrite req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var t = await db.ChecklistTemplates.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (t is null) return Results.NotFound();
+    t.Name = req.Name.Trim();
+    t.Context = req.Context?.Trim() ?? "intake";
+    var old = await db.ChecklistFields.Where(x => x.ChecklistTemplateId == id && x.TenantId == tenantId && !x.IsDeleted).ToListAsync(ct);
+    foreach (var f in old) f.IsDeleted = true;
+    foreach (var f in req.Fields.OrderBy(x => x.SortOrder))
+        db.ChecklistFields.Add(new ChecklistField { TenantId = tenantId, ChecklistTemplateId = t.Id, Label = f.Label.Trim(), Type = f.Type, SortOrder = f.SortOrder, Required = f.Required });
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(t);
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
@@ -1667,6 +1796,9 @@ record UserRolesUpdate(List<Guid> RoleIds, Guid? SiteId);
 record EmployeeCreate(Guid? SiteId, string PersonnelNumber, string Name, string? RoleName, decimal WeeklyHours, decimal ProductiveHourlyCost, decimal ProductiveHourlyRate, int AnnualVacationDays);
 record ResourceCreate(Guid? SiteId, string Name, ResourceKind Kind, decimal? MaxLoadKg, decimal? MaxVehicleHeightM, bool SupportsEv);
 record ReminderCreate(Guid CustomerId, Guid? VehicleId, string Type, string Subject, DateTimeOffset DueAt, CommunicationChannel PreferredChannel);
+record CommunicationCreate(Guid CustomerId, Guid? VehicleId, Guid? WorkOrderId, CommunicationChannel Channel, string Subject, string? Body, string? Direction);
+record ChecklistFieldWrite(string Label, ChecklistFieldType Type, int SortOrder, bool Required);
+record ChecklistTemplateWrite(string Name, string? Context, List<ChecklistFieldWrite> Fields);
 record LoanerCreate(Guid? SiteId, string Number, string LicensePlate, string VehicleName, int Mileage, string? FuelOrChargeLevel);
 record LoanerBookingCreate(Guid LoanerVehicleId, Guid CustomerId, Guid? WorkOrderId, DateTimeOffset From, DateTimeOffset To);
 record LoanerHandover(int? Mileage, string? FuelOrChargeLevel, string? Damage);
