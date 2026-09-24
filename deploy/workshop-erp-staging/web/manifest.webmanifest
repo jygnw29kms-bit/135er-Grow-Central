@@ -1,0 +1,19 @@
+{
+  "name": "Workshop Manager ERP",
+  "short_name": "Workshop ERP",
+  "description": "Werkstatt-ERP für Planung, Auftrag, Personal, Lager, Reifen, CRM und Faktura.",
+  "start_url": "/jl/demo/",
+  "scope": "/jl/demo/",
+  "display": "standalone",
+  "background_color": "#f3f5f7",
+  "theme_color": "#17212b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/jl/demo/jl-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
