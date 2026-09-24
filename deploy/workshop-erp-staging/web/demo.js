@@ -456,6 +456,21 @@ async function convertAppointment(id){try{await api('/work-orders/from-appointme
 function options(arr,label,selected=null){
  return arr.map(x=>'<option value="'+x.id+'" '+(selected===x.id?'selected':'')+'>'+esc(label(x))+'</option>').join('')
 }
+function vehicleOptionsForCustomer(customerId,selected=null){
+ const vehicles=state.vehicles.filter(v=>!customerId||v.customerId===customerId);
+ return options(vehicles,v=>v.licensePlate+' · '+(v.make||'')+' '+(v.model||''),selected);
+}
+function bindCustomerVehicle(customerSelect,vehicleSelect,selectedVehicle=null,allowNew=false){
+ const refresh=()=>{
+  const customerId=customerSelect.value;
+  const current=selectedVehicle||vehicleSelect.value;
+  const prefix=allowNew?'<option value="">Neues Fahrzeug anlegen</option>':'';
+  vehicleSelect.innerHTML=prefix+vehicleOptionsForCustomer(customerId,current);
+  if(current&&[...vehicleSelect.options].some(o=>o.value===current))vehicleSelect.value=current;
+ };
+ customerSelect.addEventListener('change',()=>{selectedVehicle=null;refresh()});
+ refresh();
+}
 function modalForm(title,body,onSubmit,submitLabel='Speichern'){
  showModal(title,'<form id="dynamicForm">'+body+'<div class="modal-actions"><button type="button" class="secondary" id="cancelModal">Abbrechen</button><button class="primary" type="submit">'+esc(submitLabel)+'</button></div></form>');
  $('cancelModal').onclick=closeModal;
@@ -550,8 +565,8 @@ function appointmentModal(existing=null){
  const local=v=>v?new Date(v).toISOString().slice(0,16):'';
  modalForm(existing?'Termin bearbeiten':'Termin anlegen',
  '<div class="form-grid">'+
- '<label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName,x.customerId||state.customers[0]?.id)+'</select></label>'+
- '<label>Fahrzeug<select name="vehicleId">'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model,x.vehicleId||state.vehicles[0]?.id)+'</select></label>'+
+ '<label>Kunde<select id="appointmentCustomer" name="customerId">'+options(state.customers,c=>c.displayName,x.customerId||state.customers[0]?.id)+'</select></label>'+
+ '<label>Fahrzeug<select id="appointmentVehicle" name="vehicleId"></select></label>'+
  '<label>Start<input name="startsAt" type="datetime-local" required value="'+local(x.startsAt)+'"></label>'+
  '<label>Ende<input name="endsAt" type="datetime-local" required value="'+local(x.endsAt)+'"></label>'+
  '<label>Ressource<select name="resourceId"><option value="">–</option>'+options(state.resources,r=>r.name,x.resourceId)+'</select></label>'+
@@ -560,8 +575,10 @@ function appointmentModal(existing=null){
  '<label class="span2">Kundenwunsch<textarea name="customerRequest">'+esc(x.customerRequest||'')+'</textarea></label></div>',
  async f=>{
   const body={siteId:state.site?.id,customerId:f.get('customerId'),vehicleId:f.get('vehicleId'),resourceId:f.get('resourceId')||null,employeeId:f.get('employeeId')||null,startsAt:new Date(f.get('startsAt')).toISOString(),endsAt:new Date(f.get('endsAt')).toISOString(),subject:f.get('subject'),customerRequest:f.get('customerRequest')};
+  if(new Date(body.endsAt)<=new Date(body.startsAt))throw new Error('Terminende muss nach dem Terminbeginn liegen.');
   return api(existing?'/appointments/'+existing.id:'/appointments',{method:existing?'PUT':'POST',body:JSON.stringify(body)});
  });
+ bindCustomerVehicle($('appointmentCustomer'),$('appointmentVehicle'),x.vehicleId||null);
 }
 async function cancelAppointment(id){
  if(!confirm('Termin wirklich absagen?'))return;
@@ -719,8 +736,13 @@ async function createInvoice(id){try{await api('/invoices/from-work-order/'+id,{
 function paymentModal(id){
  const inv=state.invoices.find(x=>x.id===id);
  const open=Math.max(0,Number(inv?.grossTotal||0)-Number(inv?.paidTotal||0));
- modalForm('Zahlung erfassen','<label>Betrag<input name="amount" type="number" step=".01" value="'+open.toFixed(2)+'" required></label><label>Zahlungsart<select name="method"><option value="0">Bar</option><option value="1">Karte</option><option value="2">Überweisung</option><option value="3">Lastschrift</option></select></label><label>Referenz<input name="reference"></label>',
- async f=>api('/invoices/'+id+'/payments',{method:'POST',body:JSON.stringify({amount:Number(f.get('amount')),method:Number(f.get('method')),reference:f.get('reference')})})
+ modalForm('Zahlung erfassen','<label>Betrag<input name="amount" type="number" min=".01" max="'+open.toFixed(2)+'" step=".01" value="'+open.toFixed(2)+'" required></label><label>Zahlungsart<select name="method"><option value="0">Bar</option><option value="1">Karte</option><option value="2">Überweisung</option><option value="3">Lastschrift</option><option value="4">Sonstiges</option></select></label><label>Referenz<input name="reference" placeholder="Kassenbeleg, Transaktions-ID, Verwendungszweck …"></label><p class="muted">Offener Betrag: <b>'+fmtMoney(open)+'</b>. Überzahlungen werden serverseitig verhindert.</p>',
+ async f=>{
+  const amount=Number(f.get('amount'));
+  if(!Number.isFinite(amount)||amount<=0)throw new Error('Bitte einen gültigen Zahlbetrag eingeben.');
+  if(amount>open)throw new Error('Der Zahlbetrag darf den offenen Betrag nicht überschreiten.');
+  return api('/invoices/'+id+'/payments',{method:'POST',body:JSON.stringify({amount,method:Number(f.get('method')),reference:f.get('reference')})})
+ }
  );
 }
 
