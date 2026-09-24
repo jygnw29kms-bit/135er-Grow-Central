@@ -7,7 +7,7 @@ const fmtDateTime=v=>v?new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeSt
 let token=sessionStorage.getItem('wm_erp_token')||'';
 let plannerState={date:new Date(),view:'week',axis:'calendar'};
 let personnelPlannerState={date:new Date(),view:'week'};
-let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],loaners:[],loanerBookings:[],checklists:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
+let state={site:null,sites:[],customers:[],vehicles:[],employees:[],resources:[],appointments:[],orders:[],inventory:[],suppliers:[],purchaseOrders:[],absences:[],tires:[],invoices:[],reminders:[],communications:[],loaners:[],loanerBookings:[],checklists:[],checklistRuns:[],dashboard:null,report:null,security:null,adminUsers:[],adminRoles:[],permissions:[],selectedOrder:null};
 
 const workStatus={
 0:'Entwurf',1:'Geplant',2:'Angekommen',3:'Annahme',4:'Diagnose',5:'Freigabe offen',6:'Freigegeben',
@@ -84,14 +84,14 @@ document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>page(b.da
 async function loadAll(withToast=false){
  try{
   await health();
-  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,loaners,loanerBookings,checklists,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
+  const [sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,dashboard,report,security,adminUsers,adminRoles,permissions]=await Promise.all([
    api('/sites'),api('/customers'),api('/vehicles'),api('/employees'),api('/resources'),api('/appointments'),
    api('/work-orders'),api('/inventory'),api('/suppliers'),api('/purchase-orders'),api('/absences'),
-   api('/tires'),api('/invoices'),api('/reminders'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),
+   api('/tires'),api('/invoices'),api('/reminders'),api('/communications'),api('/loaners'),api('/loaner-bookings'),api('/checklists/templates'),api('/checklists/runs'),
    api('/dashboard'),api('/reports/overview?year=2025'),api('/admin/security-summary'),
    api('/admin/users'),api('/admin/roles'),api('/admin/permissions')
   ]);
-  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,loaners,loanerBookings,checklists,dashboard,report,security,adminUsers,adminRoles,permissions});
+  Object.assign(state,{sites,customers,vehicles,employees,resources,appointments,orders,inventory,suppliers,purchaseOrders,absences,tires,invoices,reminders,communications,loaners,loanerBookings,checklists,checklistRuns,dashboard,report,security,adminUsers,adminRoles,permissions});
   state.site=sites[0]||null;
   $('siteContext').textContent=state.site?state.site.name+' · '+state.site.city:'Kein Standort';
   $('buildInfo').textContent='ERP 4.0 · STAGING · '+new Date().toLocaleDateString('de-DE');
@@ -174,10 +174,12 @@ function renderAll(){
  $('purchaseOrderRows').innerHTML=state.purchaseOrders.map(x=>{
   const o=x.order||x,sup=state.suppliers.find(s=>s.id===o.supplierId),lines=x.lines||[];
   const ordered=lines.reduce((a,l)=>a+Number(l.quantity||0),0),received=lines.reduce((a,l)=>a+Number(l.receivedQuantity||0),0);
-  const receive=o.status!==3?'<button class="secondary small" data-receive-po="'+o.id+'">Wareneingang</button>':'';
-  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(sup?.name||'Lieferant')+'</b><span>'+ordered+' bestellt · '+received+' eingegangen</span></div></div><div class="page-actions"><span class="badge '+badge(o.status===3?'erhalten':o.status===2?'teil':'bestellt')+'">'+esc(o.status===3?'Erhalten':o.status===2?'Teilweise':'Bestellt')+'</span>'+receive+'</div></div>';
+  const receive=(o.status!==3&&o.status!==4)?'<button class="secondary small" data-receive-po="'+o.id+'">Wareneingang</button>':'';
+  const cancel=(o.status!==3&&o.status!==4)?'<button class="secondary small" data-cancel-po="'+o.id+'">Stornieren</button>':'';
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(o.number)+' · '+esc(sup?.name||'Lieferant')+'</b><span>'+ordered+' bestellt · '+received+' eingegangen</span></div></div><div class="page-actions"><span class="badge '+badge(o.status===3?'erhalten':o.status===2?'teil':'bestellt')+'">'+esc(o.status===3?'Erhalten':o.status===2?'Teilweise':'Bestellt')+'</span>'+receive+cancel+'</div></div>';
  }).join('')||empty('Keine Bestellungen vorhanden.');
  document.querySelectorAll('[data-receive-po]').forEach(b=>b.onclick=()=>goodsReceiptModal(b.dataset.receivePo));
+ document.querySelectorAll('[data-cancel-po]').forEach(b=>b.onclick=()=>cancelPurchaseOrder(b.dataset.cancelPo));
  renderPurchaseForm();
 
  $('employeeRows').innerHTML=state.employees.map(e=>
@@ -201,28 +203,45 @@ function renderAll(){
 
  $('reminderRows').innerHTML=state.reminders.map(r=>{
   const cu=customer(r.customerId),v=vehicle(r.vehicleId);
-  return '<div class="row-item"><div class="row-main"><div><b>'+esc(r.subject)+' · '+esc(cu?.displayName||'')+'</b><span>'+fmtDateTime(r.dueAt)+(v?' · '+esc(v.licensePlate):'')+' · '+esc(r.type)+'</span></div></div><div class="page-actions"><span class="badge '+badge(new Date(r.dueAt)<new Date()?'kritisch':'offen')+'">'+(new Date(r.dueAt)<new Date()?'Fällig':'Offen')+'</span><button class="secondary small" data-complete-reminder="'+r.id+'">Erledigt</button></div></div>';
- }).join('')||empty('Keine offenen Wiedervorlagen.');
+  const st=['Offen','Gesendet','Erledigt','Storniert'][r.status]||r.status;
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(r.subject)+' · '+esc(cu?.displayName||'')+'</b><span>'+fmtDateTime(r.dueAt)+(v?' · '+esc(v.licensePlate):'')+' · '+esc(r.type)+'</span></div></div><div class="page-actions"><span class="badge '+badge(st)+'">'+esc(st)+'</span>'+(r.status<2?'<button class="secondary small" data-edit-reminder="'+r.id+'">Bearbeiten</button><button class="secondary small" data-complete-reminder="'+r.id+'">Erledigt</button><button class="secondary small" data-cancel-reminder="'+r.id+'">Stornieren</button>':'')+'</div></div>';
+ }).join('')||empty('Keine Wiedervorlagen.');
+ document.querySelectorAll('[data-edit-reminder]').forEach(b=>b.onclick=()=>reminderModal(state.reminders.find(r=>r.id===b.dataset.editReminder)));
  document.querySelectorAll('[data-complete-reminder]').forEach(b=>b.onclick=()=>completeReminder(b.dataset.completeReminder));
+ document.querySelectorAll('[data-cancel-reminder]').forEach(b=>b.onclick=()=>cancelReminder(b.dataset.cancelReminder));
+
+ $('communicationRows').innerHTML=state.communications.map(x=>{
+  const cu=customer(x.customerId),v=vehicle(x.vehicleId);
+  const channel=['E-Mail','SMS','Telefon','WhatsApp','Brief','In-App'][x.channel]||x.channel;
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(x.subject)+' · '+esc(cu?.displayName||'')+'</b><span>'+fmtDateTime(x.occurredAt)+' · '+esc(channel)+(v?' · '+esc(v.licensePlate):'')+' · '+esc(x.direction||'')+'</span></div></div></div>';
+ }).join('')||empty('Noch keine Kommunikation dokumentiert.');
 
  $('loanerRows').innerHTML=state.loaners.map(l=>
-  '<div class="row-item"><div class="row-main"><div><b>'+esc(l.number)+' · '+esc(l.licensePlate)+'</b><span>'+esc(l.vehicleName)+' · '+esc(l.mileage)+' km · '+esc(l.fuelOrChargeLevel)+'</span></div></div><span class="badge success">aktiv</span></div>'
+  '<div class="row-item"><div class="row-main"><div><b>'+esc(l.number)+' · '+esc(l.licensePlate)+'</b><span>'+esc(l.vehicleName)+' · '+esc(l.mileage)+' km · '+esc(l.fuelOrChargeLevel)+'</span></div></div><div class="page-actions"><span class="badge success">aktiv</span><button class="secondary small" data-edit-loaner="'+l.id+'">Bearbeiten</button></div></div>'
  ).join('')||empty('Keine Leihwagen.');
+ document.querySelectorAll('[data-edit-loaner]').forEach(b=>b.onclick=()=>loanerModal(state.loaners.find(l=>l.id===b.dataset.editLoaner)));
 
  $('loanerBookingRows').innerHTML=state.loanerBookings.map(b=>{
   const l=state.loaners.find(x=>x.id===b.loanerVehicleId),cu=customer(b.customerId);
   const status=['Reserviert','Ausgegeben','Zurück','Storniert'][b.status]||b.status;
-  const action=b.status===0?'<button class="secondary small" data-loaner-out="'+b.id+'">Ausgeben</button>':b.status===1?'<button class="secondary small" data-loaner-return="'+b.id+'">Rücknahme</button>':'';
+  const action=b.status===0?'<button class="secondary small" data-loaner-out="'+b.id+'">Ausgeben</button><button class="secondary small" data-loaner-cancel="'+b.id+'">Stornieren</button>':b.status===1?'<button class="secondary small" data-loaner-return="'+b.id+'">Rücknahme</button><button class="secondary small" data-loaner-cancel="'+b.id+'">Stornieren</button>':'';
   return '<div class="row-item"><div class="row-main"><div><b>'+esc(l?.number||'Leihwagen')+' · '+esc(cu?.displayName||'')+'</b><span>'+fmtDateTime(b.from)+' bis '+fmtDateTime(b.to)+'</span></div></div><div class="page-actions"><span class="badge '+badge(status)+'">'+esc(status)+'</span>'+action+'</div></div>';
  }).join('')||empty('Keine Reservierungen.');
  document.querySelectorAll('[data-loaner-out]').forEach(b=>b.onclick=()=>loanerHandoverModal(b.dataset.loanerOut,false));
  document.querySelectorAll('[data-loaner-return]').forEach(b=>b.onclick=()=>loanerHandoverModal(b.dataset.loanerReturn,true));
+ document.querySelectorAll('[data-loaner-cancel]').forEach(b=>b.onclick=()=>cancelLoanerBooking(b.dataset.loanerCancel));
 
  $('checklistRows').innerHTML=state.checklists.map(x=>{
   const t=x.template||x,fields=x.fields||[];
-  return '<div class="row-item"><div class="row-main"><div><b>'+esc(t.name)+'</b><span>'+esc(t.context)+' · '+fields.length+' Prüfpunkte</span></div></div><button class="primary small" data-run-checklist="'+t.id+'">Starten</button></div>';
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc(t.name)+'</b><span>'+esc(t.context)+' · '+fields.length+' Prüfpunkte</span></div></div><div class="page-actions"><button class="secondary small" data-edit-checklist="'+t.id+'">Bearbeiten</button><button class="primary small" data-run-checklist="'+t.id+'">Starten</button></div></div>';
  }).join('')||empty('Keine Checklisten.');
  document.querySelectorAll('[data-run-checklist]').forEach(b=>b.onclick=()=>checklistModal(b.dataset.runChecklist));
+ document.querySelectorAll('[data-edit-checklist]').forEach(b=>b.onclick=()=>checklistTemplateModal(state.checklists.find(x=>(x.template||x).id===b.dataset.editChecklist)));
+
+ $('checklistRunRows').innerHTML=state.checklistRuns.map(r=>{
+  const t=state.checklists.find(x=>(x.template||x).id===r.checklistTemplateId),o=state.orders.find(x=>x.id===r.workOrderId),v=vehicle(r.vehicleId),e=employee(r.employeeId);
+  return '<div class="row-item"><div class="row-main"><div><b>'+esc((t?.template||t)?.name||'Checkliste')+'</b><span>'+fmtDateTime(r.startedAt)+(r.completedAt?' · abgeschlossen':' · offen')+(o?' · '+esc(o.number):'')+(v?' · '+esc(v.licensePlate):'')+(e?' · '+esc(e.name):'')+'</span></div></div><span class="badge '+badge(r.completedAt?'fertig':'offen')+'">'+(r.completedAt?'Fertig':'Offen')+'</span></div>';
+ }).join('')||empty('Noch keine Prüfläufe.');
 
  const monthly=(state.report?.monthly||[]);
  const maxMonth=Math.max(1,...monthly.map(m=>Number(m.net||0)));
@@ -576,28 +595,89 @@ function supplierModal(existing=null){
  );
 }
 
-function reminderModal(){
- modalForm('Wiedervorlage anlegen','<div class="form-grid"><label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName)+'</select></label><label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model)+'</select></label><label>Typ<input name="type" value="Service"></label><label>Fällig<input name="dueAt" type="datetime-local" required></label><label class="span2">Betreff<input name="subject" required></label><label>Kanal<select name="preferredChannel"><option value="0">E-Mail</option><option value="1">SMS</option><option value="2">Telefon</option><option value="3">WhatsApp</option><option value="4">Brief</option><option value="5">In-App</option></select></label></div>',
- async f=>api('/reminders',{method:'POST',body:JSON.stringify({customerId:f.get('customerId'),vehicleId:f.get('vehicleId')||null,type:f.get('type'),subject:f.get('subject'),dueAt:new Date(f.get('dueAt')).toISOString(),preferredChannel:Number(f.get('preferredChannel'))})})
+function reminderModal(existing=null){
+ const x=existing||{},local=x.dueAt?new Date(x.dueAt).toISOString().slice(0,16):'';
+ modalForm(existing?'Wiedervorlage bearbeiten':'Wiedervorlage anlegen',
+  '<div class="form-grid"><label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName,x.customerId||state.customers[0]?.id)+'</select></label>'+
+  '<label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model,x.vehicleId)+'</select></label>'+
+  '<label>Typ<input name="type" value="'+esc(x.type||'Service')+'"></label>'+
+  '<label>Fällig<input name="dueAt" type="datetime-local" required value="'+local+'"></label>'+
+  '<label class="span2">Betreff<input name="subject" required value="'+esc(x.subject||'')+'"></label>'+
+  '<label>Kanal<select name="preferredChannel">'+[['0','E-Mail'],['1','SMS'],['2','Telefon'],['3','WhatsApp'],['4','Brief'],['5','In-App']].map(([v,n])=>'<option value="'+v+'" '+(Number(v)===x.preferredChannel?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div>',
+  async fd=>api(existing?'/reminders/'+existing.id:'/reminders',{method:existing?'PUT':'POST',body:JSON.stringify({
+   customerId:fd.get('customerId'),vehicleId:fd.get('vehicleId')||null,type:fd.get('type'),subject:fd.get('subject'),
+   dueAt:new Date(fd.get('dueAt')).toISOString(),preferredChannel:Number(fd.get('preferredChannel'))
+  })})
  );
 }
 async function completeReminder(id){
  try{await api('/reminders/'+id+'/status',{method:'PUT',body:JSON.stringify({status:2})});await loadAll();toast('Wiedervorlage erledigt.')}catch(e){toast(e.message,true)}
 }
+async function cancelReminder(id){
+ if(!confirm('Wiedervorlage wirklich stornieren?'))return;
+ try{await api('/reminders/'+id+'/cancel',{method:'POST'});await loadAll();toast('Wiedervorlage storniert.')}catch(e){toast(e.message,true)}
+}
+function communicationModal(){
+ modalForm('Kundenkontakt dokumentieren',
+  '<div class="form-grid"><label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName)+'</select></label>'+
+  '<label>Fahrzeug<select name="vehicleId"><option value="">–</option>'+options(state.vehicles,v=>v.licensePlate+' · '+v.make+' '+v.model)+'</select></label>'+
+  '<label>Auftrag<select name="workOrderId"><option value="">–</option>'+options(state.orders,o=>o.number+' · '+(vehicle(o.vehicleId)?.licensePlate||''))+'</select></label>'+
+  '<label>Kanal<select name="channel"><option value="2">Telefon</option><option value="0">E-Mail</option><option value="1">SMS</option><option value="3">WhatsApp</option><option value="4">Brief</option><option value="5">In-App</option></select></label>'+
+  '<label>Richtung<select name="direction"><option value="outbound">Ausgehend</option><option value="inbound">Eingehend</option></select></label>'+
+  '<label class="span2">Betreff<input name="subject" required></label>'+
+  '<label class="span2">Notiz / Inhalt<textarea name="body"></textarea></label></div>',
+  async fd=>api('/communications',{method:'POST',body:JSON.stringify({
+   customerId:fd.get('customerId'),vehicleId:fd.get('vehicleId')||null,workOrderId:fd.get('workOrderId')||null,
+   channel:Number(fd.get('channel')),subject:fd.get('subject'),body:fd.get('body'),direction:fd.get('direction')
+  })})
+ );
+}
 
-function loanerModal(){
- modalForm('Leihwagen anlegen','<div class="form-grid"><label>Nummer<input name="number" required placeholder="LW-04"></label><label>Kennzeichen<input name="licensePlate" required></label><label>Fahrzeug<input name="vehicleName" required></label><label>Kilometer<input name="mileage" type="number" value="0"></label><label>Tank/Ladung<input name="fuel" value="voll"></label></div>',
- async f=>api('/loaners',{method:'POST',body:JSON.stringify({siteId:state.site?.id,number:f.get('number'),licensePlate:f.get('licensePlate'),vehicleName:f.get('vehicleName'),mileage:Number(f.get('mileage')),fuelOrChargeLevel:f.get('fuel')})})
+function loanerModal(existing=null){
+ const x=existing||{};
+ modalForm(existing?'Leihwagen bearbeiten':'Leihwagen anlegen',
+  '<div class="form-grid"><label>Nummer<input name="number" required value="'+esc(x.number||'')+'" placeholder="LW-04"></label>'+
+  '<label>Kennzeichen<input name="licensePlate" required value="'+esc(x.licensePlate||'')+'"></label>'+
+  '<label>Fahrzeug<input name="vehicleName" required value="'+esc(x.vehicleName||'')+'"></label>'+
+  '<label>Kilometer<input name="mileage" type="number" value="'+esc(x.mileage??0)+'"></label>'+
+  '<label>Tank/Ladung<input name="fuel" value="'+esc(x.fuelOrChargeLevel||'voll')+'"></label></div>',
+  async fd=>api(existing?'/loaners/'+existing.id:'/loaners',{method:existing?'PUT':'POST',body:JSON.stringify({
+   siteId:x.siteId||state.site?.id,number:fd.get('number'),licensePlate:fd.get('licensePlate'),vehicleName:fd.get('vehicleName'),
+   mileage:Number(fd.get('mileage')),fuelOrChargeLevel:fd.get('fuel')
+  })})
  );
 }
 function loanerBookingModal(){
  modalForm('Leihwagen reservieren','<div class="form-grid"><label>Leihwagen<select name="loanerVehicleId">'+options(state.loaners,l=>l.number+' · '+l.licensePlate+' · '+l.vehicleName)+'</select></label><label>Kunde<select name="customerId">'+options(state.customers,c=>c.displayName)+'</select></label><label>Auftrag<select name="workOrderId"><option value="">–</option>'+options(state.orders,o=>o.number+' · '+(vehicle(o.vehicleId)?.licensePlate||''))+'</select></label><label>Von<input name="from" type="datetime-local" required></label><label>Bis<input name="to" type="datetime-local" required></label></div>',
- async f=>api('/loaner-bookings',{method:'POST',body:JSON.stringify({loanerVehicleId:f.get('loanerVehicleId'),customerId:f.get('customerId'),workOrderId:f.get('workOrderId')||null,from:new Date(f.get('from')).toISOString(),to:new Date(f.get('to')).toISOString()})})
+ async fd=>api('/loaner-bookings',{method:'POST',body:JSON.stringify({loanerVehicleId:fd.get('loanerVehicleId'),customerId:fd.get('customerId'),workOrderId:fd.get('workOrderId')||null,from:new Date(fd.get('from')).toISOString(),to:new Date(fd.get('to')).toISOString()})})
  );
 }
 function loanerHandoverModal(id,isReturn){
  modalForm(isReturn?'Leihwagen zurücknehmen':'Leihwagen ausgeben','<div class="form-grid"><label>Kilometer<input name="mileage" type="number"></label><label>Tank/Ladung<input name="fuel"></label><label class="span2">Schäden / Hinweise<textarea name="damage"></textarea></label></div>',
- async f=>api('/loaner-bookings/'+id+(isReturn?'/return':'/handover'),{method:'POST',body:JSON.stringify({mileage:f.get('mileage')?Number(f.get('mileage')):null,fuelOrChargeLevel:f.get('fuel'),damage:f.get('damage')})})
+ async fd=>api('/loaner-bookings/'+id+(isReturn?'/return':'/handover'),{method:'POST',body:JSON.stringify({mileage:fd.get('mileage')?Number(fd.get('mileage')):null,fuelOrChargeLevel:fd.get('fuel'),damage:fd.get('damage')})})
+ );
+}
+async function cancelLoanerBooking(id){
+ if(!confirm('Leihwagenreservierung wirklich stornieren?'))return;
+ try{await api('/loaner-bookings/'+id+'/cancel',{method:'POST'});await loadAll();toast('Reservierung storniert.')}catch(e){toast(e.message,true)}
+}
+
+function checklistTemplateModal(existing=null){
+ const item=existing||{},t=item.template||item,fields=item.fields||[];
+ const types=['Checkbox','OK/Mangel','Text','Zahl','Messwert','Foto','Unterschrift','Auswahl'];
+ const lines=fields.map(f=>f.label+'|'+f.type+'|'+(f.required?'1':'0')).join('\n');
+ modalForm(existing?'Checklisten-Vorlage bearbeiten':'Checklisten-Vorlage anlegen',
+  '<label>Name<input name="name" required value="'+esc(t.name||'')+'"></label>'+
+  '<label>Kontext<select name="context"><option value="intake" '+(t.context==='intake'?'selected':'')+'>Fahrzeugannahme</option><option value="quality-control" '+(t.context==='quality-control'?'selected':'')+'>Qualitätskontrolle</option><option value="workshop" '+(t.context==='workshop'?'selected':'')+'>Werkstatt</option><option value="custom" '+(t.context==='custom'?'selected':'')+'>Individuell</option></select></label>'+
+  '<label>Prüfpunkte<textarea name="fields" rows="10" placeholder="Bezeichnung|Typnummer|Pflicht 0/1">'+esc(lines)+'</textarea></label>'+
+  '<p class="muted">Typnummern: '+types.map((x,i)=>i+'='+x).join(' · ')+'</p>',
+  async fd=>{
+   const parsed=String(fd.get('fields')||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map((line,i)=>{
+    const p=line.split('|');return{label:(p[0]||'').trim(),type:Number(p[1]||0),sortOrder:i+1,required:String(p[2]||'0').trim()==='1'}
+   });
+   if(!parsed.length)throw new Error('Mindestens ein Prüfpunkt ist erforderlich.');
+   return api(existing?'/checklists/templates/'+t.id:'/checklists/templates',{method:existing?'PUT':'POST',body:JSON.stringify({name:fd.get('name'),context:fd.get('context'),fields:parsed})});
+  }
  );
 }
 
@@ -628,6 +708,11 @@ function goodsReceiptModal(purchaseOrderId){
   if(!lines.length)throw new Error('Keine Menge eingetragen.');
   await api('/purchase-orders/'+purchaseOrderId+'/receive',{method:'POST',body:JSON.stringify({lines})});
  });
+}
+
+async function cancelPurchaseOrder(id){
+ if(!confirm('Bestellung wirklich stornieren?'))return;
+ try{await api('/purchase-orders/'+id+'/cancel',{method:'POST'});await loadAll();toast('Bestellung storniert.')}catch(e){toast(e.message,true)}
 }
 
 function timeStartModal(workOrderId){
@@ -825,9 +910,11 @@ $('dialogIntakeBtn').onclick=dialogIntakeModal;
 $('newOrderBtn').onclick=workOrderModal;
 $('newInventoryBtn').onclick=()=>inventoryModal();
 $('newSupplierBtn').onclick=supplierModal;
-$('newReminderBtn').onclick=reminderModal;
+$('newReminderBtn').onclick=()=>reminderModal();
+$('newCommunicationBtn').onclick=communicationModal;
 $('newLoanerBtn').onclick=loanerModal;
 $('newLoanerBookingBtn').onclick=loanerBookingModal;
+$('newChecklistTemplateBtn').onclick=()=>checklistTemplateModal();
 $('newEmployeeBtn').onclick=employeeModal;
 $('newRoleBtn').onclick=roleModal;
 $('newResourceBtn').onclick=resourceModal;
