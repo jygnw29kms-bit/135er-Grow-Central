@@ -67,6 +67,7 @@
       <div class="nav-group"><span>Stammdaten</span>
         <button class="nav" data-page="customers">Kunden</button>
         <button class="nav" data-page="vehicles">Fahrzeuge</button>
+        <button class="nav" data-page="catalog">Fahrzeug- & Teilekatalog</button>
         <button class="nav" data-page="tires">Reifenhotel</button>
         <button class="nav" data-page="crm">CRM & Wiedervorlagen</button>
       </div>
@@ -224,6 +225,65 @@
         <div class="panel table-panel"><table><thead><tr><th>Kennzeichen</th><th>Fahrzeug</th><th>VIN</th><th>km</th><th>HU</th><th></th></tr></thead><tbody id="vehicleRows"></tbody></table></div>
       </section>
 
+
+      <section id="catalog" class="page hidden">
+        <div class="page-head">
+          <div><span class="eyebrow">FAHRZEUG- & TEILEDATEN</span><h2>KBA / AAG Katalog</h2><p class="muted">Fahrzeugidentifikation per HSN/TSN und kundenspezifischer AAG-Teile-/Preiskatalog.</p></div>
+          <div class="page-actions"><button id="catalogRefreshBtn" class="secondary">Datenstatus aktualisieren</button></div>
+        </div>
+        <div id="catalogStatus" class="kpis"></div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h3>KBA Fahrzeugfinder</h3><p>HSN/TSN oder Hersteller, Modell und Typ durchsuchen.</p></div></div>
+            <div class="form-grid">
+              <label>HSN<input id="kbaHsn" maxlength="4" placeholder="z. B. 0035"></label>
+              <label>TSN<input id="kbaTsn" maxlength="3" placeholder="z. B. AFR"></label>
+              <label class="span2">Freitext<input id="kbaQuery" placeholder="Hersteller, Modell, Typ oder KBA-Nr."></label>
+            </div>
+            <div class="form-actions"><button id="kbaSearchBtn" class="primary">Fahrzeug suchen</button></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>AAG Artikelfinder</h3><p>Hersteller-Art.-Nr., Hennig-Nr., EAN, Nachfolgenummer, Marke oder Bezeichnung.</p></div></div>
+            <div class="form-grid">
+              <label class="span2">Artikel / EAN / Text<input id="aagQuery" placeholder="z. B. 130000, 9008071300006, TRISCAN …"></label>
+              <label>Marke<input id="aagBrand" placeholder="optional"></label>
+              <label>Status<select id="aagStatus"><option value="">alle</option><option>AKTIV-LAGER</option><option>AKTIV-BESTELL</option><option>AKTIV-ZENTRAL</option><option>ABVERKAUF-AAG</option><option>ABVERKAUF-LIEFERANT</option><option>AUSLAUF-LIEFERANT</option></select></label>
+            </div>
+            <div class="form-actions"><button id="aagSearchBtn" class="primary">Artikel suchen</button></div>
+          </div>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head"><div><h3>KBA Treffer</h3><p id="kbaResultInfo">Noch keine Suche.</p></div></div>
+          <table><thead><tr><th>HSN/TSN</th><th>Hersteller</th><th>Modell / Typ</th><th>Motor</th><th>Bauzeit</th><th>Technik</th><th></th></tr></thead><tbody id="kbaRows"></tbody></table>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head"><div><h3>AAG Treffer</h3><p id="aagResultInfo">Noch keine Suche.</p></div></div>
+          <table><thead><tr><th>Artikel</th><th>Marke / Bezeichnung</th><th>EAN</th><th>EK</th><th>Brutto</th><th>Status</th><th>Nachfolger</th><th></th></tr></thead><tbody id="aagRows"></tbody></table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><h3>Datenimport</h3><p>KBA.ZIP und monatliche kundenspezifische AAG-Preisdatei serverseitig indexieren. Bestehender Katalog wird erst nach erfolgreichem Dateizugriff ersetzt.</p></div></div>
+          <div class="split">
+            <div class="form-card">
+              <h3>KBA aktualisieren</h3>
+              <p class="muted">Erwartet ZIP mit <code>kba.dbf</code>.</p>
+              <input id="kbaImportFile" type="file" accept=".zip,application/zip">
+              <div class="form-actions"><button id="kbaImportBtn" class="secondary">KBA-Paket importieren</button></div>
+            </div>
+            <div class="form-card">
+              <h3>AAG Preisdatei aktualisieren</h3>
+              <p class="muted">Semikolon-CSV mit den gelieferten 27 Spalten; große Dateien werden serverseitig verarbeitet.</p>
+              <input id="aagImportFile" type="file" accept=".csv,text/csv">
+              <div class="form-actions"><button id="aagImportBtn" class="secondary">AAG-Preisdatei importieren</button></div>
+            </div>
+          </div>
+          <p id="catalogImportState" class="muted">Noch kein Import in dieser Sitzung.</p>
+        </div>
+      </section>
+
       <section id="tires" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">REIFENHOTEL</span><h2>Einlagerungen</h2><p class="muted">Lagerplätze, Zustand, Profiltiefen und RDKS</p></div><button class="primary" data-action="new-tire">+ Einlagern</button></div>
         <div id="tireCards" class="cards"></div>
@@ -356,6 +416,7 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-pro-ui7"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui8"></script>
+<script src="/jl/demo/catalog.js?v=erp4-pro-ui8"></script>
 </body>
 </html>
