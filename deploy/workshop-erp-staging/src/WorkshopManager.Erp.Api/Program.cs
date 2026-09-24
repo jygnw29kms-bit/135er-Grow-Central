@@ -1444,12 +1444,204 @@ app.MapGet("/api/dashboard", async (ErpDbContext db, CancellationToken ct) =>
     return Results.Ok(new { appointments, openOrders, lowStock, receivables });
 });
 
+
+app.MapGet("/api/customers/{id:guid}/history", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var customer = await db.Customers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (customer is null) return Results.NotFound();
+
+    var vehicles = await db.Vehicles.AsNoTracking().Where(x => x.CustomerId == id && x.TenantId == tenantId && !x.IsDeleted).OrderBy(x => x.LicensePlate).ToListAsync(ct);
+    var orders = await db.WorkOrders.AsNoTracking().Where(x => x.CustomerId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync(ct);
+    var invoices = await db.Invoices.AsNoTracking().Where(x => x.CustomerId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.IssueDate).Take(100).ToListAsync(ct);
+    var tires = await db.TireSets.AsNoTracking().Where(x => x.CustomerId == id && x.TenantId == tenantId && !x.IsDeleted).OrderBy(x => x.StorageNumber).ToListAsync(ct);
+    var reminders = await db.Reminders.AsNoTracking().Where(x => x.CustomerId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.DueAt).Take(100).ToListAsync(ct);
+
+    return Results.Ok(new { customer, vehicles, orders, invoices, tires, reminders });
+});
+
+app.MapGet("/api/vehicles/{id:guid}/history", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var vehicle = await db.Vehicles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (vehicle is null) return Results.NotFound();
+
+    var orders = await db.WorkOrders.AsNoTracking().Where(x => x.VehicleId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync(ct);
+    var invoices = await db.Invoices.AsNoTracking().Where(x => x.VehicleId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.IssueDate).Take(100).ToListAsync(ct);
+    var tires = await db.TireSets.AsNoTracking().Where(x => x.VehicleId == id && x.TenantId == tenantId && !x.IsDeleted).OrderBy(x => x.StorageNumber).ToListAsync(ct);
+    var appointments = await db.Appointments.AsNoTracking().Where(x => x.VehicleId == id && x.TenantId == tenantId && !x.IsDeleted).OrderByDescending(x => x.StartsAt).Take(100).ToListAsync(ct);
+
+    return Results.Ok(new { vehicle, orders, invoices, tires, appointments });
+});
+
+app.MapPut("/api/work-orders/{id:guid}", async (Guid id, WorkOrderUpdate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (order is null) return Results.NotFound();
+    if (order.Status >= WorkOrderStatus.Invoiced)
+        return Results.Conflict(new { error = "Fakturierte oder abgeschlossene Aufträge können nicht mehr direkt geändert werden." });
+
+    order.CustomerRequest = req.CustomerRequest?.Trim() ?? "";
+    order.Diagnosis = req.Diagnosis?.Trim() ?? "";
+    order.PromisedAt = req.PromisedAt;
+    order.MileageIn = req.MileageIn;
+    order.FuelOrChargeLevel = req.FuelOrChargeLevel?.Trim() ?? "";
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(order);
+});
+
+app.MapPut("/api/work-orders/{workOrderId:guid}/lines/{lineId:guid}", async (Guid workOrderId, Guid lineId, WorkOrderLineUpdate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == workOrderId && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (order is null) return Results.NotFound();
+    if (order.Status >= WorkOrderStatus.Invoiced)
+        return Results.Conflict(new { error = "Positionen eines fakturierten Auftrags können nicht geändert werden." });
+    if (req.Quantity <= 0) return Results.BadRequest(new { error = "Menge muss größer als 0 sein." });
+
+    var line = await db.WorkOrderLines.FirstOrDefaultAsync(x => x.Id == lineId && x.WorkOrderId == workOrderId && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (line is null) return Results.NotFound();
+
+    await using var tx = await db.Database.BeginTransactionAsync(ct);
+    if (line.InventoryItemId is Guid inventoryId)
+    {
+        var item = await db.InventoryItems.FirstOrDefaultAsync(x => x.Id == inventoryId && x.TenantId == tenantId && !x.IsDeleted, ct);
+        if (item is null) return Results.Conflict(new { error = "Verknüpfter Lagerartikel fehlt." });
+
+        var delta = req.Quantity - line.Quantity;
+        if (delta > 0)
+        {
+            if (item.Stock < delta) return Results.BadRequest(new { error = $"Nicht genügend Bestand. Verfügbar: {item.Stock}" });
+            item.Stock -= delta;
+            db.StockMovements.Add(new StockMovement { TenantId = tenantId, InventoryItemId = item.Id, SiteId = order.SiteId, Type = StockMovementType.Consumption, Quantity = delta, Reference = $"Auftrag {order.Number} · Mengenänderung" });
+        }
+        else if (delta < 0)
+        {
+            item.Stock += -delta;
+            db.StockMovements.Add(new StockMovement { TenantId = tenantId, InventoryItemId = item.Id, SiteId = order.SiteId, Type = StockMovementType.Return, Quantity = -delta, Reference = $"Auftrag {order.Number} · Rückbuchung" });
+        }
+    }
+
+    line.Type = req.Type;
+    line.ItemNumber = req.ItemNumber?.Trim() ?? line.ItemNumber;
+    line.Description = req.Description.Trim();
+    line.Quantity = req.Quantity;
+    line.UnitNet = req.UnitNet;
+    line.VatRate = req.VatRate;
+    line.DiscountPercent = req.DiscountPercent;
+    line.ApprovedByCustomer = req.ApprovedByCustomer;
+    await db.SaveChangesAsync(ct);
+    await tx.CommitAsync(ct);
+    return Results.Ok(line);
+});
+
+app.MapDelete("/api/work-orders/{workOrderId:guid}/lines/{lineId:guid}", async (Guid workOrderId, Guid lineId, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var order = await db.WorkOrders.FirstOrDefaultAsync(x => x.Id == workOrderId && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (order is null) return Results.NotFound();
+    if (order.Status >= WorkOrderStatus.Invoiced)
+        return Results.Conflict(new { error = "Positionen eines fakturierten Auftrags können nicht gelöscht werden." });
+
+    var line = await db.WorkOrderLines.FirstOrDefaultAsync(x => x.Id == lineId && x.WorkOrderId == workOrderId && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (line is null) return Results.NotFound();
+
+    if (line.InventoryItemId is Guid inventoryId)
+    {
+        var item = await db.InventoryItems.FirstOrDefaultAsync(x => x.Id == inventoryId && x.TenantId == tenantId && !x.IsDeleted, ct);
+        if (item is not null)
+        {
+            item.Stock += line.Quantity;
+            db.StockMovements.Add(new StockMovement { TenantId = tenantId, InventoryItemId = item.Id, SiteId = order.SiteId, Type = StockMovementType.Return, Quantity = line.Quantity, Reference = $"Auftrag {order.Number} · Position gelöscht" });
+        }
+    }
+
+    line.IsDeleted = true;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { id = line.Id, deleted = true });
+});
+
+app.MapPut("/api/employees/{id:guid}", async (Guid id, EmployeeCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (e is null) return Results.NotFound();
+    e.SiteId = req.SiteId ?? e.SiteId;
+    e.PersonnelNumber = req.PersonnelNumber.Trim();
+    e.Name = req.Name.Trim();
+    e.RoleName = req.RoleName?.Trim() ?? "";
+    e.WeeklyHours = req.WeeklyHours;
+    e.ProductiveHourlyCost = req.ProductiveHourlyCost;
+    e.ProductiveHourlyRate = req.ProductiveHourlyRate;
+    e.AnnualVacationDays = req.AnnualVacationDays;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(e);
+});
+
+app.MapPut("/api/absences/{id:guid}", async (Guid id, AbsenceCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    if (req.To < req.From) return Results.BadRequest(new { error = "Bis-Datum liegt vor Von-Datum." });
+    var a = await db.Absences.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (a is null) return Results.NotFound();
+    a.EmployeeId = req.EmployeeId;
+    a.Type = req.Type;
+    a.From = req.From;
+    a.To = req.To;
+    a.Reason = req.Reason?.Trim() ?? "";
+    a.Approved = req.Approved;
+    a.AffectsCapacity = req.AffectsCapacity;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(a);
+});
+
+app.MapDelete("/api/absences/{id:guid}", async (Guid id, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var a = await db.Absences.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (a is null) return Results.NotFound();
+    a.IsDeleted = true;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { id = a.Id, deleted = true });
+});
+
+app.MapPut("/api/suppliers/{id:guid}", async (Guid id, SupplierCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var s = await db.Suppliers.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (s is null) return Results.NotFound();
+    if (!string.IsNullOrWhiteSpace(req.SupplierNumber)) s.SupplierNumber = req.SupplierNumber.Trim();
+    s.Name = req.Name.Trim();
+    s.Email = req.Email?.Trim() ?? "";
+    s.Phone = req.Phone?.Trim() ?? "";
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(s);
+});
+
+app.MapPut("/api/resources/{id:guid}", async (Guid id, ResourceCreate req, ErpDbContext db, CancellationToken ct) =>
+{
+    var tenantId = await TenantId(db, ct);
+    var r = await db.WorkshopResources.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
+    if (r is null) return Results.NotFound();
+    r.SiteId = req.SiteId ?? r.SiteId;
+    r.Name = req.Name.Trim();
+    r.Kind = req.Kind;
+    r.MaxLoadKg = req.MaxLoadKg;
+    r.MaxVehicleHeightM = req.MaxVehicleHeightM;
+    r.SupportsEv = req.SupportsEv;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(r);
+});
+
 app.Run();
 
 record LoginRequest(string Username, string Password);
 record CustomerCreate(string DisplayName, string? CompanyName, string? FirstName, string? LastName, string? Email, string? Phone, string? Mobile, string? Street, string? PostalCode, string? City, string? Notes);
 record VehicleCreate(Guid CustomerId, string LicensePlate, string? Vin, string? Make, string? Model, string? Type, string? Hsn, string? Tsn, DateOnly? FirstRegistration, int? Mileage, DateOnly? NextHu, DateOnly? NextService);
 record WorkOrderCreate(Guid? SiteId, Guid CustomerId, Guid VehicleId, string? CustomerRequest, string? Diagnosis, DateTimeOffset? PromisedAt);
+record WorkOrderUpdate(string? CustomerRequest, string? Diagnosis, DateTimeOffset? PromisedAt, int? MileageIn, string? FuelOrChargeLevel);
+record WorkOrderLineUpdate(LineType Type, string? ItemNumber, string Description, decimal Quantity, decimal UnitNet, decimal VatRate, decimal DiscountPercent, bool ApprovedByCustomer);
 record AppointmentCreate(Guid? SiteId, Guid CustomerId, Guid VehicleId, Guid? ResourceId, Guid? EmployeeId, DateTimeOffset StartsAt, DateTimeOffset EndsAt, string Subject, string? CustomerRequest);
 record IntakeRequest(int? MileageIn, string? FuelOrChargeLevel, string? CustomerRequest);
 record TransitionRequest(WorkOrderStatus Status);
