@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08111b">
 <title>Workshop Manager ERP · STAGING</title>
 <link rel="icon" href="/jl/demo/jl-logo.svg">
-<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-ui6">
+<link rel="stylesheet" href="/jl/demo/demo.css?v=erp4-pro-ui1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -58,12 +58,15 @@
         <button class="nav" data-page="customers">Kunden</button>
         <button class="nav" data-page="vehicles">Fahrzeuge</button>
         <button class="nav" data-page="tires">Reifenhotel</button>
+        <button class="nav" data-page="crm">CRM & Wiedervorlagen</button>
       </div>
       <div class="nav-group"><span>Betrieb</span>
         <button class="nav" data-page="inventory">Lager</button>
         <button class="nav" data-page="purchasing">Einkauf</button>
         <button class="nav" data-page="personnel">Personal</button>
         <button class="nav" data-page="billing">Rechnungen</button>
+        <button class="nav" data-page="loaners">Leihwagen</button>
+        <button class="nav" data-page="checklists">Checklisten</button>
       </div>
       <div class="nav-group"><span>Steuerung</span>
         <button class="nav" data-page="reports">Auswertungen</button>
@@ -126,7 +129,7 @@
       </section>
 
       <section id="orders" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">WERKSTATT</span><h2>Leitstand & Aufträge</h2><p class="muted">Vom Termin bis zur Rechnung</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">WERKSTATT</span><h2>Leitstand & Aufträge</h2><p class="muted">Vom Termin bis zur Rechnung</p></div><div class="page-actions"><button id="newOrderBtn" class="primary">+ Auftrag</button></div></div>
         <div id="orderBoard" class="kanban"></div>
         <div id="orderDetail" class="panel hidden"></div>
       </section>
@@ -148,23 +151,23 @@
       <section id="customers" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">STAMMDATEN</span><h2>Kunden</h2></div><button class="primary" data-action="new-customer">+ Kunde</button></div>
         <div class="toolbar"><input id="customerSearch" placeholder="Kunden suchen…"><button id="customerSearchBtn" class="secondary">Suchen</button></div>
-        <div class="panel table-panel"><table><thead><tr><th>Nr.</th><th>Name</th><th>Telefon</th><th>E-Mail</th><th>Ort</th></tr></thead><tbody id="customerRows"></tbody></table></div>
+        <div class="panel table-panel"><table><thead><tr><th>Nr.</th><th>Name</th><th>Telefon</th><th>E-Mail</th><th>Ort</th><th></th></tr></thead><tbody id="customerRows"></tbody></table></div>
       </section>
 
       <section id="vehicles" class="page hidden">
         <div class="page-head"><div><span class="eyebrow">STAMMDATEN</span><h2>Fahrzeuge</h2></div><button class="primary" data-action="new-vehicle">+ Fahrzeug</button></div>
         <div class="toolbar"><input id="vehicleSearch" placeholder="Kennzeichen, VIN, Hersteller…"><button id="vehicleSearchBtn" class="secondary">Suchen</button></div>
-        <div class="panel table-panel"><table><thead><tr><th>Kennzeichen</th><th>Fahrzeug</th><th>VIN</th><th>km</th><th>HU</th></tr></thead><tbody id="vehicleRows"></tbody></table></div>
+        <div class="panel table-panel"><table><thead><tr><th>Kennzeichen</th><th>Fahrzeug</th><th>VIN</th><th>km</th><th>HU</th><th></th></tr></thead><tbody id="vehicleRows"></tbody></table></div>
       </section>
 
       <section id="tires" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">REIFENHOTEL</span><h2>Einlagerungen</h2></div><button class="primary" data-action="new-tire">+ Einlagern</button></div>
+        <div class="page-head"><div><span class="eyebrow">REIFENHOTEL</span><h2>Einlagerungen</h2><p class="muted">Lagerplätze, Zustand, Profiltiefen und RDKS</p></div><button class="primary" data-action="new-tire">+ Einlagern</button></div>
         <div id="tireCards" class="cards"></div>
       </section>
 
       <section id="inventory" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">WARENWIRTSCHAFT</span><h2>Lager</h2></div></div>
-        <div class="panel table-panel"><table><thead><tr><th>Artikel</th><th>Bezeichnung</th><th>Bestand</th><th>Min.</th><th>EK</th><th>VK</th><th>Lagerort</th></tr></thead><tbody id="inventoryRows"></tbody></table></div>
+        <div class="page-head"><div><span class="eyebrow">WARENWIRTSCHAFT</span><h2>Lager</h2><p class="muted">Zubehörteile, Bestände und Lagerorte</p></div><button id="newInventoryBtn" class="primary">+ Artikel</button></div>
+        <div class="panel table-panel"><table><thead><tr><th>Artikel</th><th>Bezeichnung</th><th>Bestand</th><th>Min.</th><th>EK</th><th>VK</th><th>Lagerort</th><th></th></tr></thead><tbody id="inventoryRows"></tbody></table></div>
       </section>
 
       <section id="purchasing" class="page hidden">
@@ -173,7 +176,7 @@
           <div class="panel"><div class="panel-head"><div><h3>Offene Bestellungen</h3><p>Bestellstatus und Wareneingang</p></div></div><div id="purchaseOrderRows" class="rows"></div></div>
           <div class="panel"><div class="panel-head"><div><h3>Schnellbestellung</h3><p>Direkt aus dem aktuellen Lagerbestand</p></div></div><div id="purchaseFormHost"></div></div>
         </div>
-        <div class="panel"><div class="panel-head"><div><h3>Lieferanten</h3></div></div><div id="supplierRows" class="rows"></div></div>
+        <div class="panel"><div class="panel-head"><div><h3>Lieferanten</h3></div><button id="newSupplierBtn" class="secondary">+ Lieferant</button></div><div id="supplierRows" class="rows"></div></div>
       </section>
 
       <section id="personnel" class="page hidden">
@@ -183,8 +186,26 @@
       </section>
 
       <section id="billing" class="page hidden">
-        <div class="page-head"><div><span class="eyebrow">FAKTURA</span><h2>Rechnungen & Zahlungen</h2></div></div>
+        <div class="page-head"><div><span class="eyebrow">FAKTURA</span><h2>Rechnungen & Zahlungen</h2><p class="muted">Rechnung, Zahlung, Storno und Gutschrift</p></div></div>
         <div class="panel table-panel"><table><thead><tr><th>Rechnung</th><th>Datum</th><th>Fällig</th><th>Brutto</th><th>Bezahlt</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+      </section>
+
+      <section id="crm" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">CRM</span><h2>Wiedervorlagen & Kundenkontakt</h2><p class="muted">Service-, HU- und Kunden-Erinnerungen</p></div><button id="newReminderBtn" class="primary">+ Wiedervorlage</button></div>
+        <div class="panel"><div class="panel-head"><div><h3>Offene Wiedervorlagen</h3><p>Fällige Kundenkontakte und Erinnerungen</p></div></div><div id="reminderRows" class="rows"></div></div>
+      </section>
+
+      <section id="loaners" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">LEIHWAGEN</span><h2>Ersatzmobilität</h2><p class="muted">Fahrzeuge, Reservierung, Ausgabe und Rücknahme</p></div><div class="page-actions"><button id="newLoanerBtn" class="secondary">+ Fahrzeug</button><button id="newLoanerBookingBtn" class="primary">+ Reservierung</button></div></div>
+        <div class="split">
+          <div class="panel"><div class="panel-head"><div><h3>Leihwagenflotte</h3></div></div><div id="loanerRows" class="rows"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Reservierungen</h3></div></div><div id="loanerBookingRows" class="rows"></div></div>
+        </div>
+      </section>
+
+      <section id="checklists" class="page hidden">
+        <div class="page-head"><div><span class="eyebrow">CHECKLISTEN</span><h2>Prüfung & Dokumentation</h2><p class="muted">Annahme, Werkstattprüfung und Qualitätskontrolle</p></div></div>
+        <div class="panel"><div class="panel-head"><div><h3>Verfügbare Checklisten</h3></div></div><div id="checklistRows" class="rows"></div></div>
       </section>
 
       <section id="reports" class="page hidden">
@@ -229,6 +250,6 @@
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
-<script src="/jl/demo/demo.js?v=erp4-ui6"></script>
+<script src="/jl/demo/demo.js?v=erp4-pro-ui1"></script>
 </body>
 </html>
