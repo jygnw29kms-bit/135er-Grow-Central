@@ -51,8 +51,9 @@
       <img src="/etes-werkstattplaner-logo.svg" alt="Ete's Autoservice Werkstattplaner" />
     </div>
     <nav class="side-nav" aria-label="Hauptnavigation">
-      <button class="nav-item active" type="button"><span class="nav-icon">⌂</span><span>Übersicht</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">▦</span><span>Werkstattplaner</span></button>
+      <button id="overviewNavBtn" class="nav-item active" type="button"><span class="nav-icon">⌂</span><span>Übersicht</span></button>
+      <button id="workshopNavBtn" class="nav-item" type="button"><span class="nav-icon">▦</span><span>Werkstattplaner</span></button>
+      <button id="personnelNavBtn" class="nav-item" type="button"><span class="nav-icon">♙</span><span>Personalplaner</span></button>
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">▤</span><span>Aufträge</span></button>
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">♟</span><span>Kunden</span></button>
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">◆</span><span>Fahrzeuge</span></button>
@@ -81,6 +82,7 @@
     </header>
 
     <main class="content">
+      <section id="workshopView" class="view-panel">
       <section class="page-head">
         <div>
           <div class="eyebrow">Werkstattsteuerung</div>
@@ -136,6 +138,56 @@
           </section>
         </aside>
       </section>
+      </section>
+
+      <section id="personnelView" class="view-panel hidden">
+        <section class="page-head personnel-head">
+          <div>
+            <div class="eyebrow">Team & Abwesenheiten</div>
+            <h1>Personalplaner</h1>
+            <p>Urlaub, Krankheit und Verfügbarkeit für das Werkstattteam.</p>
+          </div>
+          <div class="personnel-actions">
+            <button id="personnelPrevBtn" class="square-btn" type="button" aria-label="Vorheriger Zeitraum">‹</button>
+            <input id="personnelDate" type="date" aria-label="Datum im Personalplaner" />
+            <button id="personnelNextBtn" class="square-btn" type="button" aria-label="Nächster Zeitraum">›</button>
+            <select id="personnelRangeMode" aria-label="Zeitraum"><option value="auto">Automatisch</option><option value="week">Woche</option><option value="month">Monat</option></select>
+            <button id="personnelTodayBtn" type="button">Heute</button>
+            <button id="employeeManageBtn" type="button">⚙ Personal-Einstellungen</button>
+            <button id="personnelImportBtn" type="button">Excel importieren</button>
+            <button id="personnelNewBtn" class="primary" type="button">＋ Eintrag</button>
+          </div>
+        </section>
+
+        <section class="personnel-kpis">
+          <article><span>Mitarbeiter</span><strong id="personnelEmployeeCount">0</strong><small>aktiv im Plan</small></article>
+          <article><span>Urlaub geplant</span><strong id="personnelVacationCount">0</strong><small id="personnelVacationYear">im Jahr</small></article>
+          <article><span>Krankheit</span><strong id="personnelSickCount">0</strong><small>im ausgewählten Jahr</small></article>
+          <article class="region-kpi"><span>Feiertage</span><strong>Brandenburg</strong><small>fest eingestellt · BB</small></article>
+        </section>
+
+        <section class="personnel-layout">
+          <div class="personnel-card">
+            <div class="personnel-card-head">
+              <div><strong id="personnelRangeLabel">Zeitraum</strong><span id="personnelRangeHint">Horizontal wischen</span></div>
+              <div id="personnelLegend" class="personnel-legend"></div>
+            </div>
+            <div id="personnelGrid" class="personnel-grid-wrap" aria-live="polite"></div>
+            <div class="personnel-card-footer"><span>Feiertage: Brandenburg</span><span id="personnelImportStatus">Noch kein Excel-Import</span></div>
+          </div>
+          <aside class="personnel-side">
+            <section class="rail-card">
+              <div class="rail-card-head"><span>Feiertage im Zeitraum</span><strong>BB</strong></div>
+              <div id="personnelHolidayList" class="holiday-list"></div>
+            </section>
+            <section class="rail-card import-info-card">
+              <div class="rail-card-head"><span>Excel-Abgleich</span></div>
+              <p>Excel-Daten können sicher geprüft und anschließend importiert werden. Manuelle Einträge bleiben erhalten.</p>
+              <button id="personnelImportShortcut" class="quick-action" type="button">Aktuelle XLSX prüfen</button>
+            </section>
+          </aside>
+        </section>
+      </section>
     </main>
   </section>
 </div>
@@ -157,6 +209,68 @@
   <div id="auditNote" class="audit-note"></div>
   <div class="dialog-actions"><button type="button" id="deleteBtn" class="danger">Löschen</button><span class="spacer"></span><button value="cancel">Abbrechen</button><button type="submit" id="saveBtn" class="primary">Speichern</button></div>
 </form>
+</dialog>
+
+<dialog id="personnelEntryDialog" class="personnel-dialog">
+  <form method="dialog" id="personnelEntryForm">
+    <div class="dialog-head"><div><div class="eyebrow">Personalplaner</div><h2 id="personnelEntryTitle">Personaleintrag</h2></div><button value="cancel" class="icon-btn">✕</button></div>
+    <input id="personnelEntryId" type="hidden" />
+    <div class="form-grid">
+      <label>Mitarbeiter<select id="personnelEmployee" required></select></label>
+      <label>Von<input id="personnelEntryDate" type="date" required /></label>
+      <label>Bis <small>(optional)</small><input id="personnelEntryEndDate" type="date" /></label>
+      <label>Art<select id="personnelEntryType" required><option value="U">Urlaub</option><option value="K">Krankheit</option><option value="A">Arbeit</option><option value="I">Individuell</option><option value="P">Zusatzspalte</option><option value="CUSTOM">Benutzerdefiniert</option></select></label>
+      <label>Umfang<select id="personnelEntryPortion"><option value="1">Ganzer Tag</option><option value="0.5">Halber Tag</option></select></label>
+      <label id="personnelCustomCodeWrap" class="wide hidden">Eigenes Kürzel<input id="personnelCustomCode" maxlength="12" placeholder="z. B. KZ" /></label>
+      <label class="wide">Notiz<textarea id="personnelEntryNote" rows="3" maxlength="500"></textarea></label>
+    </div>
+    <div id="personnelEntryMeta" class="audit-note"></div>
+    <div class="dialog-actions"><button id="personnelEntryDeleteBtn" class="danger" type="button">Löschen</button><span class="spacer"></span><button value="cancel">Abbrechen</button><button id="personnelEntrySaveBtn" class="primary" type="submit">Speichern</button></div>
+  </form>
+</dialog>
+
+<dialog id="personnelImportDialog" class="import-dialog">
+  <div class="dialog-panel">
+    <div class="dialog-head"><div><div class="eyebrow">Sicherer Datenabgleich</div><h2>Personalplaner aus Excel importieren</h2></div><button id="personnelImportCloseBtn" class="icon-btn" type="button">✕</button></div>
+    <div class="import-step-card">
+      <span class="step-number">1</span>
+      <div><h3>Aktuelle Excel-Datei auswählen</h3><p>Die Datei wird zuerst nur geprüft.</p></div>
+      <form id="personnelImportForm" class="import-file-form">
+        <label class="file-drop"><input id="personnelImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /><span>Datei auswählen</span><small id="personnelImportFileName">Keine Datei ausgewählt</small></label>
+        <button id="personnelPreviewBtn" class="primary" type="submit">Datei prüfen</button>
+      </form>
+    </div>
+    <div id="personnelImportError" class="form-error"></div>
+    <section id="personnelImportPreview" class="import-preview hidden"></section>
+    <div class="import-note"><strong>Brandenburg ist fest eingestellt.</strong> Manuelle Einträge haben Vorrang.</div>
+    <div class="dialog-actions"><button id="personnelImportCancelBtn" type="button">Schließen</button><span class="spacer"></span><button id="personnelCommitBtn" class="primary" type="button" disabled>Import bestätigen</button></div>
+  </div>
+</dialog>
+
+<dialog id="employeeDialog" class="employee-dialog">
+  <div class="dialog-panel">
+    <div class="dialog-head"><div><div class="eyebrow">Personalstammdaten</div><h2>Personal-Einstellungen</h2></div><button id="employeeDialogCloseBtn" class="icon-btn" type="button">✕</button></div>
+    <div class="employee-settings-bar">
+      <div class="employee-year-picker">
+        <button id="employeeSettingsYearPrevBtn" type="button">‹</button>
+        <label>Planungsjahr<input id="employeeSettingsYear" type="number" min="2000" max="2100" /></label>
+        <button id="employeeSettingsYearNextBtn" type="button">›</button>
+        <button id="employeeSettingsYearTodayBtn" type="button">Aktuelles Jahr</button>
+      </div>
+      <div class="employee-region"><span>Feiertagsregion</span><strong>Brandenburg</strong></div>
+    </div>
+    <div class="employee-settings-note"><strong>Jahresbezogene Urlaubskonten:</strong> Manuelle Werte haben Vorrang vor späteren Excel-Importen.</div>
+    <form id="newEmployeeForm" class="employee-create-form">
+      <label>Name<input id="newEmployeeName" required minlength="2" /></label>
+      <label>Urlaub/Jahr<input id="newEmployeeAnnual" type="number" step="0.5" min="0" max="366" value="30" /></label>
+      <label>Resturlaub<input id="newEmployeeCarry" type="number" step="0.5" min="-100" max="366" value="0" /></label>
+      <label>Sortierung<input id="newEmployeeSort" type="number" min="0" max="9999" value="1" /></label>
+      <button class="primary" type="submit">Mitarbeiter anlegen</button>
+    </form>
+    <div id="employeeError" class="form-error"></div>
+    <div class="section-title-row"><div><h3>Mitarbeiter</h3><small id="employeeSettingsSummary"></small></div></div>
+    <div id="employeeList" class="employee-list"></div>
+  </div>
 </dialog>
 
 <dialog id="usersDialog" class="users-dialog account-admin-dialog">
