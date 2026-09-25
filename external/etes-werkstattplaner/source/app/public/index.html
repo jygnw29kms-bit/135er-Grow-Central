@@ -57,7 +57,7 @@
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">♟</span><span>Kunden</span></button>
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">◆</span><span>Fahrzeuge</span></button>
       <button class="nav-item nav-muted" type="button" disabled><span class="nav-icon">⬡</span><span>Teile & Lager</span></button>
-      <button id="usersBtn" class="nav-item hidden" type="button"><span class="nav-icon">⚙</span><span>Benutzer</span></button>
+      <button id="usersBtn" class="nav-item hidden" type="button"><span class="nav-icon">⚙</span><span>Benutzer & Rechte</span></button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-slogan">Guter Service<br>bringt Sie weiter.</div>
@@ -161,20 +161,45 @@
 
 <dialog id="usersDialog" class="users-dialog">
   <div class="dialog-panel">
-    <div class="dialog-head"><div><div class="eyebrow">Administration</div><h2>Benutzer verwalten</h2></div><button id="usersCloseBtn" class="icon-btn" type="button" aria-label="Schließen">✕</button></div>
+    <div class="dialog-head">
+      <div><div class="eyebrow">Zentrale Kontensteuerung</div><h2>Benutzer & Rechte</h2><p class="dialog-intro">Ein Konto für Werkstattplaner und Personalplaner. Rechte werden je Modul getrennt vergeben.</p></div>
+      <button id="usersCloseBtn" class="icon-btn" type="button" aria-label="Schließen">✕</button>
+    </div>
     <div class="users-layout">
       <section class="user-create-card">
-        <h3>Neuen Benutzer anlegen</h3>
+        <h3>Neues Benutzerkonto</h3>
         <form id="newUserForm">
-          <label>Name<input id="newUserName" required minlength="2" /></label>
-          <label>Rolle<select id="newUserRole"><option value="viewer">Nur Lesen</option><option value="editor">Bearbeitung</option><option value="admin">Administrator</option></select></label>
-          <label>Initialpasswort<input id="newUserPassword" type="password" required minlength="10" autocomplete="new-password" /></label>
+          <label>Benutzername<input id="newUserName" required minlength="2" autocomplete="off" /></label>
+          <label>Kontotyp
+            <select id="newUserRole">
+              <option value="viewer">Mitarbeiter · individuell</option>
+              <option value="editor">Bearbeiter · Vorlage</option>
+              <option value="admin">Systemadministrator</option>
+            </select>
+          </label>
+          <div class="permission-editor">
+            <strong>Werkstattplaner</strong>
+            <label><input id="newWView" type="checkbox" checked> Anzeigen</label>
+            <label><input id="newWEdit" type="checkbox"> Bearbeiten</label>
+            <label><input id="newWManage" type="checkbox"> Verwalten</label>
+          </div>
+          <div class="permission-editor">
+            <strong>Personalplaner</strong>
+            <label><input id="newPView" type="checkbox" checked> Anzeigen</label>
+            <label><input id="newPEdit" type="checkbox"> Bearbeiten</label>
+            <label><input id="newPManage" type="checkbox"> Verwalten</label>
+          </div>
+          <label>Initialpasswort<input id="newUserPassword" type="password" required minlength="10" autocomplete="new-password" placeholder="Mindestens 10 Zeichen" /></label>
+          <label>Passwort bestätigen<input id="newUserPassword2" type="password" required minlength="10" autocomplete="new-password" /></label>
           <div id="newUserError" class="form-error"></div>
-          <button type="submit" class="primary">Benutzer anlegen</button>
+          <button type="submit" class="primary">Benutzerkonto anlegen</button>
         </form>
       </section>
       <section class="users-list-wrap">
-        <div class="section-title-row"><h3>Vorhandene Benutzer</h3><button id="refreshUsersBtn" type="button">Aktualisieren</button></div>
+        <div class="section-title-row">
+          <div><h3>Vorhandene Benutzer</h3><small>Passwörter, Status und Modulrechte zentral verwalten.</small></div>
+          <button id="refreshUsersBtn" type="button">Aktualisieren</button>
+        </div>
         <div id="usersList" class="users-list"></div>
       </section>
     </div>
