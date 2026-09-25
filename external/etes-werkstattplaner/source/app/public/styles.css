@@ -202,3 +202,45 @@ body.orientation-landscape.device-phone .auth-note{display:none}
   body.device-phone .auth-logo{max-height:104px!important}
   body.device-phone .page-head h1{font-size:24px}
 }
+
+
+/* ===== Central account & permissions UI ===== */
+.dialog-intro{margin:2px 0 14px;color:#6d7b90;font-size:13px;max-width:720px}
+.users-dialog{max-width:1180px}
+.users-layout{grid-template-columns:330px minmax(0,1fr)}
+.permission-editor{
+  margin:12px 0;padding:12px;border:1px solid #dce4ef;border-radius:11px;background:#fbfcfe;
+  display:grid;grid-template-columns:minmax(120px,1fr) repeat(3,auto);gap:8px 12px;align-items:center
+}
+.permission-editor strong{color:#173b6d;font-size:13px}
+.permission-editor label{display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:11px!important;white-space:nowrap}
+.permission-editor input[type="checkbox"]{width:17px!important;height:17px!important;margin:0!important}
+.user-account-grid{display:grid;grid-template-columns:minmax(180px,1fr) 210px 135px;gap:10px;align-items:end}
+.user-account-grid label,.password-reset-grid label{font-size:12px;font-weight:800;color:#4a5968}
+.user-account-grid input,.user-account-grid select,.password-reset-grid input{
+  display:block;width:100%;margin-top:5px;border:1px solid #cdd7e1;border-radius:8px;padding:9px;background:#fff
+}
+.permission-matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.password-reset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed #dce4ef}
+.user-row{box-shadow:0 3px 12px #153b7608}
+.user-row .toggle-label{justify-content:flex-start}
+.no-access{padding:48px 20px;text-align:center;display:grid;gap:8px;color:#65758a}
+.no-access strong{font-size:20px;color:#173b6d}
+.no-access span{font-size:13px}
+@media(max-width:900px){
+  .users-dialog{width:calc(100% - 16px)}
+  .users-layout{grid-template-columns:1fr}
+  .user-account-grid{grid-template-columns:1fr 1fr}
+  .user-account-grid .toggle-label{grid-column:1/-1}
+  .permission-matrix{grid-template-columns:1fr}
+}
+body.device-phone .users-dialog{width:100vw!important;height:calc(var(--app-vh,1vh)*100)!important}
+body.device-phone .permission-editor{
+  grid-template-columns:1fr 1fr;gap:9px;padding:11px
+}
+body.device-phone .permission-editor strong{grid-column:1/-1;font-size:14px}
+body.device-phone .permission-editor label{font-size:12px!important}
+body.device-phone .user-account-grid,
+body.device-phone .password-reset-grid{grid-template-columns:1fr}
+body.device-phone .user-account-grid .toggle-label{grid-column:auto}
+body.device-phone .row-actions{position:sticky;bottom:0;background:#fff;padding:10px 0 4px;z-index:3}
