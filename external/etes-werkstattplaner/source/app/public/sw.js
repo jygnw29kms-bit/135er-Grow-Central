@@ -1,4 +1,4 @@
-const CACHE='etes-planer-v1.5-personnel1';
+const CACHE='etes-planer-v1.5-personnel2';
 const SHELL=['/','/index.html','/styles.css','/personnel.css','/login-preview.css','/app.js','/manifest.webmanifest','/etes-werkstattplaner-logo.svg','/etes-login-logo.svg'];
 self.addEventListener('install',e=>{
   self.skipWaiting();
