@@ -41,6 +41,16 @@ jobs:
           echo "=== LOCAL HEALTH ==="; curl -sS -o /tmp/h -w "code=%{http_code} total=%{time_total}s connect=%{time_connect}s ttfb=%{time_starttransfer}s\n" http://127.0.0.1:3080/health; cat /tmp/h; echo
           echo "=== PUBLIC HEALTH ==="; curl -sS -o /tmp/p -w "code=%{http_code} total=%{time_total}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s\n" https://werkstattplaner.grow-central.de/health; cat /tmp/p; echo
           echo "=== NGINX ==="; nginx -t 2>&1 || true
+          echo "=== USERS DB ==="
+          python3 - <<'PY'
+import sqlite3
+db='/var/lib/etes-werkstattplaner/werkstattplaner.sqlite'
+con=sqlite3.connect(db)
+rows=con.execute("select id,name,role,active from users order by id").fetchall()
+print("count=",len(rows))
+for r in rows: print(r)
+con.close()
+PY
           echo "=== RECENT SERVICE LOG ==="; journalctl -u etes-werkstattplaner --since "-15 min" --no-pager | tail -80 || true'
           B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
           if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
