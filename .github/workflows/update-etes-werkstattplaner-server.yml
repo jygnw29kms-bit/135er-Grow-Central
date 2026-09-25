@@ -1,5 +1,5 @@
 name: Update Etes Werkstattplaner Server
-# deploy accounts 1.4.0-1
+# deploy user-admin 1.4.1-1
 # deploy canonical 1.2.0-7 after repo republish
 on:
   push:
