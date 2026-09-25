@@ -1,0 +1,46 @@
+name: Diagnose Server Load Live
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check server load over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SCRIPT='set -e
+          echo "=== DATE ==="; date
+          echo "=== UPTIME / LOAD ==="; uptime
+          echo "=== CPU ==="; nproc; top -b -n1 | head -20
+          echo "=== MEMORY ==="; free -h
+          echo "=== SWAP ==="; swapon --show || true
+          echo "=== DISK ==="; df -hT
+          echo "=== INODES ==="; df -ih
+          echo "=== TOP CPU ==="; ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -15
+          echo "=== TOP MEM ==="; ps -eo pid,comm,%cpu,%mem --sort=-%mem | head -15
+          echo "=== SERVICE ==="; systemctl --no-pager --full status etes-werkstattplaner | head -25 || true
+          echo "=== LOCAL HEALTH ==="; curl -sS -o /tmp/h -w "code=%{http_code} total=%{time_total}s connect=%{time_connect}s ttfb=%{time_starttransfer}s\n" http://127.0.0.1:3080/health; cat /tmp/h; echo
+          echo "=== PUBLIC HEALTH ==="; curl -sS -o /tmp/p -w "code=%{http_code} total=%{time_total}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s\n" https://werkstattplaner.grow-central.de/health; cat /tmp/p; echo
+          echo "=== NGINX ==="; nginx -t 2>&1 || true
+          echo "=== RECENT SERVICE LOG ==="; journalctl -u etes-werkstattplaner --since "-15 min" --no-pager | tail -80 || true'
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
