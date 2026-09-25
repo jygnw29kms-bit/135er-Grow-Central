@@ -1,5 +1,9 @@
 name: Diagnose Server Load Live
 on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/diag-server-load-live.yml'
   workflow_dispatch:
 permissions:
   contents: read
