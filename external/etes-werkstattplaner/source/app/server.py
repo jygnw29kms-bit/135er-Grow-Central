@@ -195,6 +195,8 @@ def upsert_user(name, role, password):
     con.execute('''INSERT INTO users(name,password_hash,role,active) VALUES(?,?,?,1)
       ON CONFLICT(name) DO UPDATE SET password_hash=excluded.password_hash,role=excluded.role,active=1,updated_at=CURRENT_TIMESTAMP''',
       (name, hash_password(password), role))
+    uid=con.execute('SELECT id FROM users WHERE name=?',(name,)).fetchone()[0]
+    save_permissions(con,uid,default_permissions_for_role(role))
     con.commit()
     con.close()
 
@@ -335,7 +337,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return None if not u else self.json_out({'user':u})
             if p.path=='/api/config':
                 u=self.require()
-                return None if not u else self.json_out({'resources':RESOURCES,'statuses':STATUSES,'mechanics':MECHANICS,'parts':PARTS,'loaner':LOANER})
+                return None if not u else self.json_out({'resources':RESOURCES,'statuses':STATUSES,'mechanics':MECHANICS,'parts':PARTS,'loaner':LOANER,'modules':list(MODULES)})
             if p.path=='/api/appointments':
                 u=self.require_perm('werkstattplaner','view')
                 if not u:return
@@ -537,7 +539,7 @@ class Handler(SimpleHTTPRequestHandler):
         m=re.fullmatch(r'/api/appointments/([^/]+)',urlparse(self.path).path)
         if not m:
             return self.json_out({'error':'Nicht gefunden'},404)
-        u=self.require(('admin','editor'))
+        u=self.require_perm('werkstattplaner','edit')
         if not u:return
         aid=m.group(1)
         con=db_connect()
@@ -595,7 +597,7 @@ def main():
             print(e,file=sys.stderr)
             sys.exit(2)
         return
-    print(f"Ete's Werkstattplaner 1.2 auf http://{HOST}:{PORT}")
+    print(f"Ete's Werkstattplaner 1.4 auf http://{HOST}:{PORT}")
     ThreadingHTTPServer((HOST,PORT),Handler).serve_forever()
 
 if __name__=='__main__':
