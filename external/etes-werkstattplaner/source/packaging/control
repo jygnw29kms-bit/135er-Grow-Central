@@ -1,5 +1,5 @@
 Package: etes-werkstattplaner
-Version: 1.3.0-1
+Version: 1.4.0-1
 Section: web
 Priority: optional
 Architecture: all
@@ -8,4 +8,4 @@ Maintainer: Ete's Autoservice
 Description: Mehrbenutzer-Werkstattkalender fuer Ete's Autoservice
  Serverseitiger Werkstattplaner im Ete's-Autoservice-Design mit Ersteinrichtung, Benutzerverwaltung,
  fuenf Hebebuehnen, Achsmessplatz, Rollenrechten, Live-Synchronisierung,
- PWA und SQLite-Datenbank.
+ PWA, SQLite-Datenbank und zentrale Benutzer-/Modulrechte für Werkstatt- und Personalplaner.
