@@ -108,17 +108,6 @@ function bind(){
   $('editUserForm').onsubmit=saveSelectedUser;
   $('resetEditBtn').onclick=()=>selectedUserId&&selectUser(selectedUserId);
   $('newUserForm').onsubmit=createUser;
-  wirePermDependencies($('newUserForm'));
-  $('newUserRole').onchange=()=>{
-    const role=$('newUserRole').value;
-    const ids=['newWView','newWEdit','newWManage','newPView','newPEdit','newPManage'];
-    ids.forEach(id=>{$(id).disabled=role==='admin'});
-    if(role==='admin')ids.forEach(id=>$(id).checked=true);
-    if(role==='editor'){
-      $('newWView').checked=$('newWEdit').checked=true;$('newWManage').checked=false;
-      $('newPView').checked=$('newPEdit').checked=true;$('newPManage').checked=false;
-    }
-  };
   window.addEventListener('online',()=>setOnline(true));
   window.addEventListener('offline',()=>setOnline(false));
   window.addEventListener('resize',scheduleDeviceProfile,{passive:true});
