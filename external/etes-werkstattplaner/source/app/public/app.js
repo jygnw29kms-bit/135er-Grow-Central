@@ -101,7 +101,12 @@ function bind(){
   };
   $('usersBtn').onclick=openUsers;
   $('usersCloseBtn').onclick=()=>$('usersDialog').close();
-  $('refreshUsersBtn').onclick=loadUsers;
+  $('refreshUsersBtn').onclick=()=>loadUsers(true);
+  $('newUserModeBtn').onclick=showNewUserMode;
+  $('cancelNewUserBtn').onclick=()=>selectedUserId?selectUser(selectedUserId):showUserEmpty();
+  $('userSearch').oninput=renderUserDirectory;
+  $('editUserForm').onsubmit=saveSelectedUser;
+  $('resetEditBtn').onclick=()=>selectedUserId&&selectUser(selectedUserId);
   $('newUserForm').onsubmit=createUser;
   wirePermDependencies($('newUserForm'));
   $('newUserRole').onchange=()=>{
@@ -238,107 +243,184 @@ async function saveFromForm(){
 }
 async function persist(d,force){const exists=appointments.some(a=>a.id===d.id);await api('/api/appointments'+(exists?'/'+encodeURIComponent(d.id):''),{method:exists?'PUT':'POST',body:JSON.stringify({...d,force})});await loadAppointments()}
 
-async function openUsers(){if(!isAdmin())return;$('usersDialog').showModal();await loadUsers()}
-async function loadUsers(){try{const d=await api('/api/users');const list=$('usersList');list.innerHTML='';d.users.forEach(u=>list.appendChild(userRow(u)))}catch(e){toast(e.message)}}
-function permLevelMarkup(prefix,moduleLabel,perm,locked){
-  return '<div class="permission-editor user-permissions" data-module="'+prefix+'"><strong>'+moduleLabel+'</strong>'+
-    '<label><input class="perm-view" type="checkbox" '+(perm.view?'checked ':'')+(locked?'disabled ':'')+'> Anzeigen</label>'+
-    '<label><input class="perm-edit" type="checkbox" '+(perm.edit?'checked ':'')+(locked?'disabled ':'')+'> Bearbeiten</label>'+
-    '<label><input class="perm-manage" type="checkbox" '+(perm.manage?'checked ':'')+(locked?'disabled ':'')+'> Verwalten</label></div>';
+let usersCache=[];
+let selectedUserId=null;
+
+async function openUsers(){
+  if(!isAdmin())return;
+  $('usersDialog').showModal();
+  await loadUsers(true);
 }
-function readPerm(row,module){
-  const box=row.querySelector('.user-permissions[data-module="'+module+'"]');
-  const view=box.querySelector('.perm-view').checked;
-  const edit=box.querySelector('.perm-edit').checked;
-  const manage=box.querySelector('.perm-manage').checked;
-  return {view:view||edit||manage,edit:edit||manage,manage};
+async function loadUsers(preserveSelection=false){
+  try{
+    const d=await api('/api/users');
+    usersCache=Array.isArray(d.users)?d.users:[];
+    $('usersCount').textContent=usersCache.length+' '+(usersCache.length===1?'Benutzerkonto':'Benutzerkonten');
+    renderUserDirectory();
+    if(preserveSelection&&selectedUserId&&usersCache.some(u=>u.id===selectedUserId)){
+      selectUser(selectedUserId);
+    }else if(usersCache.length){
+      const preferred=usersCache.find(u=>u.id!==currentUser.id)||usersCache[0];
+      selectUser(preferred.id);
+    }else{
+      showUserEmpty();
+    }
+  }catch(e){toast(e.message)}
 }
-function wirePermDependencies(root){
-  root.querySelectorAll('.permission-editor').forEach(box=>{
-    const v=box.querySelector('input[id$="View"],.perm-view');
-    const e=box.querySelector('input[id$="Edit"],.perm-edit');
-    const m=box.querySelector('input[id$="Manage"],.perm-manage');
-    if(!v||!e||!m)return;
-    const sync=()=>{
-      if(m.checked){e.checked=true;v.checked=true}
-      if(e.checked)v.checked=true;
-      if(!v.checked){e.checked=false;m.checked=false}
-      if(!e.checked)m.checked=false;
-    };
-    v.addEventListener('change',sync);e.addEventListener('change',sync);m.addEventListener('change',sync);
-  });
+function renderUserDirectory(){
+  const list=$('usersList');
+  const q=($('userSearch').value||'').trim().toLowerCase();
+  list.innerHTML='';
+  usersCache
+    .filter(u=>!q||u.name.toLowerCase().includes(q)||roleLabel(u.role).toLowerCase().includes(q))
+    .forEach(u=>{
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='account-list-item'+(u.id===selectedUserId?' active':'')+(u.active?'':' inactive');
+      btn.dataset.userId=u.id;
+      btn.innerHTML=
+        '<span class="account-avatar">'+esc((u.name||'?').slice(0,1).toUpperCase())+'</span>'+
+        '<span class="account-list-copy"><strong>'+esc(u.name)+'</strong><small>'+esc(roleLabel(u.role))+(u.id===currentUser.id?' · Du':'')+'</small></span>'+
+        '<span class="account-status-dot '+(u.active?'on':'off')+'" title="'+(u.active?'Aktiv':'Deaktiviert')+'"></span>';
+      btn.onclick=()=>selectUser(u.id);
+      list.appendChild(btn);
+    });
 }
-function userRow(u){
-  const row=document.createElement('div');row.className='user-row'+(u.active?'':' inactive');
-  const locked=u.role==='admin';
-  const perms=u.permissions||{werkstattplaner:{view:false,edit:false,manage:false},personalplaner:{view:false,edit:false,manage:false}};
-  row.innerHTML=
-    '<div class="user-row-head"><div><strong>'+esc(u.name)+'</strong><span class="user-state">'+(u.active?'aktiv':'deaktiviert')+'</span></div><span class="role-chip">'+roleLabel(u.role)+'</span></div>'+
-    '<div class="user-account-grid">'+
-      '<label>Benutzername<input class="u-name" value="'+esc(u.name)+'"></label>'+
-      '<label>Kontotyp<select class="u-role"><option value="viewer">Mitarbeiter · individuell</option><option value="editor">Bearbeiter · Vorlage</option><option value="admin">Systemadministrator</option></select></label>'+
-      '<label class="toggle-label"><input class="u-active" type="checkbox"> Konto aktiv</label>'+
-    '</div>'+
-    '<div class="permission-matrix">'+
-      permLevelMarkup('werkstattplaner','Werkstattplaner',perms.werkstattplaner||{},locked)+
-      permLevelMarkup('personalplaner','Personalplaner',perms.personalplaner||{},locked)+
-    '</div>'+
-    '<div class="password-reset-grid">'+
-      '<label>Neues Passwort<input class="u-password" type="password" minlength="10" placeholder="leer = unverändert" autocomplete="new-password"></label>'+
-      '<label>Passwort bestätigen<input class="u-password2" type="password" minlength="10" placeholder="nur bei Änderung" autocomplete="new-password"></label>'+
-    '</div>'+
-    '<div class="row-actions"><span class="row-error"></span><button type="button" class="save-user primary">Konto speichern</button></div>';
-  row.querySelector('.u-role').value=u.role;
-  row.querySelector('.u-active').checked=!!u.active;
-  wirePermDependencies(row);
-  row.querySelector('.u-role').addEventListener('change',()=>{
-    const role=row.querySelector('.u-role').value;
-    const admin=role==='admin';
-    row.querySelectorAll('.user-permissions input').forEach(el=>{el.disabled=admin;if(admin)el.checked=true});
-  });
-  row.querySelector('.save-user').onclick=async()=>{
-    const role=row.querySelector('.u-role').value;
-    const password=row.querySelector('.u-password').value;
-    const password2=row.querySelector('.u-password2').value;
-    const permissions=role==='admin'
-      ? {werkstattplaner:{view:true,edit:true,manage:true},personalplaner:{view:true,edit:true,manage:true}}
-      : {werkstattplaner:readPerm(row,'werkstattplaner'),personalplaner:readPerm(row,'personalplaner')};
-    const payload={
-      name:row.querySelector('.u-name').value.trim(),role,
-      active:row.querySelector('.u-active').checked,
-      password,password_confirm:password2,permissions
-    };
-    const err=row.querySelector('.row-error');err.textContent='';
-    if(password&&password!==password2){err.textContent='Passwörter stimmen nicht überein';return}
-    try{
-      await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(payload)});
-      toast('Benutzerkonto gespeichert');await loadUsers();
-      if(u.id===currentUser.id){const me=await api('/api/me');currentUser=me.user;updateRole()}
-    }catch(e){err.textContent=e.message}
+function showUserEmpty(){
+  selectedUserId=null;
+  $('userEditor').classList.add('hidden');
+  $('newUserPanel').classList.add('hidden');
+  $('userEmptyState').classList.remove('hidden');
+  renderUserDirectory();
+}
+function showNewUserMode(){
+  selectedUserId=null;
+  $('userEmptyState').classList.add('hidden');
+  $('userEditor').classList.add('hidden');
+  $('newUserPanel').classList.remove('hidden');
+  $('newUserError').textContent='';
+  $('newUserForm').reset();
+  $('newUserRole').value='viewer';
+  $('newWView').checked=true;$('newPView').checked=true;
+  $('newWEdit').checked=$('newWManage').checked=$('newPEdit').checked=$('newPManage').checked=false;
+  renderUserDirectory();
+  setTimeout(()=>$('newUserName').focus(),0);
+}
+function setCheckbox(id,value){$(id).checked=!!value}
+function selectUser(id){
+  const u=usersCache.find(x=>x.id===Number(id)||x.id===id);
+  if(!u)return;
+  selectedUserId=u.id;
+  $('userEmptyState').classList.add('hidden');
+  $('newUserPanel').classList.add('hidden');
+  $('userEditor').classList.remove('hidden');
+  $('editUserId').value=u.id;
+  $('editUserTitle').textContent=u.name;
+  $('editUserState').textContent=u.active?'aktiv':'deaktiviert';
+  $('editUserState').className='user-state '+(u.active?'active':'inactive');
+  $('editUserName').value=u.name;
+  $('editUserRole').value=u.role;
+  $('editUserActive').checked=!!u.active;
+  const wp=(u.permissions||{}).werkstattplaner||{};
+  const pp=(u.permissions||{}).personalplaner||{};
+  setCheckbox('editWView',wp.view);setCheckbox('editWEdit',wp.edit);setCheckbox('editWManage',wp.manage);
+  setCheckbox('editPView',pp.view);setCheckbox('editPEdit',pp.edit);setCheckbox('editPManage',pp.manage);
+  $('editUserPassword').value='';$('editUserPassword2').value='';
+  $('editUserError').textContent='';
+  applyEditRoleLock();
+  renderUserDirectory();
+}
+function normalizePerm(viewId,editId,manageId){
+  const manage=$(manageId).checked;
+  const edit=$(editId).checked||manage;
+  const view=$(viewId).checked||edit||manage;
+  return {view,edit,manage};
+}
+function syncPermGroup(viewId,editId,manageId){
+  const v=$(viewId),e=$(editId),m=$(manageId);
+  const sync=()=>{
+    if(m.checked){e.checked=true;v.checked=true}
+    if(e.checked)v.checked=true;
+    if(!v.checked){e.checked=false;m.checked=false}
+    if(!e.checked)m.checked=false;
   };
-  return row;
+  v.onchange=sync;e.onchange=sync;m.onchange=sync;
 }
-function roleLabel(role){return role==='admin'?'Systemadministrator':role==='editor'?'Bearbeiter':'Mitarbeiter'}
+function applyEditRoleLock(){
+  const admin=$('editUserRole').value==='admin';
+  ['editWView','editWEdit','editWManage','editPView','editPEdit','editPManage'].forEach(id=>{
+    $(id).disabled=admin;
+    if(admin)$(id).checked=true;
+  });
+}
+async function saveSelectedUser(e){
+  e.preventDefault();
+  const id=Number($('editUserId').value);
+  const role=$('editUserRole').value;
+  const p1=$('editUserPassword').value,p2=$('editUserPassword2').value;
+  const err=$('editUserError');err.textContent='';
+  if(p1!==p2){err.textContent='Passwörter stimmen nicht überein';return}
+  const permissions=role==='admin'
+    ? {werkstattplaner:{view:true,edit:true,manage:true},personalplaner:{view:true,edit:true,manage:true}}
+    : {
+        werkstattplaner:normalizePerm('editWView','editWEdit','editWManage'),
+        personalplaner:normalizePerm('editPView','editPEdit','editPManage')
+      };
+  const payload={
+    name:$('editUserName').value.trim(),
+    role,
+    active:$('editUserActive').checked,
+    password:p1,
+    password_confirm:p2,
+    permissions
+  };
+  try{
+    await api('/api/users/'+id,{method:'PUT',body:JSON.stringify(payload)});
+    toast('Benutzerkonto gespeichert');
+    if(id===currentUser.id){const me=await api('/api/me');currentUser=me.user;updateRole()}
+    await loadUsers(true);
+  }catch(ex){err.textContent=ex.message}
+}
+function roleLabel(role){
+  return role==='admin'?'Systemadministrator':role==='editor'?'Bearbeiter':'Mitarbeiter';
+}
 function newUserPermissions(){
   const role=$('newUserRole').value;
   if(role==='admin')return {werkstattplaner:{view:true,edit:true,manage:true},personalplaner:{view:true,edit:true,manage:true}};
   return {
-    werkstattplaner:{view:$('newWView').checked,edit:$('newWEdit').checked,manage:$('newWManage').checked},
-    personalplaner:{view:$('newPView').checked,edit:$('newPEdit').checked,manage:$('newPManage').checked}
+    werkstattplaner:normalizePerm('newWView','newWEdit','newWManage'),
+    personalplaner:normalizePerm('newPView','newPEdit','newPManage')
   };
 }
 async function createUser(e){
-  e.preventDefault();$('newUserError').textContent='';
+  e.preventDefault();
+  $('newUserError').textContent='';
   const p1=$('newUserPassword').value,p2=$('newUserPassword2').value;
   if(p1!==p2){$('newUserError').textContent='Passwörter stimmen nicht überein';return}
   try{
-    await api('/api/users',{method:'POST',body:JSON.stringify({
-      name:$('newUserName').value.trim(),role:$('newUserRole').value,
-      password:p1,password_confirm:p2,permissions:newUserPermissions()
+    const d=await api('/api/users',{method:'POST',body:JSON.stringify({
+      name:$('newUserName').value.trim(),
+      role:$('newUserRole').value,
+      password:p1,password_confirm:p2,
+      permissions:newUserPermissions()
     })});
-    $('newUserForm').reset();$('newUserRole').value='viewer';
-    $('newWView').checked=true;$('newPView').checked=true;
-    toast('Benutzerkonto angelegt');await loadUsers()
+    toast('Benutzerkonto angelegt');
+    await loadUsers(false);
+    const created=usersCache.find(u=>u.id===d.id);
+    if(created)selectUser(created.id);
   }catch(err){$('newUserError').textContent=err.message}
 }
+
+syncPermGroup('editWView','editWEdit','editWManage');
+syncPermGroup('editPView','editPEdit','editPManage');
+syncPermGroup('newWView','newWEdit','newWManage');
+syncPermGroup('newPView','newPEdit','newPManage');
+$('editUserRole').onchange=applyEditRoleLock;
+$('newUserRole').onchange=()=>{
+  const role=$('newUserRole').value;
+  const ids=['newWView','newWEdit','newWManage','newPView','newPEdit','newPManage'];
+  ids.forEach(id=>$(id).disabled=role==='admin');
+  if(role==='admin')ids.forEach(id=>$(id).checked=true);
+};
+
 init();
