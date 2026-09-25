@@ -642,70 +642,7 @@ class Handler(SimpleHTTPRequestHandler):
                 rows=con.execute("SELECT id,filename,sha256,year,region,employee_count,entry_count,manual_conflicts,status,created_at,committed_at FROM personnel_imports ORDER BY created_at DESC LIMIT 30").fetchall()
                 con.close()
                 return self.json_out({'imports':[dict(r) for r in rows]})
-            if p.path=='/api/personnel/import/preview':
-            u=self.require_perm('personalplaner','manage')
-            if not u:return
-            return self.personnel_import_preview(u)
-
-        if p.path=='/api/personnel/import/commit':
-            u=self.require_perm('personalplaner','manage')
-            if not u:return
-            try:b=self.read_json()
-            except ValueError as e:return self.json_out({'error':str(e)},400)
-            return self.personnel_import_commit(u,b)
-
-        if p.path=='/api/personnel/employees':
-            u=self.require_perm('personalplaner','manage')
-            if not u:return
-            con=None
-            try:
-                b=self.read_json();emp=validate_personnel_employee(b)
-                con=db_connect()
-                cur=con.execute('INSERT INTO personnel_employees(name,active,sort_order) VALUES(?,?,?)',(emp['name'],emp['active'],emp['sort_order']))
-                eid=cur.lastrowid
-                con.execute('''INSERT INTO personnel_employee_years(employee_id,year,annual_vacation,carryover_vacation,source_import_id)
-                  VALUES(?,?,?,?,NULL)''',(eid,emp['year'],emp['annual_vacation'],emp['carryover_vacation']))
-                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-employee-create',emp['name']))
-                con.commit();con.close();notify_change('personnel-changed')
-                return self.json_out({'ok':True,'id':eid},201)
-            except sqlite3.IntegrityError:
-                if con:con.rollback();con.close()
-                return self.json_out({'error':'Mitarbeiter ist bereits vorhanden'},409)
-            except ValueError as e:
-                if con:con.rollback();con.close()
-                return self.json_out({'error':str(e)},400)
-
-        if p.path=='/api/personnel/entries':
-            u=self.require_perm('personalplaner','edit')
-            if not u:return
-            try:
-                b=self.read_json();entry=validate_personnel_entry(b)
-                start_date=parse_iso_date(entry['date'])
-                end_raw=clean(b.get('end_date'),10)
-                end_date=parse_iso_date(end_raw) if end_raw else start_date
-                if end_date<start_date or (end_date-start_date).days>366: raise ValueError('Zeitraum ist ungültig')
-            except ValueError as e:return self.json_out({'error':str(e)},400)
-            con=db_connect();ids=[]
-            try:
-                emp=con.execute('SELECT id FROM personnel_employees WHERE id=?',(entry['employee_id'],)).fetchone()
-                if not emp: raise ValueError('Mitarbeiter nicht gefunden')
-                day=start_date
-                while day<=end_date:
-                    iso=day.isoformat()
-                    existing=con.execute('SELECT id FROM personnel_entries WHERE employee_id=? AND date=?',(entry['employee_id'],iso)).fetchone()
-                    if existing: raise ValueError('Für diesen Mitarbeiter existiert am '+iso+' bereits ein Eintrag')
-                    cur=con.execute('''INSERT INTO personnel_entries(employee_id,date,code,category,portion,label,note,source,created_by,updated_by)
-                      VALUES(?,?,?,?,?,?,?,'manual',?,?)''',(entry['employee_id'],iso,entry['code'],entry['category'],entry['portion'],entry['label'],entry['note'],u['id'],u['id']))
-                    ids.append(cur.lastrowid);day+=timedelta(days=1)
-                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-entry-create',f"{entry['employee_id']} {start_date} bis {end_date}"))
-                con.commit()
-            except (ValueError,sqlite3.IntegrityError) as e:
-                con.rollback();con.close()
-                return self.json_out({'error':str(e)},409 if isinstance(e,sqlite3.IntegrityError) else 400)
-            con.close();notify_change('personnel-changed')
-            return self.json_out({'ok':True,'id':ids[0] if ids else None,'count':len(ids),'from':start_date.isoformat(),'to':end_date.isoformat()},201)
-
-        if p.path=='/api/users':
+            if p.path=='/api/users':
                 u=self.require(('admin',))
                 if not u:return
                 con=db_connect()
@@ -773,6 +710,69 @@ class Handler(SimpleHTTPRequestHandler):
                 with SESSIONS_LOCK:
                     SESSIONS.pop(m.value,None)
             return self.json_out({'ok':True},200,[('Set-Cookie','etes_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax')])
+
+        if p.path=='/api/personnel/import/preview':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            return self.personnel_import_preview(u)
+
+        if p.path=='/api/personnel/import/commit':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            try:b=self.read_json()
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            return self.personnel_import_commit(u,b)
+
+        if p.path=='/api/personnel/employees':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            con=None
+            try:
+                b=self.read_json();emp=validate_personnel_employee(b)
+                con=db_connect()
+                cur=con.execute('INSERT INTO personnel_employees(name,active,sort_order) VALUES(?,?,?)',(emp['name'],emp['active'],emp['sort_order']))
+                eid=cur.lastrowid
+                con.execute('''INSERT INTO personnel_employee_years(employee_id,year,annual_vacation,carryover_vacation,source_import_id)
+                  VALUES(?,?,?,?,NULL)''',(eid,emp['year'],emp['annual_vacation'],emp['carryover_vacation']))
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-employee-create',emp['name']))
+                con.commit();con.close();notify_change('personnel-changed')
+                return self.json_out({'ok':True,'id':eid},201)
+            except sqlite3.IntegrityError:
+                if con:con.rollback();con.close()
+                return self.json_out({'error':'Mitarbeiter ist bereits vorhanden'},409)
+            except ValueError as e:
+                if con:con.rollback();con.close()
+                return self.json_out({'error':str(e)},400)
+
+        if p.path=='/api/personnel/entries':
+            u=self.require_perm('personalplaner','edit')
+            if not u:return
+            try:
+                b=self.read_json();entry=validate_personnel_entry(b)
+                start_date=parse_iso_date(entry['date'])
+                end_raw=clean(b.get('end_date'),10)
+                end_date=parse_iso_date(end_raw) if end_raw else start_date
+                if end_date<start_date or (end_date-start_date).days>366: raise ValueError('Zeitraum ist ungültig')
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            con=db_connect();ids=[]
+            try:
+                emp=con.execute('SELECT id FROM personnel_employees WHERE id=?',(entry['employee_id'],)).fetchone()
+                if not emp: raise ValueError('Mitarbeiter nicht gefunden')
+                day=start_date
+                while day<=end_date:
+                    iso=day.isoformat()
+                    existing=con.execute('SELECT id FROM personnel_entries WHERE employee_id=? AND date=?',(entry['employee_id'],iso)).fetchone()
+                    if existing: raise ValueError('Für diesen Mitarbeiter existiert am '+iso+' bereits ein Eintrag')
+                    cur=con.execute('''INSERT INTO personnel_entries(employee_id,date,code,category,portion,label,note,source,created_by,updated_by)
+                      VALUES(?,?,?,?,?,?,?,'manual',?,?)''',(entry['employee_id'],iso,entry['code'],entry['category'],entry['portion'],entry['label'],entry['note'],u['id'],u['id']))
+                    ids.append(cur.lastrowid);day+=timedelta(days=1)
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-entry-create',f"{entry['employee_id']} {start_date} bis {end_date}"))
+                con.commit()
+            except (ValueError,sqlite3.IntegrityError) as e:
+                con.rollback();con.close()
+                return self.json_out({'error':str(e)},409 if isinstance(e,sqlite3.IntegrityError) else 400)
+            con.close();notify_change('personnel-changed')
+            return self.json_out({'ok':True,'id':ids[0] if ids else None,'count':len(ids),'from':start_date.isoformat(),'to':end_date.isoformat()},201)
 
         if p.path=='/api/users':
             u=self.require(('admin',))
