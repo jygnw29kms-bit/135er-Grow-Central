@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import argparse, base64, hashlib, hmac, json, os, re, secrets, sqlite3, sys, threading, time
+from datetime import date, datetime, timedelta
 from http.cookies import SimpleCookie
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+from personnel import MAX_WORKBOOK_BYTES, WorkbookImportError, brandenburg_holidays, normalize_personnel_code, parse_personnel_xlsx
 
 BASE = Path(__file__).resolve().parent
 PUBLIC = BASE / 'public'
@@ -26,6 +29,7 @@ SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
 EVENT_COND = threading.Condition()
 EVENT_VERSION = 0
+EVENT_KIND = 'appointments-changed'
 
 def db_connect():
     con = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
@@ -67,6 +71,65 @@ def init_db():
       id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,action TEXT NOT NULL,appointment_id TEXT,details TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES users(id)
     );
+    CREATE TABLE IF NOT EXISTS personnel_employees (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS personnel_employee_years (
+      employee_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      annual_vacation REAL NOT NULL DEFAULT 0,
+      carryover_vacation REAL NOT NULL DEFAULT 0,
+      source_import_id TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY(employee_id,year),
+      FOREIGN KEY(employee_id) REFERENCES personnel_employees(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS personnel_imports (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      region TEXT NOT NULL DEFAULT 'Brandenburg',
+      payload_json TEXT NOT NULL,
+      warnings_json TEXT NOT NULL DEFAULT '[]',
+      employee_count INTEGER NOT NULL DEFAULT 0,
+      entry_count INTEGER NOT NULL DEFAULT 0,
+      manual_conflicts INTEGER NOT NULL DEFAULT 0,
+      created_by INTEGER,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','committed','cancelled')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      committed_at TEXT,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_personnel_imports_year ON personnel_imports(year,status,created_at);
+    CREATE TABLE IF NOT EXISTS personnel_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      code TEXT NOT NULL,
+      category TEXT NOT NULL,
+      portion REAL NOT NULL DEFAULT 1 CHECK(portion IN (0.5,1.0)),
+      label TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('manual','excel')),
+      source_import_id TEXT,
+      created_by INTEGER,
+      updated_by INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(employee_id,date),
+      FOREIGN KEY(employee_id) REFERENCES personnel_employees(id) ON DELETE CASCADE,
+      FOREIGN KEY(source_import_id) REFERENCES personnel_imports(id),
+      FOREIGN KEY(created_by) REFERENCES users(id),
+      FOREIGN KEY(updated_by) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_personnel_entries_date ON personnel_entries(date);
+    CREATE INDEX IF NOT EXISTS idx_personnel_entries_employee ON personnel_entries(employee_id,date);
     ''')
     rows = con.execute('SELECT id,role FROM users').fetchall()
     for row in rows:
@@ -200,10 +263,11 @@ def upsert_user(name, role, password):
     con.commit()
     con.close()
 
-def notify_change():
-    global EVENT_VERSION
+def notify_change(kind='appointments-changed'):
+    global EVENT_VERSION, EVENT_KIND
     with EVENT_COND:
         EVENT_VERSION += 1
+        EVENT_KIND = kind
         EVENT_COND.notify_all()
 
 def valid_date(v): return bool(re.fullmatch(r'\d{4}-\d{2}-\d{2}', v))
@@ -211,6 +275,61 @@ def valid_time(v): return bool(re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', v))
 def tmins(v):
     h,m = map(int,v.split(':'))
     return h*60+m
+
+def parse_iso_date(value):
+    value=clean(value,10)
+    if not valid_date(value):
+        raise ValueError('Ungültiges Datum')
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise ValueError('Ungültiges Datum')
+
+def valid_personnel_year(value):
+    try: year=int(value)
+    except (TypeError,ValueError): raise ValueError('Ungültiges Planungsjahr')
+    if year<2000 or year>2100:
+        raise ValueError('Ungültiges Planungsjahr')
+    return year
+
+def vacation_number(value,label,minimum=-100):
+    try: number=float(value or 0)
+    except (TypeError,ValueError): raise ValueError(label+' ist ungültig')
+    if number<minimum or number>366:
+        raise ValueError(label+' liegt außerhalb des zulässigen Bereichs')
+    return round(number*2)/2
+
+def validate_personnel_employee(body):
+    try: sort_order=max(0,min(9999,int(body.get('sort_order') or 0)))
+    except (TypeError,ValueError): raise ValueError('Sortierung ist ungültig')
+    return {
+      'name':validate_username(body.get('name')),
+      'active':1 if bool(body.get('active',True)) else 0,
+      'sort_order':sort_order,
+      'year':valid_personnel_year(body.get('year')),
+      'annual_vacation':vacation_number(body.get('annual_vacation'),'Urlaubsanspruch',0),
+      'carryover_vacation':vacation_number(body.get('carryover_vacation'),'Resturlaub Vorjahr')
+    }
+
+def validate_personnel_entry(body,forced_id=None):
+    try: employee_id=int(body.get('employee_id'))
+    except (TypeError,ValueError): raise ValueError('Mitarbeiter fehlt')
+    if employee_id<1: raise ValueError('Mitarbeiter fehlt')
+    entry_date=parse_iso_date(body.get('date')).isoformat()
+    requested=clean(body.get('code'),12)
+    if requested.upper()=='CUSTOM':
+        requested=clean(body.get('custom_code'),12)
+    try: portion=float(body.get('portion') or 1)
+    except (TypeError,ValueError): raise ValueError('Umfang ist ungültig')
+    info=normalize_personnel_code(requested,portion)
+    label=clean(body.get('label'),80) if info['category']=='custom' else str(info['label'])
+    if not label: label='Benutzerdefiniert'
+    return {
+      'id':int(forced_id) if forced_id is not None else None,
+      'employee_id':employee_id,'date':entry_date,'code':str(info['code']),
+      'category':str(info['category']),'portion':float(info['portion']),
+      'label':label,'note':clean(body.get('note'),500)
+    }
 
 def validate_appt(b, forced_id=None):
     a = {
@@ -264,6 +383,143 @@ class Handler(SimpleHTTPRequestHandler):
             raise
         except Exception:
             raise ValueError('Ungültiges JSON')
+
+    def read_xlsx_upload(self):
+        content_type=self.headers.get('Content-Type','')
+        match=re.search(r'boundary=(?:"([^"]+)"|([^;]+))',content_type,re.I)
+        if not content_type.lower().startswith('multipart/form-data') or not match:
+            raise ValueError('Excel-Datei fehlt')
+        boundary=(match.group(1) or match.group(2) or '').strip().encode('ascii','ignore')
+        if not boundary or len(boundary)>200:
+            raise ValueError('Ungültiger Datei-Upload')
+        try: length=int(self.headers.get('Content-Length','0'))
+        except ValueError: raise ValueError('Ungültiger Datei-Upload')
+        if length<1 or length>MAX_WORKBOOK_BYTES+131072:
+            raise ValueError('Die Excel-Datei ist leer oder größer als 5 MB')
+        raw=self.rfile.read(length)
+        marker=b'--'+boundary
+        for part in raw.split(marker):
+            if b'\r\n\r\n' not in part: continue
+            header_raw,body=part.split(b'\r\n\r\n',1)
+            headers=header_raw.decode('iso-8859-1','replace')
+            if not re.search(r'content-disposition:\s*form-data',headers,re.I): continue
+            name_match=re.search(r'name="([^"]+)"',headers,re.I)
+            if not name_match or name_match.group(1)!='file': continue
+            filename_match=re.search(r'filename="([^"]*)"',headers,re.I)
+            filename=Path((filename_match.group(1) if filename_match else 'Personalplaner.xlsx').replace('\\','/')).name
+            if body.endswith(b'\r\n'): body=body[:-2]
+            if not filename.lower().endswith('.xlsx'): raise ValueError('Bitte eine XLSX-Datei auswählen')
+            if len(body)>MAX_WORKBOOK_BYTES: raise ValueError('Die Excel-Datei ist größer als 5 MB')
+            return filename[:200],body
+        raise ValueError('Excel-Datei fehlt')
+
+    def personnel_plan(self,query):
+        try:
+            start=parse_iso_date(query.get('start',[''])[0])
+            end=parse_iso_date(query.get('end',[''])[0])
+            year=valid_personnel_year(query.get('year',[start.year])[0])
+            if end<start or (end-start).days>370: raise ValueError('Zeitraum ist ungültig')
+        except ValueError as exc:
+            return self.json_out({'error':str(exc)},400)
+        con=db_connect()
+        employee_rows=con.execute('''SELECT e.id,e.name,e.active,e.sort_order,
+          COALESCE(y.annual_vacation,0) annual_vacation,COALESCE(y.carryover_vacation,0) carryover_vacation
+          FROM personnel_employees e LEFT JOIN personnel_employee_years y
+          ON y.employee_id=e.id AND y.year=? WHERE e.active=1 ORDER BY e.sort_order,e.name COLLATE NOCASE''',(year,)).fetchall()
+        entry_rows=con.execute('''SELECT pe.*,e.name employee_name,u.name updated_by_name
+          FROM personnel_entries pe JOIN personnel_employees e ON e.id=pe.employee_id
+          LEFT JOIN users u ON u.id=pe.updated_by
+          WHERE pe.date BETWEEN ? AND ? AND e.active=1
+          ORDER BY e.sort_order,e.name COLLATE NOCASE,pe.date''',(start.isoformat(),end.isoformat())).fetchall()
+        usage_rows=con.execute('''SELECT employee_id,
+          COALESCE(SUM(CASE WHEN category='vacation' THEN portion ELSE 0 END),0) vacation_used,
+          COALESCE(SUM(CASE WHEN category='sick' THEN portion ELSE 0 END),0) sick_days
+          FROM personnel_entries WHERE date BETWEEN ? AND ? GROUP BY employee_id''',
+          (f'{year:04d}-01-01',f'{year:04d}-12-31')).fetchall()
+        usage={r['employee_id']:r for r in usage_rows}
+        last_import=con.execute("SELECT filename,year,committed_at FROM personnel_imports WHERE status='committed' ORDER BY committed_at DESC LIMIT 1").fetchone()
+        con.close()
+        employees=[]
+        for row in employee_rows:
+            used=float((usage.get(row['id']) or {'vacation_used':0})['vacation_used'] or 0)
+            sick=float((usage.get(row['id']) or {'sick_days':0})['sick_days'] or 0)
+            total=float(row['annual_vacation'] or 0)+float(row['carryover_vacation'] or 0)
+            employees.append({**dict(row),'vacation_total':total,'vacation_used':used,'vacation_remaining':total-used,'sick_days':sick})
+        holidays=[h for h in brandenburg_holidays(year) if start.isoformat()<=h['date']<=end.isoformat()]
+        return self.json_out({'year':year,'region':'Brandenburg','region_code':'BB','start':start.isoformat(),'end':end.isoformat(),
+          'employees':employees,'entries':[dict(r) for r in entry_rows],'holidays':holidays,
+          'last_import':dict(last_import) if last_import else None,
+          'codes':[{'code':'U','half_code':'UH','category':'vacation','label':'Urlaub'},
+                   {'code':'K','half_code':'KH','category':'sick','label':'Krankheit'},
+                   {'code':'A','half_code':'AH','category':'work','label':'Arbeit'},
+                   {'code':'I','half_code':'IH','category':'individual','label':'Individuell'},
+                   {'code':'P','half_code':'ph','category':'extra','label':'Zusatzspalte'},
+                   {'code':'CUSTOM','half_code':'CUSTOM','category':'custom','label':'Benutzerdefiniert'}]})
+
+    def personnel_import_preview(self,user):
+        try:
+            filename,data=self.read_xlsx_upload()
+            payload=parse_personnel_xlsx(data,filename)
+        except (ValueError,WorkbookImportError) as exc:
+            return self.json_out({'error':str(exc)},400)
+        year=payload['year']
+        imported_keys={(e['name'].casefold(),entry['date']) for e in payload['employees'] for entry in e['entries']}
+        con=db_connect()
+        manual=con.execute('''SELECT e.name,pe.date FROM personnel_entries pe JOIN personnel_employees e ON e.id=pe.employee_id
+          WHERE pe.source='manual' AND pe.date BETWEEN ? AND ?''',(f'{year:04d}-01-01',f'{year:04d}-12-31')).fetchall()
+        manual_conflicts=sum(1 for r in manual if (r['name'].casefold(),r['date']) in imported_keys)
+        import_id=secrets.token_urlsafe(18)
+        warnings=list(payload.get('warnings') or [])
+        if manual_conflicts: warnings.append(f'{manual_conflicts} manuelle Einträge haben Vorrang und werden nicht überschrieben.')
+        con.execute("DELETE FROM personnel_imports WHERE status='draft' AND created_at<datetime('now','-2 days')")
+        con.execute('''INSERT INTO personnel_imports(id,filename,sha256,year,region,payload_json,warnings_json,employee_count,entry_count,manual_conflicts,created_by)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)''',(import_id,payload['filename'],payload['sha256'],year,'Brandenburg',
+          json.dumps(payload,ensure_ascii=False,separators=(',',':')),json.dumps(warnings,ensure_ascii=False),
+          payload['employee_count'],payload['entry_count'],manual_conflicts,user['id']))
+        con.commit();con.close()
+        employees=[{'name':e['name'],'annual_vacation':e['annual_vacation'],'carryover_vacation':e['carryover_vacation'],'entry_count':len(e['entries'])} for e in payload['employees']]
+        return self.json_out({'preview':{'id':import_id,'filename':payload['filename'],'year':year,'region':'Brandenburg',
+          'employee_count':payload['employee_count'],'entry_count':payload['entry_count'],'code_counts':payload['code_counts'],
+          'warnings':warnings,'manual_conflicts':manual_conflicts,'employees':employees}},201)
+
+    def personnel_import_commit(self,user,body):
+        import_id=clean(body.get('import_id'),80)
+        if not import_id: return self.json_out({'error':'Import-Vorschau fehlt'},400)
+        con=db_connect()
+        row=con.execute("SELECT * FROM personnel_imports WHERE id=? AND status='draft'",(import_id,)).fetchone()
+        if not row:
+            con.close();return self.json_out({'error':'Import-Vorschau nicht gefunden oder bereits verwendet'},404)
+        payload=json.loads(row['payload_json']);year=int(row['year'])
+        inserted=0;preserved=0
+        try:
+            con.execute('BEGIN IMMEDIATE')
+            con.execute("DELETE FROM personnel_entries WHERE source='excel' AND date BETWEEN ? AND ?",(f'{year:04d}-01-01',f'{year:04d}-12-31'))
+            for emp in payload['employees']:
+                existing=con.execute('SELECT id FROM personnel_employees WHERE name=? COLLATE NOCASE',(emp['name'],)).fetchone()
+                if existing: eid=existing['id'];con.execute('UPDATE personnel_employees SET active=1,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(emp['sort_order'],eid))
+                else:
+                    cur=con.execute('INSERT INTO personnel_employees(name,active,sort_order) VALUES(?,1,?)',(emp['name'],emp['sort_order']));eid=cur.lastrowid
+                yearrow=con.execute('SELECT source_import_id FROM personnel_employee_years WHERE employee_id=? AND year=?',(eid,year)).fetchone()
+                if yearrow and yearrow['source_import_id'] is None:
+                    preserved+=1
+                else:
+                    con.execute('''INSERT INTO personnel_employee_years(employee_id,year,annual_vacation,carryover_vacation,source_import_id)
+                      VALUES(?,?,?,?,?) ON CONFLICT(employee_id,year) DO UPDATE SET annual_vacation=excluded.annual_vacation,
+                      carryover_vacation=excluded.carryover_vacation,source_import_id=excluded.source_import_id,updated_at=CURRENT_TIMESTAMP''',
+                      (eid,year,emp['annual_vacation'],emp['carryover_vacation'],import_id))
+                for entry in emp['entries']:
+                    conflict=con.execute("SELECT id FROM personnel_entries WHERE employee_id=? AND date=? AND source='manual'",(eid,entry['date'])).fetchone()
+                    if conflict: continue
+                    con.execute('''INSERT OR REPLACE INTO personnel_entries(employee_id,date,code,category,portion,label,note,source,source_import_id,created_by,updated_by)
+                      VALUES(?,?,?,?,?,?,?,'excel',?,?,?)''',(eid,entry['date'],entry['code'],entry['category'],entry['portion'],entry['label'],'',import_id,user['id'],user['id']))
+                    inserted+=1
+            con.execute("UPDATE personnel_imports SET status='committed',committed_at=CURRENT_TIMESTAMP WHERE id=?",(import_id,))
+            con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(user['id'],'personnel-import',f'{year}: {inserted} Einträge'))
+            con.commit()
+        except Exception:
+            con.rollback();con.close();raise
+        con.close();notify_change('personnel-changed')
+        return self.json_out({'ok':True,'inserted':inserted,'manual_conflicts':row['manual_conflicts'],'manual_allowances_preserved':preserved})
 
     def session_user(self):
         c=SimpleCookie(self.headers.get('Cookie',''))
