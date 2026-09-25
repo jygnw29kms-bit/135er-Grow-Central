@@ -159,49 +159,135 @@
 </form>
 </dialog>
 
-<dialog id="usersDialog" class="users-dialog">
-  <div class="dialog-panel">
-    <div class="dialog-head">
-      <div><div class="eyebrow">Zentrale Kontensteuerung</div><h2>Benutzer & Rechte</h2><p class="dialog-intro">Ein Konto für Werkstattplaner und Personalplaner. Rechte werden je Modul getrennt vergeben.</p></div>
-      <button id="usersCloseBtn" class="icon-btn" type="button" aria-label="Schließen">✕</button>
+<dialog id="usersDialog" class="users-dialog account-admin-dialog">
+  <div class="dialog-panel account-admin-panel">
+    <div class="dialog-head account-admin-head">
+      <div>
+        <div class="eyebrow">Zentrale Kontensteuerung</div>
+        <h2>Benutzerkonten & Rechte</h2>
+        <p class="dialog-intro">Alle Benutzer für Werkstattplaner und Personalplaner zentral anlegen und bearbeiten.</p>
+      </div>
+      <div class="account-head-actions">
+        <button id="newUserModeBtn" class="primary" type="button">＋ Neuer Benutzer</button>
+        <button id="refreshUsersBtn" type="button">Aktualisieren</button>
+        <button id="usersCloseBtn" class="icon-btn" type="button" aria-label="Schließen">✕</button>
+      </div>
     </div>
-    <div class="users-layout">
-      <section class="user-create-card">
-        <h3>Neues Benutzerkonto</h3>
-        <form id="newUserForm">
-          <label>Benutzername<input id="newUserName" required minlength="2" autocomplete="off" /></label>
-          <label>Kontotyp
-            <select id="newUserRole">
-              <option value="viewer">Mitarbeiter · individuell</option>
-              <option value="editor">Bearbeiter · Vorlage</option>
-              <option value="admin">Systemadministrator</option>
-            </select>
-          </label>
-          <div class="permission-editor">
-            <strong>Werkstattplaner</strong>
-            <label><input id="newWView" type="checkbox" checked> Anzeigen</label>
-            <label><input id="newWEdit" type="checkbox"> Bearbeiten</label>
-            <label><input id="newWManage" type="checkbox"> Verwalten</label>
+
+    <div class="account-admin-layout">
+      <aside class="account-directory">
+        <label class="account-search">Benutzer suchen
+          <input id="userSearch" type="search" placeholder="Name oder Rolle" autocomplete="off" />
+        </label>
+        <div id="usersCount" class="users-count"></div>
+        <div id="usersList" class="account-list" aria-label="Benutzerkonten"></div>
+      </aside>
+
+      <main class="account-editor-area">
+        <section id="userEmptyState" class="account-empty">
+          <strong>Benutzer auswählen</strong>
+          <span>Wähle links ein Konto aus oder lege einen neuen Benutzer an.</span>
+        </section>
+
+        <section id="userEditor" class="account-editor hidden">
+          <div class="account-editor-title">
+            <div>
+              <div class="eyebrow">Benutzer bearbeiten</div>
+              <h3 id="editUserTitle">Benutzerkonto</h3>
+            </div>
+            <span id="editUserState" class="user-state"></span>
           </div>
-          <div class="permission-editor">
-            <strong>Personalplaner</strong>
-            <label><input id="newPView" type="checkbox" checked> Anzeigen</label>
-            <label><input id="newPEdit" type="checkbox"> Bearbeiten</label>
-            <label><input id="newPManage" type="checkbox"> Verwalten</label>
+          <form id="editUserForm">
+            <input id="editUserId" type="hidden" />
+            <div class="user-account-grid">
+              <label>Benutzername<input id="editUserName" required minlength="2" autocomplete="off" /></label>
+              <label>Kontotyp
+                <select id="editUserRole">
+                  <option value="viewer">Mitarbeiter · individuell</option>
+                  <option value="editor">Bearbeiter · Vorlage</option>
+                  <option value="admin">Systemadministrator</option>
+                </select>
+              </label>
+              <label class="toggle-label account-active"><input id="editUserActive" type="checkbox"> Konto aktiv</label>
+            </div>
+
+            <h4 class="permission-heading">Modulrechte</h4>
+            <div class="permission-matrix">
+              <div class="permission-editor" data-edit-module="werkstattplaner">
+                <strong>Werkstattplaner</strong>
+                <label><input id="editWView" type="checkbox"> Anzeigen</label>
+                <label><input id="editWEdit" type="checkbox"> Bearbeiten</label>
+                <label><input id="editWManage" type="checkbox"> Verwalten</label>
+              </div>
+              <div class="permission-editor" data-edit-module="personalplaner">
+                <strong>Personalplaner</strong>
+                <label><input id="editPView" type="checkbox"> Anzeigen</label>
+                <label><input id="editPEdit" type="checkbox"> Bearbeiten</label>
+                <label><input id="editPManage" type="checkbox"> Verwalten</label>
+              </div>
+            </div>
+
+            <h4 class="permission-heading">Passwort</h4>
+            <p class="field-help">Leer lassen, wenn das Passwort unverändert bleiben soll.</p>
+            <div class="password-reset-grid">
+              <label>Neues Passwort<input id="editUserPassword" type="password" minlength="10" autocomplete="new-password" placeholder="Mindestens 10 Zeichen" /></label>
+              <label>Passwort bestätigen<input id="editUserPassword2" type="password" minlength="10" autocomplete="new-password" /></label>
+            </div>
+
+            <div id="editUserError" class="form-error"></div>
+            <div class="account-editor-actions">
+              <button id="resetEditBtn" type="button">Änderungen verwerfen</button>
+              <span class="spacer"></span>
+              <button type="submit" class="primary">Benutzer speichern</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="newUserPanel" class="account-editor hidden">
+          <div class="account-editor-title">
+            <div><div class="eyebrow">Neues Konto</div><h3>Benutzer anlegen</h3></div>
           </div>
-          <label>Initialpasswort<input id="newUserPassword" type="password" required minlength="10" autocomplete="new-password" placeholder="Mindestens 10 Zeichen" /></label>
-          <label>Passwort bestätigen<input id="newUserPassword2" type="password" required minlength="10" autocomplete="new-password" /></label>
-          <div id="newUserError" class="form-error"></div>
-          <button type="submit" class="primary">Benutzerkonto anlegen</button>
-        </form>
-      </section>
-      <section class="users-list-wrap">
-        <div class="section-title-row">
-          <div><h3>Vorhandene Benutzer</h3><small>Passwörter, Status und Modulrechte zentral verwalten.</small></div>
-          <button id="refreshUsersBtn" type="button">Aktualisieren</button>
-        </div>
-        <div id="usersList" class="users-list"></div>
-      </section>
+          <form id="newUserForm">
+            <div class="user-account-grid">
+              <label>Benutzername<input id="newUserName" required minlength="2" autocomplete="off" /></label>
+              <label>Kontotyp
+                <select id="newUserRole">
+                  <option value="viewer">Mitarbeiter · individuell</option>
+                  <option value="editor">Bearbeiter · Vorlage</option>
+                  <option value="admin">Systemadministrator</option>
+                </select>
+              </label>
+              <div></div>
+            </div>
+            <h4 class="permission-heading">Modulrechte</h4>
+            <div class="permission-matrix">
+              <div class="permission-editor">
+                <strong>Werkstattplaner</strong>
+                <label><input id="newWView" type="checkbox" checked> Anzeigen</label>
+                <label><input id="newWEdit" type="checkbox"> Bearbeiten</label>
+                <label><input id="newWManage" type="checkbox"> Verwalten</label>
+              </div>
+              <div class="permission-editor">
+                <strong>Personalplaner</strong>
+                <label><input id="newPView" type="checkbox" checked> Anzeigen</label>
+                <label><input id="newPEdit" type="checkbox"> Bearbeiten</label>
+                <label><input id="newPManage" type="checkbox"> Verwalten</label>
+              </div>
+            </div>
+            <h4 class="permission-heading">Initialpasswort</h4>
+            <div class="password-reset-grid">
+              <label>Passwort<input id="newUserPassword" type="password" required minlength="10" autocomplete="new-password" /></label>
+              <label>Passwort bestätigen<input id="newUserPassword2" type="password" required minlength="10" autocomplete="new-password" /></label>
+            </div>
+            <div id="newUserError" class="form-error"></div>
+            <div class="account-editor-actions">
+              <button id="cancelNewUserBtn" type="button">Abbrechen</button>
+              <span class="spacer"></span>
+              <button type="submit" class="primary">Benutzerkonto anlegen</button>
+            </div>
+          </form>
+        </section>
+      </main>
     </div>
   </div>
 </dialog>
