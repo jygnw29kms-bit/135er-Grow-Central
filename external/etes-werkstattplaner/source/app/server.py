@@ -19,6 +19,8 @@ STATUSES = ['Termin bestätigt','Fahrzeug da','In Arbeit','Wartet auf Teile','R�
 MECHANICS = ['—','Uwe','Torsten','Metin','Scheissnie','Jan','Leon']
 PARTS = ['offen','bestellt','vorhanden','nicht erforderlich']
 LOANER = ['Nein','Ja']
+MODULES = ('werkstattplaner','personalplaner')
+PERMISSION_LEVELS = ('view','edit','manage')
 
 SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
@@ -44,6 +46,15 @@ def init_db():
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      user_id INTEGER NOT NULL,
+      module TEXT NOT NULL CHECK(module IN ('werkstattplaner','personalplaner')),
+      can_view INTEGER NOT NULL DEFAULT 0,
+      can_edit INTEGER NOT NULL DEFAULT 0,
+      can_manage INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY(user_id,module),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
     CREATE TABLE IF NOT EXISTS appointments (
       id TEXT PRIMARY KEY,date TEXT NOT NULL,resource TEXT NOT NULL,start TEXT NOT NULL,end TEXT NOT NULL,
       plate TEXT NOT NULL,vehicle TEXT DEFAULT '',customer TEXT DEFAULT '',phone TEXT DEFAULT '',mechanic TEXT DEFAULT '—',
@@ -57,8 +68,60 @@ def init_db():
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES users(id)
     );
     ''')
+    rows = con.execute('SELECT id,role FROM users').fetchall()
+    for row in rows:
+        if row['role']=='admin':
+            defaults=(1,1,1)
+        elif row['role']=='editor':
+            defaults=(1,1,0)
+        else:
+            defaults=(1,0,0)
+        for module in MODULES:
+            con.execute('''INSERT OR IGNORE INTO user_permissions(user_id,module,can_view,can_edit,can_manage)
+                           VALUES(?,?,?,?,?)''',(row['id'],module,*defaults))
     con.commit()
     con.close()
+
+def default_permissions_for_role(role):
+    if role=='admin':
+        return {m:{'view':True,'edit':True,'manage':True} for m in MODULES}
+    if role=='editor':
+        return {m:{'view':True,'edit':True,'manage':False} for m in MODULES}
+    return {m:{'view':True,'edit':False,'manage':False} for m in MODULES}
+
+def normalize_permissions(raw, role='viewer'):
+    base=default_permissions_for_role(role)
+    if not isinstance(raw,dict):
+        return base
+    out={}
+    for module in MODULES:
+        src=raw.get(module,{})
+        view=bool(src.get('view',base[module]['view']))
+        edit=bool(src.get('edit',base[module]['edit'])) and view
+        manage=bool(src.get('manage',base[module]['manage'])) and view
+        if manage:
+            edit=True
+        out[module]={'view':view,'edit':edit,'manage':manage}
+    return out
+
+def save_permissions(con, user_id, permissions):
+    for module in MODULES:
+        p=permissions[module]
+        con.execute('''INSERT INTO user_permissions(user_id,module,can_view,can_edit,can_manage)
+                       VALUES(?,?,?,?,?)
+                       ON CONFLICT(user_id,module) DO UPDATE SET
+                       can_view=excluded.can_view,can_edit=excluded.can_edit,can_manage=excluded.can_manage''',
+                    (user_id,module,int(p['view']),int(p['edit']),int(p['manage'])))
+
+def load_permissions(con, user_id):
+    rows=con.execute('SELECT module,can_view,can_edit,can_manage FROM user_permissions WHERE user_id=?',(user_id,)).fetchall()
+    data={r['module']:{'view':bool(r['can_view']),'edit':bool(r['can_edit']),'manage':bool(r['can_manage'])} for r in rows}
+    if len(data)!=len(MODULES):
+        role=con.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()
+        perms=normalize_permissions(data, role['role'] if role else 'viewer')
+        save_permissions(con,user_id,perms)
+        return perms
+    return data
 
 def hash_password(password):
     salt = secrets.token_bytes(16)
@@ -114,8 +177,9 @@ def create_initial_admin(name, password):
             raise ValueError('Ersteinrichtung wurde bereits abgeschlossen')
         con.execute('INSERT INTO users(name,password_hash,role,active) VALUES(?,?,?,1)', (name, hash_password(password), 'admin'))
         uid = con.execute('SELECT id FROM users WHERE name=?', (name,)).fetchone()[0]
+        save_permissions(con,uid,default_permissions_for_role('admin'))
         con.commit()
-        return {'id': uid, 'name': name, 'role': 'admin'}
+        return {'id': uid, 'name': name, 'role': 'admin', 'permissions': default_permissions_for_role('admin')}
     except Exception:
         con.rollback()
         raise
@@ -162,7 +226,7 @@ def validate_appt(b, forced_id=None):
     return a
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = 'EtesWerkstattplaner/1.2'
+    server_version = 'EtesWerkstattplaner/1.4'
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,directory=str(PUBLIC),**kwargs)
@@ -214,12 +278,13 @@ class Handler(SimpleHTTPRequestHandler):
             s['expires']=time.time()+12*3600
         con=db_connect()
         row=con.execute('SELECT id,name,role,active FROM users WHERE id=?',(uid,)).fetchone()
+        perms=load_permissions(con,uid) if row else {}
         con.close()
         if not row or not row['active']:
             with SESSIONS_LOCK:
                 SESSIONS.pop(token,None)
             return None
-        return {'id':row['id'],'name':row['name'],'role':row['role']}
+        return {'id':row['id'],'name':row['name'],'role':row['role'],'permissions':perms}
 
     def create_session(self, user):
         token=secrets.token_urlsafe(32)
@@ -238,6 +303,19 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         return u
 
+    def require_perm(self,module,level='view'):
+        u=self.require()
+        if not u:
+            return None
+        if u['role']=='admin':
+            return u
+        perms=u.get('permissions',{}).get(module,{})
+        key={'view':'view','edit':'edit','manage':'manage'}.get(level,'view')
+        if not perms.get(key,False):
+            self.json_out({'error':'Keine Berechtigung für '+module},403)
+            return None
+        return u
+
     def safe_origin(self):
         origin=self.headers.get('Origin')
         host=self.headers.get('Host')
@@ -246,7 +324,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         p=urlparse(self.path)
         if p.path=='/health':
-            return self.json_out({'ok':True,'service':'etes-werkstattplaner','version':'1.2.0','configured':users_exist()})
+            return self.json_out({'ok':True,'service':'etes-werkstattplaner','version':'1.4.0','configured':users_exist()})
         if p.path=='/api/setup-status':
             return self.json_out({'needs_setup':not users_exist()})
         if p.path.startswith('/api/'):
@@ -259,7 +337,7 @@ class Handler(SimpleHTTPRequestHandler):
                 u=self.require()
                 return None if not u else self.json_out({'resources':RESOURCES,'statuses':STATUSES,'mechanics':MECHANICS,'parts':PARTS,'loaner':LOANER})
             if p.path=='/api/appointments':
-                u=self.require()
+                u=self.require_perm('werkstattplaner','view')
                 if not u:return
                 date=clean(parse_qs(p.query).get('date',[''])[0],10)
                 if not valid_date(date):
@@ -273,8 +351,13 @@ class Handler(SimpleHTTPRequestHandler):
                 if not u:return
                 con=db_connect()
                 rows=con.execute('SELECT id,name,role,active,created_at,updated_at FROM users ORDER BY active DESC,role,name').fetchall()
+                users=[]
+                for r in rows:
+                    d=dict(r)
+                    d['permissions']=load_permissions(con,r['id'])
+                    users.append(d)
                 con.close()
-                return self.json_out({'users':[dict(r) for r in rows]})
+                return self.json_out({'users':users,'modules':list(MODULES)})
             if p.path=='/api/events':
                 return self.handle_events()
             return self.json_out({'error':'Nicht gefunden'},404)
@@ -315,7 +398,10 @@ class Handler(SimpleHTTPRequestHandler):
             con.close()
             if not row or not verify_password(pw,row['password_hash']):
                 return self.json_out({'error':'Name oder Passwort falsch'},401)
-            user={'id':row['id'],'name':row['name'],'role':row['role']}
+            con=db_connect()
+            perms=load_permissions(con,row['id'])
+            con.close()
+            user={'id':row['id'],'name':row['name'],'role':row['role'],'permissions':perms}
             cookie=self.create_session(user)
             return self.json_out({'user':user},200,[('Set-Cookie',cookie)])
 
@@ -337,11 +423,15 @@ class Handler(SimpleHTTPRequestHandler):
                 name=validate_username(b.get('name'))
                 role=clean(b.get('role'),20)
                 pw=validate_password(b.get('password'))
+                if pw != str(b.get('password_confirm') or pw):
+                    raise ValueError('Passwörter stimmen nicht überein')
+                permissions=normalize_permissions(b.get('permissions'),role)
                 if role not in ('admin','editor','viewer'):
                     raise ValueError('Ungültige Rolle')
                 con=db_connect()
                 con.execute('INSERT INTO users(name,password_hash,role,active) VALUES(?,?,?,1)',(name,hash_password(pw),role))
                 uid=con.execute('SELECT id FROM users WHERE name=?',(name,)).fetchone()[0]
+                save_permissions(con,uid,permissions)
                 con.commit(); con.close()
                 return self.json_out({'ok':True,'id':uid},201)
             except sqlite3.IntegrityError:
@@ -350,7 +440,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.json_out({'error':str(e)},400)
 
         if p.path=='/api/appointments':
-            u=self.require(('admin','editor'))
+            u=self.require_perm('werkstattplaner','edit')
             if not u:return
             try:b=self.read_json(); a=validate_appt(b)
             except ValueError as e:return self.json_out({'error':str(e)},400)
@@ -382,10 +472,14 @@ class Handler(SimpleHTTPRequestHandler):
                 role=clean(b.get('role'),20)
                 active=1 if bool(b.get('active',True)) else 0
                 pw=str(b.get('password') or '')
+                pw2=str(b.get('password_confirm') or '')
+                permissions=normalize_permissions(b.get('permissions'),role)
                 if role not in ('admin','editor','viewer'):
                     raise ValueError('Ungültige Rolle')
                 if pw:
                     validate_password(pw)
+                    if pw2 and pw!=pw2:
+                        raise ValueError('Passwörter stimmen nicht überein')
             except ValueError as e:
                 return self.json_out({'error':str(e)},400)
 
@@ -405,6 +499,9 @@ class Handler(SimpleHTTPRequestHandler):
                     con.execute('UPDATE users SET name=?,role=?,active=?,password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(name,role,active,hash_password(pw),uid))
                 else:
                     con.execute('UPDATE users SET name=?,role=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(name,role,active,uid))
+                save_permissions(con,uid,permissions)
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',
+                            (u['id'],'user-update',json.dumps({'target_user':uid,'role':role,'active':bool(active),'permissions':permissions},ensure_ascii=False)))
                 con.commit()
             except sqlite3.IntegrityError:
                 con.close()
@@ -415,7 +512,7 @@ class Handler(SimpleHTTPRequestHandler):
         m=re.fullmatch(r'/api/appointments/([^/]+)',p.path)
         if not m:
             return self.json_out({'error':'Nicht gefunden'},404)
-        u=self.require(('admin','editor'))
+        u=self.require_perm('werkstattplaner','edit')
         if not u:return
         try:b=self.read_json(); aid=m.group(1); a=validate_appt(b,aid)
         except ValueError as e:return self.json_out({'error':str(e)},400)
