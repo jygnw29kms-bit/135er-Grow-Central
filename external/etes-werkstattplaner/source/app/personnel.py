@@ -235,7 +235,8 @@ def _sheet_cells(archive: zipfile.ZipFile, path: str, shared: list[str]) -> dict
                 except (ValueError, IndexError):
                     value = ""
             elif cell_type in ("str", "e"):
-                value = raw            elif cell_type == "b":
+                value = raw
+            elif cell_type == "b":
                 value = raw == "1"
             else:
                 try:
@@ -268,7 +269,7 @@ def parse_personnel_xlsx(data: bytes, filename: str = "Personalplaner.xlsx") -> 
         paths = _sheet_paths(archive)
         planner_path = paths.get("Personalplaner")
         if not planner_path:
-            raise WorkbookImportError("Das Tabllenblatt „Personalplaner“ fehlt")
+            raise WorkbookImportError("Das Tabellenblatt „Personalplaner“ fehlt")
         planner = _sheet_cells(archive, planner_path, shared)
         settings = _sheet_cells(archive, paths["Einstellungen"], shared) if "Einstellungen" in paths else {}
     finally:
