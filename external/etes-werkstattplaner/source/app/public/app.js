@@ -1,6 +1,7 @@
 const START=7*60, END=18*60, STEP=30;
 let currentUser=null, appointments=[], config={resources:[],mechanics:[],statuses:[],parts:[],loaner:[]};
 let events=null;
+let currentView='workshop', personnelPlan=null, personnelImportPreview=null, personnelEmployees=[], personnelSettingsYear=null;
 const $=id=>document.getElementById(id);
 
 function applyDeviceProfile(){
@@ -23,7 +24,7 @@ function applyDeviceProfile(){
 let deviceResizeTimer=null;
 function scheduleDeviceProfile(){
   clearTimeout(deviceResizeTimer);
-  deviceResizeTimer=setTimeout(()=>{applyDeviceProfile();if(currentUser)render()},90);
+  deviceResizeTimer=setTimeout(()=>{applyDeviceProfile();if(currentUser){if(currentView==='personnel')loadPersonnel();else render()}},90);
 }
 
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -59,6 +60,7 @@ async function api(url,opts={}){
 async function init(){
   applyDeviceProfile();
   $('datePicker').value=todayISO();
+  if($('personnelDate')) $('personnelDate').value=todayISO();
   bind();
   try{
     const s=await api('/api/setup-status');
@@ -108,6 +110,32 @@ function bind(){
   $('editUserForm').onsubmit=saveSelectedUser;
   $('resetEditBtn').onclick=()=>selectedUserId&&selectUser(selectedUserId);
   $('newUserForm').onsubmit=createUser;
+  $('overviewNavBtn').onclick=()=>showView('workshop','overviewNavBtn');
+  $('workshopNavBtn').onclick=()=>showView('workshop','workshopNavBtn');
+  $('personnelNavBtn').onclick=()=>{if(canViewPersonnel())showView('personnel','personnelNavBtn')};
+  $('personnelPrevBtn').onclick=()=>shiftPersonnel(-1);
+  $('personnelNextBtn').onclick=()=>shiftPersonnel(1);
+  $('personnelTodayBtn').onclick=()=>{$('personnelDate').value=todayISO();loadPersonnel()};
+  $('personnelDate').onchange=loadPersonnel;
+  $('personnelRangeMode').onchange=loadPersonnel;
+  $('personnelNewBtn').onclick=()=>openPersonnelEntry();
+  $('personnelEntryType').onchange=togglePersonnelCustomCode;
+  $('personnelEntryForm').onsubmit=savePersonnelEntry;
+  $('personnelEntryDeleteBtn').onclick=deletePersonnelEntry;
+  $('personnelImportBtn').onclick=openPersonnelImport;
+  $('personnelImportShortcut').onclick=openPersonnelImport;
+  $('personnelImportCloseBtn').onclick=closePersonnelImport;
+  $('personnelImportCancelBtn').onclick=closePersonnelImport;
+  $('personnelImportFile').onchange=()=>{$('personnelImportFileName').textContent=$('personnelImportFile').files[0]?.name||'Keine Datei ausgewählt'};
+  $('personnelImportForm').onsubmit=previewPersonnelImport;
+  $('personnelCommitBtn').onclick=commitPersonnelImport;
+  $('employeeManageBtn').onclick=()=>openEmployeeManager();
+  $('employeeDialogCloseBtn').onclick=()=>$('employeeDialog').close();
+  $('employeeSettingsYearPrevBtn').onclick=()=>shiftEmployeeSettingsYear(-1);
+  $('employeeSettingsYearNextBtn').onclick=()=>shiftEmployeeSettingsYear(1);
+  $('employeeSettingsYearTodayBtn').onclick=()=>setEmployeeSettingsYear(new Date().getFullYear());
+  $('employeeSettingsYear').onchange=()=>setEmployeeSettingsYear($('employeeSettingsYear').value);
+  $('newEmployeeForm').onsubmit=createEmployee;
   window.addEventListener('online',()=>setOnline(true));
   window.addEventListener('offline',()=>setOnline(false));
   window.addEventListener('resize',scheduleDeviceProfile,{passive:true});
@@ -119,6 +147,8 @@ async function enterApp(){
   fillSelect($('resource'),config.resources);fillSelect($('mechanic'),config.mechanics);fillSelect($('status'),config.statuses);fillSelect($('parts'),config.parts);fillSelect($('loaner'),config.loaner);
   $('legend').innerHTML=config.statuses.map(s=>'<span data-status="'+esc(s)+'">'+esc(s)+'</span>').join('');
   updateRole();showApp();
+  if(canViewWorkshop()) showView('workshop','workshopNavBtn',false);
+  else if(canViewPersonnel()) showView('personnel','personnelNavBtn',false);
   if(canViewWorkshop()){
     await loadAppointments();connectEvents();
   }else{
@@ -135,9 +165,20 @@ function updateRole(){
   $('usersBtn').classList.toggle('hidden',!isAdmin());
   document.body.dataset.workshopAccess=canViewWorkshop()?'1':'0';
   document.body.dataset.personnelAccess=canViewPersonnel()?'1':'0';
+  $('personnelNavBtn').classList.toggle('hidden',!canViewPersonnel());
+  $('personnelNewBtn').disabled=!modulePerm('personalplaner','edit');
+  $('employeeManageBtn').classList.toggle('hidden',!modulePerm('personalplaner','manage'));
+  $('personnelImportBtn').classList.toggle('hidden',!modulePerm('personalplaner','manage'));
+  $('personnelImportShortcut').classList.toggle('hidden',!modulePerm('personalplaner','manage'));
 }
 function setOnline(ok){$('syncDot').classList.toggle('offline',!ok);$('syncDot').title=ok?'Server verbunden':'Offline'}
-function connectEvents(){if(events)events.close();events=new EventSource('/api/events');events.onopen=()=>setOnline(true);events.onerror=()=>setOnline(false);events.addEventListener('appointments-changed',()=>loadAppointments())}
+function connectEvents(){
+  if(events)events.close();
+  events=new EventSource('/api/events');
+  events.onopen=()=>setOnline(true);events.onerror=()=>setOnline(false);
+  events.addEventListener('appointments-changed',()=>{if(currentView==='workshop'&&canViewWorkshop())loadAppointments()});
+  events.addEventListener('personnel-changed',()=>{if(currentView==='personnel'&&canViewPersonnel())loadPersonnel()});
+}
 function shiftDate(days){let d=new Date($('datePicker').value+'T12:00:00');d.setDate(d.getDate()+days);$('datePicker').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');loadAppointments()}
 function updateDateLabel(){
   const d=new Date($('datePicker').value+'T12:00:00');
@@ -411,5 +452,179 @@ $('newUserRole').onchange=()=>{
   ids.forEach(id=>$(id).disabled=role==='admin');
   if(role==='admin')ids.forEach(id=>$(id).checked=true);
 };
+
+
+function dateFromIso(value){const [y,m,d]=String(value||todayISO()).split('-').map(Number);return new Date(y,m-1,d,12)}
+function isoFromDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function canPersonnelEdit(){return modulePerm('personalplaner','edit')}
+function canPersonnelManage(){return modulePerm('personalplaner','manage')}
+function personnelMode(){const v=$('personnelRangeMode').value;return v!=='auto'?v:(document.documentElement.dataset.device==='phone'?'week':'month')}
+function personnelRange(){
+  const selected=dateFromIso($('personnelDate').value||todayISO());
+  if(personnelMode()==='week'){
+    const monday=new Date(selected);monday.setDate(selected.getDate()-((selected.getDay()+6)%7));
+    return {start:isoFromDate(monday),end:isoFromDate(addDays(monday,6)),year:selected.getFullYear(),mode:'week'};
+  }
+  const first=new Date(selected.getFullYear(),selected.getMonth(),1,12),last=new Date(selected.getFullYear(),selected.getMonth()+1,0,12);
+  return {start:isoFromDate(first),end:isoFromDate(last),year:selected.getFullYear(),mode:'month'};
+}
+function showView(view,navId,load=true){
+  currentView=view;
+  $('workshopView').classList.toggle('hidden',view!=='workshop');
+  $('personnelView').classList.toggle('hidden',view!=='personnel');
+  ['overviewNavBtn','workshopNavBtn','personnelNavBtn'].forEach(id=>$(id).classList.toggle('active',id===navId));
+  if(load&&view==='personnel')loadPersonnel();
+}
+function shiftPersonnel(direction){
+  const d=dateFromIso($('personnelDate').value||todayISO());
+  if(personnelMode()==='month'){d.setDate(1);d.setMonth(d.getMonth()+direction)}else d.setDate(d.getDate()+direction*7);
+  $('personnelDate').value=isoFromDate(d);loadPersonnel();
+}
+function formatDays(v){const n=Number(v||0);return n.toLocaleString('de-DE',{minimumFractionDigits:Number.isInteger(n)?0:1,maximumFractionDigits:1})+' T'}
+async function loadPersonnel(){
+  if(!currentUser||!canViewPersonnel())return;
+  const range=personnelRange();
+  $('personnelGrid').innerHTML='<div class="personnel-loading">Personalplan wird geladen …</div>';
+  try{personnelPlan=await api('/api/personnel/plan?start='+encodeURIComponent(range.start)+'&end='+encodeURIComponent(range.end)+'&year='+range.year);renderPersonnel(range)}
+  catch(e){$('personnelGrid').innerHTML='<div class="personnel-empty"><strong>Personalplan konnte nicht geladen werden.</strong><span>'+esc(e.message)+'</span></div>'}
+}
+function renderPersonnel(range){
+  const plan=personnelPlan;if(!plan)return;
+  const days=[];for(let d=dateFromIso(range.start),end=dateFromIso(range.end);d<=end;d=addDays(d,1))days.push(isoFromDate(d));
+  const holidayMap=new Map((plan.holidays||[]).map(x=>[x.date,x]));
+  const entryMap=new Map((plan.entries||[]).map(x=>[x.employee_id+'|'+x.date,x]));
+  const start=dateFromIso(range.start),end=dateFromIso(range.end);
+  $('personnelRangeLabel').textContent=range.mode==='week'
+    ?'Woche '+start.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' – '+end.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})
+    :start.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  $('personnelEmployeeCount').textContent=plan.employees.length;
+  $('personnelVacationCount').textContent=formatDays(plan.employees.reduce((s,x)=>s+Number(x.vacation_used||0),0));
+  $('personnelVacationYear').textContent='im Jahr '+plan.year;
+  $('personnelSickCount').textContent=formatDays(plan.employees.reduce((s,x)=>s+Number(x.sick_days||0),0));
+  $('personnelLegend').innerHTML='<span class="category-vacation">U Urlaub</span><span class="category-sick">K Krank</span><span class="category-work">A Arbeit</span><span class="category-individual">I Individuell</span><span class="category-custom">… Sonstiges</span>';
+  $('personnelHolidayList').innerHTML=plan.holidays.length?plan.holidays.map(x=>'<div><time>'+dateFromIso(x.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+'</time><span>'+esc(x.name)+'</span></div>').join(''):'<p class="muted-copy">Keine Feiertage im Zeitraum.</p>';
+  $('personnelImportStatus').textContent=plan.last_import?'Letzter Import: '+plan.last_import.filename:'Noch kein Excel-Import';
+  const wrap=$('personnelGrid');wrap.innerHTML='';
+  if(!plan.employees.length){wrap.innerHTML='<div class="personnel-empty"><strong>Noch keine Mitarbeiter vorhanden.</strong><span>Über Personal-Einstellungen anlegen oder die Excel-Datei importieren.</span></div>';return}
+  const table=document.createElement('div');table.className='personnel-table';table.style.gridTemplateColumns='minmax(var(--person-name-col),var(--person-name-col)) repeat('+days.length+',minmax(var(--person-day-col),var(--person-day-col)))';
+  const corner=document.createElement('div');corner.className='personnel-name-cell personnel-corner';corner.innerHTML='<strong>Mitarbeiter</strong><small>Urlaub '+plan.year+'</small>';table.appendChild(corner);
+  days.forEach(day=>{
+    const d=dateFromIso(day),holiday=holidayMap.get(day),weekend=[0,6].includes(d.getDay());
+    const h=document.createElement('div');h.className='personnel-day-head'+(weekend?' weekend':'')+(holiday?' holiday':'');
+    h.innerHTML='<span>'+d.toLocaleDateString('de-DE',{weekday:'short'}).replace('.','')+'</span><strong>'+d.getDate()+'</strong>'+(holiday?'<small>'+esc(holiday.name)+'</small>':'');table.appendChild(h);
+  });
+  plan.employees.forEach(emp=>{
+    const name=document.createElement('button');name.type='button';name.className='personnel-name-cell personnel-name-button';
+    name.innerHTML='<strong>'+esc(emp.name)+'</strong><small>'+formatDays(emp.vacation_used)+' / '+formatDays(emp.vacation_total)+' · Rest '+formatDays(emp.vacation_remaining)+'</small>';
+    if(canPersonnelManage())name.onclick=()=>openEmployeeManager(emp.id);else name.disabled=true;
+    table.appendChild(name);
+    days.forEach(day=>{
+      const d=dateFromIso(day),entry=entryMap.get(emp.id+'|'+day),holiday=holidayMap.get(day),weekend=[0,6].includes(d.getDay());
+      const cell=document.createElement('button');cell.type='button';cell.className='personnel-entry-cell'+(weekend?' weekend':'')+(holiday?' holiday':'')+(entry?' has-entry category-'+entry.category:'');
+      if(entry){cell.innerHTML='<span>'+esc(entry.code)+'</span>'+(Number(entry.portion)===0.5?'<small>½</small>':'');cell.title=entry.label+(entry.note?' · '+entry.note:'')}
+      else if(holiday){cell.innerHTML='<i>•</i>';cell.title=holiday.name}
+      if(canPersonnelEdit())cell.onclick=()=>openPersonnelEntry(emp.id,day,entry||null);else cell.disabled=true;
+      table.appendChild(cell);
+    });
+  });
+  wrap.appendChild(table);
+}
+function togglePersonnelCustomCode(){$('personnelCustomCodeWrap').classList.toggle('hidden',$('personnelEntryType').value!=='CUSTOM')}
+function openPersonnelEntry(employeeId=null,day=null,entry=null){
+  if(!canPersonnelEdit())return;
+  const employees=personnelPlan?.employees||[];
+  $('personnelEmployee').innerHTML='';employees.forEach(x=>$('personnelEmployee').add(new Option(x.name,x.id)));
+  $('personnelEntryId').value=entry?.id||'';
+  $('personnelEmployee').value=String(employeeId||employees[0]?.id||'');
+  $('personnelEntryDate').value=day||$('personnelDate').value||todayISO();
+  $('personnelEntryEndDate').value='';
+  $('personnelEntryEndDate').disabled=!!entry;
+  const code=entry?.category==='custom'?'CUSTOM':(entry?.code||'U');
+  $('personnelEntryType').value=[...$('personnelEntryType').options].some(o=>o.value===code)?code:'CUSTOM';
+  $('personnelEntryPortion').value=String(entry?.portion||1);
+  $('personnelCustomCode').value=entry?.category==='custom'?entry.code:'';
+  $('personnelEntryNote').value=entry?.note||'';
+  $('personnelEntryDeleteBtn').classList.toggle('hidden',!entry);
+  $('personnelEntryMeta').textContent=entry?(entry.source==='excel'?'Aus Excel importiert · Änderungen werden manuell geschützt':'Manueller Eintrag'):'Von–Bis ist möglich; ohne Bis wird nur ein Tag eingetragen.';
+  togglePersonnelCustomCode();$('personnelEntryDialog').showModal();
+}
+async function savePersonnelEntry(e){
+  e.preventDefault();if(!canPersonnelEdit())return;
+  const id=$('personnelEntryId').value;
+  const payload={
+    employee_id:Number($('personnelEmployee').value),date:$('personnelEntryDate').value,
+    end_date:id?'':$('personnelEntryEndDate').value,code:$('personnelEntryType').value,
+    custom_code:$('personnelCustomCode').value,portion:Number($('personnelEntryPortion').value),
+    note:$('personnelEntryNote').value
+  };
+  try{await api('/api/personnel/entries'+(id?'/'+id:''),{method:id?'PUT':'POST',body:JSON.stringify(payload)});$('personnelEntryDialog').close();await loadPersonnel();toast('Personaleintrag gespeichert')}
+  catch(err){alert(err.message)}
+}
+async function deletePersonnelEntry(){
+  const id=$('personnelEntryId').value;if(!id||!canPersonnelEdit()||!confirm('Personaleintrag wirklich löschen?'))return;
+  try{await api('/api/personnel/entries/'+id,{method:'DELETE'});$('personnelEntryDialog').close();await loadPersonnel();toast('Personaleintrag gelöscht')}catch(e){alert(e.message)}
+}
+function openPersonnelImport(){
+  if(!canPersonnelManage())return;
+  personnelImportPreview=null;$('personnelImportForm').reset();$('personnelImportFileName').textContent='Keine Datei ausgewählt';$('personnelImportPreview').innerHTML='';$('personnelImportPreview').classList.add('hidden');$('personnelCommitBtn').disabled=true;$('personnelImportError').textContent='';$('personnelImportDialog').showModal()
+}
+function closePersonnelImport(){$('personnelImportDialog').close()}
+async function previewPersonnelImport(e){
+  e.preventDefault();const file=$('personnelImportFile').files[0];if(!file)return;
+  const fd=new FormData();fd.append('file',file);
+  $('personnelImportError').textContent='';$('personnelPreviewBtn').disabled=true;
+  try{const r=await api('/api/personnel/import/preview',{method:'POST',body:fd});personnelImportPreview=r.preview;renderImportPreview(r.preview);$('personnelCommitBtn').disabled=false}
+  catch(err){$('personnelImportError').textContent=err.message}
+  finally{$('personnelPreviewBtn').disabled=false}
+}
+function renderImportPreview(p){
+  const el=$('personnelImportPreview');el.classList.remove('hidden');
+  el.innerHTML='<h3>Import-Vorschau '+esc(String(p.year))+'</h3><div class="import-stats"><span><strong>'+p.employee_count+'</strong>Mitarbeiter</span><span><strong>'+p.entry_count+'</strong>Einträge</span><span><strong>'+p.manual_conflicts+'</strong>manuelle Konflikte</span></div>'+
+    (p.warnings?.length?'<ul>'+p.warnings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>Keine Warnungen.</p>');
+}
+async function commitPersonnelImport(){
+  if(!personnelImportPreview||!canPersonnelManage())return;
+  $('personnelCommitBtn').disabled=true;
+  try{const r=await api('/api/personnel/import/commit',{method:'POST',body:JSON.stringify({import_id:personnelImportPreview.id})});closePersonnelImport();toast(r.inserted+' Einträge importiert');await loadPersonnel()}
+  catch(e){$('personnelImportError').textContent=e.message;$('personnelCommitBtn').disabled=false}
+}
+async function openEmployeeManager(employeeId=null){
+  if(!canPersonnelManage())return;
+  personnelSettingsYear=personnelPlan?.year||dateFromIso($('personnelDate').value||todayISO()).getFullYear();
+  $('employeeSettingsYear').value=personnelSettingsYear;$('employeeDialog').showModal();$('employeeError').textContent='';
+  await loadEmployeeManager(employeeId);
+}
+function setEmployeeSettingsYear(value){
+  const y=Math.round(Number(value));if(!Number.isFinite(y)||y<2000||y>2100){$('employeeError').textContent='Planungsjahr muss zwischen 2000 und 2100 liegen';return}
+  personnelSettingsYear=y;$('employeeSettingsYear').value=y;loadEmployeeManager()
+}
+function shiftEmployeeSettingsYear(delta){setEmployeeSettingsYear((personnelSettingsYear||new Date().getFullYear())+delta)}
+async function loadEmployeeManager(focusId=null){
+  const year=personnelSettingsYear||new Date().getFullYear();
+  try{const r=await api('/api/personnel/employees?year='+year);personnelEmployees=r.employees;renderEmployeeManager(year,focusId)}catch(e){$('employeeError').textContent=e.message}
+}
+function renderEmployeeManager(year,focusId=null){
+  $('employeeSettingsSummary').textContent=personnelEmployees.filter(x=>x.active).length+' aktiv · '+personnelEmployees.length+' gesamt · '+year;
+  const list=$('employeeList');list.innerHTML='';
+  if(!personnelEmployees.length){list.innerHTML='<div class="personnel-empty">Noch keine Mitarbeiter vorhanden.</div>';return}
+  personnelEmployees.forEach(emp=>{
+    const row=document.createElement('div');row.className='employee-row'+(emp.active?'':' inactive');
+    row.innerHTML='<div class="employee-row-title"><strong>'+esc(emp.name)+'</strong><span>'+formatDays(emp.vacation_remaining)+' verfügbar</span></div>'+
+      '<div class="employee-edit-grid"><label>Name<input class="e-name" value="'+esc(emp.name)+'"></label><label>Urlaub/Jahr<input class="e-annual" type="number" step=".5" value="'+Number(emp.annual_vacation||0)+'"></label><label>Rest Vorjahr<input class="e-carry" type="number" step=".5" value="'+Number(emp.carryover_vacation||0)+'"></label><label>Sortierung<input class="e-sort" type="number" value="'+Number(emp.sort_order||0)+'"></label><label class="toggle-label"><input class="e-active" type="checkbox" '+(emp.active?'checked':'')+'> aktiv</label></div>'+
+      '<div class="row-actions"><span class="row-error"></span><button class="primary e-save" type="button">Speichern</button></div>';
+    row.querySelector('.e-save').onclick=async()=>{
+      const payload={name:row.querySelector('.e-name').value.trim(),annual_vacation:Number(row.querySelector('.e-annual').value||0),carryover_vacation:Number(row.querySelector('.e-carry').value||0),sort_order:Number(row.querySelector('.e-sort').value||0),active:row.querySelector('.e-active').checked,year};
+      try{await api('/api/personnel/employees/'+emp.id,{method:'PUT',body:JSON.stringify(payload)});toast('Personal-Einstellungen gespeichert');await loadEmployeeManager(emp.id);await loadPersonnel()}catch(e){row.querySelector('.row-error').textContent=e.message}
+    };
+    list.appendChild(row);
+    if(Number(focusId)===Number(emp.id))setTimeout(()=>row.scrollIntoView({block:'center'}),0);
+  });
+}
+async function createEmployee(e){
+  e.preventDefault();const year=personnelSettingsYear||new Date().getFullYear();
+  const payload={name:$('newEmployeeName').value.trim(),annual_vacation:Number($('newEmployeeAnnual').value||0),carryover_vacation:Number($('newEmployeeCarry').value||0),sort_order:Number($('newEmployeeSort').value||personnelEmployees.length+1),active:true,year};
+  try{const r=await api('/api/personnel/employees',{method:'POST',body:JSON.stringify(payload)});$('newEmployeeForm').reset();$('newEmployeeAnnual').value='30';$('newEmployeeCarry').value='0';toast('Mitarbeiter angelegt');await loadEmployeeManager(r.id);await loadPersonnel()}catch(e){$('employeeError').textContent=e.message}
+}
 
 init();
