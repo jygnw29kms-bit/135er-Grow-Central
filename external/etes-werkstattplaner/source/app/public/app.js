@@ -29,7 +29,15 @@ function scheduleDeviceProfile(){
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function mins(t){const p=t.split(':').map(Number);return p[0]*60+p[1]}
 function timeLabel(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
-function canEdit(){return currentUser&&['admin','editor'].includes(currentUser.role)}
+function modulePerm(module,level='view'){
+  if(!currentUser)return false;
+  if(currentUser.role==='admin')return true;
+  const p=(currentUser.permissions||{})[module]||{};
+  return !!p[level];
+}
+function canEdit(){return modulePerm('werkstattplaner','edit')}
+function canViewWorkshop(){return modulePerm('werkstattplaner','view')}
+function canViewPersonnel(){return modulePerm('personalplaner','view')}
 function isAdmin(){return currentUser&&currentUser.role==='admin'}
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function uuid(){return crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2)}
@@ -95,6 +103,17 @@ function bind(){
   $('usersCloseBtn').onclick=()=>$('usersDialog').close();
   $('refreshUsersBtn').onclick=loadUsers;
   $('newUserForm').onsubmit=createUser;
+  wirePermDependencies($('newUserForm'));
+  $('newUserRole').onchange=()=>{
+    const role=$('newUserRole').value;
+    const ids=['newWView','newWEdit','newWManage','newPView','newPEdit','newPManage'];
+    ids.forEach(id=>{$(id).disabled=role==='admin'});
+    if(role==='admin')ids.forEach(id=>$(id).checked=true);
+    if(role==='editor'){
+      $('newWView').checked=$('newWEdit').checked=true;$('newWManage').checked=false;
+      $('newPView').checked=$('newPEdit').checked=true;$('newPManage').checked=false;
+    }
+  };
   window.addEventListener('online',()=>setOnline(true));
   window.addEventListener('offline',()=>setOnline(false));
   window.addEventListener('resize',scheduleDeviceProfile,{passive:true});
@@ -105,7 +124,14 @@ async function enterApp(){
   config=await api('/api/config');
   fillSelect($('resource'),config.resources);fillSelect($('mechanic'),config.mechanics);fillSelect($('status'),config.statuses);fillSelect($('parts'),config.parts);fillSelect($('loaner'),config.loaner);
   $('legend').innerHTML=config.statuses.map(s=>'<span data-status="'+esc(s)+'">'+esc(s)+'</span>').join('');
-  updateRole();showApp();await loadAppointments();connectEvents();setOnline(navigator.onLine);
+  updateRole();showApp();
+  if(canViewWorkshop()){
+    await loadAppointments();connectEvents();
+  }else{
+    $('planner').innerHTML='<div class="no-access"><strong>Kein Zugriff auf den Werkstattplaner</strong><span>Dein Benutzerkonto ist angemeldet, besitzt aber keine Berechtigung für dieses Modul.</span></div>';
+    $('todayCount').textContent='0 Termine';
+  }
+  setOnline(navigator.onLine);
 }
 function fillSelect(el,arr){el.innerHTML='';arr.forEach(x=>el.add(new Option(x,x)))}
 function updateRole(){
@@ -113,6 +139,8 @@ function updateRole(){
   $('roleBadge').textContent=currentUser.role==='admin'?'Administrator':currentUser.role==='editor'?'Bearbeitung':'Nur Lesen';
   $('newBtn').disabled=!canEdit();
   $('usersBtn').classList.toggle('hidden',!isAdmin());
+  document.body.dataset.workshopAccess=canViewWorkshop()?'1':'0';
+  document.body.dataset.personnelAccess=canViewPersonnel()?'1':'0';
 }
 function setOnline(ok){$('syncDot').classList.toggle('offline',!ok);$('syncDot').title=ok?'Server verbunden':'Offline'}
 function connectEvents(){if(events)events.close();events=new EventSource('/api/events');events.onopen=()=>setOnline(true);events.onerror=()=>setOnline(false);events.addEventListener('appointments-changed',()=>loadAppointments())}
@@ -212,20 +240,105 @@ async function persist(d,force){const exists=appointments.some(a=>a.id===d.id);a
 
 async function openUsers(){if(!isAdmin())return;$('usersDialog').showModal();await loadUsers()}
 async function loadUsers(){try{const d=await api('/api/users');const list=$('usersList');list.innerHTML='';d.users.forEach(u=>list.appendChild(userRow(u)))}catch(e){toast(e.message)}}
+function permLevelMarkup(prefix,moduleLabel,perm,locked){
+  return '<div class="permission-editor user-permissions" data-module="'+prefix+'"><strong>'+moduleLabel+'</strong>'+
+    '<label><input class="perm-view" type="checkbox" '+(perm.view?'checked ':'')+(locked?'disabled ':'')+'> Anzeigen</label>'+
+    '<label><input class="perm-edit" type="checkbox" '+(perm.edit?'checked ':'')+(locked?'disabled ':'')+'> Bearbeiten</label>'+
+    '<label><input class="perm-manage" type="checkbox" '+(perm.manage?'checked ':'')+(locked?'disabled ':'')+'> Verwalten</label></div>';
+}
+function readPerm(row,module){
+  const box=row.querySelector('.user-permissions[data-module="'+module+'"]');
+  const view=box.querySelector('.perm-view').checked;
+  const edit=box.querySelector('.perm-edit').checked;
+  const manage=box.querySelector('.perm-manage').checked;
+  return {view:view||edit||manage,edit:edit||manage,manage};
+}
+function wirePermDependencies(root){
+  root.querySelectorAll('.permission-editor').forEach(box=>{
+    const v=box.querySelector('input[id$="View"],.perm-view');
+    const e=box.querySelector('input[id$="Edit"],.perm-edit');
+    const m=box.querySelector('input[id$="Manage"],.perm-manage');
+    if(!v||!e||!m)return;
+    const sync=()=>{
+      if(m.checked){e.checked=true;v.checked=true}
+      if(e.checked)v.checked=true;
+      if(!v.checked){e.checked=false;m.checked=false}
+      if(!e.checked)m.checked=false;
+    };
+    v.addEventListener('change',sync);e.addEventListener('change',sync);m.addEventListener('change',sync);
+  });
+}
 function userRow(u){
   const row=document.createElement('div');row.className='user-row'+(u.active?'':' inactive');
-  row.innerHTML='<div class="user-row-head"><div><strong>'+esc(u.name)+'</strong><span class="user-state">'+(u.active?'aktiv':'deaktiviert')+'</span></div><span class="role-chip">'+roleLabel(u.role)+'</span></div><div class="user-edit-grid"><label>Name<input class="u-name" value="'+esc(u.name)+'"></label><label>Rolle<select class="u-role"><option value="viewer">Nur Lesen</option><option value="editor">Bearbeitung</option><option value="admin">Administrator</option></select></label><label>Neues Passwort<input class="u-password" type="password" minlength="10" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="toggle-label"><input class="u-active" type="checkbox"> Konto aktiv</label></div><div class="row-actions"><span class="row-error"></span><button type="button" class="save-user primary">Speichern</button></div>';
-  row.querySelector('.u-role').value=u.role;row.querySelector('.u-active').checked=!!u.active;
+  const locked=u.role==='admin';
+  const perms=u.permissions||{werkstattplaner:{view:false,edit:false,manage:false},personalplaner:{view:false,edit:false,manage:false}};
+  row.innerHTML=
+    '<div class="user-row-head"><div><strong>'+esc(u.name)+'</strong><span class="user-state">'+(u.active?'aktiv':'deaktiviert')+'</span></div><span class="role-chip">'+roleLabel(u.role)+'</span></div>'+
+    '<div class="user-account-grid">'+
+      '<label>Benutzername<input class="u-name" value="'+esc(u.name)+'"></label>'+
+      '<label>Kontotyp<select class="u-role"><option value="viewer">Mitarbeiter · individuell</option><option value="editor">Bearbeiter · Vorlage</option><option value="admin">Systemadministrator</option></select></label>'+
+      '<label class="toggle-label"><input class="u-active" type="checkbox"> Konto aktiv</label>'+
+    '</div>'+
+    '<div class="permission-matrix">'+
+      permLevelMarkup('werkstattplaner','Werkstattplaner',perms.werkstattplaner||{},locked)+
+      permLevelMarkup('personalplaner','Personalplaner',perms.personalplaner||{},locked)+
+    '</div>'+
+    '<div class="password-reset-grid">'+
+      '<label>Neues Passwort<input class="u-password" type="password" minlength="10" placeholder="leer = unverändert" autocomplete="new-password"></label>'+
+      '<label>Passwort bestätigen<input class="u-password2" type="password" minlength="10" placeholder="nur bei Änderung" autocomplete="new-password"></label>'+
+    '</div>'+
+    '<div class="row-actions"><span class="row-error"></span><button type="button" class="save-user primary">Konto speichern</button></div>';
+  row.querySelector('.u-role').value=u.role;
+  row.querySelector('.u-active').checked=!!u.active;
+  wirePermDependencies(row);
+  row.querySelector('.u-role').addEventListener('change',()=>{
+    const role=row.querySelector('.u-role').value;
+    const admin=role==='admin';
+    row.querySelectorAll('.user-permissions input').forEach(el=>{el.disabled=admin;if(admin)el.checked=true});
+  });
   row.querySelector('.save-user').onclick=async()=>{
-    const payload={name:row.querySelector('.u-name').value.trim(),role:row.querySelector('.u-role').value,active:row.querySelector('.u-active').checked,password:row.querySelector('.u-password').value};
+    const role=row.querySelector('.u-role').value;
+    const password=row.querySelector('.u-password').value;
+    const password2=row.querySelector('.u-password2').value;
+    const permissions=role==='admin'
+      ? {werkstattplaner:{view:true,edit:true,manage:true},personalplaner:{view:true,edit:true,manage:true}}
+      : {werkstattplaner:readPerm(row,'werkstattplaner'),personalplaner:readPerm(row,'personalplaner')};
+    const payload={
+      name:row.querySelector('.u-name').value.trim(),role,
+      active:row.querySelector('.u-active').checked,
+      password,password_confirm:password2,permissions
+    };
     const err=row.querySelector('.row-error');err.textContent='';
-    try{await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(payload)});toast('Benutzer gespeichert');await loadUsers();if(u.id===currentUser.id){const me=await api('/api/me');currentUser=me.user;updateRole()}}catch(e){err.textContent=e.message}
+    if(password&&password!==password2){err.textContent='Passwörter stimmen nicht überein';return}
+    try{
+      await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(payload)});
+      toast('Benutzerkonto gespeichert');await loadUsers();
+      if(u.id===currentUser.id){const me=await api('/api/me');currentUser=me.user;updateRole()}
+    }catch(e){err.textContent=e.message}
   };
   return row;
 }
-function roleLabel(role){return role==='admin'?'Administrator':role==='editor'?'Bearbeitung':'Nur Lesen'}
+function roleLabel(role){return role==='admin'?'Systemadministrator':role==='editor'?'Bearbeiter':'Mitarbeiter'}
+function newUserPermissions(){
+  const role=$('newUserRole').value;
+  if(role==='admin')return {werkstattplaner:{view:true,edit:true,manage:true},personalplaner:{view:true,edit:true,manage:true}};
+  return {
+    werkstattplaner:{view:$('newWView').checked,edit:$('newWEdit').checked,manage:$('newWManage').checked},
+    personalplaner:{view:$('newPView').checked,edit:$('newPEdit').checked,manage:$('newPManage').checked}
+  };
+}
 async function createUser(e){
   e.preventDefault();$('newUserError').textContent='';
-  try{await api('/api/users',{method:'POST',body:JSON.stringify({name:$('newUserName').value.trim(),role:$('newUserRole').value,password:$('newUserPassword').value})});$('newUserForm').reset();$('newUserRole').value='viewer';toast('Benutzer angelegt');await loadUsers()}catch(err){$('newUserError').textContent=err.message}
+  const p1=$('newUserPassword').value,p2=$('newUserPassword2').value;
+  if(p1!==p2){$('newUserError').textContent='Passwörter stimmen nicht überein';return}
+  try{
+    await api('/api/users',{method:'POST',body:JSON.stringify({
+      name:$('newUserName').value.trim(),role:$('newUserRole').value,
+      password:p1,password_confirm:p2,permissions:newUserPermissions()
+    })});
+    $('newUserForm').reset();$('newUserRole').value='viewer';
+    $('newWView').checked=true;$('newPView').checked=true;
+    toast('Benutzerkonto angelegt');await loadUsers()
+  }catch(err){$('newUserError').textContent=err.message}
 }
 init();
