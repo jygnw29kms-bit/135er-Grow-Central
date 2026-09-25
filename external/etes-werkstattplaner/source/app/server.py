@@ -604,7 +604,108 @@ class Handler(SimpleHTTPRequestHandler):
                 rows=con.execute('''SELECT a.*,cu.name created_by_name,uu.name updated_by_name FROM appointments a LEFT JOIN users cu ON a.created_by=cu.id LEFT JOIN users uu ON a.updated_by=uu.id WHERE a.date=? ORDER BY a.start,a.resource''',(date,)).fetchall()
                 con.close()
                 return self.json_out({'appointments':[dict(r) for r in rows]})
-            if p.path=='/api/users':
+            if p.path=='/api/personnel/plan':
+                u=self.require_perm('personalplaner','view')
+                if not u:return
+                return self.personnel_plan(parse_qs(p.query))
+            if p.path=='/api/personnel/employees':
+                u=self.require_perm('personalplaner','manage')
+                if not u:return
+                try: year=valid_personnel_year(parse_qs(p.query).get('year',[datetime.now().year])[0])
+                except ValueError as e:return self.json_out({'error':str(e)},400)
+                con=db_connect()
+                rows=con.execute('''SELECT e.id,e.name,e.active,e.sort_order,
+                    COALESCE(y.annual_vacation,0) annual_vacation,
+                    COALESCE(y.carryover_vacation,0) carryover_vacation,
+                    CASE WHEN y.employee_id IS NULL THEN 'unset' WHEN y.source_import_id IS NULL THEN 'manual' ELSE 'excel' END allowance_source
+                    FROM personnel_employees e LEFT JOIN personnel_employee_years y
+                    ON y.employee_id=e.id AND y.year=? ORDER BY e.sort_order,e.name COLLATE NOCASE''',(year,)).fetchall()
+                usage=con.execute('''SELECT employee_id,
+                    COALESCE(SUM(CASE WHEN category='vacation' THEN portion ELSE 0 END),0) vacation_used,
+                    COALESCE(SUM(CASE WHEN category='sick' THEN portion ELSE 0 END),0) sick_days
+                    FROM personnel_entries WHERE date BETWEEN ? AND ? GROUP BY employee_id''',
+                    (f'{year:04d}-01-01',f'{year:04d}-12-31')).fetchall()
+                usemap={r['employee_id']:r for r in usage}
+                employees=[]
+                for r in rows:
+                    d=dict(r);used=float((usemap.get(r['id']) or {'vacation_used':0})['vacation_used'] or 0)
+                    sick=float((usemap.get(r['id']) or {'sick_days':0})['sick_days'] or 0)
+                    total=float(r['annual_vacation'] or 0)+float(r['carryover_vacation'] or 0)
+                    d.update(vacation_total=total,vacation_used=used,vacation_remaining=total-used,sick_days=sick)
+                    employees.append(d)
+                con.close()
+                return self.json_out({'year':year,'region':'Brandenburg','region_code':'BB','employees':employees})
+            if p.path=='/api/personnel/imports':
+                u=self.require_perm('personalplaner','manage')
+                if not u:return
+                con=db_connect()
+                rows=con.execute("SELECT id,filename,sha256,year,region,employee_count,entry_count,manual_conflicts,status,created_at,committed_at FROM personnel_imports ORDER BY created_at DESC LIMIT 30").fetchall()
+                con.close()
+                return self.json_out({'imports':[dict(r) for r in rows]})
+            if p.path=='/api/personnel/import/preview':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            return self.personnel_import_preview(u)
+
+        if p.path=='/api/personnel/import/commit':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            try:b=self.read_json()
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            return self.personnel_import_commit(u,b)
+
+        if p.path=='/api/personnel/employees':
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            con=None
+            try:
+                b=self.read_json();emp=validate_personnel_employee(b)
+                con=db_connect()
+                cur=con.execute('INSERT INTO personnel_employees(name,active,sort_order) VALUES(?,?,?)',(emp['name'],emp['active'],emp['sort_order']))
+                eid=cur.lastrowid
+                con.execute('''INSERT INTO personnel_employee_years(employee_id,year,annual_vacation,carryover_vacation,source_import_id)
+                  VALUES(?,?,?,?,NULL)''',(eid,emp['year'],emp['annual_vacation'],emp['carryover_vacation']))
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-employee-create',emp['name']))
+                con.commit();con.close();notify_change('personnel-changed')
+                return self.json_out({'ok':True,'id':eid},201)
+            except sqlite3.IntegrityError:
+                if con:con.rollback();con.close()
+                return self.json_out({'error':'Mitarbeiter ist bereits vorhanden'},409)
+            except ValueError as e:
+                if con:con.rollback();con.close()
+                return self.json_out({'error':str(e)},400)
+
+        if p.path=='/api/personnel/entries':
+            u=self.require_perm('personalplaner','edit')
+            if not u:return
+            try:
+                b=self.read_json();entry=validate_personnel_entry(b)
+                start_date=parse_iso_date(entry['date'])
+                end_raw=clean(b.get('end_date'),10)
+                end_date=parse_iso_date(end_raw) if end_raw else start_date
+                if end_date<start_date or (end_date-start_date).days>366: raise ValueError('Zeitraum ist ungültig')
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            con=db_connect();ids=[]
+            try:
+                emp=con.execute('SELECT id FROM personnel_employees WHERE id=?',(entry['employee_id'],)).fetchone()
+                if not emp: raise ValueError('Mitarbeiter nicht gefunden')
+                day=start_date
+                while day<=end_date:
+                    iso=day.isoformat()
+                    existing=con.execute('SELECT id FROM personnel_entries WHERE employee_id=? AND date=?',(entry['employee_id'],iso)).fetchone()
+                    if existing: raise ValueError('Für diesen Mitarbeiter existiert am '+iso+' bereits ein Eintrag')
+                    cur=con.execute('''INSERT INTO personnel_entries(employee_id,date,code,category,portion,label,note,source,created_by,updated_by)
+                      VALUES(?,?,?,?,?,?,?,'manual',?,?)''',(entry['employee_id'],iso,entry['code'],entry['category'],entry['portion'],entry['label'],entry['note'],u['id'],u['id']))
+                    ids.append(cur.lastrowid);day+=timedelta(days=1)
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-entry-create',f"{entry['employee_id']} {start_date} bis {end_date}"))
+                con.commit()
+            except (ValueError,sqlite3.IntegrityError) as e:
+                con.rollback();con.close()
+                return self.json_out({'error':str(e)},409 if isinstance(e,sqlite3.IntegrityError) else 400)
+            con.close();notify_change('personnel-changed')
+            return self.json_out({'ok':True,'id':ids[0] if ids else None,'count':len(ids),'from':start_date.isoformat(),'to':end_date.isoformat()},201)
+
+        if p.path=='/api/users':
                 u=self.require(('admin',))
                 if not u:return
                 con=db_connect()
@@ -719,6 +820,50 @@ class Handler(SimpleHTTPRequestHandler):
             return self.json_out({'error':'Ungültiger Origin'},403)
         p=urlparse(self.path)
 
+        pem=re.fullmatch(r'/api/personnel/employees/(\d+)',p.path)
+        if pem:
+            u=self.require_perm('personalplaner','manage')
+            if not u:return
+            eid=int(pem.group(1))
+            try:b=self.read_json();emp=validate_personnel_employee(b)
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            con=db_connect()
+            if not con.execute('SELECT id FROM personnel_employees WHERE id=?',(eid,)).fetchone():
+                con.close();return self.json_out({'error':'Mitarbeiter nicht gefunden'},404)
+            try:
+                con.execute('UPDATE personnel_employees SET name=?,active=?,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(emp['name'],emp['active'],emp['sort_order'],eid))
+                con.execute('''INSERT INTO personnel_employee_years(employee_id,year,annual_vacation,carryover_vacation,source_import_id)
+                  VALUES(?,?,?,?,NULL) ON CONFLICT(employee_id,year) DO UPDATE SET annual_vacation=excluded.annual_vacation,
+                  carryover_vacation=excluded.carryover_vacation,source_import_id=NULL,updated_at=CURRENT_TIMESTAMP''',
+                  (eid,emp['year'],emp['annual_vacation'],emp['carryover_vacation']))
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-employee-update',f"{eid} {emp['name']}"))
+                con.commit()
+            except sqlite3.IntegrityError:
+                con.rollback();con.close();return self.json_out({'error':'Mitarbeiter ist bereits vorhanden'},409)
+            con.close();notify_change('personnel-changed')
+            return self.json_out({'ok':True,'year':emp['year'],'allowance_source':'manual'})
+
+        pen=re.fullmatch(r'/api/personnel/entries/(\d+)',p.path)
+        if pen:
+            u=self.require_perm('personalplaner','edit')
+            if not u:return
+            entry_id=int(pen.group(1))
+            try:b=self.read_json();entry=validate_personnel_entry(b,entry_id)
+            except ValueError as e:return self.json_out({'error':str(e)},400)
+            con=db_connect()
+            old=con.execute('SELECT * FROM personnel_entries WHERE id=?',(entry_id,)).fetchone()
+            if not old:con.close();return self.json_out({'error':'Personaleintrag nicht gefunden'},404)
+            try:
+                con.execute('''UPDATE personnel_entries SET employee_id=?,date=?,code=?,category=?,portion=?,label=?,note=?,
+                  source='manual',source_import_id=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?''',
+                  (entry['employee_id'],entry['date'],entry['code'],entry['category'],entry['portion'],entry['label'],entry['note'],u['id'],entry_id))
+                con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-entry-update',str(entry_id)))
+                con.commit()
+            except sqlite3.IntegrityError:
+                con.rollback();con.close();return self.json_out({'error':'Für diesen Mitarbeiter existiert an dem Tag bereits ein Eintrag'},409)
+            con.close();notify_change('personnel-changed')
+            return self.json_out({'ok':True})
+
         um=re.fullmatch(r'/api/users/(\d+)',p.path)
         if um:
             u=self.require(('admin',))
@@ -792,6 +937,19 @@ class Handler(SimpleHTTPRequestHandler):
     def do_DELETE(self):
         if not self.safe_origin():
             return self.json_out({'error':'Ungültiger Origin'},403)
+        path=urlparse(self.path).path
+        personnel_match=re.fullmatch(r'/api/personnel/entries/(\d+)',path)
+        if personnel_match:
+            u=self.require_perm('personalplaner','edit')
+            if not u:return
+            entry_id=int(personnel_match.group(1))
+            con=db_connect()
+            old=con.execute('SELECT * FROM personnel_entries WHERE id=?',(entry_id,)).fetchone()
+            if not old:con.close();return self.json_out({'error':'Personaleintrag nicht gefunden'},404)
+            con.execute('DELETE FROM personnel_entries WHERE id=?',(entry_id,))
+            con.execute('INSERT INTO audit_log(user_id,action,appointment_id,details) VALUES(?,?,NULL,?)',(u['id'],'personnel-entry-delete',f"{old['date']} / Mitarbeiter {old['employee_id']} / {old['code']}"))
+            con.commit();con.close();notify_change('personnel-changed')
+            return self.json_out({'ok':True})
         m=re.fullmatch(r'/api/appointments/([^/]+)',urlparse(self.path).path)
         if not m:
             return self.json_out({'error':'Nicht gefunden'},404)
@@ -827,7 +985,8 @@ class Handler(SimpleHTTPRequestHandler):
                     current=EVENT_VERSION
                 if current!=seen:
                     seen=current
-                    self.wfile.write(b'event: appointments-changed\ndata: {}\n\n')
+                    kind=EVENT_KIND if EVENT_KIND in ('appointments-changed','personnel-changed') else 'appointments-changed'
+                    self.wfile.write(('event: '+kind+'\ndata: {}\n\n').encode())
                 else:
                     self.wfile.write(b': ping\n\n')
                 self.wfile.flush()
