@@ -324,7 +324,7 @@ def parse_personnel_xlsx(data: bytes, filename: str = "Personalplaner.xlsx") -> 
             "name": name,
             "sort_order": len(employees) + 1,
             "carryover_vacation": _number(planner.get(f"D{row}")),
-            "annual_vacation": _number((planner.get(f"E"{row}")),
+            "annual_vacation": _number(planner.get(f"E{row}")),
             "entries": [],
         })
     if not employees:
