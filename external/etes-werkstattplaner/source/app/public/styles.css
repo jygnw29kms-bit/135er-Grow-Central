@@ -244,3 +244,65 @@ body.device-phone .user-account-grid,
 body.device-phone .password-reset-grid{grid-template-columns:1fr}
 body.device-phone .user-account-grid .toggle-label{grid-column:auto}
 body.device-phone .row-actions{position:sticky;bottom:0;background:#fff;padding:10px 0 4px;z-index:3}
+
+
+/* ===== User administration master-detail ===== */
+.account-admin-dialog{max-width:1240px;width:min(1240px,calc(100vw - 28px))}
+.account-admin-panel{padding:20px;min-height:680px}
+.account-admin-head{align-items:flex-start;margin-bottom:16px}
+.account-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.account-head-actions>button{min-height:40px;border:1px solid #cbd5df;border-radius:9px;padding:8px 12px;background:#fff}
+.account-head-actions>.primary{border-color:#e5b100;background:var(--yellow)}
+.account-admin-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;min-height:570px}
+.account-directory{border:1px solid #dce4ef;border-radius:14px;background:#f8fafc;padding:12px;display:flex;flex-direction:column;min-width:0}
+.account-search{display:grid;gap:6px;font-size:12px;font-weight:800;color:#4a5968}
+.account-search input{width:100%;border:1px solid #cdd7e1;border-radius:9px;background:#fff;padding:10px 11px;font-size:14px}
+.users-count{font-size:11px;color:#7b8798;padding:10px 2px 8px}
+.account-list{display:grid;gap:7px;overflow:auto;max-height:500px;padding-right:2px}
+.account-list-item{
+  width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) 12px;gap:10px;align-items:center;
+  text-align:left;border:1px solid #d9e2ed;background:#fff;border-radius:11px;padding:9px 10px;color:#17345f;
+  transition:.15s ease
+}
+.account-list-item:hover{border-color:#9fb4ce;background:#fbfdff}
+.account-list-item.active{border-color:#1f67c8;background:#eef5ff;box-shadow:0 0 0 2px #1f67c818}
+.account-list-item.inactive{opacity:.62}
+.account-avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#153d76;color:#fff;font-weight:900}
+.account-list-copy{min-width:0;display:grid;gap:2px}
+.account-list-copy strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-list-copy small{font-size:10px;color:#748399;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-status-dot{width:9px;height:9px;border-radius:50%;background:#9ba8b9}
+.account-status-dot.on{background:#24a653}.account-status-dot.off{background:#c45c5c}
+.account-editor-area{border:1px solid #dce4ef;border-radius:14px;background:#fff;padding:18px;min-width:0}
+.account-empty{height:100%;min-height:500px;display:grid;place-items:center;align-content:center;gap:8px;text-align:center;color:#7a8798}
+.account-empty strong{font-size:20px;color:#193a67}
+.account-editor-title{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #e5ebf2;padding-bottom:12px;margin-bottom:14px}
+.account-editor-title h3{margin:2px 0 0;color:#153762;font-size:22px}
+.account-editor h4.permission-heading{margin:18px 0 5px;color:#173b6d;font-size:13px}
+.field-help{margin:0 0 8px;color:#7a8798;font-size:11px}
+.account-active{padding-bottom:5px}
+.account-editor-actions{display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #e5ebf2}
+.account-editor-actions button{min-height:42px;border-radius:9px;padding:8px 13px;border:1px solid #cbd5df;background:#fff}
+.account-editor-actions .primary{background:var(--yellow);border-color:#e5b100}
+.user-state.active{background:#def7e5;color:#167638}.user-state.inactive{background:#f4e3e3;color:#9a3333}
+
+@media(max-width:900px){
+  .account-admin-dialog{width:calc(100vw - 12px);max-width:none}
+  .account-admin-layout{grid-template-columns:240px minmax(0,1fr)}
+  .account-admin-panel{padding:14px}
+  .user-account-grid{grid-template-columns:1fr}
+  .permission-matrix{grid-template-columns:1fr}
+}
+body.device-phone .account-admin-dialog{
+  width:100vw!important;max-width:none!important;height:calc(var(--app-vh,1vh)*100)!important;margin:0!important;border-radius:0!important
+}
+body.device-phone .account-admin-panel{padding:12px;min-height:100%}
+body.device-phone .account-admin-head{display:block}
+body.device-phone .account-head-actions{margin-top:10px}
+body.device-phone .account-admin-layout{display:block;min-height:0}
+body.device-phone .account-directory{margin-bottom:12px;max-height:245px}
+body.device-phone .account-list{max-height:165px}
+body.device-phone .account-editor-area{padding:12px}
+body.device-phone .account-empty{min-height:220px}
+body.device-phone .account-editor-title h3{font-size:19px}
+body.device-phone .account-editor-actions{position:sticky;bottom:0;background:#fff;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:5}
