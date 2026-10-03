@@ -22,9 +22,9 @@ jobs:
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p ~/httpdocs/touran"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/touran"
       - name: Upload Touran Live
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r touran-deploy/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:~/httpdocs/touran/"
+          sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r touran-deploy/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:/var/www/vhosts/dezender.de/httpdocs/touran/"
