@@ -1,0 +1,27 @@
+name: Deploy Touran Live
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'touran-deploy/**'
+      - '.github/workflows/deploy-touran.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Deploy Touran files
+        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './touran-deploy/*'
+          remote_path: '/var/www/vhosts/dezender.de/httpdocs/touran/'
+          delete_remote_files: false
