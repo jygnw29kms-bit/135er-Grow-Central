@@ -23,14 +23,14 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Bereich | Stand |
 |---|---|
 | Version | `alpha-0.7.5` |
-| Aktueller Pi-Candidate | **Build 199** |
-| Release-Tag | `pi-universal-alpha-0.7.5-199` |
-| Quellstand des Candidates | `34442bc41d2c79328d3d5c61eb63a744f4c433a6` |
-| Veröffentlichungsdatum | 31. August 2026 |
-| Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung offen |
+| Aktueller Pi-Candidate | **Build 351** |
+| Release-Tag | `pi-universal-alpha-0.7.5-351` |
+| Quellstand des Candidates | `16e80b7c9836125f5ee4f8cdf48b92fd67054f60` |
+| Veröffentlichung | 24. September 2026 |
+| Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
 | Entwicklungsmodus | **Open Source / öffentlich** |
 
-Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historische Build-Dokumente bleiben nachvollziehbar, definieren aber nicht den aktuellen Projektstand.
+Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historische Build-Dokumente bleiben nachvollziehbar, definieren aber nicht den aktuellen Projektstand. Der `master`-Branch kann bereits neuere Quellcodeänderungen als der letzte veröffentlichte Image-Candidate enthalten.
 
 ## Produktprinzipien
 
@@ -86,12 +86,13 @@ Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servic
 
 ## Release-Regeln
 
-1. `master` und die kanonische Dokumentation bilden immer den neuesten bekannten Projektstand ab.
+1. `master` und die kanonische Dokumentation bilden den neuesten bekannten Quellstand ab.
 2. Ein erfolgreicher CI-Lauf oder Image-Build erhält zunächst den Status `CANDIDATE`.
 3. `VALIDATED` wird erst nach dokumentiertem Test auf realer Zielhardware vergeben.
 4. Öffentliche Builds, Images, App-Pakete und Installationsskripte werden – sofern technisch und rechtlich veröffentlichbar – über die Open-Source-Projektkanäle dokumentiert und bereitgestellt.
 5. Die öffentliche Projektseite unter [grow-central.de](https://grow-central.de/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
 6. Zugangsdaten, Tokens, private Schlüssel, lokale Adressen, Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse werden niemals veröffentlicht.
+7. Projektfremde Komponenten wie Touran, Ete’s Autoservice, God’s Eye oder Dyson V11 BMS dürfen gemeinsame Infrastruktur nur nutzen, wenn Builds, Deployments, Secrets, Releases und Dokumentation sauber getrennt bleiben.
 
 ## Lizenz
 
@@ -109,4 +110,4 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 
 ## English summary
 
-135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 199 is the current `alpha-0.7.5` hardware-test candidate; automated build gates passed and physical validation is still pending.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 351 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
