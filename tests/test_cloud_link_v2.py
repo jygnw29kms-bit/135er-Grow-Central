@@ -67,6 +67,43 @@ def test_cloud_capabilities_accepts_health_contract(monkeypatch):
     assert result["closed_test_mode"] is True
 
 
+def test_cloud_capabilities_rejects_unrelated_health_endpoint(monkeypatch):
+    monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
+    client = FakeClient(FakeResponse(200, {
+        "ok": True,
+        "service": "Some Other Service",
+        "version": "1.0.0",
+    }))
+
+    result = asyncio.run(agent_v2.cloud_capabilities(client))
+
+    assert result["reachable"] is True
+    assert result["compatible"] is False
+    assert result["reason"] == "unexpected_cloud_identity"
+
+
+def test_telemetry_reports_pi_online_even_without_ble_connection(monkeypatch):
+    monkeypatch.setattr(agent_v2.legacy, "SITE", "test-site")
+    monkeypatch.setattr(agent_v2.legacy, "device_id", lambda: "raspberry-pi-test")
+    client = FakeClient(FakeResponse(200, {"connected": False, "online": False}))
+
+    telemetry, local = asyncio.run(agent_v2.telemetry_payload(client))
+
+    assert local["connected"] is False
+    assert telemetry["device_online"] is True
+
+
+def test_telemetry_reports_pi_offline_when_local_api_is_unreachable(monkeypatch):
+    monkeypatch.setattr(agent_v2.legacy, "SITE", "test-site")
+    monkeypatch.setattr(agent_v2.legacy, "device_id", lambda: "raspberry-pi-test")
+    client = FakeClient(FakeResponse(503, {}))
+
+    telemetry, local = asyncio.run(agent_v2.telemetry_payload(client))
+
+    assert local == {}
+    assert telemetry["device_online"] is False
+
+
 def test_cloud_agent_v2_can_be_started_as_systemd_script(tmp_path):
     env = os.environ.copy()
     env.update({
