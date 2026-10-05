@@ -31,15 +31,25 @@ class FakeClient:
         return self.response
 
 
-def test_local_status_uses_configured_local_api_token(monkeypatch):
+def test_local_status_uses_per_device_local_api_token(monkeypatch, tmp_path):
+    token = "a-local-device-token-with-more-than-32-characters"
+    token_file = tmp_path / "local-api-token"
+    token_file.write_text(token + "\n", encoding="utf-8")
+    monkeypatch.setattr(agent_v2, "LOCAL_TOKEN_FILE", token_file)
     monkeypatch.setattr(agent_v2.legacy, "LOCAL_API", "http://127.0.0.1:8080")
-    monkeypatch.setattr(agent_v2.legacy, "LOCAL_TOKEN", "test-token")
+    monkeypatch.setattr(agent_v2.legacy, "LOCAL_TOKEN", "test")
     client = FakeClient(FakeResponse(200, {"ok": True}))
 
     payload = asyncio.run(agent_v2.local_status(client))
 
     assert payload == {"ok": True}
-    assert client.calls[0][1]["headers"] == {"X-API-Token": "test-token"}
+    assert client.calls[0][1]["headers"] == {"X-API-Token": token}
+
+
+def test_cloud_link_rejects_public_image_placeholder_token(monkeypatch, tmp_path):
+    monkeypatch.setattr(agent_v2, "LOCAL_TOKEN_FILE", tmp_path / "missing-token")
+    monkeypatch.setattr(agent_v2.legacy, "LOCAL_TOKEN", "test")
+    assert agent_v2.local_headers() == {}
 
 
 def test_cloud_capabilities_reports_incompatible_http_response(monkeypatch):
