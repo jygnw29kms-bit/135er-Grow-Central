@@ -35,7 +35,7 @@ jobs:
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/touran /var/www/vhosts/dezender.de/private/touran-logs && chmod 700 /var/www/vhosts/dezender.de/private/touran-logs"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/touran /var/www/vhosts/dezender.de/private/touran-logs && chmod 0777 /var/www/vhosts/dezender.de/private/touran-logs"
       - name: Upload Touran Live
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
