@@ -16,6 +16,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Prepare latest Touran build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf touran-publish
+          cp -a touran-deploy touran-publish
+          latest_file="$(find touran-publish -maxdepth 1 -type f -name 'TouranLive-[0-9]*.[0-9]*.[0-9]*-*.apk' -printf '%f\n' | sort -V | tail -n1)"
+          test -n "$latest_file"
+          latest_version="$(printf '%s' "$latest_file" | sed -E 's/^TouranLive-([0-9]+\.[0-9]+\.[0-9]+)-.*$/\1/')"
+          cp "touran-publish/$latest_file" touran-publish/TouranLive-debug.apk
+          sed -i "s/__LATEST_VERSION__/$latest_version/g" touran-publish/index.html
+          printf '%s\n' "$latest_version" > touran-publish/latest-version.txt
+          echo "Publishing $latest_file as latest v$latest_version"
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
       - name: Create remote folder
@@ -27,4 +40,19 @@ jobs:
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r touran-deploy/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:/var/www/vhosts/dezender.de/httpdocs/touran/"
+          sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r touran-publish/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:/var/www/vhosts/dezender.de/httpdocs/touran/"
+      - name: Verify public latest version
+        run: |
+          set -euo pipefail
+          expected="$(cat touran-publish/latest-version.txt)"
+          for i in {1..12}; do
+            got="$(curl -fsSL https://www.dezender.de/touran/latest-version.txt || true)"
+            if [ "$got" = "$expected" ]; then
+              curl -fsI https://www.dezender.de/touran/TouranLive-debug.apk >/dev/null
+              echo "Public Touran page is current: v$expected"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Expected v$expected but public page reports '$got'" >&2
+          exit 1
