@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 CLOUD_STATE = legacy.CONTACT_ACK.with_name("cloud-link-status.json")
 MIN_RETRY = 30
 MAX_RETRY = 600
+EXPECTED_CLOUD_SERVICE = "135er-Grow Central Cloud"
 
 
 def _persist_state(**values) -> None:
@@ -51,7 +52,8 @@ async def local_status(client: httpx.AsyncClient) -> dict:
             timeout=5,
         )
         if response.is_success:
-            return response.json()
+            payload = response.json()
+            return payload if isinstance(payload, dict) else {}
         logger.warning("Local status returned HTTP %s", response.status_code)
     except Exception as exc:
         logger.warning("Local status unavailable: %s", type(exc).__name__)
@@ -59,19 +61,28 @@ async def local_status(client: httpx.AsyncClient) -> dict:
 
 
 async def cloud_capabilities(client: httpx.AsyncClient) -> dict:
-    """Probe the cloud before entering the telemetry loop."""
+    """Probe and verify the Grow Central cloud endpoint before syncing."""
     try:
         response = await client.get(f"{legacy.CLOUD_URL}/api/health", timeout=10)
         if not response.is_success:
             return {"reachable": True, "compatible": False, "http_status": response.status_code}
         data = response.json()
-        return {
+        if not isinstance(data, dict):
+            return {"reachable": True, "compatible": False, "reason": "invalid_health_payload"}
+
+        service = data.get("service")
+        version = data.get("version")
+        compatible = bool(data.get("ok")) and service == EXPECTED_CLOUD_SERVICE and isinstance(version, str) and bool(version.strip())
+        result = {
             "reachable": True,
-            "compatible": bool(data.get("ok")),
-            "version": data.get("version"),
-            "service": data.get("service"),
+            "compatible": compatible,
+            "version": version,
+            "service": service,
             "closed_test_mode": data.get("closed_test_mode"),
         }
+        if not compatible:
+            result["reason"] = "unexpected_cloud_identity"
+        return result
     except Exception as exc:
         return {"reachable": False, "compatible": False, "error": type(exc).__name__}
 
@@ -86,7 +97,10 @@ async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
         "humidity_pct": None,
         "vpd_kpa": None,
         "fan_speed_pct": None,
-        "device_online": bool(local.get("connected", local.get("ok", False))),
+        # Reaching /api/status proves that the Grow Central appliance is online.
+        # The status field "connected" only describes the optional BLE fallback
+        # device and must not be used as the Pi/cloud presence signal.
+        "device_online": bool(local),
         "extra": {"df100m": local, "closed_test_mode": legacy.CLOSED_TEST, "runtime": "cloud-link-v2"},
     }, local
 
