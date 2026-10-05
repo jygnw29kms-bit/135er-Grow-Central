@@ -5,7 +5,8 @@ from app.camera_policy import install as _install_camera_policy
 from app.camera import router as camera_router
 from app.camera_led import install as install_camera_led
 from app.automation import router as automation_router
-from app.gui_auth import GuiAuthMiddleware, router as gui_auth_router
+from app.auth_middleware import GuiAuthMiddleware
+from app.gui_auth import router as gui_auth_router
 from app.firstboot import router as firstboot_router
 from app.gui_shell import router as gui_shell_router
 from app.mdns_alias import install as install_mdns_alias
@@ -21,7 +22,7 @@ install_camera_led()
 app.add_middleware(GuiAuthMiddleware)
 # Added after auth on purpose: Starlette makes this the outer layer, so an
 # unprovisioned device can answer captive-portal probes and setup requests
-# before normal GUI authentication exists.
+# before normal GUI/API authentication exists.
 app.add_middleware(SetupPortalMiddleware)
 # No kiosk/touch HTML rewriting is used anymore. Browser and mobile clients
 # provide their native input methods and receive responses byte-for-byte.
