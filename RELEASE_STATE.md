@@ -1,29 +1,31 @@
 # 135er-Grow Central · Canonical Release State
 
-- **Stand:** 2. September 2026
+- **Stand:** 5. Oktober 2026
 - **Repository-Version:** `alpha-0.7.5`
 - **Branch:** `master`
-- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 199**
-- **Candidate-Tag:** `pi-universal-alpha-0.7.5-199`
-- **Candidate-Commit:** `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
-- **Status:** `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung offen
-- **Entwicklungsmodus:** `CLOSED` – keine öffentliche Distribution neuer Projektartefakte
+- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 351**
+- **Candidate-Tag:** `pi-universal-alpha-0.7.5-351`
+- **Candidate-Commit:** `16e80b7c9836125f5ee4f8cdf48b92fd67054f60`
+- **Status:** `CANDIDATE` – automatisierte Build-/Release-Gates bestanden, reale Hardwarevalidierung je Hardwareklasse weiterhin erforderlich
+- **Entwicklungsmodus:** `OPEN SOURCE` – öffentliches Repository und öffentliche, veröffentlichbare Projektartefakte
 
-> Diese Datei ist die kanonische Referenz für README, aktive Projektdokumentation, Pi-Image, Mobile, Cloud/APT und interne Release-Kommunikation. Historische Build-Dateien sind Nachweise vergangener Stände und definieren nicht den aktuellen Candidate.
+> Diese Datei ist die kanonische Referenz für README, aktive Projektdokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien bleiben nachvollziehbar, definieren aber nicht den aktuellen Candidate.
 
-## Aktueller Candidate: Build 199
+## Aktueller Candidate: Build 351
 
 | Merkmal | Wert |
 |---|---|
-| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-199.img.xz` |
-| Größe | 1.159.817.996 Byte |
-| SHA-256 | `cf1cdc65ada868573eddf0da6774203843f9f9e61c3a2a4ae3b68e8fc6b09d1b` |
+| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-351.img.xz` |
+| Größe | 1.158.228.444 Byte |
+| SHA-256 | `7078c0aab4766ed9cfb7b69e4e00957099df2ef33f8a8dab0a6c4e88e0f18f6a` |
 | Basis | Raspberry Pi OS Lite 64-bit |
 | Architektur | dauerhaft headless, Local First |
-| Veröffentlichung | 31. August 2026 |
-| Hardwarestatus | noch nicht `VALIDATED` |
+| Veröffentlichung | 24. September 2026 |
+| Hardwarestatus | `CANDIDATE`; reale Validierung je Hardwareklasse offen |
 
-Build 199 enthält den aktuellen headless Runtime-Stand, die zentrale Hardwareklassifikation, die überarbeitete Desktop-/Mobile-Oberfläche und die gehärtete Ersteinrichtung ohne bekannte Factory-Passwörter. SSH bleibt standardmäßig deaktiviert und wird nur ausdrücklich eingerichtet.
+Build 351 ist der neueste veröffentlichte Universal-Image-Candidate. Er verwendet die zentrale Hardwareerkennung, die gehärtete Ersteinrichtung ohne bekannte Factory-Passwörter, die lokale Web-/Mobile-Oberfläche und den optionalen Cloud-Link. SSH bleibt standardmäßig deaktiviert und wird nur ausdrücklich eingerichtet.
+
+Der `master`-Branch kann nach Build 351 bereits neuere Quellcodeänderungen enthalten. Ein neuer Quellstand wird deshalb erst dann als neuer Image-Candidate bezeichnet, wenn der vollständige Image-Workflow erfolgreich durchlaufen und ein entsprechender Release-Tag veröffentlicht wurde.
 
 ## Verbindliche Hardwarestrategie
 
@@ -59,14 +61,14 @@ Ein Build wird erst nach erfolgreichem Durchlauf der automatisierten Prüfungen 
 6. Optionale Cloud-Verbindung ohne Abhängigkeit der lokalen Kernfunktionen.
 7. Ressourcen- und Stabilitätstests getrennt nach Hardwareklasse.
 
-## Distribution und Vertraulichkeit
+## Distribution und Open Source
 
-- Repository, neue Releases, Images, App-Pakete und Installationsskripte werden bis auf Weiteres geschlossen geführt.
-- Die öffentliche Produktseite unter `https://grow-central.de/` enthält keine internen Downloads, Buildnummern, Commit-IDs, Protokollnamen oder Betriebsendpunkte.
-- Bereits früher veröffentlichte Inhalte gelten als potenziell eingesehen oder kopiert und dürfen nicht als vertraulich vorausgesetzt werden.
-- Für bereits unter MIT veröffentlichte Fassungen bleibt die vorhandene Lizenz maßgeblich; eine Neulizenzierung künftiger Fassungen wird separat geklärt.
-- Zugangsdaten, Tokens, Schlüssel und Kundendaten dürfen niemals in Commits oder Release-Artefakten enthalten sein.
+- Grow Central wird vollständig als Open-Source-Projekt entwickelt; das öffentliche Repository ist die zentrale Quellreferenz.
+- Veröffentlichbare Images, App-Pakete, Installationsskripte und technische Dokumentation dürfen über die Projektkanäle bereitgestellt werden.
+- Die öffentliche Produktseite unter `https://grow-central.de/` dient als Einstiegspunkt und kann auf Repository, Dokumentation und Releases verweisen.
+- Zugangsdaten, Tokens, Schlüssel, private Zertifikate, lokale Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse dürfen niemals in Commits oder Release-Artefakten enthalten sein.
+- Für Drittanbieter-Komponenten gelten zusätzlich deren jeweilige Lizenz- und Markenbedingungen.
 
 ## Projekttrennung
 
-Ete’s Autoservice ist kein Bestandteil von 135er-Grow Central. Gemeinsame Infrastruktur oder ein gemeinsamer Deployment-Kanal begründen keine funktionale oder kommerzielle Verbindung.
+Ete’s Autoservice, Touran, God’s Eye und Dyson V11 BMS sind keine funktionalen Bestandteile von Grow Central. Falls sie vorübergehend dieselbe Repository- oder CI-Infrastruktur nutzen, müssen Builds, Deployments, Secrets, Releases und Dokumentation technisch getrennt bleiben.
