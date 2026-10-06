@@ -11,7 +11,8 @@ $install = $_SERVER['HTTP_X_TOURAN_INSTALL'] ?? 'anon';
 $install = preg_replace('/[^A-Za-z0-9-]/', '', $install);
 if ($install === '' || strlen($install) > 64) $install = 'anon';
 $type = $_SERVER['HTTP_X_TOURAN_REPORT'] ?? 'log';
-$type = $type === 'capability' ? 'capability' : 'log';
+$allowedTypes = ['log','capability','radio-system','selfcheck'];
+$type = in_array($type, $allowedTypes, true) ? $type : 'log';
 $root = dirname(__DIR__, 3) . '/private/touran-logs';
 if (!is_dir($root) && !mkdir($root, 0700, true)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'storage unavailable']); exit; }
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
