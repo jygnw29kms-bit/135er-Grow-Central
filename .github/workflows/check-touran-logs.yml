@@ -1,0 +1,19 @@
+﻿name: Check Touran Logs
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y sshpass >/dev/null
+      - name: Inspect Touran uploads
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          HOST: ${{ secrets.SFTP_HOST }}
+          PORT: ${{ secrets.SFTP_PORT }}
+          USER: ${{ secrets.SSH_USERNAME }}
+        run: |
+          set -euo pipefail
+          echo '=== private touran logs ==='
+          sshpass -e ssh -o StrictHostKeyChecking=no -p "${PORT:-22}" "$USER@$HOST" 'DIR=/var/www/vhosts/dezender.de/private/touran-logs; if [ -d "$DIR" ]; then find "$DIR" -maxdepth 1 -type f ! -name ".rate-*" -printf "%TY-%Tm-%Td %TH:%TM:%TS %s %f\n" | sort -r | head -30; echo TOTAL=$(find "$DIR" -maxdepth 1 -type f ! -name ".rate-*" | wc -l); else echo MISSING_DIR; fi'
