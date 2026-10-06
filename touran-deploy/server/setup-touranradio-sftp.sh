@@ -21,7 +21,11 @@ chown root:root "$CHROOT" "$CHROOT/upload"
 chmod 0755 "$CHROOT" "$CHROOT/upload"
 chown "$USER_NAME:$GROUP_NAME" "$INBOX"
 chmod 0730 "$INBOX"
-chown root:www-data "$TARGET" || true
+# Plesk PHP-FPM normally runs as the subscription system user, not necessarily www-data.
+# Match the private log store to the actual webspace owner so PHP can write uploads.
+WEB_OWNER="$(stat -c '%U' /var/www/vhosts/dezender.de/httpdocs)"
+WEB_GROUP="$(stat -c '%G' /var/www/vhosts/dezender.de/httpdocs)"
+chown "$WEB_OWNER:$WEB_GROUP" "$TARGET"
 chmod 0770 "$TARGET"
 
 KEY_DIR="/etc/ssh/authorized_keys"
