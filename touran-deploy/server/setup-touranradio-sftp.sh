@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -euo pipefail
 
 USER_NAME="touranradio"
@@ -24,11 +24,11 @@ chmod 0730 "$INBOX"
 chown root:www-data "$TARGET" || true
 chmod 0770 "$TARGET"
 
-SSH_DIR="$CHROOT/.ssh"
-mkdir -p "$SSH_DIR"
-chown root:root "$SSH_DIR"
-chmod 0755 "$SSH_DIR"
-AUTH_KEYS="$SSH_DIR/authorized_keys"
+KEY_DIR="/etc/ssh/authorized_keys"
+mkdir -p "$KEY_DIR"
+chown root:root "$KEY_DIR"
+chmod 0755 "$KEY_DIR"
+AUTH_KEYS="$KEY_DIR/$USER_NAME"
 touch "$AUTH_KEYS"
 chown root:root "$AUTH_KEYS"
 chmod 0644 "$AUTH_KEYS"
@@ -41,6 +41,7 @@ Match User touranradio
     PasswordAuthentication no
     KbdInteractiveAuthentication no
     PubkeyAuthentication yes
+    AuthorizedKeysFile /etc/ssh/authorized_keys/%u
     PermitTTY no
     X11Forwarding no
     AllowTcpForwarding no

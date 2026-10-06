@@ -1,4 +1,4 @@
-﻿# 135er Touran – SFTP Upload User
+# 135er Touran – SFTP Upload User
 
 Ziel: eigener, stark eingeschraenkter Radio-Account fuer Log-Uploads.
 
@@ -19,7 +19,7 @@ bash /path/to/setup-touranradio-sftp.sh
 ```
 
 Danach den PUBLIC KEY des Radios in
-`/srv/touranradio/.ssh/authorized_keys`
+`/etc/ssh/authorized_keys/touranradio`
 eintragen.
 
 ## Wichtig fuer die App
