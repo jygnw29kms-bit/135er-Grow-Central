@@ -36,6 +36,13 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/touran /var/www/vhosts/dezender.de/private/touran-logs && chmod 0777 /var/www/vhosts/dezender.de/private/touran-logs"
+      - name: Provision Touran radio SFTP user
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" 'bash -s' < touran-deploy/server/setup-touranradio-sftp.sh
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" 'id touranradio && getent passwd touranradio && test -d /srv/touranradio/upload/inbox && test -f /etc/ssh/sshd_config.d/90-touranradio-sftp.conf'
       - name: Upload Touran Live
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
