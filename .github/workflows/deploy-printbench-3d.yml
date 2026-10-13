@@ -1,4 +1,4 @@
-name: Deploy PRINTBENCH 3D Druck
+﻿name: Deploy PRINTBENCH 3D Druck
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
           php -l ingest.php
           php -l live-data.php
           mkdir -p ../dist
-          cp index.php ingest.php live-data.php final-master.css final-master.js api.php ../dist/
+          cp index.php ingest.php live-data.php media-ingest.php media-data.php final-master.css final-master.js api.php ../dist/
           cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
           cp -a Druckkosten-Rechner/data ../dist/data
 
@@ -57,3 +57,4 @@ jobs:
           echo 'LIVE=https://www.dezender.de/3d-druck/'
 
 # redeploy 3d-Files 2cfd98f 2026-10-13-final-master
+
