@@ -1,0 +1,59 @@
+name: Deploy verified Etes Werkstattplaner release
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: ['.github/workflows/deploy-etes-verified-release.yml']
+permissions:
+  contents: read
+concurrency:
+  group: etes-werkstattplaner-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify immutable release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d external/etes-werkstattplaner/releases/etes-werkstattplaner_1.8.1-1_all.deb.b64 > /tmp/etes-1.8.1.deb
+          printf '%s\n' '6cdebf1e4c39c18bd3b67ad2e592538dbbeae9016eeabb9c10140cb4b06c4ace  /tmp/etes-1.8.1.deb' | sha256sum -c -
+          python3 -m py_compile scripts/deploy-etes-verified-release.py
+      - name: Back up, migrate, deploy and verify using existing Grow Central SSH secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SSH_HOST" && test -n "$SSH_USERNAME" && test -n "$SSH_PASSWORD"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          export SSHPASS="$SSH_PASSWORD"
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" > ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          remote_dir="/tmp/etes-verified-${GITHUB_RUN_ID}"
+          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes -o ConnectTimeout=20 "$SSH_USERNAME@$SSH_HOST" "mkdir -m 700 '$remote_dir'"
+          trap 'sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" "rm -f '\''$remote_dir/package.deb'\'' '\''$remote_dir/deploy.py'\''; rmdir '\''$remote_dir'\''" || true' EXIT
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=yes /tmp/etes-1.8.1.deb "$SSH_USERNAME@$SSH_HOST:$remote_dir/package.deb"
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=yes scripts/deploy-etes-verified-release.py "$SSH_USERNAME@$SSH_HOST:$remote_dir/deploy.py"
+          command="python3 '$remote_dir/deploy.py' --package '$remote_dir/package.deb' --version 1.8.1 --sha256 6cdebf1e4c39c18bd3b67ad2e592538dbbeae9016eeabb9c10140cb4b06c4ace"
+          if [ "$(sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" 'id -u')" = 0 ]; then
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" "$command"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' $command"
+          fi
+      - name: Verify public production health
+        run: |
+          curl --fail --silent --show-error https://werkstattplaner.grow-central.de/health > /tmp/etes-public-health.json
+          python3 -c 'import json; d=json.load(open("/tmp/etes-public-health.json")); assert d["ok"] and d["version"]=="1.8.1" and d["timezone"]=="Europe/Berlin" and d["configured"]; print("Public production version 1.8.1 verified")'
