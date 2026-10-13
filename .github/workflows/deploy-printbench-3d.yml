@@ -1,4 +1,4 @@
-﻿name: Deploy PRINTBENCH 3D Druck
+name: Deploy PRINTBENCH 3D Druck
 
 on:
   workflow_dispatch:
@@ -52,7 +52,10 @@ jobs:
           echo "$PAGE" | grep -q 'DEZENDER'
           echo "$PAGE" | grep -q 'BAMBU LAB P2S'
           echo "$PAGE" | grep -q 'final-master.css'
-          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/final-master.js | grep -q 'LIVE_ENDPOINT'
+          curl --fail --retry 8 --retry-delay 3 -o /tmp/final-master.js https://www.dezender.de/3d-druck/final-master.js
+          grep -q 'LIVE_ENDPOINT' /tmp/final-master.js
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://www.dezender.de/3d-druck/media-data.php)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://www.dezender.de/3d-druck/media-ingest.php)" = "405"
           test "$(curl -s -o /dev/null -w '%{http_code}' https://www.dezender.de/3d-druck/ingest.php)" = "405"
           echo 'LIVE=https://www.dezender.de/3d-druck/'
 
