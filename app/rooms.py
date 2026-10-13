@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
 from app.devices.runtime import runtime
+from app.devices.gc_trust import TrustStore
 from app.smarthome.registry import DeviceRegistry
 from app.smarthome.router import device_overview
 
@@ -33,6 +34,8 @@ async def _native_gc_devices(timeout: float = 1.0) -> list[dict[str, Any]]:
         discovered = await provider.discover(timeout=max(0.1, min(timeout, 3.0)))
     except Exception:
         return []
+
+    discovered = [device for device in discovered if (TrustStore().get(device.native_id) or {}).get("status") == "TRUSTED"]
 
     async def resolve(device) -> dict[str, Any]:
         online = False
@@ -221,7 +224,7 @@ async def room_devices(room_id: str):
     state = load_state(); room_or_404(state, room_id)
     legacy = [
         {"id": d.id, "name": d.name, "adapter": d.adapter}
-        for d in DeviceRegistry.from_env().list()
+        for d in DeviceRegistry.from_env().list() if not d.id.startswith("growcentral_esp32:")
     ]
     native = await _native_gc_devices(timeout=0.8)
     merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
@@ -241,6 +244,11 @@ async def room_devices(room_id: str):
 @router.post("/{room_id}/devices", dependencies=[Depends(require_write_auth)])
 async def assign_device(room_id: str, body: DeviceAssignment):
     state = load_state(); room_or_404(state, room_id)
+    if body.device_id.startswith("growcentral_esp32:"):
+        try:
+            TrustStore().require_trusted(body.device_id.split(":", 1)[1])
+        except PermissionError as exc:
+            raise HTTPException(403, "Sensor muss zuerst manuell angenommen werden") from exc
     exists = True
     try:
         DeviceRegistry.from_env().get(body.device_id)
@@ -336,7 +344,7 @@ async def capture_room_sensors_once() -> int:
     state = load_state()
     if not state["rooms"] or not state["assignments"]: return 0
     overview = await device_overview(refresh=True)
-    combined_devices = list(overview.get("devices", []))
+    combined_devices = [row for row in overview.get("devices", []) if not str(row.get("id", "")).startswith("growcentral_esp32:")]
     combined_devices.extend(await _native_gc_devices(timeout=0.8))
     by_id = {d["id"]: d for d in combined_devices}
     count = 0

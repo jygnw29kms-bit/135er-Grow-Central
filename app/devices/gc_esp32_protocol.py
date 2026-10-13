@@ -26,7 +26,7 @@ class Esp32Announcement:
 def device_topic(root: str, device_id: str, leaf: str) -> str:
     if not _ID.fullmatch(device_id):
         raise ValueError("invalid Grow Central device id")
-    if leaf not in {"announce", "state", "set", "ack", "availability"}:
+    if leaf not in {"announce", "state", "set", "ack", "availability", "challenge", "proof"}:
         raise ValueError("invalid Grow Central MQTT leaf")
     clean_root = root.strip("/")
     if not clean_root:

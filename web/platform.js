@@ -69,7 +69,7 @@
   }
   function renderDeviceTable() {
     const legacy = state.smart?.devices || [];
-    let discovered = state.discovered || [];
+    let discovered = (state.discovered || []).filter(x => x.provider_id !== "growcentral_esp32" || x.metadata?.trust_status === "TRUSTED");
     if (state.filter === 'online') discovered = discovered;
     else if (!['all','provider'].includes(state.filter)) discovered = discovered.filter((x)=>x.device_class===state.filter);
     let legacyFiltered = legacy;
@@ -142,7 +142,7 @@
 
   async function universalDiscover() {
     const button=$('discoverBtn'); button.disabled=true; button.textContent='Suche läuft…';
-    try { const result=await api('/api/devices/discover?timeout=5'); state.discovered=result.devices||[]; renderDeviceTable(); const errors=result.errors||[]; toast(`${state.discovered.length} Gerät(e) erkannt${errors.length?` · ${errors.length} Provider mit Hinweis`:''}`,errors.length?'':'success'); }
+    try { const result=await api('/api/devices/discover?timeout=5'); state.discovered=result.devices||[]; document.dispatchEvent(new Event("gc:sensors-discovered")); renderDeviceTable(); const errors=result.errors||[]; toast(`${state.discovered.length} Gerät(e) erkannt${errors.length?` · ${errors.length} Provider mit Hinweis`:''}`,errors.length?'':'success'); }
     catch(error){toast(`Discovery fehlgeschlagen: ${error.message}`,'error');}
     finally{button.disabled=false;button.textContent='Geräte suchen';}
   }

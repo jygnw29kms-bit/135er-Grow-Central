@@ -100,7 +100,8 @@ jobs:
           apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata mosquitto mosquitto-clients
 
           cat >/etc/mosquitto/conf.d/grow-central.conf <<'EOF'
-          listener 1883 0.0.0.0
+          per_listener_settings true
+          listener 1883 127.0.0.1
           allow_anonymous true
           persistence true
           persistence_location /var/lib/mosquitto/
@@ -209,6 +210,10 @@ jobs:
           GC_SMARTHOME_ENABLED=true
           GC_CAMERA_ENABLED=true
           GC_CAMERA_DEVICE=
+          GC_HA_EXPORT_ENABLED=false
+          GC_HA_BRIDGE_TOKEN=
+          GC_HA_EXPORT_DEVICE_IDS=
+          GC_HA_EXPORT_SWITCH_IDS=
           EOF
           # GUI credentials are created only by the captive first-boot portal.
           chown -R root:growcentral /opt/135er-grow-central
@@ -365,9 +370,9 @@ jobs:
           ufw allow 8080/tcp
           ufw allow 5353/udp
           # Native Grow-Central ESP32 MQTT: private LAN only.
-          ufw allow from 10.0.0.0/8 to any port 1883 proto tcp
-          ufw allow from 172.16.0.0/12 to any port 1883 proto tcp
-          ufw allow from 192.168.0.0/16 to any port 1883 proto tcp
+          ufw allow from 10.0.0.0/8 to any port 8883 proto tcp
+          ufw allow from 172.16.0.0/12 to any port 8883 proto tcp
+          ufw allow from 192.168.0.0/16 to any port 8883 proto tcp
           WLAN="$(cat /var/lib/135er-grow-central/hardware-wlan-interface 2>/dev/null || true)"
           if [ -z "$WLAN" ]; then
             WLAN="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1; exit}')"
@@ -585,9 +590,9 @@ jobs:
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q 'ufw allow 22/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          grep -q '192.168.0.0/16 to any port 1883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           test -f /etc/mosquitto/conf.d/grow-central.conf
-          grep -q '^listener 1883 0.0.0.0$' /etc/mosquitto/conf.d/grow-central.conf
+          grep -q '^listener 1883 127.0.0.1$' /etc/mosquitto/conf.d/grow-central.conf
           /bin/bash -n /usr/local/sbin/grow-central-bluetooth-init.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
@@ -743,6 +748,7 @@ jobs:
       - name: Compress and checksum image
         run: |
           VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}"
+          printf 'Source commit: %s\nBuilt at: %s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > "${VERSIONED_NAME}-SOURCE.txt"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
@@ -773,6 +779,7 @@ jobs:
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz.sha256
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-SOURCE.txt
           compression-level: 0
           retention-days: 14
 
@@ -781,4 +788,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi-universal-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Universal Raspberry Pi OS Lite 64-bit image for Raspberry Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Hardware and NetworkManager interface names are detected at runtime; Pi 3B keeps the confirmed conservative 2.4 GHz setup-AP behavior. First boot ships without factory passwords; local SSH is opt-in." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-SOURCE.txt --target "$GITHUB_SHA" --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Test image from commit ${GITHUB_SHA}. Raspberry Pi OS Lite 64-bit for Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Includes manual sensor trust/identity, scoped Home Assistant export and the installable HA component (Apple Home/Siri, Alexa and Google bridge setup documented). Home Assistant runs separately; export is opt-in. Network sensors require individually provisioned MQTT TLS credentials and firmware 0.3.0. BLE credential provisioning is not implemented. Real hardware validation remains pending. First boot ships without factory passwords; local SSH is opt-in." --prerelease

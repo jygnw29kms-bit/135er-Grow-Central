@@ -4,6 +4,7 @@ import asyncio
 import os
 import subprocess
 import sys
+import pytest
 
 from local.cloud_link import agent_v2
 
@@ -131,3 +132,55 @@ def test_cloud_agent_v2_can_be_started_as_systemd_script(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert "Cloud Link disabled" in result.stdout
+
+
+@pytest.mark.parametrize("failure", ["health", "telemetry_404"])
+def test_recovery_repeats_contact_handshake(monkeypatch, failure):
+    monkeypatch.setattr(agent_v2.legacy, "CLOUD_ENABLED", True)
+    monkeypatch.setattr(agent_v2.legacy, "validate_configuration", lambda: None)
+    monkeypatch.setattr(agent_v2, "_persist_state", lambda **kw: None)
+    monkeypatch.setattr(agent_v2.time, "monotonic", lambda: 0)
+    iteration = 0
+    reasons = []
+
+    async def capabilities(client):
+        nonlocal iteration
+        iteration += 1
+        return {"compatible": not (failure == "health" and iteration == 2)}
+
+    async def telemetry(client):
+        return {}, {}
+
+    async def handshake(client, headers, local, reason):
+        reasons.append(reason)
+
+    async def mirror(client, headers, signature):
+        return None
+
+    async def sleep(delay):
+        if iteration >= 3:
+            raise asyncio.CancelledError
+
+    class Response(FakeResponse):
+        def raise_for_status(self):
+            assert self.is_success
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, *args, **kwargs):
+            return Response(404 if failure == "telemetry_404" and iteration == 2 else 200)
+
+    monkeypatch.setattr(agent_v2, "cloud_capabilities", capabilities)
+    monkeypatch.setattr(agent_v2, "telemetry_payload", telemetry)
+    monkeypatch.setattr(agent_v2.legacy, "contact_handshake", handshake)
+    monkeypatch.setattr(agent_v2.legacy, "mirror_bundle_if_changed", mirror)
+    monkeypatch.setattr(agent_v2.asyncio, "sleep", sleep)
+    monkeypatch.setattr(agent_v2.httpx, "AsyncClient", Client)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(agent_v2.main())
+    assert reasons == ["startup", "reconnect"]

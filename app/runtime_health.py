@@ -12,6 +12,8 @@ from fastapi import APIRouter
 
 from app.devices.runtime import runtime as device_runtime
 from shared.hardware_profile import current_hardware
+from app.cloud_link_state import connection_state
+from app.cloud_status import _read_env
 
 router = APIRouter(prefix="/api/runtime", tags=["runtime"])
 
@@ -55,9 +57,13 @@ async def runtime_health():
     provider_ids = list(device_runtime.ids())
     hardware = current_hardware()
 
-    cloud_enabled = os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true"
-    cloud_state = str(cloud.get("state") or ("disabled" if not cloud_enabled else "starting"))
-    cloud_optional_ok = not cloud_enabled or cloud_state in {"connected", "degraded", "disabled", "starting"}
+    cloud_env = _read_env()
+    cloud_enabled = cloud_env.get("GC_CLOUD_ENABLED", os.getenv("GC_CLOUD_ENABLED", "false")).lower() == "true"
+    origin = cloud_env.get("GC_CLOUD_URL", os.getenv("GC_CLOUD_URL", "")).rstrip("/")
+    cloud_status = connection_state(cloud, enabled=cloud_enabled, origin=origin)
+    cloud_state = cloud_status["state"]
+    # Cloud outages never prevent local operation.
+    cloud_optional_ok = True
 
     blockers: list[str] = []
     warnings: list[str] = []
@@ -95,7 +101,10 @@ async def runtime_health():
             "enabled": cloud_enabled,
             "state": cloud_state,
             "optional_ok": cloud_optional_ok,
-            "detail": cloud.get("detail", ""),
+            "detail": cloud_status["detail"],
+            "stale": cloud_status["stale"],
+            "age_seconds": cloud_status["age_seconds"],
+            "updated_at": cloud_status["updated_at"],
             "compatible": cloud.get("cloud_compatible"),
         },
         "device_runtime": {

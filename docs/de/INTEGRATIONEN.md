@@ -86,3 +86,9 @@ FRITZ!Box, Tapo, Shelly und spätere Matter-Ziele werden als Provider getrennt e
 - Schreibzugriffe bleiben deny-by-default und benötigen Gerätefreigabe, writable-Flag, Authentifizierung und Audit.
 - Cloud/WAN darf lokale Freigaben nicht umgehen.
 - **ESP32 ist kein Bestandteil der Zielarchitektur.**
+
+## Export zu Home Assistant und Sprachassistenten
+
+Die installierbare Grow-Central-HA-Komponente exportiert ausgewählte Sensoren und
+freigegebene Schalter. Einrichtung für Apple Home/Siri, Alexa, Google Assistant
+und Android/iOS: [Home Assistant](HOME_ASSISTANT.md).

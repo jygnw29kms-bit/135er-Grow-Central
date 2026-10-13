@@ -1,0 +1,10 @@
+{
+  "domain": "grow_central",
+  "name": "Grow Central",
+  "version": "0.1.0",
+  "config_flow": true,
+  "documentation": "https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/HOME_ASSISTANT.md",
+  "codeowners": [],
+  "iot_class": "local_polling",
+  "requirements": []
+}

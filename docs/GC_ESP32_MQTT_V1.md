@@ -90,12 +90,34 @@ Network onboarding is intentionally local. Initial Wi-Fi and broker settings can
 
 ```text
 NET WIFI <ssid>|<password>
-NET MQTT <pi-lan-ip>|1883||
+NET CA <base64-DER-of-broker-CA>
+NET MQTT <broker-host>|8883|<device-id>|<individual-password>
 NET INFO
 ```
 
-The Raspberry Pi image includes a local Mosquitto listener on TCP/1883. The first-boot firewall permits that listener only from RFC1918/private-LAN source ranges. Internet/cloud MQTT is not required for native nodes.
+The Pi image keeps its development listener on 127.0.0.1:1883 only. Native nodes use an explicitly configured TLS listener on TCP/8883 with individual credentials and topic ACLs. The first-boot firewall permits 8883 only from RFC1918/private-LAN ranges. The TLS listener is not created before its real certificates and password file exist. Internet/cloud MQTT is not required for native nodes.
 
 After MQTT connection the node publishes retained `online`, retained `announce`, and retained `state`. An unexpected disconnect therefore changes retained availability to `offline` through MQTT Last Will. Grow Central's `growcentral_esp32` provider discovers the retained announcement and exposes the node through the standard device platform. Native ESP32 nodes can also be assigned to Grow Central rooms; their normalized soil-moisture values are included in room sensor history and the room UI.
 
 For capacitive probes, the engineering air/water endpoints are not a universal agronomic calibration. Grow Central should keep per-substrate calibration/profile data because dielectric response varies with substrate composition, salinity/EC and temperature.
+
+
+## Mandatory manual trust layer (firmware 0.3.0)
+
+The examples above describe the application payloads, not authorization. Native
+announcements and measurements use the `gc-signed-v1` envelope documented in
+[Sensor pairing](en/SENSOR_PAIRING.md). Legacy unsigned announcements may appear
+as DISCOVERED for migration, but they cannot be accepted or contribute room data.
+
+Four persistent states apply: DISCOVERED, TRUSTED, REJECTED and REVOKED. The user
+must select a name and room and compare the physical key fingerprint. Fresh,
+non-retained nonce proofs authenticate acceptance, live state reads and health.
+Rejected/revoked devices do not reappear as new candidates. Availability text
+alone is advisory and is never used as identity or live-state evidence.
+
+The native pairing policy grants read-only access. It does not authorize actuator
+commands, even if an announcement claims an actuator capability. Operator
+configuration of separate validated actuator policies is outside this step.
+
+Wi-Fi/MQTT credential transfer over BLE is unavailable and disabled. Local USB
+configuration remains the supported path; do not send credentials through MQTT.

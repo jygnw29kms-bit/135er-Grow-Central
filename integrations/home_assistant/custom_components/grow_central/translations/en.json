@@ -1,0 +1,30 @@
+{
+  "title": "Grow Central",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grow Central",
+        "description": "Connect the local Grow Central bridge.",
+        "data": {
+          "url": "Grow Central URL",
+          "token": "Bridge token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Grow Central",
+        "data": {
+          "token": "Bridge token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid bridge token",
+      "cannot_connect": "Cannot connect",
+      "invalid_response": "Invalid URL or response"
+    },
+    "abort": {
+      "already_configured": "Already configured",
+      "reauth_successful": "Authentication updated"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# Merge into configuration.yaml, then replace the entity IDs with your real IDs.
+# Restrict the bridge to deliberate selections; do not expose all entities.
+homekit:
+  - name: Grow Central
+    port: 21065
+    filter:
+      include_entities:
+        - sensor.room_temperature_c
+        - switch.lamp_switch
