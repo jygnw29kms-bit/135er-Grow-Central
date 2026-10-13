@@ -1,0 +1,29 @@
+name: Diagnose PRINTBENCH firewall
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Inspect server blocks for collector IP
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" '
+            echo "=== ID ==="; id
+            echo "=== FAIL2BAN ==="; (fail2ban-client status 2>&1 || sudo -n fail2ban-client status 2>&1 || true)
+            echo "=== JAILS ==="
+            for j in sshd recidive plesk-apache plesk-modsecurity nginx-http-auth; do
+              echo "--- $j ---"; (fail2ban-client status "$j" 2>&1 || sudo -n fail2ban-client status "$j" 2>&1 || true) | grep -E "Banned IP|Status|Currently banned|Total banned" || true
+            done
+            echo "=== IPTABLES MATCH ==="; (iptables-save 2>/dev/null || sudo -n iptables-save 2>/dev/null || true) | grep -C2 "95.90.247.104" || true
+            echo "=== NFT MATCH ==="; (nft list ruleset 2>/dev/null || sudo -n nft list ruleset 2>/dev/null || true) | grep -C3 "95.90.247.104" || true
+          '
