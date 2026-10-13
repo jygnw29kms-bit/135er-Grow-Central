@@ -35,9 +35,11 @@ jobs:
       - name: Create PRINTBENCH webroot
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          PRINTBENCH_PUB: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh49PlsfFTCYiBnLGVxEMT0zBixMA8cx51yRNHFhPjr printbench-media"
         run: |
           set -euo pipefail
-          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && chmod 733 /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime/media && chmod 733 /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime/media && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "umask 077; mkdir -p ~/.ssh; touch ~/.ssh/authorized_keys; grep -qxF '$PRINTBENCH_PUB' ~/.ssh/authorized_keys || echo '$PRINTBENCH_PUB' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"
 
       - name: Deploy PRINTBENCH with Grow Central SSH secrets
         env:
