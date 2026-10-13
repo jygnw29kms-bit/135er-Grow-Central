@@ -56,4 +56,4 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' https://www.dezender.de/3d-druck/ingest.php)" = "405"
           echo 'LIVE=https://www.dezender.de/3d-druck/'
 
-# redeploy 3d-Files 1ae03ea 2026-10-13-live
+# redeploy 3d-Files 2cfd98f 2026-10-13-final-master
