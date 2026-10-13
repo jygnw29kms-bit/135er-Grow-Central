@@ -25,20 +25,27 @@ jobs:
           cp index.php index.html api.php site.css hightech.css site.js workbench.js ../dist/
           cp -a Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
 
-      - name: Deploy PRINTBENCH to dezender.de/3d-druck
-        uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
-        with:
-          username: ${{ secrets.SFTP_USERNAME }}
-          server: ${{ secrets.SFTP_HOST }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          local_path: './dist/*'
-          remote_path: '/var/www/vhosts/dezender.de/httpdocs/3d-druck/'
-          delete_remote_files: true
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Create PRINTBENCH webroot
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck"
+
+      - name: Deploy PRINTBENCH with Grow Central SSH secrets
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r dist/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:/var/www/vhosts/dezender.de/httpdocs/3d-druck/"
 
       - name: Verify live PHP and API
         run: |
           set -euo pipefail
           sleep 5
-          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/index.php | grep -q '3D PRINT'
+          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/index.php | grep -q 'PRINTBENCH'
           curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/api.php | grep -q 'PRINTBENCH'
           echo 'LIVE=https://www.dezender.de/3d-druck/'
