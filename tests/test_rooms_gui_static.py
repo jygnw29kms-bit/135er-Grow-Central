@@ -23,3 +23,9 @@ def test_rooms_feature_does_not_remove_firstboot_network_path():
     assert "ipv4.method shared" in setup_ap
     assert 'DHCP_RANGE="10.42.0.10,10.42.0.250"' in setup_ap
     assert "wifi-sec.psk" not in setup_ap
+
+
+def test_room_views_show_substrate_moisture():
+    js = (ROOT / "web" / "room_views.js").read_text(encoding="utf-8")
+    assert "soil_moisture_percent" in js
+    assert "Substrat" in js

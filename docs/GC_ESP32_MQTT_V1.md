@@ -79,3 +79,23 @@ Safety-critical actuators MUST define their local fallback behavior in firmware.
 ## Broker assumptions
 
 Grow Central uses a local MQTT broker or a configured LAN broker. TLS and credentials are supported for remote brokers, but an Internet-hosted broker is not the default architecture.
+
+## Grow-Central Soil Node reference implementation
+
+The repository reference node lives in `firmware/gc-soil-node` and currently targets the Seeed Studio XIAO ESP32-C3 with a HW-390 V2 capacitive probe.
+
+The node derives a stable lowercase device id from its ESP32 hardware identity and publishes only the normalized `soil_moisture` capability in the state body. Sensor diagnostics are carried under `meta`, including raw/filtered ADC values, median, min/max, standard deviation, quality class, calibration references, Wi-Fi RSSI, uptime and firmware version.
+
+Network onboarding is intentionally local. Initial Wi-Fi and broker settings can be written over USB serial and are persisted in ESP32 NVS:
+
+```text
+NET WIFI <ssid>|<password>
+NET MQTT <pi-lan-ip>|1883||
+NET INFO
+```
+
+The Raspberry Pi image includes a local Mosquitto listener on TCP/1883. The first-boot firewall permits that listener only from RFC1918/private-LAN source ranges. Internet/cloud MQTT is not required for native nodes.
+
+After MQTT connection the node publishes retained `online`, retained `announce`, and retained `state`. An unexpected disconnect therefore changes retained availability to `offline` through MQTT Last Will. Grow Central's `growcentral_esp32` provider discovers the retained announcement and exposes the node through the standard device platform. Native ESP32 nodes can also be assigned to Grow Central rooms; their normalized soil-moisture values are included in room sensor history and the room UI.
+
+For capacitive probes, the engineering air/water endpoints are not a universal agronomic calibration. Grow Central should keep per-substrate calibration/profile data because dielectric response varies with substrate composition, salinity/EC and temperature.

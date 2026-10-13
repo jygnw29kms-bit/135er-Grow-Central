@@ -1,7 +1,13 @@
 #include <Arduino.h>
 #include <Preferences.h>
+#include <WiFi.h>
+#include <MQTT.h>
 #include <math.h>
 
+static constexpr char FW_VERSION[] = "0.2.0";
+static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
+static constexpr char SCHEMA[] = "gc-device-v1";
+static constexpr char MQTT_ROOT[] = "growcentral/v1";
 static constexpr uint8_t SOIL_PIN = A0;          // XIAO ESP32-C3 D0 / GPIO2
 static constexpr uint16_t ADC_MAX = 4095;
 static constexpr uint16_t DEFAULT_AIR_RAW = 3767;
@@ -9,13 +15,33 @@ static constexpr uint16_t DEFAULT_WATER_RAW = 1310;
 static constexpr uint8_t SAMPLE_COUNT = 64;
 static constexpr uint16_t SAMPLE_DELAY_MS = 2;
 static constexpr uint32_t REPORT_INTERVAL_MS = 1000;
+static constexpr uint32_t MQTT_PUBLISH_INTERVAL_MS = 10000;
+static constexpr uint32_t WIFI_RETRY_MS = 10000;
+static constexpr uint32_t MQTT_RETRY_MS = 5000;
 static constexpr float EMA_ALPHA = 0.20f;
+static constexpr float PUBLISH_DELTA_PCT = 0.5f;
 
 Preferences prefs;
+WiFiClient net;
+MQTTClient mqtt(512, 1024);
+
 uint16_t airRaw = DEFAULT_AIR_RAW;
 uint16_t waterRaw = DEFAULT_WATER_RAW;
 float emaRaw = NAN;
+float lastPublishedPct = NAN;
 uint32_t lastReport = 0;
+uint32_t lastMqttPublish = 0;
+uint32_t lastWifiAttempt = 0;
+uint32_t lastMqttAttempt = 0;
+
+String wifiSsid;
+String wifiPass;
+String mqttHost;
+uint16_t mqttPort = 1883;
+String mqttUser;
+String mqttPass;
+String deviceName = "Grow-Central Soil Sensor";
+String deviceId;
 
 struct SoilReading {
   uint16_t rawMean;
@@ -42,6 +68,23 @@ static float clampf(float value, float lo, float hi) {
   return value;
 }
 
+static String jsonEscape(const String& src) {
+  String out;
+  out.reserve(src.length() + 8);
+  for (size_t i = 0; i < src.length(); ++i) {
+    const char c = src[i];
+    switch (c) {
+      case '\\': out += "\\\\"; break;
+      case '"': out += "\\\""; break;
+      case '\n': out += "\\n"; break;
+      case '\r': out += "\\r"; break;
+      case '\t': out += "\\t"; break;
+      default: if (static_cast<uint8_t>(c) >= 0x20) out += c; break;
+    }
+  }
+  return out;
+}
+
 static float rawToPercent(float raw) {
   const float span = float(airRaw) - float(waterRaw);
   if (fabsf(span) < 50.0f) return NAN;
@@ -66,14 +109,12 @@ static const char* signalQuality(float sigma, uint16_t span) {
 
 static SoilReading sampleSoil() {
   uint16_t samples[SAMPLE_COUNT];
-  uint32_t sum = 0;
   uint16_t minVal = ADC_MAX;
   uint16_t maxVal = 0;
 
   for (uint8_t i = 0; i < SAMPLE_COUNT; ++i) {
-    uint16_t v = analogRead(SOIL_PIN);
+    const uint16_t v = analogRead(SOIL_PIN);
     samples[i] = v;
-    sum += v;
     if (v < minVal) minVal = v;
     if (v > maxVal) maxVal = v;
     delay(SAMPLE_DELAY_MS);
@@ -81,8 +122,6 @@ static SoilReading sampleSoil() {
 
   qsort(samples, SAMPLE_COUNT, sizeof(uint16_t), compareU16);
   const uint16_t median = (samples[(SAMPLE_COUNT / 2) - 1] + samples[SAMPLE_COUNT / 2]) / 2;
-
-  // 12.5% trimmed mean suppresses motion spikes / ADC outliers.
   const uint8_t trim = SAMPLE_COUNT / 8;
   uint32_t trimmedSum = 0;
   uint8_t trimmedN = 0;
@@ -124,7 +163,6 @@ static SoilReading sampleSoil() {
 }
 
 static uint16_t calibrationSnapshot() {
-  // Multiple complete measurement windows -> robust field calibration.
   uint32_t sum = 0;
   constexpr uint8_t windows = 8;
   for (uint8_t i = 0; i < windows; ++i) {
@@ -147,47 +185,267 @@ static void loadCalibration() {
   airRaw = prefs.getUShort("air", DEFAULT_AIR_RAW);
   waterRaw = prefs.getUShort("water", DEFAULT_WATER_RAW);
   prefs.end();
-
   if (airRaw <= waterRaw + 100 || airRaw > ADC_MAX || waterRaw < 50) {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
   }
 }
 
+static void loadNetworkConfig() {
+  prefs.begin("gc-net", true);
+  wifiSsid = prefs.getString("ssid", "");
+  wifiPass = prefs.getString("wpass", "");
+  mqttHost = prefs.getString("mhost", "");
+  mqttPort = prefs.getUShort("mport", 1883);
+  mqttUser = prefs.getString("muser", "");
+  mqttPass = prefs.getString("mpass", "");
+  deviceName = prefs.getString("name", "Grow-Central Soil Sensor");
+  prefs.end();
+}
+
+static void saveNetworkConfig() {
+  prefs.begin("gc-net", false);
+  prefs.putString("ssid", wifiSsid);
+  prefs.putString("wpass", wifiPass);
+  prefs.putString("mhost", mqttHost);
+  prefs.putUShort("mport", mqttPort);
+  prefs.putString("muser", mqttUser);
+  prefs.putString("mpass", mqttPass);
+  prefs.putString("name", deviceName);
+  prefs.end();
+}
+
+static void clearNetworkConfig() {
+  prefs.begin("gc-net", false);
+  prefs.clear();
+  prefs.end();
+  wifiSsid = "";
+  wifiPass = "";
+  mqttHost = "";
+  mqttPort = 1883;
+  mqttUser = "";
+  mqttPass = "";
+  deviceName = "Grow-Central Soil Sensor";
+  mqtt.disconnect();
+  WiFi.disconnect(true, true);
+}
+
+static String topic(const char* leaf) {
+  return String(MQTT_ROOT) + "/devices/" + deviceId + "/" + leaf;
+}
+
+static void publishAnnouncement() {
+  if (!mqtt.connected()) return;
+  String payload = "{\"schema\":\"" + String(SCHEMA) + "\",\"protocol\":\"" + String(PROTOCOL) +
+                   "\",\"id\":\"" + jsonEscape(deviceId) + "\",\"name\":\"" + jsonEscape(deviceName) +
+                   "\",\"device_class\":\"sensor\",\"model\":\"GC-SOIL-XIAO-C3-HW390\",\"firmware\":\"" +
+                   String(FW_VERSION) + "\",\"capabilities\":[\"soil_moisture\"]}";
+  mqtt.publish(topic("announce"), payload, true, 1);
+}
+
+static void publishState(const SoilReading& r, bool force = false) {
+  if (!mqtt.connected() || !r.sensorOk || isnan(r.moisturePct)) return;
+  const uint32_t now = millis();
+  const bool due = now - lastMqttPublish >= MQTT_PUBLISH_INTERVAL_MS;
+  const bool changed = isnan(lastPublishedPct) || fabsf(r.moisturePct - lastPublishedPct) >= PUBLISH_DELTA_PCT;
+  if (!force && !due && !changed) return;
+
+  const int32_t rssi = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0;
+  String payload;
+  payload.reserve(520);
+  payload += "{\"soil_moisture\":" + String(r.moisturePct, 1);
+  payload += ",\"meta\":{";
+  payload += "\"raw\":" + String(r.rawMean);
+  payload += ",\"median\":" + String(r.rawMedian);
+  payload += ",\"filtered_raw\":" + String(r.filteredRaw, 1);
+  payload += ",\"min\":" + String(r.rawMin);
+  payload += ",\"max\":" + String(r.rawMax);
+  payload += ",\"sigma\":" + String(r.sigma, 1);
+  payload += ",\"quality\":\"" + String(r.quality) + "\"";
+  payload += ",\"moisture_state\":\"" + String(r.state) + "\"";
+  payload += ",\"sensor_ok\":true";
+  payload += ",\"air_raw\":" + String(airRaw);
+  payload += ",\"water_raw\":" + String(waterRaw);
+  payload += ",\"rssi_dbm\":" + String(rssi);
+  payload += ",\"uptime_ms\":" + String(now);
+  payload += ",\"firmware\":\"" + String(FW_VERSION) + "\"}}";
+
+  if (mqtt.publish(topic("state"), payload, true, 1)) {
+    lastPublishedPct = r.moisturePct;
+    lastMqttPublish = now;
+  }
+}
+
+static void deriveDeviceId() {
+  const uint64_t mac = ESP.getEfuseMac();
+  char suffix[7];
+  snprintf(suffix, sizeof(suffix), "%06lx", static_cast<unsigned long>(mac & 0xFFFFFFUL));
+  deviceId = String("gc-soil-") + suffix;
+  deviceId.toLowerCase();
+}
+
+static void startWifiIfConfigured() {
+  if (wifiSsid.isEmpty() || WiFi.status() == WL_CONNECTED) return;
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(false);
+  WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
+  lastWifiAttempt = millis();
+  Serial.printf("GC_NET wifi_connect ssid=%s\n", wifiSsid.c_str());
+}
+
+static void maintainWifi() {
+  if (wifiSsid.isEmpty()) return;
+  if (WiFi.status() == WL_CONNECTED) return;
+  const uint32_t now = millis();
+  if (now - lastWifiAttempt >= WIFI_RETRY_MS) startWifiIfConfigured();
+}
+
+static void configureMqttClient() {
+  if (mqttHost.isEmpty()) return;
+  mqtt.begin(mqttHost.c_str(), mqttPort, net);
+  mqtt.setKeepAlive(30);
+  mqtt.setTimeout(1500);
+  mqtt.setWill(topic("availability").c_str(), "offline", true, 1);
+}
+
+static void connectMqttIfReady() {
+  if (mqttHost.isEmpty() || WiFi.status() != WL_CONNECTED || mqtt.connected()) return;
+  const uint32_t now = millis();
+  if (now - lastMqttAttempt < MQTT_RETRY_MS) return;
+  lastMqttAttempt = now;
+
+  configureMqttClient();
+  const bool ok = mqttUser.isEmpty()
+    ? mqtt.connect(deviceId.c_str())
+    : mqtt.connect(deviceId.c_str(), mqttUser.c_str(), mqttPass.c_str());
+  if (!ok) {
+    Serial.printf("GC_NET mqtt_failed host=%s port=%u err=%d rc=%d\n",
+      mqttHost.c_str(), mqttPort, int(mqtt.lastError()), int(mqtt.returnCode()));
+    return;
+  }
+
+  mqtt.publish(topic("availability"), "online", true, 1);
+  publishAnnouncement();
+  Serial.printf("GC_NET mqtt_online broker=%s:%u device=%s\n", mqttHost.c_str(), mqttPort, deviceId.c_str());
+}
+
+static void printNetworkInfo() {
+  Serial.printf("GC_NET device=%s name=%s fw=%s\n", deviceId.c_str(), deviceName.c_str(), FW_VERSION);
+  Serial.printf("GC_NET wifi_configured=%s wifi_status=%d ssid=%s ip=%s rssi=%d\n",
+    wifiSsid.isEmpty() ? "no" : "yes", int(WiFi.status()), wifiSsid.c_str(),
+    WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "-",
+    WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0);
+  Serial.printf("GC_NET mqtt_configured=%s mqtt_connected=%s host=%s port=%u user=%s\n",
+    mqttHost.isEmpty() ? "no" : "yes", mqtt.connected() ? "yes" : "no",
+    mqttHost.c_str(), mqttPort, mqttUser.isEmpty() ? "-" : mqttUser.c_str());
+}
+
 static void printInfo() {
-  Serial.println("Grow-Central Soil Node GC-SOIL-01");
+  Serial.printf("Grow-Central Soil Node %s firmware=%s\n", deviceId.c_str(), FW_VERSION);
   Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u\n", airRaw, waterRaw);
-  Serial.println("commands: INFO | CAL AIR | CAL WATER | RESET CAL");
-  Serial.println("note: WATER is engineering reference only; final substrate calibration comes later.");
+  Serial.println("commands:");
+  Serial.println("  INFO | CAL AIR | CAL WATER | RESET CAL");
+  Serial.println("  NET INFO");
+  Serial.println("  NET WIFI <ssid>|<password>");
+  Serial.println("  NET MQTT <host>|<port>|<user>|<password>");
+  Serial.println("  NET NAME <display name> | NET CLEAR | REBOOT");
+  Serial.println("WATER is engineering reference only; final substrate calibration comes later.");
+}
+
+static void parseWifiCommand(const String& value) {
+  const int sep = value.indexOf('|');
+  if (sep < 1) {
+    Serial.println("ERR usage: NET WIFI <ssid>|<password>");
+    return;
+  }
+  wifiSsid = value.substring(0, sep);
+  wifiPass = value.substring(sep + 1);
+  wifiSsid.trim();
+  if (wifiSsid.isEmpty()) {
+    Serial.println("ERR empty SSID");
+    return;
+  }
+  saveNetworkConfig();
+  mqtt.disconnect();
+  WiFi.disconnect(true, false);
+  delay(100);
+  lastWifiAttempt = 0;
+  startWifiIfConfigured();
+  Serial.println("OK WiFi configuration saved");
+}
+
+static void parseMqttCommand(const String& value) {
+  int p1 = value.indexOf('|');
+  int p2 = p1 < 0 ? -1 : value.indexOf('|', p1 + 1);
+  int p3 = p2 < 0 ? -1 : value.indexOf('|', p2 + 1);
+  if (p1 < 1) {
+    Serial.println("ERR usage: NET MQTT <host>|<port>|<user>|<password>");
+    return;
+  }
+  mqttHost = value.substring(0, p1);
+  mqttHost.trim();
+  const String portPart = p2 < 0 ? value.substring(p1 + 1) : value.substring(p1 + 1, p2);
+  const long parsedPort = portPart.toInt();
+  mqttPort = parsedPort > 0 && parsedPort <= 65535 ? uint16_t(parsedPort) : 1883;
+  mqttUser = p2 < 0 ? "" : (p3 < 0 ? value.substring(p2 + 1) : value.substring(p2 + 1, p3));
+  mqttPass = p3 < 0 ? "" : value.substring(p3 + 1);
+  saveNetworkConfig();
+  mqtt.disconnect();
+  lastMqttAttempt = 0;
+  Serial.println("OK MQTT configuration saved");
 }
 
 static void handleSerialCommands() {
   if (!Serial.available()) return;
   String cmd = Serial.readStringUntil('\n');
   cmd.trim();
-  cmd.toUpperCase();
+  if (!cmd.length()) return;
+  String upper = cmd;
+  upper.toUpperCase();
 
-  if (cmd == "INFO") {
+  if (upper == "INFO") {
     printInfo();
-  } else if (cmd == "CAL AIR") {
+    printNetworkInfo();
+  } else if (upper == "CAL AIR") {
     Serial.println("CAL AIR: keep sensor dry/in air...");
     airRaw = calibrationSnapshot();
     saveCalibration();
     emaRaw = NAN;
     Serial.printf("CAL AIR SAVED: %u\n", airRaw);
-  } else if (cmd == "CAL WATER") {
+  } else if (upper == "CAL WATER") {
     Serial.println("CAL WATER: immerse probe area only, keep electronics dry...");
     waterRaw = calibrationSnapshot();
     saveCalibration();
     emaRaw = NAN;
     Serial.printf("CAL WATER SAVED: %u\n", waterRaw);
-  } else if (cmd == "RESET CAL") {
+  } else if (upper == "RESET CAL") {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
     saveCalibration();
     emaRaw = NAN;
     Serial.println("CALIBRATION RESET TO PROVISIONAL REFERENCES");
-  } else if (cmd.length()) {
+  } else if (upper == "NET INFO") {
+    printNetworkInfo();
+  } else if (upper.startsWith("NET WIFI ")) {
+    parseWifiCommand(cmd.substring(9));
+  } else if (upper.startsWith("NET MQTT ")) {
+    parseMqttCommand(cmd.substring(9));
+  } else if (upper.startsWith("NET NAME ")) {
+    deviceName = cmd.substring(9);
+    deviceName.trim();
+    if (deviceName.isEmpty()) deviceName = "Grow-Central Soil Sensor";
+    saveNetworkConfig();
+    publishAnnouncement();
+    Serial.println("OK device name saved");
+  } else if (upper == "NET CLEAR") {
+    clearNetworkConfig();
+    Serial.println("OK network configuration cleared");
+  } else if (upper == "REBOOT") {
+    Serial.println("REBOOTING");
+    delay(100);
+    ESP.restart();
+  } else {
     Serial.printf("UNKNOWN COMMAND: %s\n", cmd.c_str());
   }
 }
@@ -195,13 +453,15 @@ static void handleSerialCommands() {
 static void reportReading(const SoilReading& r) {
   const uint16_t span = r.rawMax - r.rawMin;
   if (r.sensorOk) {
-    Serial.printf("GC_SOIL raw=%u median=%u filtered=%.1f pct=%.1f min=%u max=%u span=%u sigma=%.1f quality=%s state=%s uptime=%lu\n",
+    Serial.printf("GC_SOIL raw=%u median=%u filtered=%.1f pct=%.1f min=%u max=%u span=%u sigma=%.1f quality=%s state=%s wifi=%d mqtt=%d uptime=%lu\n",
       r.rawMean, r.rawMedian, r.filteredRaw, r.moisturePct,
       r.rawMin, r.rawMax, span, r.sigma, r.quality, r.state,
+      WiFi.status() == WL_CONNECTED ? 1 : 0, mqtt.connected() ? 1 : 0,
       static_cast<unsigned long>(millis()));
   } else {
-    Serial.printf("GC_SOIL raw=%u median=%u min=%u max=%u span=%u sigma=%.1f quality=%s state=SENSOR_FAULT uptime=%lu\n",
+    Serial.printf("GC_SOIL raw=%u median=%u min=%u max=%u span=%u sigma=%.1f quality=%s state=SENSOR_FAULT wifi=%d mqtt=%d uptime=%lu\n",
       r.rawMean, r.rawMedian, r.rawMin, r.rawMax, span, r.sigma, r.quality,
+      WiFi.status() == WL_CONNECTED ? 1 : 0, mqtt.connected() ? 1 : 0,
       static_cast<unsigned long>(millis()));
   }
 }
@@ -212,17 +472,27 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(SOIL_PIN, ADC_11db);
   pinMode(SOIL_PIN, INPUT);
+  deriveDeviceId();
   loadCalibration();
+  loadNetworkConfig();
+  mqtt.setOptions(30, true, 1500);
   printInfo();
+  printNetworkInfo();
+  startWifiIfConfigured();
 }
 
 void loop() {
   handleSerialCommands();
+  maintainWifi();
+  connectMqttIfReady();
+  if (mqtt.connected()) mqtt.loop();
+
   const uint32_t now = millis();
   if (now - lastReport >= REPORT_INTERVAL_MS) {
     lastReport = now;
     SoilReading reading = sampleSoil();
     reportReading(reading);
+    publishState(reading);
   }
   delay(5);
 }

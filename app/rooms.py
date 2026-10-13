@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
+from app.devices.runtime import runtime
 from app.smarthome.registry import DeviceRegistry
 from app.smarthome.router import device_overview
 
@@ -23,6 +24,40 @@ DATA_FILE = Path(os.getenv("GC_ROOMS_FILE", "/var/lib/135er-grow-central/rooms.j
 CAPTURE_INTERVAL_SECONDS = max(60, int(os.getenv("GC_ROOM_CAPTURE_INTERVAL", "300")))
 router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
 _capture_task: asyncio.Task | None = None
+
+
+async def _native_gc_devices(timeout: float = 1.0) -> list[dict[str, Any]]:
+    """Return native Grow-Central ESP32 devices in the room/overview row shape."""
+    try:
+        provider = runtime.get("growcentral_esp32")
+        discovered = await provider.discover(timeout=max(0.1, min(timeout, 3.0)))
+    except Exception:
+        return []
+
+    async def resolve(device) -> dict[str, Any]:
+        online = False
+        state: dict[str, Any] | None = None
+        error: str | None = None
+        try:
+            health = await provider.health(device.native_id)
+            online = health.online
+            if online:
+                state = dict(await provider.state(device.native_id))
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+        return {
+            "id": device.global_id,
+            "name": device.name,
+            "adapter": device.provider_id,
+            "provider_id": device.provider_id,
+            "native_id": device.native_id,
+            "online": online,
+            "error": error,
+            "state": state,
+            "metadata": dict(device.metadata),
+        }
+
+    return list(await asyncio.gather(*(resolve(device) for device in discovered)))
 
 
 def now_iso() -> str:
@@ -184,15 +219,36 @@ async def delete_room(room_id: str):
 @router.get("/{room_id}/devices")
 async def room_devices(room_id: str):
     state = load_state(); room_or_404(state, room_id)
-    devices = DeviceRegistry.from_env().list()
-    return {"devices": [{"id": d.id, "name": d.name, "adapter": d.adapter, "assigned": state["assignments"].get(d.id) == room_id, "room_id": state["assignments"].get(d.id)} for d in devices]}
+    legacy = [
+        {"id": d.id, "name": d.name, "adapter": d.adapter}
+        for d in DeviceRegistry.from_env().list()
+    ]
+    native = await _native_gc_devices(timeout=0.8)
+    merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
+    for row in native:
+        merged[row["id"]] = row
+    devices = []
+    for row in merged.values():
+        device_id = row["id"]
+        devices.append({
+            **row,
+            "assigned": state["assignments"].get(device_id) == room_id,
+            "room_id": state["assignments"].get(device_id),
+        })
+    return {"devices": sorted(devices, key=lambda row: (str(row.get("name") or "").lower(), row["id"]))}
 
 
 @router.post("/{room_id}/devices", dependencies=[Depends(require_write_auth)])
 async def assign_device(room_id: str, body: DeviceAssignment):
     state = load_state(); room_or_404(state, room_id)
-    try: DeviceRegistry.from_env().get(body.device_id)
-    except KeyError as exc: raise HTTPException(404, "Gerät nicht gefunden") from exc
+    exists = True
+    try:
+        DeviceRegistry.from_env().get(body.device_id)
+    except KeyError:
+        native = await _native_gc_devices(timeout=1.2)
+        exists = any(row["id"] == body.device_id for row in native)
+    if not exists:
+        raise HTTPException(404, "Gerät nicht gefunden")
     state["assignments"][body.device_id] = room_id; save_state(state)
     return {"ok": True, "device_id": body.device_id, "room_id": room_id}
 
@@ -280,17 +336,20 @@ async def capture_room_sensors_once() -> int:
     state = load_state()
     if not state["rooms"] or not state["assignments"]: return 0
     overview = await device_overview(refresh=True)
-    by_id = {d["id"]: d for d in overview.get("devices", [])}
+    combined_devices = list(overview.get("devices", []))
+    combined_devices.extend(await _native_gc_devices(timeout=0.8))
+    by_id = {d["id"]: d for d in combined_devices}
     count = 0
     for room in state["rooms"]:
         rows = [by_id[d] for d, rid in state["assignments"].items() if rid == room["id"] and d in by_id]
         states = [r.get("state") or {} for r in rows if r.get("online")]
         temps = [float(s["temperature_c"]) for s in states if s.get("temperature_c") is not None]
         humidity = [float(s["humidity_percent"]) for s in states if s.get("humidity_percent") is not None]
+        soils = [float(s["soil_moisture"]) for s in states if s.get("soil_moisture") is not None]
         powers = [float(s["power_w"]) for s in states if s.get("power_w") is not None]
         energies = [float(s["energy_wh"]) for s in states if s.get("energy_wh") is not None]
-        if not (temps or humidity or powers or energies): continue
-        append_sensor(state, room["id"], {"temperature_c": round(sum(temps)/len(temps),2) if temps else None, "humidity_percent": round(sum(humidity)/len(humidity),2) if humidity else None, "co2_ppm": None, "soil_moisture_percent": None, "power_w": round(sum(powers),3) if powers else None, "energy_wh": round(sum(energies),3) if energies else None, "source": "assigned-devices"}); count += 1
+        if not (temps or humidity or soils or powers or energies): continue
+        append_sensor(state, room["id"], {"temperature_c": round(sum(temps)/len(temps),2) if temps else None, "humidity_percent": round(sum(humidity)/len(humidity),2) if humidity else None, "co2_ppm": None, "soil_moisture_percent": round(sum(soils)/len(soils),2) if soils else None, "power_w": round(sum(powers),3) if powers else None, "energy_wh": round(sum(energies),3) if energies else None, "source": "assigned-devices"}); count += 1
     if count: save_state(state)
     return count
 

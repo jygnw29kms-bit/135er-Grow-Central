@@ -1,4 +1,5 @@
 from pathlib import Path
+import asyncio
 
 import app.rooms as rooms
 
@@ -37,3 +38,77 @@ def test_console_contains_room_navigation():
     assert "Geräte zuordnen" in html
     assert "Growtagebuch" in html
     assert "Pflanzen" in html
+
+
+async def _soil_device_overview(*, refresh: bool):
+    return {
+        "devices": [
+            {
+                "id": "growcentral_esp32:gc-soil-test",
+                "online": True,
+                "state": {"soil_moisture": 42.5},
+            }
+        ]
+    }
+
+
+def test_room_capture_includes_assigned_soil_moisture(tmp_path, monkeypatch):
+    monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
+    monkeypatch.setattr(rooms, "device_overview", _soil_device_overview)
+    state = rooms.empty_state()
+    state["rooms"].append({"id": "room_soil", "name": "Zelt Soil"})
+    state["assignments"]["growcentral_esp32:gc-soil-test"] = "room_soil"
+    rooms.save_state(state)
+
+    captured = asyncio.run(rooms.capture_room_sensors_once())
+
+    assert captured == 1
+    saved = rooms.load_state()
+    assert saved["sensor_history"][-1]["soil_moisture_percent"] == 42.5
+    assert saved["sensor_history"][-1]["source"] == "assigned-devices"
+
+
+async def _native_soil_nodes(timeout: float = 1.0):
+    return [
+        {
+            "id": "growcentral_esp32:gc-soil-native",
+            "name": "Grow-Central Soil Sensor",
+            "adapter": "growcentral_esp32",
+            "provider_id": "growcentral_esp32",
+            "native_id": "gc-soil-native",
+            "online": True,
+            "state": {"soil_moisture": 37.2},
+            "metadata": {"firmware": "0.2.0"},
+        }
+    ]
+
+
+def test_room_devices_includes_native_gc_soil_node(tmp_path, monkeypatch):
+    monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
+    monkeypatch.setenv("GC_SMARTHOME_DEVICE_CONFIG", str(tmp_path / "devices.json"))
+    monkeypatch.setattr(rooms, "_native_gc_devices", _native_soil_nodes)
+    state = rooms.empty_state()
+    state["rooms"].append({"id": "room_native", "name": "Zelt Native"})
+    rooms.save_state(state)
+
+    payload = asyncio.run(rooms.room_devices("room_native"))
+
+    assert payload["devices"][0]["id"] == "growcentral_esp32:gc-soil-native"
+    assert payload["devices"][0]["adapter"] == "growcentral_esp32"
+
+
+def test_native_gc_soil_node_can_be_assigned_to_room(tmp_path, monkeypatch):
+    monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
+    monkeypatch.setenv("GC_SMARTHOME_DEVICE_CONFIG", str(tmp_path / "devices.json"))
+    monkeypatch.setattr(rooms, "_native_gc_devices", _native_soil_nodes)
+    state = rooms.empty_state()
+    state["rooms"].append({"id": "room_native", "name": "Zelt Native"})
+    rooms.save_state(state)
+
+    result = asyncio.run(rooms.assign_device(
+        "room_native",
+        rooms.DeviceAssignment(device_id="growcentral_esp32:gc-soil-native"),
+    ))
+
+    assert result["ok"] is True
+    assert rooms.load_state()["assignments"]["growcentral_esp32:gc-soil-native"] == "room_native"

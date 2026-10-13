@@ -97,7 +97,15 @@ jobs:
           sed -i 's/^127\.0\.1\.1.*/127.0.1.1\t135er-grow-central/' /etc/hosts || true
 
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata mosquitto mosquitto-clients
+
+          cat >/etc/mosquitto/conf.d/grow-central.conf <<'EOF'
+          listener 1883 0.0.0.0
+          allow_anonymous true
+          persistence true
+          persistence_location /var/lib/mosquitto/
+          EOF
+          chmod 0644 /etc/mosquitto/conf.d/grow-central.conf
 
           find /etc/netplan /usr/lib/netplan -type f -name '*.yaml' -exec chmod 0600 {} + 2>/dev/null || true
 
@@ -356,6 +364,10 @@ jobs:
           ufw allow 80/tcp
           ufw allow 8080/tcp
           ufw allow 5353/udp
+          # Native Grow-Central ESP32 MQTT: private LAN only.
+          ufw allow from 10.0.0.0/8 to any port 1883 proto tcp
+          ufw allow from 172.16.0.0/12 to any port 1883 proto tcp
+          ufw allow from 192.168.0.0/16 to any port 1883 proto tcp
           WLAN="$(cat /var/lib/135er-grow-central/hardware-wlan-interface 2>/dev/null || true)"
           if [ -z "$WLAN" ]; then
             WLAN="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1; exit}')"
@@ -517,7 +529,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service mosquitto.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
           systemctl disable ssh.service ssh.socket 2>/dev/null || true
           systemctl enable unattended-upgrades.service || true
 
@@ -573,6 +585,9 @@ jobs:
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q 'ufw allow 22/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q '192.168.0.0/16 to any port 1883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          test -f /etc/mosquitto/conf.d/grow-central.conf
+          grep -q '^listener 1883 0.0.0.0$' /etc/mosquitto/conf.d/grow-central.conf
           /bin/bash -n /usr/local/sbin/grow-central-bluetooth-init.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
