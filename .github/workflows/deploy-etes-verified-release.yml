@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           base64 -d deploy/verified-releases/etes-werkstattplaner_1.8.4-1_all.deb.b64 > /tmp/etes-1.8.4.deb
-          printf '%s\n' '0e17e9fdddbeb97d7f4feb7b92cb26f3dc306823cbf3072a09ee02b8fdbf3ca5  /tmp/etes-1.8.4.deb' | sha256sum -c -
+          printf '%s\n' '8394bcbe50cbe0a68ff6aa61208a901d8f181f9553f5cabdfca0897d744daefa  /tmp/etes-1.8.4.deb' | sha256sum -c -
           python3 -m py_compile scripts/deploy-etes-verified-release.py
       - name: Back up, migrate, deploy and verify using existing Grow Central SSH secrets
         env:
@@ -47,7 +47,7 @@ jobs:
           trap 'sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" "rm -f '\''$remote_dir/package.deb'\'' '\''$remote_dir/deploy.py'\''; rmdir '\''$remote_dir'\''" || true' EXIT
           sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=yes /tmp/etes-1.8.4.deb "$SSH_USERNAME@$SSH_HOST:$remote_dir/package.deb"
           sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=yes scripts/deploy-etes-verified-release.py "$SSH_USERNAME@$SSH_HOST:$remote_dir/deploy.py"
-          command="python3 '$remote_dir/deploy.py' --package '$remote_dir/package.deb' --version 1.8.4 --sha256 0e17e9fdddbeb97d7f4feb7b92cb26f3dc306823cbf3072a09ee02b8fdbf3ca5"
+          command="python3 '$remote_dir/deploy.py' --package '$remote_dir/package.deb' --version 1.8.4 --sha256 8394bcbe50cbe0a68ff6aa61208a901d8f181f9553f5cabdfca0897d744daefa"
           if [ "$(sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" 'id -u')" = 0 ]; then
             sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes "$SSH_USERNAME@$SSH_HOST" "$command"
           else
