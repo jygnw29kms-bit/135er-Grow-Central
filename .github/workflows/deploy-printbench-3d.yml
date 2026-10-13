@@ -20,9 +20,10 @@ jobs:
           git clone --depth 1 https://github.com/jygnw29kms-bit/3d-Files.git printbench
           cd printbench
           php -l index.php
-          php -l api.php
+          php -l ingest.php
+          php -l live-data.php
           mkdir -p ../dist
-          cp index.php api.php site.css hightech.css calculator-integrated.css site.js workbench.js ../dist/
+          cp index.php ingest.php live-data.php final-master.css final-master.js api.php ../dist/
           cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
           cp -a Druckkosten-Rechner/data ../dist/data
 
@@ -34,7 +35,7 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           set -euo pipefail
-          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && chmod 750 /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
 
       - name: Deploy PRINTBENCH with Grow Central SSH secrets
         env:
@@ -43,15 +44,14 @@ jobs:
           set -euo pipefail
           sshpass -e scp -P "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no -r dist/* "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}:/var/www/vhosts/dezender.de/httpdocs/3d-druck/"
 
-      - name: Verify integrated live page and API
+      - name: Verify final master live page and API
         run: |
           set -euo pipefail
           sleep 5
           PAGE="$(curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/)"
-          echo "$PAGE" | grep -q 'PRINTBENCH'
-          echo "$PAGE" | grep -q 'Druckkosten Rechner'
-          echo "$PAGE" | grep -q 'calculator-integrated.css'
-          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/assets/printbench-hero.svg | grep -q 'ADDITIVE MANUFACTURING'
-          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/data/filaments.json | grep -q 'brands'
-          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/api.php | grep -q 'PRINTBENCH'
+          echo "$PAGE" | grep -q 'DEZENDER'
+          echo "$PAGE" | grep -q 'BAMBU LAB P2S'
+          echo "$PAGE" | grep -q 'final-master.css'
+          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/final-master.js | grep -q 'LIVE_ENDPOINT'
+          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/ingest.php | grep -q 'method'
           echo 'LIVE=https://www.dezender.de/3d-druck/'
