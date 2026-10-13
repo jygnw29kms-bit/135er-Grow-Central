@@ -23,7 +23,7 @@ jobs:
           php -l api.php
           mkdir -p ../dist
           cp index.php api.php site.css hightech.css calculator-integrated.css site.js workbench.js ../dist/
-          cp -a Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
+          cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
           cp -a Druckkosten-Rechner/data ../dist/data
 
       - name: Install sshpass
@@ -51,6 +51,7 @@ jobs:
           echo "$PAGE" | grep -q 'PRINTBENCH'
           echo "$PAGE" | grep -q 'Druckkosten Rechner'
           echo "$PAGE" | grep -q 'calculator-integrated.css'
+          curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/assets/printbench-hero.svg | grep -q 'ADDITIVE MANUFACTURING'
           curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/data/filaments.json | grep -q 'brands'
           curl --fail --retry 8 --retry-delay 3 https://www.dezender.de/3d-druck/api.php | grep -q 'PRINTBENCH'
           echo 'LIVE=https://www.dezender.de/3d-druck/'
