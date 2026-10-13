@@ -35,7 +35,7 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           set -euo pipefail
-          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && chmod 750 /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
+          sshpass -e ssh -p "${{ secrets.SFTP_PORT }}" -o StrictHostKeyChecking=no "${{ secrets.SSH_USERNAME }}@${{ secrets.SFTP_HOST }}" "mkdir -p /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && chmod 733 /var/www/vhosts/dezender.de/httpdocs/3d-druck/runtime && rm -f /var/www/vhosts/dezender.de/httpdocs/3d-druck/index.html"
 
       - name: Deploy PRINTBENCH with Grow Central SSH secrets
         env:
@@ -56,4 +56,4 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' https://www.dezender.de/3d-druck/ingest.php)" = "405"
           echo 'LIVE=https://www.dezender.de/3d-druck/'
 
-# redeploy 3d-Files 64ae124
+# redeploy runtime perms
