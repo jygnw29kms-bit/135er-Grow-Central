@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import sqlite3
+import stat
 import subprocess
 import tempfile
 import time
@@ -87,6 +88,13 @@ def main():
         target.parent.mkdir(parents=True,exist_ok=True)
         if name.is_dir():shutil.copytree(name,target,symlinks=True)
         elif name.exists():shutil.copy2(name,target)
+    # Keep backup parent private, but preserve installed directory modes in the package.
+    (rollback/'DEBIAN').chmod(0o755)
+    (rollback/'DEBIAN/control').chmod(0o644)
+    for directory in rollback.rglob('*'):
+        if directory.is_dir() and not directory.is_symlink() and 'DEBIAN' not in directory.relative_to(rollback).parts:
+            original=Path('/')/directory.relative_to(rollback)
+            directory.chmod(stat.S_IMODE(original.stat().st_mode) if original.is_dir() else 0o755)
     old_deb=backup/'rollback.deb'
     run('dpkg-deb','--build','--root-owner-group',str(rollback),str(old_deb),stdout=subprocess.DEVNULL)
     timezone_file=Path('/etc/systemd/system/'+SERVICE+'.service.d/99-etes-berlin.conf')
