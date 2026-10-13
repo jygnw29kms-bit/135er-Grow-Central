@@ -22,6 +22,8 @@ jobs:
           php -l index.php
           php -l ingest.php
           php -l live-data.php
+          php -l media-ingest.php
+          php -l media-data.php
           mkdir -p ../dist
           cp index.php ingest.php live-data.php media-ingest.php media-data.php final-master.css final-master.js api.php ../dist/
           cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips ../dist/
