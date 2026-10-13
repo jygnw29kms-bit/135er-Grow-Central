@@ -91,6 +91,10 @@ def main():
     # Keep backup parent private, but preserve installed directory modes in the package.
     (rollback/'DEBIAN').chmod(0o755)
     (rollback/'DEBIAN/control').chmod(0o644)
+    for maintainer_script in ('preinst','postinst','prerm','postrm'):
+        script = rollback/'DEBIAN'/maintainer_script
+        if script.exists():
+            script.chmod(0o755)
     for directory in rollback.rglob('*'):
         if directory.is_dir() and not directory.is_symlink() and 'DEBIAN' not in directory.relative_to(rollback).parts:
             original=Path('/')/directory.relative_to(rollback)
