@@ -19,7 +19,7 @@ if [[ ${EUID} -ne 0 ]]; then
 fi
 
 install -d -o growcentral -g growcentral "$BACKUP/web" "$BACKUP/app"
-WEB_FILES=(platform.html platform-master.css platform-master.js platform-visual.css room_views.js)
+WEB_FILES=(platform.html platform.js platform-master.css platform-master.js platform-visual.css room_views.js console.html console.js console.css mobile.html mobile.js ui-editor.html ui-editor.js session_write.js mobile_runtime_fix.css mobile_runtime_fix.js)
 IMAGE_FILES=(master-grow-hero.jpg master-grow-room.jpg)
 APP_FILES=(gui_shell.py)
 for f in "${WEB_FILES[@]}" "${IMAGE_FILES[@]}"; do [[ -f "$WEB/$f" ]] && cp -a "$WEB/$f" "$BACKUP/web/$f"; done
@@ -83,6 +83,7 @@ done
 HEALTH_HTTP="$(curl -sS -o "$TMP/health.json" -w '%{http_code}' http://127.0.0.1:8080/api/health || true)"
 ROOT_HTTP="$(curl -sS -D "$TMP/root.headers" -o "$TMP/root.html" -w '%{http_code}' http://127.0.0.1:8080/ || true)"
 UI_HTTP="$(curl -sS -D "$TMP/ui.headers" -o "$TMP/ui.html" -w '%{http_code}' http://127.0.0.1:8080/ui || true)"
+ROOMS_HTTP="$(curl -sS -o "$TMP/rooms.html" -w '%{http_code}' http://127.0.0.1:8080/rooms || true)"
 CSS_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/platform-master.css || true)"
 VISUAL_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/platform-visual.css || true)"
 JS_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/platform-master.js || true)"
@@ -97,6 +98,9 @@ if [[ "$HEALTH_HTTP" != "200" || "$CSS_HTTP" != "200" || "$VISUAL_HTTP" != "200"
 fi
 if [[ "$ROOT_HTTP" != "200" && "$ROOT_HTTP" != "303" ]]; then echo "Unerwarteter Status auf /: $ROOT_HTTP" >&2; rollback; exit 3; fi
 if [[ "$UI_HTTP" != "200" && "$UI_HTTP" != "303" ]]; then echo "Unerwarteter Status auf /ui: $UI_HTTP" >&2; rollback; exit 4; fi
+
+if [[ "$ROOMS_HTTP" != "200" && "$ROOMS_HTTP" != "303" ]]; then echo "Unerwarteter Status auf /rooms: $ROOMS_HTTP" >&2; rollback; exit 8; fi
+if [[ "$ROOMS_HTTP" == "200" ]]; then grep -q 'id="roomDialog"' "$TMP/rooms.html" || { echo "Raumverwaltung fehlt auf /rooms." >&2; rollback; exit 9; }; fi
 
 if [[ "$ROOT_HTTP" == "200" ]]; then grep -q 'class="app-shell master-shell"' "$TMP/root.html" || { echo "Master-Markierung fehlt auf /." >&2; rollback; exit 5; }; fi
 if [[ "$UI_HTTP" == "200" ]]; then
@@ -119,3 +123,4 @@ echo "ROOM_JS_HTTP=$ROOM_JS_HTTP"
 echo "HERO_ART_HTTP=$HERO_HTTP"
 echo "ROOM_ART_HTTP=$ROOM_ART_HTTP"
 echo "PRODUCTIVE_ROUTE=/ui"
+echo "ROOM_WORKSPACE_HTTP=$ROOMS_HTTP"

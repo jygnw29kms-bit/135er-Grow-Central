@@ -19,6 +19,12 @@ async def gui_shell():
     return FileResponse(WEB_DIR / "platform.html", headers={"Cache-Control": "no-store"})
 
 
+@router.get("/rooms", include_in_schema=False)
+async def room_workspace():
+    """Room management and sensor diagnostics alongside the approved master UI."""
+    return FileResponse(WEB_DIR / "console.html", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/mobile", include_in_schema=False)
 async def mobile_gui():
     """Dedicated touch-first UI for phones and compact mobile devices."""

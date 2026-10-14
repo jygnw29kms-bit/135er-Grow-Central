@@ -17,7 +17,7 @@
     toast.timer = setTimeout(() => node.className = 'toast', 3200);
   }
   function setText(id, value, fallback='—') { const node=$(id); if(node) node.textContent = value ?? fallback; }
-  function fmt(value, digits=1) { return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '—'; }
+  function fmt(value, digits=1) { return (value!=null&&value!==''&&Number.isFinite(Number(value))) ? Number(value).toFixed(digits) : '—'; }
   function supportLabel(value='') { return ({detected:'DETECTED',experimental:'EXPERIMENTAL',compatible:'COMPATIBLE',validated:'VALIDATED',certified:'CERTIFIED'})[value] || String(value).toUpperCase(); }
 
   function setMode(mode) {
@@ -81,12 +81,12 @@
 
   function updateHeadline(healthOk, runtimeErrors=0) {
     const banner=$('statusBanner');
-    banner.classList.remove('warning','error');
+    banner?.classList.remove('warning','error');
     if (!healthOk) {
-      banner.classList.add('error'); setText('headline','Lokaler Core nicht erreichbar'); setText('headlineSub','Bitte Raspberry Pi und Dienststatus prüfen.'); return;
+      banner?.classList.add('error'); setText('headline','Lokaler Core nicht erreichbar'); setText('headlineSub','Bitte Raspberry Pi und Dienststatus prüfen.'); return;
     }
     if (runtimeErrors) {
-      banner.classList.add('warning'); setText('headline','Grow Central läuft mit Hinweisen'); setText('headlineSub',`${runtimeErrors} Provider melden aktuell einen Verbindungsfehler.`); return;
+      banner?.classList.add('warning'); setText('headline','Grow Central läuft mit Hinweisen'); setText('headlineSub',`${runtimeErrors} Provider melden aktuell einen Verbindungsfehler.`); return;
     }
     setText('headline','Alles läuft normal'); setText('headlineSub','Lokaler Core ist bereit. Geräte werden herstellerunabhängig verwaltet.');
   }
@@ -114,11 +114,11 @@
       const data=await api(`/api/v1/smarthome/overview${refresh?'?refresh=true':''}`); state.smart=data;
       const summary=data.summary||{}; const rows=data.devices||[];
       const power=summary.power_w;
-      setText('power', Number.isFinite(Number(power)) ? fmt(power) : '—');
-      setText('powerHint', Number.isFinite(Number(power)) ? `${summary.online||0} online` : 'keine Messgeräte');
+      setText('power', (power!=null&&power!==''&&Number.isFinite(Number(power))) ? fmt(power) : '—');
+      setText('powerHint', (power!=null&&power!==''&&Number.isFinite(Number(power))) ? `${summary.online||0} online` : 'keine Messgeräte');
       setText('deviceCounter', `${summary.online||0} / ${summary.configured||rows.length||0}`);
-      setText('energyNow', Number.isFinite(Number(power)) ? fmt(power) : '—');
-      setText('energyTotalSmall', `${Number.isFinite(Number(summary.energy_wh)) ? fmt(Number(summary.energy_wh)/1000,3) : '—'} kWh`);
+      setText('energyNow', (power!=null&&power!==''&&Number.isFinite(Number(power))) ? fmt(power) : '—');
+      setText('energyTotalSmall', `${(summary.energy_wh!=null&&summary.energy_wh!==''&&Number.isFinite(Number(summary.energy_wh))) ? fmt(Number(summary.energy_wh)/1000,3) : '—'} kWh`);
       $('devicePreview').innerHTML=rows.length?rows.slice(0,7).map(miniDevice).join(''):'<div class="empty">Noch keine lokalen Geräte registriert.</div>';
       renderDeviceTable();
       return data;
@@ -130,14 +130,14 @@
       const data=await api('/api/status'); const notifications=(data.notifications||[]).slice().reverse();
       let temp=null,rh=null,vpd=null;
       for(const item of notifications){
-        if(temp==null && Number.isFinite(Number(item.temperature)))temp=Number(item.temperature);
-        if(rh==null && Number.isFinite(Number(item.humidity)))rh=Number(item.humidity);
-        if(vpd==null && Number.isFinite(Number(item.vpd)))vpd=Number(item.vpd);
+        if(temp==null && (item.temperature!=null&&item.temperature!==''&&Number.isFinite(Number(item.temperature))))temp=Number(item.temperature);
+        if(rh==null && (item.humidity!=null&&item.humidity!==''&&Number.isFinite(Number(item.humidity))))rh=Number(item.humidity);
+        if(vpd==null && (item.vpd!=null&&item.vpd!==''&&Number.isFinite(Number(item.vpd))))vpd=Number(item.vpd);
       }
       if(vpd==null && temp!=null && rh!=null){const es=.6108*Math.exp(17.27*temp/(temp+237.3));vpd=es*(1-rh/100);}
       setText('temp',temp==null?'—':fmt(temp)); setText('rh',rh==null?'—':fmt(rh,0)); setText('vpd',vpd==null?'—':fmt(vpd,2));
       setText('tempHint',temp==null?'keine Daten':'Live-Wert'); setText('rhHint',rh==null?'keine Daten':'Live-Wert'); setText('vpdHint',vpd==null?'keine Daten':'berechnet / Sensor');
-    } catch (_) {}
+    } catch (_) {} finally { document.dispatchEvent(new Event('gc:climate-loaded')); }
   }
 
   async function universalDiscover() {
@@ -149,7 +149,7 @@
 
   async function loadAutomations(){try{const d=await api('/api/v1/automations');const rows=d.automations||[];$('automationList').innerHTML=rows.length?rows.map((r)=>`<article class="rule-card"><div><strong>${esc(r.name||'Automation')}</strong><small>${esc([r.trigger,r.device_id].filter(Boolean).join(' · '))}</small></div><span class="state-badge ${r.enabled===false?'offline':''}">${r.enabled===false?'PAUSIERT':'AKTIV'}</span></article>`).join(''):'<div class="empty">Noch keine lokalen Regeln angelegt.</div>';}catch(e){$('automationList').innerHTML=`<div class="empty">Automationen: ${esc(e.message)}</div>`;}}
   async function loadCamera(){try{const d=await api('/api/v1/camera/status?refresh=true');const rows=d.devices||[];$('cameraGrid').innerHTML=rows.length?rows.map((r)=>`<article class="camera-card"><div class="camera-placeholder">◉</div><footer><strong>${esc(r.c920_match?'Logitech C920':r.name||r.device||'Kamera')}</strong><small>${esc(r.capture_capable?'Capture bereit':'Gerät erkannt · prüfen')}</small></footer></article>`).join(''):'<div class="empty">Keine lokale Kamera erkannt.</div>';}catch(e){$('cameraGrid').innerHTML=`<div class="empty">Kamera: ${esc(e.message)}</div>`;}}
-  async function loadEnergy(refresh=false){const d=await loadSmart(refresh);if(!d)return;const s=d.summary||{};setText('energyPower',Number.isFinite(Number(s.power_w))?fmt(s.power_w):'—');setText('energyTotal',Number.isFinite(Number(s.energy_wh))?fmt(Number(s.energy_wh)/1000,3):'—');setText('energyOnline',`${s.online||0} / ${s.configured||0}`);setText('energyOn',s.switched_on??'—');$('energyDevices').innerHTML=(d.devices||[]).length?(d.devices||[]).map(miniDevice).join(''):'<div class="empty">Keine Energiedaten verfügbar.</div>';}
+  async function loadEnergy(refresh=false){const d=await loadSmart(refresh);if(!d)return;const s=d.summary||{};setText('energyPower',(s.power_w!=null&&s.power_w!==''&&Number.isFinite(Number(s.power_w)))?fmt(s.power_w):'—');setText('energyTotal',(s.energy_wh!=null&&s.energy_wh!==''&&Number.isFinite(Number(s.energy_wh)))?fmt(Number(s.energy_wh)/1000,3):'—');setText('energyOnline',`${s.online||0} / ${s.configured||0}`);setText('energyOn',s.switched_on??'—');$('energyDevices').innerHTML=(d.devices||[]).length?(d.devices||[]).map(miniDevice).join(''):'<div class="empty">Keine Energiedaten verfügbar.</div>';}
   async function loadSystem(){try{const d=await api('/api/v1/system/info');const values=[['Hostname',d.hostname],['IPv4',d.primary_ipv4],['Version',d.version],['Build',d.build],['Hardware',d.model],['OS',d.operating_system],['Uptime',d.uptime?.display]];$('systemGrid').innerHTML=values.map(([k,v])=>`<div class="system-item"><span>${esc(k)}</span><b>${esc(v||'—')}</b></div>`).join('');}catch(e){$('systemGrid').innerHTML=`<div class="empty">System: ${esc(e.message)}</div>`;}}
 
   async function refreshAll(showToast=false){
