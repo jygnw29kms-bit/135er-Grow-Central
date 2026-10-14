@@ -152,5 +152,9 @@
     } catch (e) { status.textContent = e.message; }
     finally { polling = false; }
   }
+  window.addEventListener('gc:usb-open', event => {
+    const device = devices.find(item => item.device_id === event.detail?.device_id);
+    if (device) open(device);
+  });
   window.addEventListener('gc:refresh', refresh); refresh(); setInterval(refresh, 3000);
 })();

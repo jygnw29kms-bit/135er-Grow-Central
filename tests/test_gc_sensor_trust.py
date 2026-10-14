@@ -205,3 +205,25 @@ def test_legacy_native_alias_cannot_bypass_trust_for_room_history(discovered,mon
     monkeypatch.setattr(rooms,'device_overview',legacy);monkeypatch.setattr(rooms,'_native_gc_devices',native)
     assert asyncio.run(rooms.capture_room_sensors_once())==0
     assert rooms.load_state()['sensor_history']==[]
+
+
+def test_sensor_acceptance_without_hex_typing_requires_confirmation_and_fresh_key(discovered, monkeypatch, tmp_path):
+    store,key,row=discovered
+    monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
+    state=rooms.empty_state();state['rooms']=[{'id':'room1','name':'Test'}];rooms.save_state(state)
+    app=FastAPI();app.include_router(gc_pairing.router);app.dependency_overrides[require_write_auth]=lambda:None
+    from app.devices.runtime import runtime
+    calls=[]
+    async def prove(device_id):
+        calls.append(device_id)
+        return verify_message(packet(key,'proof',seq=2,body={'nonce':'fresh','state':{}}),kind='proof')
+    monkeypatch.setattr(runtime.get('growcentral_esp32'),'prove_identity',prove)
+    client=TestClient(app)
+    body={'name':'Boden','room_id':'room1','fingerprint_confirmation':row['fingerprint']}
+    assert client.post(f'/api/devices/trust/{ID}/accept',json=body).status_code==403
+    assert client.post(f'/api/devices/trust/{ID}/accept',json={**body,'identity_confirmed':'yes'}).status_code==422
+    assert client.post(f'/api/devices/trust/{ID}/accept',json={**body,'identity_confirmed':True,'fingerprint_confirmation':'0'*64}).status_code==403
+    assert not calls
+    response=client.post(f'/api/devices/trust/{ID}/accept',json={**body,'identity_confirmed':True})
+    assert response.status_code==200,response.text
+    assert calls==[ID] and store.get(ID)['status']=='TRUSTED'

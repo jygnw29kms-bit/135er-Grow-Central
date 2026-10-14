@@ -1,7 +1,7 @@
 """Manual acceptance endpoints. Discovery never implies authorization."""
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator
 from app.security import require_write_auth
 from .gc_trust import TrustStore
 
@@ -10,7 +10,8 @@ router = APIRouter(prefix='/api/devices/trust', tags=['sensor-pairing'])
 class Acceptance(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     room_id: str = Field(min_length=1, max_length=80)
-    fingerprint_confirmation: str = Field(pattern=r'^[a-fA-F0-9]{16}$')
+    fingerprint_confirmation: str = Field(pattern=r'^(?:[a-fA-F0-9]{16}|[a-fA-F0-9]{64})$')
+    identity_confirmed: StrictBool = False
 
     @field_validator('name')
     @classmethod
@@ -32,6 +33,11 @@ async def accept_sensor(device_id: str, body: Acceptance):
     from app import rooms
     from .runtime import runtime
     try:
+        expected = await asyncio.to_thread(TrustStore().get, device_id)
+        confirmation = body.fingerprint_confirmation.lower()
+        if len(confirmation) == 64:
+            if not body.identity_confirmed or not expected or confirmation != expected['fingerprint']:
+                raise PermissionError('Sensoridentität zuerst ausdrücklich bestätigen; bei geänderter Identität neu prüfen.')
         room_state = rooms.load_state()
         rooms.room_or_404(room_state, body.room_id)
         proof = await runtime.get('growcentral_esp32').prove_identity(device_id)
@@ -41,7 +47,7 @@ async def accept_sensor(device_id: str, body: Acceptance):
             current['assignments'][f'growcentral_esp32:{device_id}'] = body.room_id
             rooms.save_state(current)
         row = await asyncio.to_thread(TrustStore().accept, device_id, name=body.name, room_id=body.room_id,
-                                      fingerprint=body.fingerprint_confirmation, proved_key=proof.public_key, assign=assign)
+                                      fingerprint=confirmation[-16:], proved_key=proof.public_key, assign=assign)
         return {'ok': True, 'device': row, 'credential_transfer': 'disabled'}
     except KeyError as exc:
         raise HTTPException(404, 'Sensor nicht gefunden') from exc
@@ -79,13 +85,19 @@ async def release_sensor(device_id: str):
 
 
 class IdentityReset(BaseModel):
-    fingerprint_confirmation: str = Field(pattern=r'^[a-fA-F0-9]{16}$')
+    fingerprint_confirmation: str = Field(pattern=r'^(?:[a-fA-F0-9]{16}|[a-fA-F0-9]{64})$')
+    identity_confirmed: StrictBool = False
 
 
 @router.post('/{device_id}/reset-identity', dependencies=[Depends(require_write_auth)])
 async def reset_sensor_identity(device_id: str, body: IdentityReset):
     try:
-        row = await asyncio.to_thread(TrustStore().reset_identity, device_id, body.fingerprint_confirmation)
+        confirmation = body.fingerprint_confirmation.lower()
+        if len(confirmation) == 64:
+            expected = await asyncio.to_thread(TrustStore().get, device_id)
+            if not body.identity_confirmed or not expected or confirmation != expected['fingerprint']:
+                raise PermissionError('Zurücksetzen der bisherigen Identität ausdrücklich bestätigen.')
+        row = await asyncio.to_thread(TrustStore().reset_identity, device_id, confirmation[-16:])
         return {'ok': True, 'device': row}
     except KeyError as exc:
         raise HTTPException(404, 'Sensor nicht gefunden') from exc
