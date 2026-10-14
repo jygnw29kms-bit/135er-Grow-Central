@@ -6,9 +6,9 @@ Reproduzierbare reale Validierung des GrowCentral-Universal-Images nach der verb
 
 ## Release-Basis
 
-- Aktueller Candidate: `pi-universal-alpha-0.7.5-369`
-- Candidate-Commit: `456ed2519e0b66920f0bc6db284c962563eb5c7f`
-- Build 369 enthält die aktuelle headless Runtime und die Hardwareprofil-Architektur.
+- Aktueller Candidate: `pi-universal-alpha-0.7.5-375`
+- Candidate-Commit: `f3837eb86028654becec96cd94488ba4d6a5e0cb`
+- Build 375 enthält die aktuelle headless Runtime und die Hardwareprofil-Architektur.
 - Status bis zum Realtest: **CANDIDATE**.
 
 ## Zu testende Supportklassen

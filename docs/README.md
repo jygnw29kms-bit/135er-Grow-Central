@@ -3,7 +3,7 @@
 <p align="center"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central · J.L." width="760"></p>
 
 > [!IMPORTANT]
-> Grow Central verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Build 369 ist der aktuelle `alpha-0.7.5` Candidate. Die automatisierten Gates sind bestanden; reale Hardwarevalidierung steht noch aus. Neue veröffentlichbare Artefakte werden offen über die öffentlichen Projektkanäle bereitgestellt und dokumentiert.
+> Grow Central verwendet verbindlich **ein Universal-Image mit Hardwareprofilen**. Pi 3B/3B+ = `LEGACY_LITE`; Pi 4/400/CM4 = `FULL_SUPPORT` Standard; Pi 5/CM5 = `FULL_SUPPORT` Performance. Build 375 ist der aktuelle `alpha-0.7.5` Candidate. Die automatisierten Gates sind bestanden; reale Hardwarevalidierung steht noch aus. Neue veröffentlichbare Artefakte werden offen über die öffentlichen Projektkanäle bereitgestellt und dokumentiert.
 
 ## Zuerst lesen
 
@@ -30,7 +30,7 @@ Neue Features dürfen nicht durch die Leistungsgrenzen des Pi 3 begrenzt werden.
 
 ## Aktueller Testfokus
 
-- reale Hardwarevalidierung von Build 369;
+- reale Hardwarevalidierung von Build 375;
 - automatische Hardwareklassifikation und Diagnoseausgabe;
 - Pi-3-Legacy/Lite-Ressourcenprofil;
 - Pi-4/5-Full-Support-Pfad;
@@ -77,7 +77,7 @@ GrowCentral uses **one universal Raspberry Pi image with runtime hardware profil
 
 ## Aktueller Sensorstand · 14. Oktober 2026
 
-Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer Pi-4-Installation mit Hotfixes bestätigt. Das Original-Image 369 bleibt ein CANDIDATE und enthält Firmware 0.4.0. Kalibrierung, Dauerbetrieb und andere Hardwareklassen sind offen.
+Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer Pi-4-Installation mit Hotfixes bestätigt. Der neue Candidate Build 375 enthält Firmware 0.4.1 und die Korrekturen. Das historische Original-Image 369 enthält Firmware 0.4.0. Kalibrierung, Dauerbetrieb und andere Hardwareklassen sind offen.
 
 - [Sensor setup and calibration](de/SOIL_SENSOR_GUIDE.md)
 - [Hardware evidence and remaining checks](de/SENSOR_HARDWARE_TEST_2026-10-14.md)

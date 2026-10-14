@@ -29,9 +29,9 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 ## Aktueller Stand
 
 - Version: `alpha-0.7.5`
-- aktueller Candidate: **Build 369** / `pi-universal-alpha-0.7.5-369`
-- Candidate-Commit: `456ed2519e0b66920f0bc6db284c962563eb5c7f`
-- Build 369: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
+- aktueller Candidate: **Build 375** / `pi-universal-alpha-0.7.5-375`
+- Candidate-Commit: `f3837eb86028654becec96cd94488ba4d6a5e0cb`
+- Build 375: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
 - reale, klassenbezogene Hardwarevalidierung steht noch aus
 - veröffentlichbare Releases und Artefakte werden über die öffentlichen Open-Source-Projektkanäle bereitgestellt
 

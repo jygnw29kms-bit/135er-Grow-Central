@@ -23,9 +23,9 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Bereich | Stand |
 |---|---|
 | Version | `alpha-0.7.5` |
-| Aktueller Pi-Candidate | **Build 369** |
-| Release-Tag | `pi-universal-alpha-0.7.5-369` |
-| Quellstand des Candidates | `456ed2519e0b66920f0bc6db284c962563eb5c7f` |
+| Aktueller Pi-Candidate | **Build 375** |
+| Release-Tag | `pi-universal-alpha-0.7.5-375` |
+| Quellstand des Candidates | `f3837eb86028654becec96cd94488ba4d6a5e0cb` |
 | Veröffentlichung | 14. Oktober 2026 |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
 | Entwicklungsmodus | **Open Source / öffentlich** |
@@ -34,7 +34,7 @@ Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historisch
 
 ## Bestätigter Sensor-Teststand · 14. Oktober 2026
 
-Auf einem Raspberry Pi 4 mit Build 369 und den dokumentierten Hotfixes wurden USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige mit Seeed XIAO ESP32-C3 / HW-390, Firmware **0.4.1**, bestätigt. Das unveränderte Image 369 enthält noch Firmware 0.4.0; der aktuelle Quellstand enthält die Korrekturen. Ein neuer Image-Build wird erst nach erfolgreicher Veröffentlichung zum aktuellen Candidate.
+Auf einem Raspberry Pi 4 mit Build 369 und den dokumentierten Hotfixes wurden USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige mit Seeed XIAO ESP32-C3 / HW-390, Firmware **0.4.1**, bestätigt. Der neue veröffentlichte Candidate Build 375 enthält Firmware 0.4.1 und die Korrekturen. Das Original-Image 369 bleibt unverändert; der bestätigte Teiltest ist kein vollständiger Realtest des neuen Images.
 
 - [Sensor einrichten und kalibrieren](docs/de/SOIL_SENSOR_GUIDE.md)
 - [Hardwarebefund und offene Prüfungen](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md)
@@ -120,4 +120,4 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 
 ## English summary
 
-135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 369 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 375 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.

@@ -10,7 +10,7 @@
 
 ## Validation status
 
-- Build 369 is the current `alpha-0.7.5` Candidate and already contains the hardware-profile runtime.
+- Build 375 is the current `alpha-0.7.5` Candidate and already contains the hardware-profile runtime.
 - automated image, boot and release gates passed; one patched Pi 4 sensor path was confirmed, while full class-specific physical validation remains pending.
 - successful CI/image builds do not replace physical validation.
 - validation is tracked separately by support class.

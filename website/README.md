@@ -19,3 +19,5 @@ Die Gestaltung bleibt beim GrowCentral Nexus UI.
 ## Stand 14. Oktober 2026
 
 Der bestätigte Pi-4-Teiltest für XIAO ESP32-C3/HW-390 (Firmware 0.4.1 nach Hotfixes) und die Bodenfeuchte-Historie sind beschrieben. Die Seite grenzt die relative Feuchtereferenz von Temperatur, pH, EC und exaktem Wassergehalt ab. Sie verlinkt die Kalibrierungsanleitung und kennzeichnet ausstehende Prüfungen. Image 369 wird nicht nachträglich ausgetauscht.
+
+Aktueller Download-Candidate: Build 375 mit Firmware 0.4.1 und sämtlichen Sensor-/UI-Hotfixes. Automatisierte Image-Gates und Release-Prüfsummenprüfung bestanden; vollständiger Realtest offen.

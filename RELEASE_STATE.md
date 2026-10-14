@@ -3,29 +3,34 @@
 - **Stand:** 14. Oktober 2026
 - **Repository-Version:** `alpha-0.7.5`
 - **Branch:** `master`
-- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 369**
-- **Candidate-Tag:** `pi-universal-alpha-0.7.5-369`
-- **Candidate-Commit:** `456ed2519e0b66920f0bc6db284c962563eb5c7f`
-- **Status:** `CANDIDATE` – automatisierte Build-/Release-Gates bestanden, reale Hardwarevalidierung je Hardwareklasse weiterhin erforderlich
-- **Entwicklungsmodus:** `OPEN SOURCE` – öffentliches Repository und öffentliche, veröffentlichbare Projektartefakte
+- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 375**
+- **Candidate-Tag:** `pi-universal-alpha-0.7.5-375`
+- **Candidate-Commit:** `f3837eb86028654becec96cd94488ba4d6a5e0cb`
+- **Status:** `CANDIDATE` – automatisierte Image-Gates bestanden; vollständige reale Prüfung dieses Images offen
+- **Entwicklungsmodus:** `OPEN SOURCE` – öffentliches Repository und veröffentlichbare Artefakte
 
-> Diese Datei ist die kanonische Referenz für README, aktive Projektdokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien bleiben nachvollziehbar, definieren aber nicht den aktuellen Candidate.
+> Diese Datei ist die kanonische Referenz für README, Dokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien definieren nicht den aktuellen Candidate.
 
-## Aktueller Candidate: Build 369
+## Aktueller Candidate: Build 375
 
 | Merkmal | Wert |
 |---|---|
-| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-369.img.xz` |
-| Größe | 1.169.689.412 Byte |
-| SHA-256 | `436c5cbfbc21e39606df47bc4e152603f2ca34d9c2ee611765558f6d2f014b73` |
-| Basis | Raspberry Pi OS Lite 64-bit |
-| Architektur | dauerhaft headless, Local First |
+| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-375.img.xz` |
+| Größe | 1.164.234.740 Byte |
+| SHA-256 | `e7712591867c81f6b0667cc81f59a46f465a95917b8de851ca879b29cde93b8e` |
+| Quellstand | `f3837eb86028654becec96cd94488ba4d6a5e0cb` |
+| Basis | Raspberry Pi OS Lite 64-bit, Universal-Image |
+| Sensor-Firmware | `0.4.1` |
 | Veröffentlichung | 14. Oktober 2026 |
-| Hardwarestatus | `CANDIDATE`; reale Validierung je Hardwareklasse offen |
+| Hardwarestatus | `CANDIDATE`; dieses vollständige Image noch nicht real validiert |
 
-Build 369 ist der geprüfte veröffentlichte Universal-Image-Candidate des bereinigten Grow-Projekts. Firmware-Build, Boot/Reboot und Pristine-Prüfung wurden erfolgreich abgeschlossen. Image-SHA256 stimmt mit dem GitHub-Asset-Digest überein; Begleitpakete wurden zusätzlich auf SHA256, ZIP-Integrität und identischen Quellstand geprüft. Er verwendet die zentrale Hardwareerkennung, die gehärtete Ersteinrichtung ohne bekannte Factory-Passwörter, die lokale Web-/Mobile-Oberfläche und den optionalen Cloud-Link. SSH bleibt standardmäßig deaktiviert und wird nur ausdrücklich eingerichtet.
+[Release und Downloads](https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-375). Firmware-Build, Userspace-Boot/Reboot, Pristine-Prüfung, Komprimierung und Veröffentlichung bestanden. Die veröffentlichte Image-Prüfsumme stimmt mit dem GitHub-Asset-Digest überein. Begleitpakete wurden auf SHA256, ZIP-Integrität, Quellstand und Firmwaremanifest geprüft.
 
-Der `master`-Branch kann nach Build 369 bereits neuere Quellcodeänderungen enthalten. Ein neuer Quellstand wird deshalb erst dann als neuer Image-Candidate bezeichnet, wenn der vollständige Image-Workflow erfolgreich durchlaufen und ein entsprechender Release-Tag veröffentlicht wurde.
+Build 375 enthält Mosquitto-Konfigurationskorrektur, USB-Sensoraufnahme, individuelle MQTT-TLS-Zugänge und Zertifikatskompatibilität, paketweisen CA-Transfer mit Längenprüfung, Firmwarediagnose 0.4.1, Supportdownload-Korrekturen und Bodenfeuchte-Historie. Der zusätzlich eingegangene Menüeditor ist ein lokaler Layoutentwurf; eine produktive Navigationsintegration wird nicht behauptet.
+
+Der reale Pi-4-Teiltest wurde zuvor auf **Build 369 mit Hotfixes** durchgeführt: Sensoraufnahme, MQTT-Verbindung und Bodenfeuchte-Anzeige sind bestätigt. Diese Erkenntnisse fließen in Build 375 ein, ersetzen aber keinen vollständigen Realtest dieses Images. [Hardwarebefund](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md), [Kalibrierung](docs/de/SOIL_SENSOR_GUIDE.md).
+
+Das Original-Image 369 bleibt unverändert und enthält Firmware 0.4.0. Bestehende funktionierende Installationen müssen nicht neu geflasht werden; dokumentierte In-place-Updates sind verfügbar. Der Git-Branch kann spätere Dokumentationsänderungen enthalten, während der Image-Quellstand exakt festgehalten bleibt.
 
 ## Verbindliche Hardwarestrategie
 
@@ -75,10 +80,7 @@ Ete’s Autoservice, Touran, God’s Eye und Dyson V11 BMS sind keine funktional
 
 ## Validierung des aktuellen Kandidaten
 
-- Image-Quellstand: `456ed2519e0b66920f0bc6db284c962563eb5c7f`.
-- Quell-/Sicherheits-/Firmwareprüfungen erfolgreich; 309 Python-Tests im geprüften Entwicklungsstand.
-- Installierbare HA-Komponente: je 8 Laufzeittests gegen HA 2025.1.4 und 2026.10.1.
-- Nachgelagerte CI-/Dokumentationskorrekturen ändern keine im Image enthaltene Grow-Runtime.
-- Reale Teilprüfung auf Pi 4: USB-Sensoraufnahme, MQTT-TLS-Verbindung und Bodenfeuchte-Anzeige mit Firmware 0.4.1 und Hotfixes bestätigt. Details: [Hardwarebefund](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md).
-- Das unveränderte Image 369 enthält Firmware 0.4.0 und benötigt die dokumentierten Korrekturen. Aktueller Git-Quellstand und Image-Inhalt sind getrennt zu bewerten.
-- Neustart-/Dauertest, Substratkalibrierung, andere Hardwareklassen sowie Sprachassistenten bleiben offen; Status bleibt `CANDIDATE`.
+- 321 Python-Tests, Firmware-Build, Sicherheits-/Projektgrenzen-/Domain-/Release-Prüfungen bestanden im geprüften Sensorstand.
+- Home-Assistant-Komponente in CI gegen HA 2025.1.4 und 2026.10.1 geprüft; reale Sprachassistentenprüfung offen.
+- Pi-4-Sensortest mit Hotfixes bestätigt; vollständiger Realtest von Build 375, Neustart-/Dauerbetrieb, Kalibrierung und andere Pi-Klassen offen.
+- Status bleibt `CANDIDATE`.

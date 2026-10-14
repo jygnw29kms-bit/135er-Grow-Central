@@ -6,6 +6,10 @@ Der derzeitige USB-Flashpfad unterstützt **Seeed XIAO ESP32-C3 / HW-390**, Firm
 
 Die Prozentzahl ist ohne Substratkalibrierung kein exakter volumetrischer Wassergehalt. Salzgehalt, Substrat und Einstecktiefe beeinflussen die Messung. Ein angezeigtes `AIR_DRY` beschreibt den Firmwarezustand anhand der Referenzen; es ersetzt keine Bewertung des konkreten Substrats.
 
+## Aktueller Image-Stand
+
+Der veröffentlichte Candidate **Build 375** enthält Firmware 0.4.1 und die beschriebenen Korrekturen. Das historische Original-Image 369 benötigt Hotfixes. Der bestätigte Pi-4-Teiltest stammt aus einer aktualisierten Build-369-Installation; die vollständige Prüfung von Build 375 ist noch offen.
+
 ## Einrichtung
 
 1. Sensor per Daten-USB am Pi anschließen und in Geräte > USB-Sensor einrichten öffnen.

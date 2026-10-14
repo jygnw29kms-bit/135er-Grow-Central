@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased · Sensor hardware findings (2026-10-14)
+## alpha-0.7.5 · Universal image candidate 375 (2026-10-14)
+
+- publish a fresh universal image from exact source `f3837eb86028654becec96cd94488ba4d6a5e0cb` with firmware 0.4.1 and the current fixes; image checksum, source and companion archives verified
+- keep complete hardware validation pending; the confirmed sensor result refers to a prior patched Pi 4 installation
+
+## Sensor hardware findings (2026-10-14)
 
 - confirm native XIAO ESP32-C3 / HW-390 onboarding, MQTT TLS connectivity and soil history display on one Pi 4 installation after hotfixes; retain CANDIDATE status for the universal image
 - fix duplicate Mosquitto persistence configuration and support archive download consistency

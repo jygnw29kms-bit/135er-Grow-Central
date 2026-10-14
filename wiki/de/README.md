@@ -31,7 +31,7 @@ Lokale Funktionen dürfen nicht von der Cloud abhängen. Schreibende Fernbefehle
 
 ## Aktueller Sensorstand · 14. Oktober 2026
 
-Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer Pi-4-Installation mit Hotfixes bestätigt. Das Original-Image 369 bleibt ein CANDIDATE und enthält Firmware 0.4.0. Kalibrierung, Dauerbetrieb und andere Hardwareklassen sind offen.
+Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer Pi-4-Installation mit Hotfixes bestätigt. Der neue Candidate Build 375 enthält Firmware 0.4.1 und die Korrekturen. Das historische Original-Image 369 enthält Firmware 0.4.0. Kalibrierung, Dauerbetrieb und andere Hardwareklassen sind offen.
 
 - [Sensor setup and calibration](../../docs/de/SOIL_SENSOR_GUIDE.md)
 - [Hardware evidence and remaining checks](../../docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md)

@@ -29,9 +29,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
-          grep -Fq 'Build 369' RELEASE_STATE.md
-          grep -Fq 'pi-universal-alpha-0.7.5-369' RELEASE_STATE.md
-          grep -Fq '456ed2519e0b66920f0bc6db284c962563eb5c7f' RELEASE_STATE.md
+          grep -Fq 'Build 375' RELEASE_STATE.md
+          grep -Fq 'pi-universal-alpha-0.7.5-375' RELEASE_STATE.md
+          grep -Fq 'f3837eb86028654becec96cd94488ba4d6a5e0cb' RELEASE_STATE.md
           grep -Fq 'CANDIDATE' RELEASE_STATE.md
           grep -Fq 'OPEN SOURCE' RELEASE_STATE.md
 
