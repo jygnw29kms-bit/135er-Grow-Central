@@ -21,6 +21,7 @@ jobs:
       - name: Dispatch universal image build on master
         run: |
           set -euo pipefail
+          echo "Camera LED integration source: 397b1eafef28d34efe02aaa27c18879d90bbaf4b"
           START_TS="$(date -u +%s)"
           gh workflow run "$TARGET_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref master
           echo "START_TS=$START_TS" >> "$GITHUB_ENV"
