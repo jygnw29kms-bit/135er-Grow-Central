@@ -10,7 +10,7 @@
   const list = make('div', null, 'usb-device-list'); section.append(list); panel.prepend(section);
   const status = make('p', '', 'pairing-feedback'); status.setAttribute('role', 'status'); section.append(status);
   const labels = {DETECTED:'USB erkannt', CHECKING:'Firmware prüfen', NEEDS_FIRMWARE:'Firmware benötigt', FLASHING:'Firmware installieren', NETWORK:'WLAN einrichten', PROVISIONING:'Zugang einrichten', CONNECTING:'Verbindung prüfen', ASSIGN:'Name und Raum', READY:'Bereit', BLOCKED:'Entscheidung prüfen', ERROR:'Einrichtung prüfen'};
-  const stage = state => ({DETECTED:0, CHECKING:1, NEEDS_FIRMWARE:1, FLASHING:1, NETWORK:2, PROVISIONING:2, CONNECTING:2, ASSIGN:3, READY:4, ERROR:0}[state] ?? 0);
+  const stage = (state, resume) => state === 'ERROR' ? (resume === 'NETWORK' ? 2 : 1) : ({DETECTED:0, CHECKING:1, NEEDS_FIRMWARE:1, FLASHING:1, NETWORK:2, PROVISIONING:2, CONNECTING:2, ASSIGN:3, READY:4, ERROR:0}[state] ?? 0);
   const dialog = document.createElement('dialog'); dialog.className = 'pairing-dialog usb-dialog';
   dialog.innerHTML = '<h2>USB-Sensor einrichten</h2><ol class="usb-steps"><li>USB</li><li>Firmware</li><li>WLAN</li><li>Raum</li><li>Bereit</li></ol><p class="usb-current" role="status"></p><div class="usb-content"></div><p class="usb-error" role="alert"></p><button type="button" class="usb-close">Schließen</button>';
   document.body.append(dialog);
@@ -46,9 +46,9 @@
     if (!selected) return;
     dialog.querySelector('.usb-current').textContent = selected.message;
     [...dialog.querySelectorAll('.usb-steps li')].forEach((li, index) => {
-      li.classList.toggle('done', index < stage(selected.state));
-      li.classList.toggle('current', index === stage(selected.state));
-      if (index === stage(selected.state)) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+      li.classList.toggle('done', index < stage(selected.state, selected.resume));
+      li.classList.toggle('current', index === stage(selected.state, selected.resume));
+      if (index === stage(selected.state, selected.resume)) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
     });
     dialog.querySelector('.usb-close').textContent = selected.busy ? 'Im Hintergrund fortsetzen' : 'Schließen';
     const key = selected.state + ':' + selected.busy;

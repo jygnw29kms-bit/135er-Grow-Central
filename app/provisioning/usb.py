@@ -177,11 +177,12 @@ class USBManager:
                 # Never expose subprocess output or commands carrying credentials.
                 session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK'} else 'FIRMWARE'
                 session.state = 'ERROR'
-                session.message = 'Schritt fehlgeschlagen. USB-Verbindung, Sensor-Bootmodus und lokalen Broker prüfen; dann erneut versuchen.'
+                session.message = ('WLAN-/MQTT-Verbindung nicht bestätigt. Als Broker die LAN-IP des Pi wählen und WLAN erneut einrichten. Die geprüfte Firmware bleibt erhalten.' if session.resume == 'NETWORK' else 'USB-/Firmwareprüfung fehlgeschlagen. Verbindung und Board prüfen; nicht automatisch erneut flashen.')
                 append_audit('usb.setup.failed', port_id=session.id, resume=session.resume)
             except Exception:
+                session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK', 'ASSIGN'} else 'FIRMWARE'
                 session.state = 'ERROR'
-                session.message = 'Einrichtung konnte nicht abgeschlossen werden. Verbindung erneut prüfen.'
+                session.message = 'Einrichtung fehlgeschlagen. Am aktuellen Schritt erneut versuchen; keine automatische Firmwareinstallation.'
             finally:
                 session.busy = False
         session.task = asyncio.create_task(run())
@@ -261,7 +262,8 @@ class USBManager:
     async def wait_online(self, session):
         from app.devices.runtime import runtime
         provider = runtime.get('growcentral_esp32')
-        for _ in range(12):
+        for attempt in range(12):
+            session.message = f'WLAN-/MQTT-Verbindung prüfen: Versuch {attempt + 1}/12. Sensor angeschlossen lassen.'
             try:
                 proof = await provider.prove_identity(session.device_id)
                 if proof.public_key != session.public_key:
@@ -294,6 +296,13 @@ class NetworkRequest(BaseModel):
     def safe_serial(cls, value):
         if any(ord(char) < 32 for char in value) or '|' in value:
             raise ValueError('Ungültige Zeichen.')
+        return value
+
+    @field_validator('broker_host')
+    @classmethod
+    def supported_broker_host(cls, value):
+        if value.lower().endswith('.local'):
+            raise ValueError('Für diesen Sensor die LAN-IP des Pi als Broker wählen; .local wird nicht unterstützt.')
         return value
 
     @field_validator('ssid')

@@ -251,3 +251,24 @@ def test_network_key_mismatch_never_advances_to_assignment(setup, monkeypatch):
         assert wait(client)['state']=='BLOCKED'
         assert TrustStore().get('gc-soil-aabbcc')['status']=='DISCOVERED'
     finally:other.close()
+
+
+def test_network_timeout_keeps_verified_sensor_at_network_step():
+    import asyncio
+    async def scenario():
+        manager=usb.USBManager()
+        session=usb.Session('port',state='CONNECTING',public_key='pinned-key',firmware=usb.VERSION)
+        async def fail():raise TimeoutError('no network proof')
+        manager.start(session,fail)
+        await session.task
+        assert session.state=='ERROR' and session.resume=='NETWORK'
+        assert session.public_key=='pinned-key' and session.firmware==usb.VERSION
+        assert 'LAN-IP' in session.message
+    asyncio.run(scenario())
+
+
+def test_mdns_broker_rejected_before_secret_transfer():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        usb.NetworkRequest(ssid='Test',password='test-password',broker_host='135er-grow-central.local')
+    assert usb.NetworkRequest(ssid='Test',password='test-password',broker_host='192.168.178.80').broker_host=='192.168.178.80'
