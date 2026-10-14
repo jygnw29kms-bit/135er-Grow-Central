@@ -13,8 +13,8 @@ import tempfile
 import time
 import urllib.request
 
-SOURCE = '66c12a1502d701004aeadc2d7b5bd059e6e7dd89'
-FILES = {'app/devices/gc_pairing.py': {'new': '6bbbbf36b7110aadee078e8533aced600d2349aa21b74b1215403c12a8c51b02', 'base': 'c2752b3594ed39181fcc794fd48fa165e51338b97d04ff2a1e5de0c1bffe21ec'}, 'app/diagnostics.py': {'new': '9e75dbb123070f8a9950e2e469eee9d1405d063e2471e997c760a14a710453f3', 'base': '56f6696579a248d0af2defa19cc2a039e76b77d8168f3475418492307e6f2974'}, 'web/app.js': {'new': 'e1791d0e8cf2399dee53e93310e71fc93be40642fd42554e99ef879a603f71ac', 'base': 'b2b3db2811204e92af5bb343888de57f46d5aeab781d67786ebccffcc58730d2'}, 'web/sensor_pairing.js': {'new': '4f48074f628ed3c2de10de5de671883d42347087be50f130dde17b7b0831b56f', 'base': '7ed6de33da2821a45768e3d1c1341382f946728a0cd83007dfc373a492812548'}, 'web/usb_onboarding.js': {'new': 'e62924f9bf90969afd529709851f887cead035fa49d474135b36a5364c7ec1a1', 'base': '34f4c3dd6398c22822ba217e39797a410902d7a43041cb8757e8f15ccb9a48aa'}}
+SOURCE = '9b3e1207e2008ebd1b6c90af40c206a9ad7c29c4'
+FILES = {'app/devices/gc_pairing.py': {'new': '6bbbbf36b7110aadee078e8533aced600d2349aa21b74b1215403c12a8c51b02', 'base': 'c2752b3594ed39181fcc794fd48fa165e51338b97d04ff2a1e5de0c1bffe21ec', 'previous': []}, 'app/diagnostics.py': {'new': '9e75dbb123070f8a9950e2e469eee9d1405d063e2471e997c760a14a710453f3', 'base': '56f6696579a248d0af2defa19cc2a039e76b77d8168f3475418492307e6f2974', 'previous': []}, 'app/provisioning/usb.py': {'new': '21858aae7267e737425b8ff76495bb325304b20a8ae6fcc26f8a3cbd9f0b2580', 'base': '5b12e15c3e7502e18f30f8bf02225f42aca2d19f2ac7835674743c01c5d23eb7', 'previous': []}, 'web/app.js': {'new': 'e1791d0e8cf2399dee53e93310e71fc93be40642fd42554e99ef879a603f71ac', 'base': 'b2b3db2811204e92af5bb343888de57f46d5aeab781d67786ebccffcc58730d2', 'previous': []}, 'web/sensor_pairing.js': {'new': '4f48074f628ed3c2de10de5de671883d42347087be50f130dde17b7b0831b56f', 'base': '7ed6de33da2821a45768e3d1c1341382f946728a0cd83007dfc373a492812548', 'previous': []}, 'web/usb_onboarding.js': {'new': '11a97efe94a2d9e854aba7c36a9463652bb446d28d1312b3784b02ddfddb6ce3', 'base': '34f4c3dd6398c22822ba217e39797a410902d7a43041cb8757e8f15ccb9a48aa', 'previous': ['3965e5c5eae398d7db4688f9b34f7701c4ce8f1965758f79344d0de8819da634', 'e62924f9bf90969afd529709851f887cead035fa49d474135b36a5364c7ec1a1']}}
 ROOT = Path('/opt/135er-grow-central')
 UNIT = '135er-grow-central.service'
 BACKUP_ROOT = Path('/var/backups/grow-central')
@@ -43,7 +43,7 @@ def main():
             target.write_bytes(data)
             if target.suffix == '.py': py_compile.compile(str(target), doraise=True)
         if args.check_only:
-            print('Alle fünf Downloads, SHA256-Werte und Python-Syntax geprüft; Installation unverändert.')
+            print('Alle sechs Downloads, SHA256-Werte und Python-Syntax geprüft; Installation unverändert.')
             return
         if not (ROOT/'BUILD').is_file() or (ROOT/'BUILD').read_text().strip() != '369':
             raise RuntimeError('Dieser Hotfix ist ausschließlich für Build 369 vorgesehen.')
@@ -52,7 +52,7 @@ def main():
             path = ROOT/name
             if path.is_symlink() or not path.is_file(): raise RuntimeError('Installationsdatei fehlt/ist unerwartet verknüpft: ' + name)
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            if digest not in (hashes['base'], hashes['new']):
+            if digest not in (hashes['base'], hashes['new'], *hashes.get('previous', [])):
                 raise RuntimeError('Lokale Änderung erkannt; nicht überschrieben: ' + name)
             all_current = all_current and digest == hashes['new']
         if all_current:
@@ -90,7 +90,7 @@ def main():
             for name in FILES: shutil.copy2(backup/name,ROOT/name)
             subprocess.run(['systemctl','start',UNIT],check=False)
             raise
-        print('HOTFIX AKTIV: USB-Sensor bleibt sichtbar; Aufnahme ohne Hex-Tippen; stabiler Supportdownload und Diagnose zum Kopieren.')
+        print('HOTFIX AKTIV: USB-Sensor bleibt sichtbar; Aufnahme ohne Hex-Tippen; WLAN-Schritt bleibt erhalten; Broker-LAN-IP; stabiler Supportdownload.')
         print('Browser mit Strg+F5 neu laden. Sensor angeschlossen lassen; USB-Einrichtung fortsetzen.')
         print('Image-Build bleibt 369. Quellstand des Hotfix:',SOURCE)
 
