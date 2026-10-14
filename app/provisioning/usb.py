@@ -41,7 +41,7 @@ class USBRoute(APIRoute):
 
 
 router = APIRouter(prefix='/api/devices/usb', route_class=USBRoute, tags=['USB sensor setup'], dependencies=[Depends(require_write_auth)])
-VERSION = '0.4.0'
+VERSION = '0.4.1'
 MODEL = 'GC-SOIL-XIAO-C3-HW390'
 SUPPORTED = {(0x303a, 0x1001), (0x1a86, 0x7523), (0x1a86, 0x55d4), (0x10c4, 0xea60), (0x2886, 0x0044), (0x2886, 0x0056)}
 OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe000, 'firmware.bin': 0x10000}

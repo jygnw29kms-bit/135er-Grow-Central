@@ -9,7 +9,7 @@
 #include "identity.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.4.0";
+static constexpr char FW_VERSION[] = "0.4.1";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -380,11 +380,11 @@ static void maintainWifi() {
 static void configureMqttClient() {
   if (mqttHost.isEmpty()) return;
   net.setCACert(mqttCa.c_str());
-  net.setHandshakeTimeout(2);
-  net.setTimeout(2);
+  net.setHandshakeTimeout(10);
+  net.setTimeout(10);
   mqtt.begin(mqttHost.c_str(), mqttPort, net);
   mqtt.setKeepAlive(30);
-  mqtt.setTimeout(1500);
+  mqtt.setTimeout(5000);
   mqtt.setWill(topic("availability").c_str(), "offline", true, 1);
 }
 
@@ -410,6 +410,10 @@ static void connectMqttIfReady() {
     ? mqtt.connect(deviceId.c_str())
     : mqtt.connect(deviceId.c_str(), mqttUser.c_str(), mqttPass.c_str());
   if (!ok) {
+    char tlsError[192] = {};
+    const int tlsCode = net.lastError(tlsError, sizeof(tlsError));
+    Serial.printf("GC_NET tls_error=%d detail=%s utc_epoch=%lld\n",
+      tlsCode, tlsError, static_cast<long long>(time(nullptr)));
     Serial.printf("GC_NET mqtt_failed host=%s port=%u err=%d rc=%d\n",
       mqttHost.c_str(), mqttPort, int(mqtt.lastError()), int(mqtt.returnCode()));
     return;
@@ -422,6 +426,8 @@ static void connectMqttIfReady() {
 }
 
 static void printNetworkInfo() {
+  Serial.printf("GC_NET utc_epoch=%lld ca_bytes=%u tls_handshake_timeout_s=10\n",
+    static_cast<long long>(time(nullptr)), unsigned(mqttCa.length()));
   Serial.printf("GC_NET device=%s name=%s fw=%s\n", deviceId.c_str(), deviceName.c_str(), FW_VERSION);
   Serial.printf("GC_NET wifi_configured=%s wifi_status=%d ssid=%s ip=%s rssi=%d\n",
     wifiSsid.isEmpty() ? "no" : "yes", int(WiFi.status()), wifiSsid.c_str(),
