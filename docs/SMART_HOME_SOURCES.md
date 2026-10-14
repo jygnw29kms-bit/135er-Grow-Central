@@ -25,3 +25,21 @@ Architecture consequence: Tapo and FRITZ! devices are integrated through the mai
 - Gen2+ RPC protocol: https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol/
 
 Architecture consequence: Shelly Gen2+ is suitable for a restricted native local JSON-RPC adapter.
+
+## Home Assistant export update — 2026-10-13
+
+The maintained documentation sources for HomeKit, Google Assistant, Alexa and
+Home Assistant Cloud were retrieved from the official `home-assistant.io`
+GitHub repository (`current/source/_integrations/*.markdown`). Direct website
+retrieval returned HTTP 403. These sources support the local HomeKit Bridge and
+Cloud/account-linking architecture. Numerical soil moisture (`moisture`) is not
+one of HomeKit's numerical sensor classes or Google Assistant's supported sensor
+classes; it remains available in Home Assistant. No voice compatibility is
+inferred merely from a percentage unit.
+
+- https://github.com/home-assistant/home-assistant.io/blob/current/source/_integrations/homekit.markdown
+- https://github.com/home-assistant/home-assistant.io/blob/current/source/_integrations/google_assistant.markdown
+- https://github.com/home-assistant/home-assistant.io/blob/current/source/_integrations/alexa.markdown
+- https://github.com/home-assistant/home-assistant.io/blob/current/source/_integrations/cloud.markdown
+
+Implementation and setup: [Home Assistant](de/HOME_ASSISTANT.md).

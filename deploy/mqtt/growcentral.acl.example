@@ -1,0 +1,15 @@
+# Backend credentials: username growcentral, used only by the Pi.
+user growcentral
+topic read growcentral/v1/devices/+/announce
+topic read growcentral/v1/devices/+/state
+topic read growcentral/v1/devices/+/availability
+topic read growcentral/v1/devices/+/proof
+topic write growcentral/v1/devices/+/challenge
+
+# Each sensor username is exactly its native device ID, e.g. gc-soil-xxxxxx.
+# No sensor can read/write other devices, actuator commands, or arbitrary topics.
+pattern write growcentral/v1/devices/%u/announce
+pattern write growcentral/v1/devices/%u/state
+pattern write growcentral/v1/devices/%u/availability
+pattern write growcentral/v1/devices/%u/proof
+pattern read growcentral/v1/devices/%u/challenge

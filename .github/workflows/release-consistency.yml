@@ -29,11 +29,11 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
-          grep -Fq 'Build 199' RELEASE_STATE.md
-          grep -Fq 'pi-universal-alpha-0.7.5-199' RELEASE_STATE.md
-          grep -Fq '34442bc41d2c79328d3d5c61eb63a744f4c433a6' RELEASE_STATE.md
+          grep -Fq 'Build 369' RELEASE_STATE.md
+          grep -Fq 'pi-universal-alpha-0.7.5-369' RELEASE_STATE.md
+          grep -Fq '456ed2519e0b66920f0bc6db284c962563eb5c7f' RELEASE_STATE.md
           grep -Fq 'CANDIDATE' RELEASE_STATE.md
-          grep -Fq 'CLOSED' RELEASE_STATE.md
+          grep -Fq 'OPEN SOURCE' RELEASE_STATE.md
 
       - name: Verify canonical hardware support classes
         shell: bash
@@ -64,13 +64,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          forbidden='github\.com|Build [0-9]+|pi-universal-|candidate_commit|GC_CLOUD_|127\.0\.0\.1|10\.42\.0\.1|gc-device-v1|install-135ercloud'
+          forbidden='BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|GC_CLOUD_TOKEN=|GC_MQTT_PASSWORD=|password=[^[:space:]]|127\.0\.0\.1|10\.42\.0\.1'
           if grep -Eiq "$forbidden" website/index.html; then
             echo 'public website exposes an internal project marker'
             exit 1
           fi
-          grep -Fq 'Closed Development' README.md
-          grep -Fq 'keine öffentliche Distribution' RELEASE_STATE.md
+          grep -Fq 'Open Source' README.md
+          grep -Fq 'öffentliche Repository' RELEASE_STATE.md
 
       - name: Guard validation state
         shell: bash
@@ -86,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
           for file in RELEASE_STATE.md README.md docs/PROJECT_STATUS.md docs/RELEASE_PIPELINE.md docs/README.md docs/HARDWARE_TEST_PLAN.md docs/KNOWN_LIMITATIONS.md website/README.md; do
-            if grep -Eq 'Build 118|pi-universal-alpha-0\.7\.5-118|master e339602|Build 176|pi-universal-alpha-0\.7\.5-176' "$file"; then
+            if grep -Eq 'Build 118|pi-universal-alpha-0\.7\.5-118|master e339602|Build 176|pi-universal-alpha-0\.7\.5-176|Build 199|pi-universal-alpha-0\.7\.5-199' "$file"; then
               echo "obsolete active release marker found in $file"
               exit 1
             fi

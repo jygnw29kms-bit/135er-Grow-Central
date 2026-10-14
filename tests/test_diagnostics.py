@@ -60,3 +60,30 @@ def test_support_bundle_request_and_status_use_state_files(tmp_path, monkeypatch
     ready = asyncio.run(diagnostics.support_bundle_status())
     assert ready["available"] is True
     assert ready["size"] == 7
+
+
+def test_download_pins_archive_before_latest_symlink_changes(monkeypatch, tmp_path):
+    import gzip
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    old=tmp_path/'old.tar.gz';new=tmp_path/'new.tar.gz';latest=tmp_path/'latest.tar.gz'
+    old.write_bytes(gzip.compress(b'old diagnostic'));new.write_bytes(gzip.compress(b'new diagnostic'))
+    latest.symlink_to(old.name);monkeypatch.setattr(diagnostics,'SUPPORT_LATEST',latest)
+    response=asyncio.run(diagnostics.download_support_bundle())
+    latest.unlink();latest.symlink_to(new.name)
+    app=FastAPI()
+    @app.get('/download')
+    async def download():return response
+    result=TestClient(app).get('/download')
+    assert result.status_code==200 and result.content==old.read_bytes()
+    assert int(result.headers['content-length'])==len(result.content)
+    assert result.headers['cache-control']=='private, no-store'
+    assert result.headers['content-type']=='application/gzip'
+
+
+def test_missing_bundle_download_has_clear_status(monkeypatch,tmp_path):
+    from fastapi import HTTPException
+    import pytest
+    monkeypatch.setattr(diagnostics,'SUPPORT_LATEST',tmp_path/'missing.tar.gz')
+    with pytest.raises(HTTPException) as error:asyncio.run(diagnostics.download_support_bundle())
+    assert error.value.status_code==404

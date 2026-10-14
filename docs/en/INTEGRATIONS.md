@@ -27,3 +27,9 @@ See [Mars Hydro / iConnect hardware profile](../MARS_HYDRO_ICONNECT.md).
 The Home Assistant connector is intentionally not an arbitrary service proxy: the current baseline allows only registered `switch.*` entities and on/off commands.
 
 The Raspberry Pi remains the local master. **ESP32 is explicitly not part of the target architecture.**
+
+## Export to Home Assistant and voice assistants
+
+A local custom integration exports selected sensors and approved switches.
+Apple Home/Siri, Alexa, Google Assistant and mobile setup:
+[Home Assistant](HOME_ASSISTANT.md).

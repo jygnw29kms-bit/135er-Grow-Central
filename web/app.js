@@ -82,7 +82,7 @@ async function scanSetupWifi(){const button=$("setupWifiScanBtn");button.disable
 $("setupMode")?.addEventListener("change",setSetupMode);$("setupWifiScanBtn")?.addEventListener("click",scanSetupWifi);
 $("firstBootSetupForm")?.addEventListener("submit",async event=>{event.preventDefault();const button=$("firstBootSubmitBtn");button.disabled=true;const data=Object.fromEntries(new FormData(event.currentTarget));data.fritz_enabled=false;$("firstBootSetupStatus").textContent="Konfiguration wird geprüft. Beim WLAN-Wechsel kann die Verbindung kurz abbrechen…";try{await api("/api/setup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});$("firstBootSetupStatus").textContent="Übernommen. Der Pi prüft Netzwerk, Haupt-GUI und 135er-Grow-Central.local. Danach mit dem Heimnetz verbinden und die GUI erneut öffnen.";setTimeout(loadFirstBootStatus,5000)}catch(e){$("firstBootSetupStatus").textContent=e.message;button.disabled=false}});
 $("restartSetupBtn")?.addEventListener("click",async()=>{if(!confirm("Setup wirklich erneut ausführen? Die bestehende Netzwerkverbindung bleibt bis zum Speichern aktiv."))return;try{await api("/api/setup/restart",{method:"POST"});await loadFirstBootStatus()}catch(e){$("supportBundleStatus").textContent=e.message}});
-async function refreshSupportBundleStatus(){try{const state=await api("/api/v1/diagnostics/bundle/status");$("supportBundleStatus").textContent=state.pending?"Support-Datei wird erstellt…":state.available?`Support-Datei bereit (${Math.ceil(state.size/1024)} KiB). Bei Problemen immer diese Datei mitsenden.`:"Noch keine Support-Datei vorhanden.";$("downloadSupportBundleBtn").hidden=!state.available;return state}catch(e){$("supportBundleStatus").textContent=e.message;return null}}
+async function refreshSupportBundleStatus(){try{const state=await api("/api/v1/diagnostics/bundle/status");$("supportBundleStatus").textContent=state.pending?"Support-Datei wird erstellt…":state.available?`Support-Datei bereit (${Math.ceil(state.size/1024)} KiB). Bei Problemen immer diese Datei mitsenden.`:"Noch keine Support-Datei vorhanden.";$("downloadSupportBundleBtn").hidden=!state.available||state.pending;return state}catch(e){$("supportBundleStatus").textContent=e.message;return null}}
 $("createSupportBundleBtn")?.addEventListener("click",async()=>{const button=$("createSupportBundleBtn");button.disabled=true;try{await api("/api/v1/diagnostics/bundle",{method:"POST"});for(let i=0;i<60;i++){await new Promise(resolve=>setTimeout(resolve,2000));const state=await refreshSupportBundleStatus();if(state&&!state.pending)break}}catch(e){$("supportBundleStatus").textContent=e.message}finally{button.disabled=false}});
 $("discoverBtn").addEventListener("click",async()=>{diag("Scanning BLE…");try{const x=await writeApi("/api/df100m/discover");diag(x);if(x.devices?.length){const d=x.devices[0];diag(await writeApi("/api/df100m/connect?address="+encodeURIComponent(d.address),{method:"POST"}));refreshStatus()}}catch(e){diag("DISCOVERY ERROR\n"+e.message)}});
 $("servicesBtn").addEventListener("click",async()=>{diag("Reading GATT services…");try{diag(await writeApi("/api/df100m/services"))}catch(e){diag("GATT ERROR\n"+e.message)}});
@@ -91,3 +91,23 @@ let refreshRunning=false;
 async function refreshAll(force=false){if(refreshRunning||document.hidden)return;refreshRunning=true;try{await Promise.allSettled([refreshStatus(),refreshPower(force)])}finally{refreshRunning=false}}
 $("refreshBtn").addEventListener("click",()=>refreshView(document.querySelector(".view.active")?.id||"dashboard"));$("connectionRetryBtn")?.addEventListener("click",()=>refreshView(document.querySelector(".view.active")?.id||"dashboard"));setInterval(()=>checkPiConnection().then(()=>refreshAll()).catch(()=>{}),15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshView(document.querySelector(".view.active")?.id||"dashboard")});updateProjection();refreshView("dashboard");
 loadFirstBootStatus();
+
+// Fetch the archive with the active GUI session; expose HTTP errors in the UI.
+$("downloadSupportBundleBtn")?.addEventListener("click",async event=>{
+  event.preventDefault();const label=$("supportBundleStatus");label.textContent="Support-Datei wird übertragen…";
+  try{
+    const response=await fetch("/api/v1/diagnostics/bundle/download",{credentials:"same-origin",cache:"no-store"});
+    if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||`Supportdownload fehlgeschlagen (HTTP ${response.status}).`)}
+    if(!(response.headers.get("Content-Type")||"").startsWith("application/gzip"))throw new Error("Der Pi hat keine Support-Datei geliefert. Anmeldung und Supportstatus prüfen.");
+    const blob=await response.blob();if(!blob.size)throw new Error("Die Support-Datei ist leer.");
+    const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="Grow-Central-Support.tar.gz";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    label.textContent="Datei an den Browser übergeben. Falls Chrome den Download blockiert: Downloadmeldung prüfen oder Diagnose unten anzeigen/kopieren.";
+  }catch(error){label.textContent=error.message+" Diagnose kann unten angezeigt/kopiert werden."}
+});
+const supportActions=$("createSupportBundleBtn")?.parentElement;
+if(supportActions){
+ const show=document.createElement("button");show.className="secondary";show.type="button";show.textContent="DIAGNOSE ANZEIGEN / KOPIEREN";
+ const text=document.createElement("textarea");text.hidden=true;text.readOnly=true;text.rows=14;text.style.width="100%";text.setAttribute("aria-label","Diagnose zum Kopieren");supportActions.after(text);
+ show.onclick=async()=>{try{const snapshot=await api("/api/v1/diagnostics/snapshot?lines=80");text.value=JSON.stringify(snapshot,null,2);text.hidden=false;text.focus();text.select();$("supportBundleStatus").textContent="Diagnose markiert. Mit Strg+C kopieren und im Chat einfügen."}catch(error){$("supportBundleStatus").textContent=error.message}};
+ supportActions.append(show);
+}

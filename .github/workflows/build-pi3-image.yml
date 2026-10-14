@@ -26,7 +26,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Verify Grow project boundaries
+        run: python scripts/check-grow-project-boundaries.py
+      - run: python -m pip install platformio==6.2.0
+      - run: python -m platformio run -d firmware/gc-soil-node
+      - run: python scripts/package-sensor-firmware.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bundled-sensor-firmware
+          path: firmware/gc-soil-node/dist/
   build:
+    needs: firmware
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 110
     env:
@@ -36,6 +56,11 @@ jobs:
     steps:
       - name: Checkout 135er-Grow Central
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: bundled-sensor-firmware
+          path: firmware/gc-soil-node/dist/
 
       - name: Install image build tools
         run: |
@@ -100,10 +125,9 @@ jobs:
           apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata mosquitto mosquitto-clients
 
           cat >/etc/mosquitto/conf.d/grow-central.conf <<'EOF'
-          listener 1883 0.0.0.0
+          per_listener_settings true
+          listener 1883 127.0.0.1
           allow_anonymous true
-          persistence true
-          persistence_location /var/lib/mosquitto/
           EOF
           chmod 0644 /etc/mosquitto/conf.d/grow-central.conf
 
@@ -156,7 +180,7 @@ jobs:
           dpkg-reconfigure -f noninteractive keyboard-configuration
 
           if ! id growcentral >/dev/null 2>&1; then useradd --system --home /var/lib/135er-grow-central --create-home --shell /usr/sbin/nologin growcentral; fi
-          for g in bluetooth video netdev; do getent group "$g" >/dev/null && usermod -aG "$g" growcentral || true; done
+          for g in bluetooth video netdev dialout; do getent group "$g" >/dev/null && usermod -aG "$g" growcentral || true; done
           usermod -aG growcentral GrowCentral
           install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
           install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
@@ -190,6 +214,9 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip wheel
           .venv/bin/pip install -r requirements.txt
+          .venv/bin/python -c 'from app.provisioning.usb import firmware_files; firmware_files()'
+          install -o root -g root -m 0644 deploy/systemd/grow-central-provisioning.service /etc/systemd/system/grow-central-provisioning.service
+          systemctl enable grow-central-provisioning.service
 
           cat >.env <<'EOF'
           DF100M_NAME_HINT=MZ_MZF002
@@ -209,6 +236,10 @@ jobs:
           GC_SMARTHOME_ENABLED=true
           GC_CAMERA_ENABLED=true
           GC_CAMERA_DEVICE=
+          GC_HA_EXPORT_ENABLED=false
+          GC_HA_BRIDGE_TOKEN=
+          GC_HA_EXPORT_DEVICE_IDS=
+          GC_HA_EXPORT_SWITCH_IDS=
           EOF
           # GUI credentials are created only by the captive first-boot portal.
           chown -R root:growcentral /opt/135er-grow-central
@@ -243,8 +274,8 @@ jobs:
           cat >/etc/systemd/system/135er-grow-central.service <<'EOF'
           [Unit]
           Description=135er-Grow Central Local
-          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-setup-ap.service
-          Wants=network-online.target bluetooth.target grow-central-setup-ap.service
+          After=network-online.target bluetooth.target grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-provisioning.service
+          Wants=network-online.target bluetooth.target grow-central-setup-ap.service grow-central-provisioning.service
           OnFailure=grow-central-support-on-failure@%n.service
           [Service]
           Type=simple
@@ -257,7 +288,7 @@ jobs:
           RestartSec=3
           NoNewPrivileges=true
           PrivateTmp=true
-          SupplementaryGroups=systemd-journal video netdev
+          SupplementaryGroups=systemd-journal video netdev dialout
           ProtectSystem=strict
           ProtectHome=true
           ReadWritePaths=/opt/135er-grow-central/data /var/lib/135er-grow-central
@@ -365,9 +396,9 @@ jobs:
           ufw allow 8080/tcp
           ufw allow 5353/udp
           # Native Grow-Central ESP32 MQTT: private LAN only.
-          ufw allow from 10.0.0.0/8 to any port 1883 proto tcp
-          ufw allow from 172.16.0.0/12 to any port 1883 proto tcp
-          ufw allow from 192.168.0.0/16 to any port 1883 proto tcp
+          ufw allow from 10.0.0.0/8 to any port 8883 proto tcp
+          ufw allow from 172.16.0.0/12 to any port 8883 proto tcp
+          ufw allow from 192.168.0.0/16 to any port 8883 proto tcp
           WLAN="$(cat /var/lib/135er-grow-central/hardware-wlan-interface 2>/dev/null || true)"
           if [ -z "$WLAN" ]; then
             WLAN="$(nmcli -t -e yes -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2 == "wifi" {print $1; exit}')"
@@ -551,7 +582,9 @@ jobs:
           grep -q '^ExecStart=.*/uvicorn app.entrypoint:app ' /etc/systemd/system/135er-grow-central.service
           grep -q '^ListenStream=80$' /etc/systemd/system/grow-central-http.socket
           grep -q '^ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:8080$' /etc/systemd/system/grow-central-http.service
-          grep -q '^SupplementaryGroups=systemd-journal video netdev$' /etc/systemd/system/135er-grow-central.service
+          grep -q '^SupplementaryGroups=systemd-journal video netdev dialout$' /etc/systemd/system/135er-grow-central.service
+          test "$(systemctl is-enabled grow-central-provisioning.service)" = enabled
+          .venv/bin/python -c 'from app.provisioning.usb import firmware_files; firmware_files()'
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
           /bin/bash -n /usr/local/sbin/grow-central-cloud-smoke-test
@@ -581,13 +614,13 @@ jobs:
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
           ! grep -Fq 'maintenance_activation_code' /opt/135er-grow-central/app/firstboot.py
           ! grep -Fq 'grow-central-remote-maintenance' /opt/135er-grow-central/image-builder/firstboot/apply_setup.py
-          systemd-analyze verify /etc/systemd/system/135er-grow-central.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
+          systemd-analyze verify /etc/systemd/system/grow-central-provisioning.service /etc/systemd/system/135er-grow-central.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q 'ufw allow 22/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          grep -q '192.168.0.0/16 to any port 1883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           test -f /etc/mosquitto/conf.d/grow-central.conf
-          grep -q '^listener 1883 0.0.0.0$' /etc/mosquitto/conf.d/grow-central.conf
+          grep -q '^listener 1883 127.0.0.1$' /etc/mosquitto/conf.d/grow-central.conf
           /bin/bash -n /usr/local/sbin/grow-central-bluetooth-init.sh
           /usr/bin/python3 -m py_compile /usr/local/sbin/grow-central-apply-setup.py
           /bin/bash -n /usr/local/sbin/grow-central-setup-ap.sh
@@ -673,6 +706,8 @@ jobs:
           sudo mount "${LOOP}p2" "$ROOT"
           cleanup_boot() {
             set +e
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active mosquitto.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-provisioning.service
             sudo machinectl poweroff "$MACHINE" 2>/dev/null
             sleep 2
             sudo umount "$ROOT" 2>/dev/null
@@ -702,6 +737,8 @@ jobs:
             fi
             sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active 135er-grow-central.service
             sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-http.socket
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active mosquitto.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-provisioning.service
             sudo machinectl poweroff "$MACHINE"
             wait "$nspawn_pid" || true
           }
@@ -733,6 +770,8 @@ jobs:
           test ! -e "$ROOT/var/lib/135er-grow-central/.firewall-initialized"
           test ! -e "$ROOT/var/lib/135er-grow-central/.headless-firstboot-ready"
           test ! -s "$ROOT/etc/machine-id"
+          test ! -e "$ROOT/etc/mosquitto/grow-central-sensor-broker/ca.key"
+          test ! -e "$ROOT/etc/mosquitto/grow-central-sensor-broker/accounts.json"
           test -z "$(sudo find "$ROOT/etc/ssh" -maxdepth 1 -type f -name 'ssh_host_*' -print -quit)"
           test "$(sudo chroot "$ROOT" passwd --status GrowCentral | awk '{print $2}')" = L
           ! grep -q '^GC_GUI_USERNAME=' "$ROOT/opt/135er-grow-central/.env"
@@ -743,9 +782,11 @@ jobs:
       - name: Compress and checksum image
         run: |
           VERSIONED_NAME="${IMAGE_NAME}_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}"
+          printf 'Source commit: %s\nBuilt at: %s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > "${VERSIONED_NAME}-SOURCE.txt"
           mv work.img "${VERSIONED_NAME}.img"
           xz -T0 -6 -f "${VERSIONED_NAME}.img"
           sha256sum "${VERSIONED_NAME}.img.xz" > "${VERSIONED_NAME}.img.xz.sha256"
+          python3 scripts/package-image-companions.py
           cat > "${VERSIONED_NAME}-CREDENTIALS.txt" <<'EOF'
           Hostname: 135er-grow-central
           First boot AP: 135er-GrowCentral-Setup-XXXX (open; setup-only)
@@ -773,6 +814,10 @@ jobs:
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz.sha256
             135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-CREDENTIALS.txt
+            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-SOURCE.txt
+            grow-central-homeassistant-*.zip
+            gc-soil-node-*-test.zip
+            COMPANIONS.sha256
           compression-level: 0
           retention-days: 14
 
@@ -781,4 +826,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi-universal-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Universal Raspberry Pi OS Lite 64-bit image for Raspberry Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Hardware and NetworkManager interface names are detected at runtime; Pi 3B keeps the confirmed conservative 2.4 GHz setup-AP behavior. First boot ships without factory passwords; local SSH is opt-in." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-SOURCE.txt grow-central-homeassistant-*.zip gc-soil-node-*-test.zip COMPANIONS.sha256 --target "$GITHUB_SHA" --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Test image from commit ${GITHUB_SHA}. Raspberry Pi OS Lite 64-bit for Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Includes manual sensor trust/identity, scoped Home Assistant export and the installable HA component (Apple Home/Siri, Alexa and Google bridge setup documented). Home Assistant runs separately; export is opt-in. Includes guided USB discovery, verified bundled firmware 0.4.1 flashing, local certificate/account provisioning and room assignment. Only XIAO ESP32-C3 / HW-390 is supported for flashing. BLE credential provisioning is not implemented. Real hardware validation remains pending. First boot ships without factory passwords; local SSH is opt-in." --prerelease

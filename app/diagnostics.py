@@ -34,6 +34,8 @@ UNITS = (
     "NetworkManager.service",
     "avahi-daemon.service",
     "ssh.service",
+    "mosquitto.service",
+    "grow-central-provisioning.service",
     "bluetooth.service",
 )
 COMPLETION_MARKERS = {
@@ -191,13 +193,20 @@ async def support_bundle_status():
 
 @router.get("/bundle/download")
 async def download_support_bundle():
-    if not SUPPORT_LATEST.is_file():
+    try:
+        target = SUPPORT_LATEST.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "Noch kein Support-Paket vorhanden") from exc
+    if not target.is_file():
         raise HTTPException(404, "Noch kein Support-Paket vorhanden")
+    if not os.access(target, os.R_OK):
+        raise HTTPException(503, "Support-Paket ist für den GC-Dienst nicht lesbar; Dateirechte prüfen")
     append_audit("diagnostics.bundle.downloaded")
     # No HTML/body-rewriting middleware exists in the headless architecture;
     # FileResponse can stream the archive with its exact Content-Length.
     return FileResponse(
-        path=SUPPORT_LATEST,
+        path=target,
         media_type="application/gzip",
         filename="Grow-Central-Support.tar.gz",
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
     )

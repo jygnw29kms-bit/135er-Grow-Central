@@ -1,6 +1,8 @@
 # Quellen, Referenzen und Herkunft der technischen Informationen
 
-Stand: August 2026
+Hersteller-/Protokollregister: August 2026. Ergänzender Software-Quellenabgleich: 9. Oktober 2026.
+
+Der [App-Quellenabgleich vom 9. Oktober 2026](de/APP_REVIEW_2026-10-09.md) dokumentiert neu geprüfte Primärquellen zu Python-Async-I/O, URL-Validierung und HTTPX sowie daraus abgeleitete Änderungen. Er aktualisiert keine Hardware- oder Herstellerfreigaben dieses Registers.
 
 135er-Grow Central unterscheidet ausdrücklich zwischen:
 

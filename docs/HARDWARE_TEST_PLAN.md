@@ -6,9 +6,9 @@ Reproduzierbare reale Validierung des GrowCentral-Universal-Images nach der verb
 
 ## Release-Basis
 
-- Aktueller Candidate: `pi-universal-alpha-0.7.5-199`
-- Candidate-Commit: `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
-- Build 199 enthält die aktuelle headless Runtime und die Hardwareprofil-Architektur.
+- Aktueller Candidate: `pi-universal-alpha-0.7.5-369`
+- Candidate-Commit: `456ed2519e0b66920f0bc6db284c962563eb5c7f`
+- Build 369 enthält die aktuelle headless Runtime und die Hardwareprofil-Architektur.
 - Status bis zum Realtest: **CANDIDATE**.
 
 ## Zu testende Supportklassen
@@ -115,3 +115,7 @@ Für **jede** Hardwareklasse wird separat geführt:
 Ein Image wird nicht pauschal für alle Modelle als `VALIDATED` bezeichnet. Die Validierung wird nach Supportklasse dokumentiert. Full-Support-Freigaben für Pi 4/5 können bestehen, auch wenn ein klar abgegrenzter Pi-3-Legacy/Lite-Fix noch offen ist. Umgekehrt darf ein erfolgreicher Pi-3-Test nicht automatisch Full Support für Pi 4/5 behaupten.
 
 Verbindliche Policy: [`HARDWARE_SUPPORT_POLICY.md`](HARDWARE_SUPPORT_POLICY.md).
+
+## Teilbefund vom 14. Oktober 2026
+
+[Pi-4-Sensortest](de/SENSOR_HARDWARE_TEST_2026-10-14.md): USB-Aufnahme, MQTT-TLS-Verbindung und Bodenfeuchte-Anzeige nach Hotfixes bestätigt. Noch offen: Sensor nur mit Strom versorgen/USB abziehen, Pi und Sensor neu starten, MQTT-Wiederverbindung, Identität und Raumzuordnung erhalten, 24-Stunden-Historie prüfen, Trocken-/Nass- und Substratkalibrierung durchführen. Andere Pi-Klassen bleiben separat zu prüfen.

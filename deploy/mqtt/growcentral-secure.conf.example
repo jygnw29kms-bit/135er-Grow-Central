@@ -1,0 +1,11 @@
+# Add as /etc/mosquitto/conf.d/grow-central-secure.conf only after certificates,
+# password file and ACL exist. Their paths below must refer to real local files.
+# The base image keeps anonymous development access on loopback only.
+listener 8883 0.0.0.0
+allow_anonymous false
+password_file /etc/mosquitto/grow-central.passwords
+acl_file /etc/mosquitto/grow-central.acl
+cafile /etc/mosquitto/certs/grow-central-ca.crt
+certfile /etc/mosquitto/certs/grow-central-server.crt
+keyfile /etc/mosquitto/certs/grow-central-server.key
+tls_version tlsv1.2

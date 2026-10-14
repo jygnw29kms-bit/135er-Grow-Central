@@ -1,11 +1,11 @@
 # Roadmap – 135er-Grow Central
 
-**Stand:** 2026-08-23  
+**Stand:** 2026-10-14
 **Kanonischer Release-Status:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; Build 118 ist der nächste Raspberry-Pi-Hardwaretest-Kandidat.
+Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 369 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
 
-## Jetzt · Build 118 Hardwarevalidierung
+## Jetzt · Build 369 Hardwarevalidierung
 
 - frischer Boot / Reboot;
 - First Boot, Setup AP, DHCP/DNS;
@@ -18,6 +18,16 @@ Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt be
 - Support-Bundle bei Abweichungen.
 
 ## Nächste Alpha-Ziele
+
+### Umgesetzt im Entwicklungsstand vom 9. Oktober 2026
+
+- Desktop/Mobile-Laufzeitstatus erkennt veraltete Cloud-Heartbeats und einen Wechsel des Cloud-Servers.
+- Cloud-Ausfälle erzeugen Hinweise; lokale Kernfunktionen bleiben unabhängig davon verfügbar.
+- Statusprüfungen behandeln fehlendes bzw. nicht antwortendes systemd und blockieren den asynchronen API-Ablauf nicht.
+- Cloud-Adressen werden als reine HTTPS-Ursprünge ohne eingebettete Zugangsdaten geprüft.
+- Cloud-Link V2 wiederholt den Diagnose-Handshake nach inkompatibler Health-Antwort oder fehlendem Telemetrie-Endpunkt.
+
+Diese Änderungen sind Quellcodeverbesserungen und kein neuer veröffentlichter Image-Candidate. Quellen, Prüfungen und verbleibende Grenzen: [Analyse und Quellenabgleich](de/APP_REVIEW_2026-10-09.md).
 
 ### Geräte & Grow
 
@@ -61,3 +71,42 @@ Alle neuen Pi-, Kiosk-, Mobile-, Website-, Repo- und Release-Oberflächen folgen
 ## Stable-Gate
 
 Eine Stable-/Beta-Hochstufung erfolgt erst, wenn die Kernpfade reproduzierbar auf Zielhardware getestet sind. Ein CI-erfolgreicher Build allein genügt nicht.
+
+## Native Sensoraufnahme · Entwicklungsstand 13. Oktober 2026
+
+Manuelle Aufnahme/Ablehnung, persistente Sperrzustände, Name/Raum-Zuweisung,
+P-256-Geräteidentität und aktuelle Nonce-Prüfung sind im Backend und in der
+Desktop-/Mobile-/Legacy-Oberfläche ergänzt. Firmware 0.4.0 baut für XIAO ESP32-C3;
+Hardwarevalidierung bleibt offen. Netzwerk-MQTT benötigt individuelle TLS-Zugänge;
+der anonyme Image-Listener ist auf Loopback begrenzt. BLE-Provisionierung bleibt offen und gesperrt. Individuelle lokale MQTT-TLS-Zugänge
+können inzwischen über den bestätigten USB-Assistenten eingerichtet werden.
+
+Details, Migration und überprüfte Grenzen: [Sensoraufnahme](de/SENSOR_PAIRING.md).
+
+## Home Assistant und Sprachassistenten — 2026-10-13
+
+Installierbare lokale HA-Komponente mit Config Flow, Polling, Sensoren und
+freigegebenen Schaltern. Separater API-Schlüssel und explizite Export-/Schaltlisten;
+keine Rückexport-Schleife für importierte HA-Geräte. Weitere konfigurierte
+Runtime-Sensoren können ausdrücklich als reine Messwerte ausgewählt werden.
+Apple Home/Siri über HomeKit Bridge, Alexa/Google über HA Cloud oder die offiziellen
+manuellen Account-Linking-Wege. Numerische Bodenfeuchte bleibt in HA; die aktuellen
+HomeKit-/Google-Sensorklassen unterstützen sie nicht. Kontokopplung und reale
+Sprachbefehle müssen auf der Zielinstallation geprüft werden.
+
+Einrichtung: [Home Assistant](de/HOME_ASSISTANT.md).
+
+## Geführte USB-Sensoraufnahme — 2026-10-13
+
+USB-Kandidaten am Pi werden automatisch im Gerätebereich gezeigt. Der Assistent
+prüft die aktuelle signierte USB-Identität, installiert bei Bedarf das geprüfte
+XIAO-C3-Firmwarepaket 0.4.0, richtet WLAN und individuelle lokale MQTT-TLS-Zugänge
+über USB ein und prüft danach dieselbe Identität im Netzwerk. Name/Raum und die
+bewusste Aufnahme schließen den Ablauf ab. Widerruf und Schlüsselwechsel bleiben
+manuell kontrolliert. Firmware wird im Image-CI separat gebaut und gebündelt;
+Flashbereiche schließen NVS aus. Der lokale Broker-Helfer verwendet einen Unix-
+Socket und öffnet keine allgemeine privilegierte Befehlsausführung.
+
+Software-/Seriell-/TLS-Tests und Desktop-/Mobile-Dialog sind geprüft; tatsächliches
+USB-Reset/Flash und WLAN auf XIAO/Pi bleiben Hardwaretests. BLE bleibt offen.
+Anleitung: [USB-Sensor einrichten](de/USB_SENSOR_SETUP.md).

@@ -19,7 +19,10 @@ from pydantic import BaseModel, Field
 from app.security import require_write_auth
 from app.diagnostics import router as diagnostics_router
 from app.devices.router import router as devices_router
+from app.devices.gc_pairing import router as pairing_router
 from app.smarthome.router import router as smarthome_router
+from app.smarthome.ha_bridge import router as ha_bridge_router
+from app.provisioning.usb import router as usb_router
 from app.network import router as network_router
 from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
 from app.system_info import router as system_router
@@ -38,7 +41,10 @@ app = FastAPI(title="135er-Grow Central Local", version="0.7.5")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 app.include_router(network_router)
 app.include_router(devices_router)
+app.include_router(pairing_router)
 app.include_router(smarthome_router)
+app.include_router(ha_bridge_router)
+app.include_router(usb_router)
 app.include_router(diagnostics_router)
 app.include_router(system_router)
 

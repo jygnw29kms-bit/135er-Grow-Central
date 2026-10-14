@@ -128,6 +128,7 @@ async def main() -> None:
         while True:
             capabilities = await cloud_capabilities(client)
             if not capabilities.get("compatible"):
+                connected = False
                 _persist_state(state="degraded", detail="cloud health unavailable or incompatible", cloud_compatible=False, capabilities=capabilities, retry_seconds=retry_seconds)
                 logger.warning("Cloud unavailable/incompatible: %s; retry in %ss", json.dumps(capabilities), retry_seconds)
                 await asyncio.sleep(retry_seconds)
@@ -139,6 +140,7 @@ async def main() -> None:
                 telemetry, local = await telemetry_payload(client)
                 response = await client.post(f"{legacy.CLOUD_URL}/api/v1/telemetry", json=telemetry, headers=headers, timeout=10)
                 if response.status_code == 404:
+                    connected = False
                     _persist_state(state="degraded", detail="cloud telemetry endpoint missing", cloud_compatible=False, http_status=404, retry_seconds=retry_seconds)
                     await asyncio.sleep(retry_seconds)
                     retry_seconds = min(MAX_RETRY, retry_seconds * 2)

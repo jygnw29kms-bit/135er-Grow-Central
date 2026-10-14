@@ -10,8 +10,8 @@
 
 ## Validation status
 
-- Build 199 is the current `alpha-0.7.5` Candidate and already contains the hardware-profile runtime.
-- automated image, boot and release gates passed; physical validation is still pending.
+- Build 369 is the current `alpha-0.7.5` Candidate and already contains the hardware-profile runtime.
+- automated image, boot and release gates passed; one patched Pi 4 sensor path was confirmed, while full class-specific physical validation remains pending.
 - successful CI/image builds do not replace physical validation.
 - validation is tracked separately by support class.
 
@@ -42,3 +42,11 @@
 ## Documentation rule
 
 Historical build documents may contain older candidate numbers or Pi-3-focused terminology. They are historical evidence only. Current operational truth is defined by `RELEASE_STATE.md`, `HARDWARE_SUPPORT_POLICY.md`, `PROJECT_STATUS.md` and the active runtime classifier.
+
+## Native soil sensor
+
+- XIAO ESP32-C3 / HW-390 is the supported USB flashing target; additional temperature, pH and EC hardware is not implemented by this probe.
+- AIR/WATER references give a relative engineering percentage, not volumetric water content; substrate-specific thresholds and calibration hardware tests remain open.
+- firmware 0.4.1 diagnostics identified truncated USB CA transfer; paced transfer established MQTT connectivity. Current backend checks stored CA length.
+- original image 369 still contains firmware 0.4.0; in-place hotfixes and future image contents must be distinguished.
+- per-sensor diagnostic/calibration UI is not implemented; room history aggregates assigned soil sensors.

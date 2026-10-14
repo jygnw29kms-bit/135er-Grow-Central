@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
 <link rel="stylesheet" href="/static/platform.css?v=3">
 <script>if(matchMedia('(max-width:600px) and (pointer:coarse)').matches&&!localStorage.getItem('gc.desktop'))location.replace('/mobile');</script>
+<link rel="stylesheet" href="/static/sensor_pairing.css?v=2">
 </head>
 <body>
 <div class="app-shell">
@@ -113,6 +114,7 @@
 
     <section id="devices" class="view">
       <div class="section-head"><div><small>GC-DEVICE-V1</small><h2>Geräte</h2><p>Einheitliche Geräteansicht für Mars Hydro, Spider Farmer, Tuya, ESP32 und weitere Provider.</p></div><button class="primary" id="discoverBtn">Geräte suchen</button></div>
+<section id="sensorPairing" class="pairing-panel"><h3>Grow-Central Sensoren</h3><p>Erkennung automatisch, Aufnahme nur durch dich. Neue Sensoren bekommen erst nach Name, Raum und Identitätsprüfung Zugriff auf produktive Daten.</p></section>
       <div class="filterbar"><button class="active" data-filter="all">Alle</button><button data-filter="online">Online</button><button data-filter="sensor">Sensoren</button><button data-filter="light">Licht</button><button data-filter="fan">Lüfter</button><button data-filter="switch">Schalter</button><button class="advanced-only" data-filter="provider">Provider</button></div>
       <article class="panel"><div class="table-head"><span>GERÄT</span><span>TYP</span><span>PROVIDER</span><span>STATUS / WERTE</span></div><div id="deviceList" class="device-table"><div class="empty">Geräte werden geladen…</div></div></article>
       <article class="panel advanced-only provider-panel"><div class="panel-title"><div><small>PROVIDER</small><h3>Unterstützte Plattformen</h3></div><span class="counter" id="providerCount">—</span></div><div class="provider-grid" id="providerGrid"></div></article>
@@ -144,4 +146,4 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/static/platform.js?v=2"></script><script src="/static/room_views.js?v=1"></script><script src="/static/runtime_status.js?v=1"></script>
-</body></html>
+<script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script></body></html>

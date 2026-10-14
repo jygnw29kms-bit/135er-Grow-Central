@@ -1,10 +1,15 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <time.h>
+#include <freertos/semphr.h>
 #include <MQTT.h>
 #include <math.h>
+#include "identity.h"
+#include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.2.0";
+static constexpr char FW_VERSION[] = "0.4.1";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -22,8 +27,9 @@ static constexpr float EMA_ALPHA = 0.20f;
 static constexpr float PUBLISH_DELTA_PCT = 0.5f;
 
 Preferences prefs;
-WiFiClient net;
-MQTTClient mqtt(512, 1024);
+WiFiClientSecure net;
+MQTTClient mqtt(2048, 2048);
+DeviceIdentity identity;
 
 uint16_t airRaw = DEFAULT_AIR_RAW;
 uint16_t waterRaw = DEFAULT_WATER_RAW;
@@ -33,13 +39,16 @@ uint32_t lastReport = 0;
 uint32_t lastMqttPublish = 0;
 uint32_t lastWifiAttempt = 0;
 uint32_t lastMqttAttempt = 0;
+uint32_t wifiRetry = WIFI_RETRY_MS, mqttRetry = MQTT_RETRY_MS;
+volatile bool mqttOnline = false;
 
 String wifiSsid;
 String wifiPass;
 String mqttHost;
-uint16_t mqttPort = 1883;
+uint16_t mqttPort = 8883;
 String mqttUser;
 String mqttPass;
+String mqttCa;
 String deviceName = "Grow-Central Soil Sensor";
 String deviceId;
 
@@ -55,6 +64,19 @@ struct SoilReading {
   const char* quality;
   const char* state;
 };
+
+SemaphoreHandle_t adcLock = nullptr;
+portMUX_TYPE readingLock = portMUX_INITIALIZER_UNLOCKED;
+SoilReading latestReading{};
+bool readingAvailable = false;
+
+static bool currentReading(SoilReading& out) {
+  portENTER_CRITICAL(&readingLock);
+  const bool available = readingAvailable;
+  if (available) out = latestReading;
+  portEXIT_CRITICAL(&readingLock);
+  return available;
+}
 
 static int compareU16(const void* a, const void* b) {
   const uint16_t ua = *reinterpret_cast<const uint16_t*>(a);
@@ -108,6 +130,7 @@ static const char* signalQuality(float sigma, uint16_t span) {
 }
 
 static SoilReading sampleSoil() {
+  xSemaphoreTake(adcLock, portMAX_DELAY);
   uint16_t samples[SAMPLE_COUNT];
   uint16_t minVal = ADC_MAX;
   uint16_t maxVal = 0;
@@ -159,6 +182,7 @@ static SoilReading sampleSoil() {
   r.sensorOk = ok;
   r.quality = signalQuality(sigma, span);
   r.state = ok ? moistureState(pct) : "SENSOR_FAULT";
+  xSemaphoreGive(adcLock);
   return r;
 }
 
@@ -196,7 +220,8 @@ static void loadNetworkConfig() {
   wifiSsid = prefs.getString("ssid", "");
   wifiPass = prefs.getString("wpass", "");
   mqttHost = prefs.getString("mhost", "");
-  mqttPort = prefs.getUShort("mport", 1883);
+  mqttPort = prefs.getUShort("mport", 8883);
+  mqttCa = prefs.getString("ca", "");
   mqttUser = prefs.getString("muser", "");
   mqttPass = prefs.getString("mpass", "");
   deviceName = prefs.getString("name", "Grow-Central Soil Sensor");
@@ -211,6 +236,7 @@ static void saveNetworkConfig() {
   prefs.putUShort("mport", mqttPort);
   prefs.putString("muser", mqttUser);
   prefs.putString("mpass", mqttPass);
+  prefs.putString("ca", mqttCa);
   prefs.putString("name", deviceName);
   prefs.end();
 }
@@ -222,9 +248,10 @@ static void clearNetworkConfig() {
   wifiSsid = "";
   wifiPass = "";
   mqttHost = "";
-  mqttPort = 1883;
+  mqttPort = 8883;
   mqttUser = "";
   mqttPass = "";
+  mqttCa = "";
   deviceName = "Grow-Central Soil Sensor";
   mqtt.disconnect();
   WiFi.disconnect(true, true);
@@ -234,26 +261,26 @@ static String topic(const char* leaf) {
   return String(MQTT_ROOT) + "/devices/" + deviceId + "/" + leaf;
 }
 
-static void publishAnnouncement() {
-  if (!mqtt.connected()) return;
+static String announcementPayload() {
   String payload = "{\"schema\":\"" + String(SCHEMA) + "\",\"protocol\":\"" + String(PROTOCOL) +
                    "\",\"id\":\"" + jsonEscape(deviceId) + "\",\"name\":\"" + jsonEscape(deviceName) +
                    "\",\"device_class\":\"sensor\",\"model\":\"GC-SOIL-XIAO-C3-HW390\",\"firmware\":\"" +
                    String(FW_VERSION) + "\",\"capabilities\":[\"soil_moisture\"]}";
-  mqtt.publish(topic("announce"), payload, true, 1);
+  return payload;
 }
 
-static void publishState(const SoilReading& r, bool force = false) {
-  if (!mqtt.connected() || !r.sensorOk || isnan(r.moisturePct)) return;
-  const uint32_t now = millis();
-  const bool due = now - lastMqttPublish >= MQTT_PUBLISH_INTERVAL_MS;
-  const bool changed = isnan(lastPublishedPct) || fabsf(r.moisturePct - lastPublishedPct) >= PUBLISH_DELTA_PCT;
-  if (!force && !due && !changed) return;
+static void publishAnnouncement() {
+  if (!mqtt.connected()) return;
+  const String signedPayload = identity.sign(deviceId, "announce", announcementPayload(), jsonEscape);
+  if (!signedPayload.isEmpty()) mqtt.publish(topic("announce"), signedPayload, true, 1);
+}
 
+static String statePayload(const SoilReading& r) {
   const int32_t rssi = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0;
   String payload;
   payload.reserve(520);
-  payload += "{\"soil_moisture\":" + String(r.moisturePct, 1);
+  payload += "{\"soil_moisture\":";
+  payload += r.sensorOk && !isnan(r.moisturePct) ? String(r.moisturePct, 1) : "null";
   payload += ",\"meta\":{";
   payload += "\"raw\":" + String(r.rawMean);
   payload += ",\"median\":" + String(r.rawMedian);
@@ -263,17 +290,63 @@ static void publishState(const SoilReading& r, bool force = false) {
   payload += ",\"sigma\":" + String(r.sigma, 1);
   payload += ",\"quality\":\"" + String(r.quality) + "\"";
   payload += ",\"moisture_state\":\"" + String(r.state) + "\"";
-  payload += ",\"sensor_ok\":true";
+  payload += ",\"sensor_ok\":" + String(r.sensorOk ? "true" : "false");
   payload += ",\"air_raw\":" + String(airRaw);
   payload += ",\"water_raw\":" + String(waterRaw);
   payload += ",\"rssi_dbm\":" + String(rssi);
-  payload += ",\"uptime_ms\":" + String(now);
+  payload += ",\"uptime_ms\":" + String(millis());
   payload += ",\"firmware\":\"" + String(FW_VERSION) + "\"}}";
 
-  if (mqtt.publish(topic("state"), payload, true, 1)) {
+  return payload;
+}
+
+static void publishState(const SoilReading& r, bool force = false) {
+  if (!mqtt.connected()) return;
+  const uint32_t now = millis();
+  const bool due = now - lastMqttPublish >= MQTT_PUBLISH_INTERVAL_MS;
+  const bool changed = isnan(lastPublishedPct) || fabsf(r.moisturePct - lastPublishedPct) >= PUBLISH_DELTA_PCT;
+  if (!force && !due && !changed) return;
+
+  const String payload = statePayload(r);
+  const String signedPayload = identity.sign(deviceId, "state", payload, jsonEscape);
+  if (!signedPayload.isEmpty() && mqtt.publish(topic("state"), signedPayload, true, 1)) {
     lastPublishedPct = r.moisturePct;
     lastMqttPublish = now;
   }
+}
+
+String proofQueue[4];
+uint8_t proofHead = 0, proofCount = 0;
+
+static void onMqttMessage(String& incomingTopic, String& payload) {
+  if (incomingTopic != topic("challenge") || payload.length() > 256) return;
+  // Challenge has one fixed-size hexadecimal nonce; no network configuration or actuator commands.
+  const int field = payload.indexOf("\"nonce\"");
+  if (field < 0) return;
+  const int colon = payload.indexOf(':', field + 7);
+  const int start = payload.indexOf('"', colon + 1);
+  const int end = payload.indexOf('"', start + 1);
+  if (colon < 0 || start < 0 || end - start != 65) return;
+  const String nonce = payload.substring(start + 1, end);
+  for (size_t i = 0; i < nonce.length(); ++i) if (!isxdigit(static_cast<unsigned char>(nonce[i]))) return;
+  if (proofCount < 4) {
+    proofQueue[(proofHead + proofCount) % 4] = nonce;
+    ++proofCount;
+  }
+}
+
+static void handleIdentityProof() {
+  if (!proofCount || !mqtt.connected()) return;
+  SoilReading reading{};
+  if (!currentReading(reading)) return;
+  const String nonce = proofQueue[proofHead];
+  proofQueue[proofHead] = "";
+  proofHead = (proofHead + 1) % 4;
+  --proofCount;
+  const String state = statePayload(reading);
+  const String body = "{\"nonce\":\"" + nonce + "\",\"state\":" + state + "}";
+  const String proof = identity.sign(deviceId, "proof", body, jsonEscape);
+  if (!proof.isEmpty()) mqtt.publish(topic("proof"), proof, false, 1);
 }
 
 static void deriveDeviceId() {
@@ -296,41 +369,65 @@ static void startWifiIfConfigured() {
 
 static void maintainWifi() {
   if (wifiSsid.isEmpty()) return;
-  if (WiFi.status() == WL_CONNECTED) return;
+  if (WiFi.status() == WL_CONNECTED) { wifiRetry = WIFI_RETRY_MS; return; }
   const uint32_t now = millis();
-  if (now - lastWifiAttempt >= WIFI_RETRY_MS) startWifiIfConfigured();
+  if (now - lastWifiAttempt >= wifiRetry) {
+    startWifiIfConfigured();
+    wifiRetry = min(wifiRetry * 2, uint32_t(60000));
+  }
 }
 
 static void configureMqttClient() {
   if (mqttHost.isEmpty()) return;
+  net.setCACert(mqttCa.c_str());
+  net.setHandshakeTimeout(10);
+  net.setTimeout(10);
   mqtt.begin(mqttHost.c_str(), mqttPort, net);
   mqtt.setKeepAlive(30);
-  mqtt.setTimeout(1500);
+  mqtt.setTimeout(5000);
   mqtt.setWill(topic("availability").c_str(), "offline", true, 1);
 }
 
 static void connectMqttIfReady() {
-  if (mqttHost.isEmpty() || WiFi.status() != WL_CONNECTED || mqtt.connected()) return;
+  if (mqtt.connected()) { mqttRetry = MQTT_RETRY_MS; return; }
+  if (mqttHost.isEmpty() || WiFi.status() != WL_CONNECTED) return;
   const uint32_t now = millis();
-  if (now - lastMqttAttempt < MQTT_RETRY_MS) return;
+  if (now - lastMqttAttempt < mqttRetry) return;
   lastMqttAttempt = now;
+  mqttRetry = min(mqttRetry * 2, uint32_t(60000));
 
+  if (mqttCa.isEmpty() || mqttUser.isEmpty() || mqttPass.isEmpty() || mqttPort != 8883) {
+    Serial.println("GC_NET TLS broker CA and individual credentials required (port 8883)");
+    return;
+  }
+  if (time(nullptr) < 1700000000) {
+    static bool timeRequested = false;
+    if (!timeRequested) { configTime(0, 0, "pool.ntp.org", "time.cloudflare.com"); timeRequested = true; }
+    return; // Certificate validation needs a clock; measurements keep running.
+  }
   configureMqttClient();
   const bool ok = mqttUser.isEmpty()
     ? mqtt.connect(deviceId.c_str())
     : mqtt.connect(deviceId.c_str(), mqttUser.c_str(), mqttPass.c_str());
   if (!ok) {
+    char tlsError[192] = {};
+    const int tlsCode = net.lastError(tlsError, sizeof(tlsError));
+    Serial.printf("GC_NET tls_error=%d detail=%s utc_epoch=%lld\n",
+      tlsCode, tlsError, static_cast<long long>(time(nullptr)));
     Serial.printf("GC_NET mqtt_failed host=%s port=%u err=%d rc=%d\n",
       mqttHost.c_str(), mqttPort, int(mqtt.lastError()), int(mqtt.returnCode()));
     return;
   }
 
+  mqtt.subscribe(topic("challenge"), 1);
   mqtt.publish(topic("availability"), "online", true, 1);
   publishAnnouncement();
   Serial.printf("GC_NET mqtt_online broker=%s:%u device=%s\n", mqttHost.c_str(), mqttPort, deviceId.c_str());
 }
 
 static void printNetworkInfo() {
+  Serial.printf("GC_NET utc_epoch=%lld ca_bytes=%u tls_handshake_timeout_s=10\n",
+    static_cast<long long>(time(nullptr)), unsigned(mqttCa.length()));
   Serial.printf("GC_NET device=%s name=%s fw=%s\n", deviceId.c_str(), deviceName.c_str(), FW_VERSION);
   Serial.printf("GC_NET wifi_configured=%s wifi_status=%d ssid=%s ip=%s rssi=%d\n",
     wifiSsid.isEmpty() ? "no" : "yes", int(WiFi.status()), wifiSsid.c_str(),
@@ -343,12 +440,15 @@ static void printNetworkInfo() {
 
 static void printInfo() {
   Serial.printf("Grow-Central Soil Node %s firmware=%s\n", deviceId.c_str(), FW_VERSION);
+  Serial.printf("GC_ID fingerprint=%s\n", identity.getFingerprint().c_str());
   Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u\n", airRaw, waterRaw);
   Serial.println("commands:");
   Serial.println("  INFO | CAL AIR | CAL WATER | RESET CAL");
+  Serial.println("  USB ID <64-character nonce> (signed identity, no private key)");
   Serial.println("  NET INFO");
   Serial.println("  NET WIFI <ssid>|<password>");
   Serial.println("  NET MQTT <host>|<port>|<user>|<password>");
+  Serial.println("  NET CA <base64 DER CA certificate> (USB only)");
   Serial.println("  NET NAME <display name> | NET CLEAR | REBOOT");
   Serial.println("WATER is engineering reference only; final substrate calibration comes later.");
 }
@@ -387,7 +487,7 @@ static void parseMqttCommand(const String& value) {
   mqttHost.trim();
   const String portPart = p2 < 0 ? value.substring(p1 + 1) : value.substring(p1 + 1, p2);
   const long parsedPort = portPart.toInt();
-  mqttPort = parsedPort > 0 && parsedPort <= 65535 ? uint16_t(parsedPort) : 1883;
+  mqttPort = parsedPort > 0 && parsedPort <= 65535 ? uint16_t(parsedPort) : 8883;
   mqttUser = p2 < 0 ? "" : (p3 < 0 ? value.substring(p2 + 1) : value.substring(p2 + 1, p3));
   mqttPass = p3 < 0 ? "" : value.substring(p3 + 1);
   saveNetworkConfig();
@@ -404,7 +504,17 @@ static void handleSerialCommands() {
   String upper = cmd;
   upper.toUpperCase();
 
-  if (upper == "INFO") {
+  if (upper.startsWith("USB ID ")) {
+    const String nonce = cmd.substring(7);
+    if (nonce.length() != 64) { Serial.println("ERR invalid identity challenge"); return; }
+    for (size_t i = 0; i < nonce.length(); ++i) {
+      if (!isxdigit(static_cast<unsigned char>(nonce[i]))) { Serial.println("ERR invalid identity challenge"); return; }
+    }
+    const String body = "{\"nonce\":\"" + nonce + "\",\"announcement\":" + announcementPayload() + "}";
+    const String proof = identity.sign(deviceId, "proof", body, jsonEscape);
+    if (proof.isEmpty()) Serial.println("ERR device identity unavailable");
+    else Serial.println("GC_USB_ID " + proof);
+  } else if (upper == "INFO") {
     printInfo();
     printNetworkInfo();
   } else if (upper == "CAL AIR") {
@@ -429,6 +539,24 @@ static void handleSerialCommands() {
     printNetworkInfo();
   } else if (upper.startsWith("NET WIFI ")) {
     parseWifiCommand(cmd.substring(9));
+  } else if (upper.startsWith("NET CA ")) {
+    String certificate = cmd.substring(7);
+    certificate.trim();
+    if (certificate.length() < 100 || certificate.length() > 1600) {
+      Serial.println("ERR invalid CA certificate length");
+      return;
+    }
+    for (size_t i = 0; i < certificate.length(); ++i) {
+      const char c = certificate[i];
+      if (!isalnum(static_cast<unsigned char>(c)) && c != '+' && c != '/' && c != '=') { Serial.println("ERR invalid certificate encoding"); return; }
+    }
+    String pem = "-----BEGIN CERTIFICATE-----\n";
+    for (size_t i = 0; i < certificate.length(); i += 64) pem += certificate.substring(i, i + 64) + "\n";
+    pem += "-----END CERTIFICATE-----\n";
+    mqttCa = pem;
+    saveNetworkConfig();
+    mqtt.disconnect();
+    Serial.println("OK broker CA stored");
   } else if (upper.startsWith("NET MQTT ")) {
     parseMqttCommand(cmd.substring(9));
   } else if (upper.startsWith("NET NAME ")) {
@@ -446,7 +574,7 @@ static void handleSerialCommands() {
     delay(100);
     ESP.restart();
   } else {
-    Serial.printf("UNKNOWN COMMAND: %s\n", cmd.c_str());
+    Serial.println("UNKNOWN COMMAND");
   }
 }
 
@@ -456,28 +584,52 @@ static void reportReading(const SoilReading& r) {
     Serial.printf("GC_SOIL raw=%u median=%u filtered=%.1f pct=%.1f min=%u max=%u span=%u sigma=%.1f quality=%s state=%s wifi=%d mqtt=%d uptime=%lu\n",
       r.rawMean, r.rawMedian, r.filteredRaw, r.moisturePct,
       r.rawMin, r.rawMax, span, r.sigma, r.quality, r.state,
-      WiFi.status() == WL_CONNECTED ? 1 : 0, mqtt.connected() ? 1 : 0,
+      WiFi.status() == WL_CONNECTED ? 1 : 0, mqttOnline ? 1 : 0,
       static_cast<unsigned long>(millis()));
   } else {
     Serial.printf("GC_SOIL raw=%u median=%u min=%u max=%u span=%u sigma=%.1f quality=%s state=SENSOR_FAULT wifi=%d mqtt=%d uptime=%lu\n",
       r.rawMean, r.rawMedian, r.rawMin, r.rawMax, span, r.sigma, r.quality,
-      WiFi.status() == WL_CONNECTED ? 1 : 0, mqtt.connected() ? 1 : 0,
+      WiFi.status() == WL_CONNECTED ? 1 : 0, mqttOnline ? 1 : 0,
       static_cast<unsigned long>(millis()));
+  }
+}
+
+static void measurementTask(void*) {
+  TickType_t wake = xTaskGetTickCount();
+  for (;;) {
+    const SoilReading reading = sampleSoil();
+    portENTER_CRITICAL(&readingLock);
+    latestReading = reading;
+    readingAvailable = true;
+    portEXIT_CRITICAL(&readingLock);
+    reportReading(reading);
+    vTaskDelayUntil(&wake, pdMS_TO_TICKS(REPORT_INTERVAL_MS));
   }
 }
 
 void setup() {
   Serial.begin(115200);
   delay(1200);
+  // Temporarily enable the hardware entropy source before generating the first key.
+  // It must be disabled before normal ADC measurements start.
+  bootloader_random_enable();
+  const bool identityReady = identity.begin();
+  bootloader_random_disable();
+  if (!identityReady) Serial.println("GC_ID initialization failed; unsigned messages disabled");
   analogReadResolution(12);
   analogSetPinAttenuation(SOIL_PIN, ADC_11db);
   pinMode(SOIL_PIN, INPUT);
+  adcLock = xSemaphoreCreateMutex();
   deriveDeviceId();
   loadCalibration();
   loadNetworkConfig();
   mqtt.setOptions(30, true, 1500);
+  mqtt.onMessage(onMqttMessage);
   printInfo();
   printNetworkInfo();
+  if (!adcLock || xTaskCreate(measurementTask, "gc-measure", 4096, nullptr, 2, nullptr) != pdPASS) {
+    Serial.println("GC_SOIL measurement task failed");
+  }
   startWifiIfConfigured();
 }
 
@@ -486,13 +638,10 @@ void loop() {
   maintainWifi();
   connectMqttIfReady();
   if (mqtt.connected()) mqtt.loop();
+  handleIdentityProof();
+  mqttOnline = mqtt.connected();
 
-  const uint32_t now = millis();
-  if (now - lastReport >= REPORT_INTERVAL_MS) {
-    lastReport = now;
-    SoilReading reading = sampleSoil();
-    reportReading(reading);
-    publishState(reading);
-  }
+  SoilReading reading{};
+  if (currentReading(reading)) publishState(reading);
   delay(5);
 }

@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
 <link rel="stylesheet" href="/static/app.css?v=0.11.0">
 <link rel="stylesheet" href="/static/device_extensions.css?v=0.9.0">
-</head>
+<link rel="stylesheet" href="/static/sensor_pairing.css?v=2"></head>
 <body>
 <a class="skip-link" href="#dashboard">Zum Inhalt / Skip to content</a>
 <div class="scanline"></div>
@@ -68,7 +68,7 @@
       </article>
     </section>
 
-    <section id="devices" class="view">
+    <section id="devices" class="view"><section id="sensorPairing" class="pairing-panel"><h3>Grow-Central Sensoren</h3><p>Neue Sensoren werden automatisch erkannt, aber nur nach deiner Entscheidung und Raumzuweisung aufgenommen.</p></section>
       <article class="panel onboarding-panel">
         <div class="panel-head"><div><div class="eyebrow">UNIFIED DEVICE LAB · alpha-0.7.5</div><h2>Geräte suchen, anmelden & analysieren</h2><p class="panel-copy">Bluetooth, Netzwerk, FRITZ!, Tapo und lokale Adapter werden getrennt diagnostiziert und einheitlich dargestellt.</p></div></div>
         <div class="discovery-actions"><button class="primary" id="bleScanBtn">BLUETOOTH SCANNEN</button><button class="primary" id="smartScanBtn">NETZWERK SCANNEN</button></div>
@@ -124,5 +124,5 @@
 
 <script src="/static/app.js?v=0.12.0"></script>
 <script src="/static/device_extensions.js?v=0.10.0"></script>
-</body>
+<script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script></body>
 </html>

@@ -54,7 +54,10 @@ async def _soil_device_overview(*, refresh: bool):
 
 def test_room_capture_includes_assigned_soil_moisture(tmp_path, monkeypatch):
     monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
-    monkeypatch.setattr(rooms, "device_overview", _soil_device_overview)
+    async def legacy_overview(*, refresh): return {"devices": []}
+    async def verified_native(timeout): return (await _soil_device_overview(refresh=False))["devices"]
+    monkeypatch.setattr(rooms, "device_overview", legacy_overview)
+    monkeypatch.setattr(rooms, "_native_gc_devices", verified_native)
     state = rooms.empty_state()
     state["rooms"].append({"id": "room_soil", "name": "Zelt Soil"})
     state["assignments"]["growcentral_esp32:gc-soil-test"] = "room_soil"
@@ -98,6 +101,8 @@ def test_room_devices_includes_native_gc_soil_node(tmp_path, monkeypatch):
 
 
 def test_native_gc_soil_node_can_be_assigned_to_room(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(rooms, "TrustStore", lambda: SimpleNamespace(require_trusted=lambda _id: {"status": "TRUSTED"}))
     monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
     monkeypatch.setenv("GC_SMARTHOME_DEVICE_CONFIG", str(tmp_path / "devices.json"))
     monkeypatch.setattr(rooms, "_native_gc_devices", _native_soil_nodes)

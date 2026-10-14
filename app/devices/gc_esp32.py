@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
+import secrets
+import ssl
 import time
 import uuid
 from typing import Any, Mapping
@@ -21,6 +24,8 @@ from .gc_esp32_protocol import (
     wildcard_topic,
 )
 from .models import Capability
+from .gc_identity import verify_message
+from .gc_trust import TrustStore
 from .provider import DeviceHealth, DeviceProvider, DiscoveredDevice
 
 
@@ -31,7 +36,8 @@ class GrowCentralEsp32Provider(DeviceProvider):
             raise RuntimeError("growcentral_esp32 provider missing from catalog")
         self.descriptor = descriptor
         self.host = os.getenv("GC_MQTT_HOST", "127.0.0.1")
-        self.port = int(os.getenv("GC_MQTT_PORT", "1883"))
+        self.tls = os.getenv("GC_MQTT_TLS", "false").lower() == "true"
+        self.port = int(os.getenv("GC_MQTT_PORT", "8883" if self.tls else "1883"))
         self.username = os.getenv("GC_MQTT_USERNAME") or None
         self.password = os.getenv("GC_MQTT_PASSWORD") or None
         self.root = os.getenv("GC_MQTT_PREFIX", DEFAULT_ROOT).strip("/")
@@ -43,6 +49,9 @@ class GrowCentralEsp32Provider(DeviceProvider):
             port=self.port,
             username=self.username,
             password=self.password,
+            timeout=self.command_timeout,
+            max_queued_incoming_messages=64,
+            tls_context=ssl.create_default_context(cafile=os.getenv("GC_MQTT_CA_FILE") or None) if self.tls else None,
         )
 
     async def _one(self, topic: str, timeout: float) -> bytes:
@@ -54,9 +63,39 @@ class GrowCentralEsp32Provider(DeviceProvider):
                         return bytes(message.payload)
         raise TimeoutError(f"no retained MQTT message for {topic}")
 
+    def _decode_announcement(self, payload):
+        if len(payload) > 8192:
+            raise ValueError("sensor announcement too large")
+        envelope = json.loads(payload)
+        signed = verify_message(payload, kind="announce") if isinstance(envelope, dict) and "algorithm" in envelope else None
+        announce = parse_announcement(json.dumps(signed.body) if signed else payload)
+        return announce, signed
+
+    async def prove_identity(self, native_id: str):
+        record = TrustStore().get(native_id)
+        if not record or not record["identity_verified"]:
+            raise PermissionError("sensor needs signed identity firmware")
+        nonce = secrets.token_hex(32)
+        proof_topic = device_topic(self.root, native_id, "proof")
+        async with self._client() as client:
+            await client.subscribe(proof_topic)
+            await client.publish(device_topic(self.root, native_id, "challenge"),
+                                 payload=json.dumps({"nonce": nonce}), qos=1, retain=False)
+            async with asyncio.timeout(self.command_timeout):
+                async for message in client.messages:
+                    if str(message.topic) != proof_topic:
+                        continue
+                    try:
+                        proof = verify_message(bytes(message.payload), kind="proof", device_id=native_id)
+                    except ValueError:
+                        continue
+                    if proof.public_key == record["public_key"] and proof.body.get("nonce") == nonce:
+                        return proof
+        raise TimeoutError("live sensor identity proof timed out")
+
     async def _announcement(self, native_id: str, timeout: float = 2.0) -> Esp32Announcement:
         payload = await self._one(device_topic(self.root, native_id, "announce"), timeout)
-        announce = parse_announcement(payload)
+        announce, signed = self._decode_announcement(payload)
         if announce.id != native_id:
             raise ValueError("announcement id does not match MQTT topic")
         return announce
@@ -71,13 +110,18 @@ class GrowCentralEsp32Provider(DeviceProvider):
                 async with asyncio.timeout(timeout):
                     async for message in client.messages:
                         try:
-                            announce = parse_announcement(bytes(message.payload))
-                        except (ValueError, UnicodeDecodeError):
+                            announce, signed = self._decode_announcement(bytes(message.payload))
+                            if str(message.topic) != device_topic(self.root, announce.id, "announce"):
+                                continue
+                            trust = TrustStore().discover(announce, signed)
+                            if trust["status"] in {"REJECTED", "REVOKED"}:
+                                continue
+                        except (ValueError, UnicodeDecodeError, PermissionError):
                             continue
                         found[announce.id] = DiscoveredDevice(
                             provider_id=self.descriptor.id,
                             native_id=announce.id,
-                            name=announce.name,
+                            name=trust["name"] or announce.name,
                             device_class=announce.device_class,
                             capabilities=announce.capabilities,
                             transport="mqtt",
@@ -86,6 +130,9 @@ class GrowCentralEsp32Provider(DeviceProvider):
                             metadata={
                                 "protocol": "gc-esp32-mqtt-v1",
                                 "firmware": announce.firmware,
+                                "trust_status": trust["status"],
+                                "identity_verified": trust["identity_verified"],
+                                "fingerprint": trust["fingerprint"],
                                 "topic_root": self.root,
                             },
                         )
@@ -94,47 +141,33 @@ class GrowCentralEsp32Provider(DeviceProvider):
         return sorted(found.values(), key=lambda item: (item.name.lower(), item.native_id))
 
     async def state(self, native_id: str) -> Mapping[str, Any]:
-        announce = await self._announcement(native_id)
-        payload = await self._one(device_topic(self.root, native_id, "state"), 2.0)
-        state = normalize_state(payload, announce.capabilities)
+        trusted = TrustStore().require_trusted(native_id)
+        proof = await self.prove_identity(native_id)
+        TrustStore().receive(proof)
+        allowed = tuple(Capability(value) for value in trusted["metadata"]["capabilities"])
+        state = normalize_state(json.dumps(proof.body.get("state", {})), allowed)
+        moisture = state.get("soil_moisture")
+        if moisture is not None and (type(moisture) not in (int, float) or not math.isfinite(moisture) or not 0 <= moisture <= 100):
+            raise ValueError("invalid soil moisture engineering percentage")
+        diagnostics = proof.body.get("state", {}).get("meta", {})
+        if isinstance(diagnostics, dict):
+            fields = {"raw", "median", "filtered_raw", "min", "max", "sigma", "quality", "moisture_state", "sensor_ok", "air_raw", "water_raw", "rssi_dbm", "uptime_ms", "firmware"}
+            state["meta"] = {k: v for k, v in diagnostics.items() if k in fields and isinstance(v, (str, int, float, bool)) and (not isinstance(v, float) or math.isfinite(v))}
         state["online"] = True
         return state
 
     async def command(self, native_id: str, capability: Capability, value: Any) -> Mapping[str, Any]:
-        announce = await self._announcement(native_id)
-        if capability not in announce.capabilities:
-            raise ValueError(f"device does not declare capability: {capability.value}")
-
-        command_id = uuid.uuid4().hex
-        set_topic = device_topic(self.root, native_id, "set")
-        ack_topic = device_topic(self.root, native_id, "ack")
-        payload = encode_command(command_id, capability, value)
-
-        async with self._client() as client:
-            # Subscribe before publishing so a fast ESP32 ACK cannot race us.
-            await client.subscribe(ack_topic)
-            await client.publish(set_topic, payload=payload, qos=1, retain=False)
-            async with asyncio.timeout(self.command_timeout):
-                async for message in client.messages:
-                    if str(message.topic) != ack_topic:
-                        continue
-                    try:
-                        ack_state = validate_ack(bytes(message.payload), command_id)
-                    except ValueError:
-                        # ACK for an older/different command; keep waiting.
-                        continue
-                    normalized = normalize_state(json.dumps(dict(ack_state)), announce.capabilities)
-                    normalized.setdefault(capability.value, value)
-                    normalized["online"] = True
-                    return normalized
-        raise TimeoutError("device command acknowledgement timed out")
+        TrustStore().require_trusted(native_id)
+        raise PermissionError("native sensor pairing grants read-only access; actuator writes need a separate validated policy")
 
     async def health(self, native_id: str) -> DeviceHealth:
         started = time.perf_counter()
         try:
-            availability = await self._one(device_topic(self.root, native_id, "availability"), 1.5)
-            online = availability.decode("utf-8", errors="replace").strip().lower() == "online"
-            detail = "online" if online else "device reported offline"
+            TrustStore().require_trusted(native_id)
+            proof = await self.prove_identity(native_id)
+            TrustStore().receive(proof)
+            online = True
+            detail = "live cryptographic identity verified"
         except Exception as exc:
             online = False
             detail = f"{type(exc).__name__}: {exc}"

@@ -18,6 +18,11 @@ from urllib.parse import urlparse
 
 import httpx
 
+try:
+    from .cloud_url import https_origin
+except ImportError:
+    from cloud_url import https_origin
+
 CLOUD_ENABLED = os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true"
 CLOUD_URL = os.getenv("GC_CLOUD_URL", "").rstrip("/")
 CLOSED_TEST = os.getenv("GC_CLOUD_TEST_MODE", "false").lower() == "true"
@@ -71,10 +76,11 @@ def device_id() -> str:
 
 
 def validate_configuration() -> None:
-    cloud = urlparse(CLOUD_URL)
+    try:
+        https_origin(CLOUD_URL)
+    except ValueError as exc:
+        raise RuntimeError("GC_CLOUD_URL must be a plain HTTPS origin") from exc
     local = urlparse(LOCAL_API)
-    if cloud.scheme != "https" or not cloud.netloc or cloud.path not in {"", "/"}:
-        raise RuntimeError("GC_CLOUD_URL must be a plain HTTPS origin")
     if local.scheme != "http" or local.hostname not in {"127.0.0.1", "localhost", "::1"}:
         raise RuntimeError("GC_LOCAL_API must use loopback HTTP")
     if not CLOSED_TEST and (len(TOKEN) < 32 or TOKEN.startswith("CHANGE_ME")):

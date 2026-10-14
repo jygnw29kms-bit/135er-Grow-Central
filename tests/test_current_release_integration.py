@@ -60,8 +60,8 @@ def test_native_esp32_mqtt_is_included_in_pi_image():
     workflow = read(".github/workflows/build-pi3-image.yml")
     env_example = read(".env.example")
     assert "mosquitto mosquitto-clients" in workflow
-    assert "listener 1883 0.0.0.0" in workflow
-    assert "192.168.0.0/16 to any port 1883 proto tcp" in workflow
+    assert "listener 1883 127.0.0.1" in workflow
+    assert "192.168.0.0/16 to any port 8883 proto tcp" in workflow
     assert "mosquitto.service" in workflow
     assert "GC_MQTT_HOST=127.0.0.1" in env_example
     assert "GC_MQTT_PREFIX=growcentral/v1" in env_example

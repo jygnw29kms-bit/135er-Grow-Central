@@ -45,6 +45,11 @@ class GuiAuthMiddleware(BaseHTTPMiddleware):
                 return RedirectResponse("/ui", status_code=303)
             return await call_next(request)
 
+        # The scoped HA credential grants access only to its export router.
+        from app.smarthome.ha_bridge import PREFIX, bridge_authenticated
+        if path.startswith(PREFIX + "/") and bridge_authenticated(request):
+            return await call_next(request)
+
         # API tokens never grant browser/page access. They exist only for local
         # service-to-service/API traffic such as the Pi cloud-link.
         if path.startswith("/api/") and api_token_authenticated(request):

@@ -27,6 +27,8 @@ jobs:
             requirements.txt
             cloud/requirements.txt
             local/cloud_link/requirements.txt
+      - name: MQTT TLS integration prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends mosquitto
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt pytest flask
       - run: python -m pip check
@@ -36,7 +38,11 @@ jobs:
           node --check web/platform.js
           node --check web/mobile.js
           node --check web/room_views.js
+          node --check web/usb_onboarding.js
+          node --check web/sensor_pairing.js
           node --check mobile/www/app.js
+      - name: Verify Grow project boundaries
+        run: python scripts/check-grow-project-boundaries.py
       - run: python -m pytest -q
       - name: Dyson service tool protocol and diagnostics tests
         run: python -m unittest discover -s standalone/dyson-v11-bms-pi3-image-builder/tests -v

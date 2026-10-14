@@ -1,6 +1,7 @@
 """Read-only cloud-link status for the local GUI."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
@@ -9,6 +10,8 @@ from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter
+from app.cloud_link_state import connection_state
+from local.cloud_link.cloud_url import https_origin
 
 router = APIRouter(prefix="/api/cloud", tags=["cloud-status"])
 ENV_FILE = Path("/opt/135er-grow-central/local/cloud_link/.env")
@@ -38,12 +41,15 @@ def _read_runtime() -> dict:
 
 
 def _service_active() -> bool:
-    result = subprocess.run(
-        ["systemctl", "is-active", "--quiet", "135er-grow-central-cloud-link.service"],
-        capture_output=True,
-        timeout=3,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", "135er-grow-central-cloud-link.service"],
+            capture_output=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
     return result.returncode == 0
 
 
@@ -53,13 +59,25 @@ async def cloud_status():
     runtime = _read_runtime()
     enabled = env.get("GC_CLOUD_ENABLED", os.getenv("GC_CLOUD_ENABLED", "false")).lower() == "true"
     origin = env.get("GC_CLOUD_URL", os.getenv("GC_CLOUD_URL", "")).rstrip("/")
+    invalid_origin = False
+    if origin:
+        try:
+            origin = https_origin(origin)
+        except ValueError:
+            origin = ""
+            invalid_origin = True
     parsed = urlparse(origin) if origin else None
     host = parsed.hostname if parsed else ""
-    service_active = _service_active() if enabled else False
-    connected = runtime.get("state") == "connected"
+    service_active = await asyncio.to_thread(_service_active) if enabled else False
+    status = connection_state(runtime, enabled=enabled, origin=origin)
+    connected = status["connected"] and service_active and not invalid_origin
     compatible = runtime.get("cloud_compatible")
     latency_ms: int | None = None
-    detail = str(runtime.get("detail") or ("Cloud-Link deaktiviert" if not enabled else "Cloud-Link startet"))
+    detail = status["detail"] or "Cloud-Link startet"
+    if enabled and invalid_origin:
+        detail = "Cloud-Adresse ist kein gültiger HTTPS-Ursprung"
+    elif enabled and not service_active:
+        detail = "Cloud-Link-Dienst ist nicht aktiv"
 
     # Health probing is advisory only. A reachable /api/health endpoint does not
     # mean telemetry sync works; agent_v2 owns the authoritative connection state.
@@ -72,7 +90,7 @@ async def cloud_status():
                 response = await client.get(f"{origin}/api/health", timeout=4.0)
                 latency_ms = round((time.monotonic() - started) * 1000)
                 payload = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-                health_reachable = response.is_success and payload.get("ok") is True
+                health_reachable = response.is_success and isinstance(payload, dict) and payload.get("ok") is True and payload.get("service") == "135er-Grow Central Cloud"
         except Exception:
             health_reachable = False
 
@@ -80,6 +98,10 @@ async def cloud_status():
         "enabled": enabled,
         "service_active": service_active,
         "connected": connected,
+        "state": "disabled" if not enabled else "invalid_configuration" if invalid_origin else "stopped" if not service_active else status["state"],
+        "stale": status["stale"],
+        "age_seconds": status["age_seconds"],
+        "updated_at": status["updated_at"],
         "compatible": compatible,
         "health_reachable": health_reachable,
         "origin": origin,
@@ -88,5 +110,5 @@ async def cloud_status():
         "closed_test_mode": env.get("GC_CLOUD_TEST_MODE", os.getenv("GC_CLOUD_TEST_MODE", "false")).lower() == "true",
         "latency_ms": latency_ms,
         "detail": detail,
-        "runtime": runtime,
+        "runtime": {**runtime, "cloud_origin": origin},
     }

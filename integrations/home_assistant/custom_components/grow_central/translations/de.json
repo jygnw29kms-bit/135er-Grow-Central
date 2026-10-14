@@ -1,0 +1,30 @@
+{
+  "title": "Grow Central",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grow Central",
+        "description": "Lokale Grow-Central-Brücke verbinden.",
+        "data": {
+          "url": "Grow Central URL",
+          "token": "Brücken-Zugangsschlüssel"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Grow Central",
+        "data": {
+          "token": "Bridge token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültiger Brücken-Zugangsschlüssel",
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_response": "Ungültige URL oder Antwort"
+    },
+    "abort": {
+      "already_configured": "Already configured",
+      "reauth_successful": "Authentication updated"
+    }
+  }
+}
