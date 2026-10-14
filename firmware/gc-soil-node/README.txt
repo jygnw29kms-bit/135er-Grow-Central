@@ -11,7 +11,7 @@ Measured engineering references on the first node
 - AIR_RAW: 3767
 - WATER_RAW: 1310
 
-Firmware 0.3.0 (build verified; hardware validation pending)
+Firmware 0.4.0 (build verified; hardware validation pending)
 - 12-bit ADC on A0/GPIO2
 - 64-sample acquisition windows
 - 12.5% trimmed mean for outlier suppression
@@ -116,3 +116,9 @@ Autonomy
 - Flash/NVS encryption, secure boot, offline history backfill, BLE secure
   provisioning and physical long-duration tests remain separate work.
 - No real sensor was flashed during the cloud validation.
+
+Guided USB onboarding (0.4.0)
+- USB ID <nonce> returns a signed announcement and the fresh challenge nonce.
+- The current Pi test image bundles checked firmware and installs it through GC.
+- GC provisions local CA/account credentials over USB and compares MQTT identity
+  before the explicit name/room acceptance. See docs/de/USB_SENSOR_SETUP.md.

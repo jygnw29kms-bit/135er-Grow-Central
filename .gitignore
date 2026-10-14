@@ -17,3 +17,7 @@ local/cloud_link/.env
 .vscode/
 .idea/
 .DS_Store
+
+# Generated sensor firmware bundled by image CI
+firmware/gc-soil-node/.pio/
+firmware/gc-soil-node/dist/

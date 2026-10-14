@@ -54,7 +54,7 @@ CA und individuelle Zugangsdaten sind echte Inbetriebnahmevoraussetzungen. Gehei
 
 Das Backend kann lokal über Loopback 1883 lesen; für eine eigene TLS-Verbindung `GC_MQTT_TLS=true`, `GC_MQTT_PORT=8883`, `GC_MQTT_CA_FILE` sowie private Benutzer-/Passwortbindungen konfigurieren. Der produktive Dienst liest `/opt/135er-grow-central/.env` über seine systemd-EnvironmentFile. Broker-Passwörter dürfen nicht pauschal an alle Geräte verteilt werden.
 
-**BLE-Provisionierung und automatische WLAN-/MQTT-Geheimnisübertragung bleiben nicht implementiert und ausdrücklich deaktiviert.** Die API meldet `ble_available=false` und `credential_transfer=disabled`. Es gibt keinen simulierten sicheren BLE-Kanal und keine Klartext-MQTT-Provisionierung. Ein BLE-Transport mit geprüftem Schlüsselaustausch, physischer Freigabe, Ablaufzeit und Firmware-Gegenstück ist ein eigener erforderlicher Folgeschritt.
+**BLE-Provisionierung bleibt nicht implementiert und ausdrücklich deaktiviert.** Ab Firmware 0.4.0 ist die geführte Einrichtung direkt über USB am Pi verfügbar, einschließlich Zertifikaten und individuellem MQTT-Zugang. Die API meldet `ble_available=false` und `credential_transfer=usb_only`. Anleitung: [USB-Sensor einrichten](USB_SENSOR_SETUP.md). Der bestehende Netzwerk-Aufnahme-Endpunkt überträgt selbst keine Zugangsdaten. Es gibt keinen simulierten sicheren BLE-Kanal und keine Klartext-MQTT-Provisionierung. Ein BLE-Transport mit geprüftem Schlüsselaustausch, physischer Freigabe, Ablaufzeit und Firmware-Gegenstück ist ein eigener erforderlicher Folgeschritt.
 
 ## Autonomie und Messwerte
 

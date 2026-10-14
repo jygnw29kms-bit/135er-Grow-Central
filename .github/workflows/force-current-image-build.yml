@@ -61,37 +61,7 @@ jobs:
       - run: python -m platformio run -d firmware/gc-soil-node
       - name: Package Home Assistant and sensor firmware
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import hashlib, os, zipfile
-          out = Path('test-companions')
-          out.mkdir()
-          source = Path('integrations/home_assistant/custom_components/grow_central')
-          with zipfile.ZipFile(out / 'grow-central-homeassistant-0.1.0.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-              for p in sorted(source.rglob('*')):
-                  if p.is_file() and p.suffix in {'.py', '.json'}:
-                      z.write(p, 'custom_components/grow_central/' + str(p.relative_to(source)))
-              z.write('docs/de/HOME_ASSISTANT.md', 'INSTALLATION.md')
-              z.write('integrations/home_assistant/examples/homekit.yaml', 'examples/homekit.yaml')
-              z.writestr('SOURCE.txt', os.environ['SOURCE_SHA'] + '\n')
-          build = Path('firmware/gc-soil-node/.pio/build/seeed_xiao_esp32c3')
-          files = {name: build / name for name in ['firmware.bin', 'bootloader.bin', 'partitions.bin']}
-          files['boot_app0.bin'] = Path.home() / '.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin'
-          with zipfile.ZipFile(out / 'gc-soil-node-0.3.0-test.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-              checks = []
-              for name, p in files.items():
-                  checks.append(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + name)
-                  z.write(p, name)
-              z.writestr('SHA256SUMS', '\n'.join(checks) + '\n')
-              z.writestr('SOURCE.txt', os.environ['SOURCE_SHA'] + '\n')
-              z.writestr('README.txt', 'XIAO ESP32-C3 ONLY; not a Raspberry Pi image.\nRecommended: upload the source using PlatformIO.\nOffsets: bootloader 0x0, partitions 0x8000, boot_app0 0xe000, firmware 0x10000.\nPreserve NVS identity/calibration; do not erase flash for an update.\nUSB provisioning and individual MQTT TLS credentials required. BLE provisioning is not implemented.\nReal hardware testing remains pending. See SENSOR_PAIRING.md.\n')
-              z.write('docs/de/SENSOR_PAIRING.md', 'SENSOR_PAIRING.md')
-          sums = []
-          for p in out.glob('*.zip'):
-              with zipfile.ZipFile(p) as z:
-                  assert z.testzip() is None
-              sums.append(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name)
-          (out / 'COMPANIONS.sha256').write_text('\n'.join(sums) + '\n')
-          PY
+          python scripts/package-sensor-firmware.py
+          python scripts/package-image-companions.py test-companions
       - name: Upload companions to image prerelease
         run: gh release upload "$RELEASE_TAG" test-companions/* --repo "$GITHUB_REPOSITORY"

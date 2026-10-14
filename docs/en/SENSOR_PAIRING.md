@@ -30,8 +30,11 @@ requires clock synchronization and does not disable certificate verification.
 Backend TLS is configurable through GC_MQTT_TLS/PORT/CA_FILE and private login
 bindings. Real certificates/accounts still need configuration on the target Pi.
 
-**BLE discovery/provisioning and automatic Wi-Fi/MQTT credential transfer are not
-implemented.** API reports `ble_available=false`, `credential_transfer=disabled`.
+**BLE discovery/provisioning is not implemented.** Firmware 0.4.0 adds guided
+USB onboarding on the Pi, including local certificates and individual MQTT
+accounts. API reports `ble_available=false`, `credential_transfer=usb_only`.
+See [USB sensor setup](../de/USB_SENSOR_SETUP.md). The existing network acceptance
+endpoint itself does not transfer credentials.
 This is not yet the desired first-contact BLE path without Wi-Fi setup. No
 plaintext MQTT secret transfer is substituted for it.
 

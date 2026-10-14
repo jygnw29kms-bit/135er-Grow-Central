@@ -95,3 +95,18 @@ HomeKit-/Google-Sensorklassen unterstützen sie nicht. Kontokopplung und reale
 Sprachbefehle müssen auf der Zielinstallation geprüft werden.
 
 Einrichtung: [Home Assistant](de/HOME_ASSISTANT.md).
+
+## Geführte USB-Sensoraufnahme — 2026-10-13
+
+USB-Kandidaten am Pi werden automatisch im Gerätebereich gezeigt. Der Assistent
+prüft die aktuelle signierte USB-Identität, installiert bei Bedarf das geprüfte
+XIAO-C3-Firmwarepaket 0.4.0, richtet WLAN und individuelle lokale MQTT-TLS-Zugänge
+über USB ein und prüft danach dieselbe Identität im Netzwerk. Name/Raum und die
+bewusste Aufnahme schließen den Ablauf ab. Widerruf und Schlüsselwechsel bleiben
+manuell kontrolliert. Firmware wird im Image-CI separat gebaut und gebündelt;
+Flashbereiche schließen NVS aus. Der lokale Broker-Helfer verwendet einen Unix-
+Socket und öffnet keine allgemeine privilegierte Befehlsausführung.
+
+Software-/Seriell-/TLS-Tests und Desktop-/Mobile-Dialog sind geprüft; tatsächliches
+USB-Reset/Flash und WLAN auf XIAO/Pi bleiben Hardwaretests. BLE bleibt offen.
+Anleitung: [USB-Sensor einrichten](de/USB_SENSOR_SETUP.md).

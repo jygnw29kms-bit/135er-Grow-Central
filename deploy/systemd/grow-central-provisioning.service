@@ -1,0 +1,21 @@
+[Unit]
+Description=Grow Central local sensor broker provisioning
+After=network.target mosquitto.service
+[Service]
+Type=simple
+User=root
+Group=growcentral
+WorkingDirectory=/opt/135er-grow-central
+ExecStart=/opt/135er-grow-central/.venv/bin/python -m app.provisioning.broker_service
+RuntimeDirectory=grow-central-provisioning
+RuntimeDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc/mosquitto /run/grow-central-provisioning
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

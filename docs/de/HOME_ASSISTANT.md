@@ -124,3 +124,10 @@ Quelldokumente im Repository `home-assistant/home-assistant.io` (Branch `current
 13.10.2026 erfolgreich abgerufen und für die beschriebenen Einrichtungswege und
 Sensorklassen geprüft. Die Konto-Kopplung bleibt auf der Zielinstallation zu
 verifizieren.
+
+## Native Sensoren vorbereiten
+
+Das neue USB-Test-Image kann den XIAO-C3-Sensor direkt in GC flashen und dessen
+individuellen MQTT-TLS-Zugang einrichten. Danach Name/Raum zuweisen, bevor die
+Sensor-ID in die HA-Exportliste aufgenommen wird:
+[USB-Sensor einrichten](USB_SENSOR_SETUP.md).

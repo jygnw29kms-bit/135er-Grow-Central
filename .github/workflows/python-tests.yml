@@ -38,6 +38,8 @@ jobs:
           node --check web/platform.js
           node --check web/mobile.js
           node --check web/room_views.js
+          node --check web/usb_onboarding.js
+          node --check web/sensor_pairing.js
           node --check mobile/www/app.js
       - run: python -m pytest -q
       - name: Dyson service tool protocol and diagnostics tests

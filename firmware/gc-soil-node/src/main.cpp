@@ -9,7 +9,7 @@
 #include "identity.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.3.0";
+static constexpr char FW_VERSION[] = "0.4.0";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -261,13 +261,17 @@ static String topic(const char* leaf) {
   return String(MQTT_ROOT) + "/devices/" + deviceId + "/" + leaf;
 }
 
-static void publishAnnouncement() {
-  if (!mqtt.connected()) return;
+static String announcementPayload() {
   String payload = "{\"schema\":\"" + String(SCHEMA) + "\",\"protocol\":\"" + String(PROTOCOL) +
                    "\",\"id\":\"" + jsonEscape(deviceId) + "\",\"name\":\"" + jsonEscape(deviceName) +
                    "\",\"device_class\":\"sensor\",\"model\":\"GC-SOIL-XIAO-C3-HW390\",\"firmware\":\"" +
                    String(FW_VERSION) + "\",\"capabilities\":[\"soil_moisture\"]}";
-  const String signedPayload = identity.sign(deviceId, "announce", payload, jsonEscape);
+  return payload;
+}
+
+static void publishAnnouncement() {
+  if (!mqtt.connected()) return;
+  const String signedPayload = identity.sign(deviceId, "announce", announcementPayload(), jsonEscape);
   if (!signedPayload.isEmpty()) mqtt.publish(topic("announce"), signedPayload, true, 1);
 }
 
@@ -434,6 +438,7 @@ static void printInfo() {
   Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u\n", airRaw, waterRaw);
   Serial.println("commands:");
   Serial.println("  INFO | CAL AIR | CAL WATER | RESET CAL");
+  Serial.println("  USB ID <64-character nonce> (signed identity, no private key)");
   Serial.println("  NET INFO");
   Serial.println("  NET WIFI <ssid>|<password>");
   Serial.println("  NET MQTT <host>|<port>|<user>|<password>");
@@ -493,7 +498,17 @@ static void handleSerialCommands() {
   String upper = cmd;
   upper.toUpperCase();
 
-  if (upper == "INFO") {
+  if (upper.startsWith("USB ID ")) {
+    const String nonce = cmd.substring(7);
+    if (nonce.length() != 64) { Serial.println("ERR invalid identity challenge"); return; }
+    for (size_t i = 0; i < nonce.length(); ++i) {
+      if (!isxdigit(static_cast<unsigned char>(nonce[i]))) { Serial.println("ERR invalid identity challenge"); return; }
+    }
+    const String body = "{\"nonce\":\"" + nonce + "\",\"announcement\":" + announcementPayload() + "}";
+    const String proof = identity.sign(deviceId, "proof", body, jsonEscape);
+    if (proof.isEmpty()) Serial.println("ERR device identity unavailable");
+    else Serial.println("GC_USB_ID " + proof);
+  } else if (upper == "INFO") {
     printInfo();
     printNetworkInfo();
   } else if (upper == "CAL AIR") {
