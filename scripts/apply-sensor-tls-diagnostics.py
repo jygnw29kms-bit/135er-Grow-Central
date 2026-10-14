@@ -13,10 +13,11 @@ import time
 import urllib.request
 import zipfile
 
-SOURCE = 'a3cc82d7140679a4ac069f6a1a51c9baa255ab52'
+SOURCE = 'eaa44594c5b36b5415c20452d5affb5e9244457e'
 BASE = 'https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/' + SOURCE + '/'
 ZIP_SHA = 'c99662d6574d8ef7d044ea761e1cbbce98446375980f68863505d3b34d08c264'
-CODE_SHA = 'f55ddd216fa64ff14cce8d0cdb72f4aefb30b758e0413dcb5f722cf86e119924'
+CODE_SHA = 'fe6f9bb6df11df13c230eb72688db3cd98edbf8afa21495334673714e5b1404e'
+PREVIOUS_SHA = 'f55ddd216fa64ff14cce8d0cdb72f4aefb30b758e0413dcb5f722cf86e119924'
 OLD_SHA = '21858aae7267e737425b8ff76495bb325304b20a8ae6fcc26f8a3cbd9f0b2580'
 UNIT = '135er-grow-central.service'
 ROOT = Path('/opt/135er-grow-central')
@@ -74,7 +75,7 @@ def main():
         destination = ROOT/'firmware/gc-soil-node/dist'
         if target.is_symlink() or destination.is_symlink() or any((destination/name).is_symlink() for name in [*FILES, 'manifest.json']):
             raise RuntimeError('Unerwarteter symbolischer Link.')
-        if hashlib.sha256(target.read_bytes()).hexdigest() not in (OLD_SHA, CODE_SHA):
+        if hashlib.sha256(target.read_bytes()).hexdigest() not in (OLD_SHA, PREVIOUS_SHA, CODE_SHA):
             raise RuntimeError('USB-Code unbekannt. Zuerst den bisherigen UI-Hotfix installieren; lokale Änderungen werden nicht überschrieben.')
         backups = BACKUPS
         backups.mkdir(parents=True, exist_ok=True)
@@ -108,6 +109,7 @@ def main():
                 raise RuntimeError('GC startet nach Update nicht gesund.')
         except BaseException:
             if changed and copied_code:
+                subprocess.run(['systemctl', 'stop', UNIT], check=False)
                 shutil.copy2(backup/'usb.py', target)
                 if copied_dist:
                     shutil.rmtree(destination)
@@ -118,7 +120,8 @@ def main():
             subprocess.run(['systemctl', 'restart', UNIT], check=False)
             raise
         print('Firmware 0.4.1 bereitgestellt. Sicherung:', backup)
-        print('Sensor wurde NICHT geflasht. GC neu laden und im USB-Assistenten Firmware installieren.')
+        print('Sensor wurde NICHT geflasht. Bei bereits installierter 0.4.1 ist kein Flash nötig.')
+        print('Bei älterer Sensorfirmware: GC neu laden und im USB-Assistenten Firmware installieren.')
         print('NVS/Identität/WLAN/Zugang bleiben beim Flash erhalten; kein erase_flash verwenden.')
 
 
