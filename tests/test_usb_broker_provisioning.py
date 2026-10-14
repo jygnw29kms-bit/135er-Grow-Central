@@ -2,6 +2,7 @@ import asyncio
 import base64
 from datetime import datetime, timezone
 import json
+import ipaddress
 import os
 from pathlib import Path
 import shutil
@@ -15,7 +16,7 @@ from types import SimpleNamespace
 import aiomqtt
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 import pytest
 
 from app.provisioning import broker_service as broker
@@ -58,6 +59,7 @@ def test_ca_and_server_have_valid_scope_and_private_modes(service):
     ca.public_key().verify(server.signature,server.tbs_certificate_bytes,ec.ECDSA(server.signature_hash_algorithm))
     san=server.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
     assert '135er-grow-central.local' in san.get_values_for_type(x509.DNSName)
+    assert '127.0.0.1' in san.get_values_for_type(x509.DNSName)
     assert str(san.get_values_for_type(x509.IPAddress)[0])=='127.0.0.1'
     assert server.not_valid_after_utc>datetime.now(timezone.utc)
     assert (base/'ca.key').stat().st_mode & 0o777==0o600
@@ -157,3 +159,26 @@ def test_real_unix_service_accepts_only_scoped_actions(service, monkeypatch, tmp
         assert not service[0].exists()
     finally:
         server.shutdown();server.server_close();thread.join(timeout=2)
+
+
+def test_legacy_ip_only_server_is_reissued_without_changing_ca(service):
+    base,_,_=service
+    ca=broker.certificates(['127.0.0.1','135er-grow-central.local'])
+    old=x509.load_pem_x509_certificate((base/'server.crt').read_bytes())
+    key=serialization.load_pem_private_key((base/'server.key').read_bytes(),password=None)
+    ca_key=serialization.load_pem_private_key((base/'ca.key').read_bytes(),password=None)
+    legacy=(x509.CertificateBuilder().subject_name(old.subject).issuer_name(ca.subject)
+        .public_key(key.public_key()).serial_number(x509.random_serial_number())
+        .not_valid_before(old.not_valid_before_utc).not_valid_after(old.not_valid_after_utc)
+        .add_extension(x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address('127.0.0.1')),x509.DNSName('135er-grow-central.local')]),False)
+        .sign(ca_key,hashes.SHA256()))
+    (base/'server.crt').write_bytes(legacy.public_bytes(serialization.Encoding.PEM))
+    ca_bytes=(base/'ca.crt').read_bytes()
+    broker.certificates(['127.0.0.1','135er-grow-central.local'])
+    updated=(base/'server.crt').read_bytes()
+    assert updated!=legacy.public_bytes(serialization.Encoding.PEM)
+    assert (base/'ca.crt').read_bytes()==ca_bytes
+    san=x509.load_pem_x509_certificate(updated).extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    assert '127.0.0.1' in san.get_values_for_type(x509.DNSName)
+    broker.certificates(['127.0.0.1','135er-grow-central.local'])
+    assert (base/'server.crt').read_bytes()==updated

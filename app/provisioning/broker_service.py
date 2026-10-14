@@ -91,13 +91,17 @@ def certificates(hosts):
         current = x509.load_pem_x509_certificate(cert_path.read_bytes())
         san = current.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
         names = set(san.get_values_for_type(x509.DNSName)) | {str(ip) for ip in san.get_values_for_type(x509.IPAddress)}
-        if set(hosts).issubset(names) and current.not_valid_after_utc > now + timedelta(days=30):
+        # ESP32 Arduino's Mbed TLS 2.28 checks dNSName, not iPAddress SANs.
+        # Keep real IP SANs for modern clients and exact textual aliases for this client.
+        dns_names = set(san.get_values_for_type(x509.DNSName))
+        if set(hosts).issubset(names) and set(hosts).issubset(dns_names) and current.not_valid_after_utc > now + timedelta(days=30):
             return ca
     server_key = ec.generate_private_key(ec.SECP256R1())
     sans = []
     for host in hosts:
         try:
             sans.append(x509.IPAddress(ipaddress.ip_address(host)))
+            sans.append(x509.DNSName(host))
         except ValueError:
             sans.append(x509.DNSName(host))
     certificate = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'Grow Central MQTT')]))
