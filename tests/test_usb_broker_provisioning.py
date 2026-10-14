@@ -28,6 +28,7 @@ def service(monkeypatch, tmp_path):
     base=tmp_path/'broker'
     mosquitto=tmp_path/'mosquitto'
     (mosquitto/'conf.d').mkdir(parents=True)
+    (mosquitto/'conf.d/grow-central.conf').write_text('per_listener_settings true\nlistener 1883 127.0.0.1\nallow_anonymous true\n')
     monkeypatch.setattr(broker,'BASE',base)
     monkeypatch.setattr(broker,'MOSQUITTO',mosquitto)
     monkeypatch.setattr(broker,'local_hosts',lambda:['127.0.0.1','135er-grow-central.local'])
@@ -102,13 +103,22 @@ def test_generated_broker_certificates_accounts_and_acl_work(service):
         with socket.socket() as reserve:
             reserve.bind(('127.0.0.1',0));port=reserve.getsockname()[1]
         conf=mosquitto/'test.conf'
-        conf.write_text('per_listener_settings true\n'+(mosquitto/'conf.d/grow-central-usb-tls.conf').read_text().replace('listener 8883 0.0.0.0',f'listener {port} 127.0.0.1'))
+        managed=mosquitto/'conf.d/zz-grow-central-usb-tls.conf'
+        managed.write_text(managed.read_text().replace('listener 8883 0.0.0.0',f'listener {port} 127.0.0.1'))
+        with socket.socket() as reserve:
+            reserve.bind(('127.0.0.1',0));local_port=reserve.getsockname()[1]
+        base_conf=mosquitto/'conf.d/grow-central.conf'
+        base_conf.write_text(base_conf.read_text().replace('listener 1883',f'listener {local_port}'))
+        conf.write_text('include_dir '+str(mosquitto/'conf.d')+'\n')
         process=subprocess.Popen([BINARY,'-c',str(conf)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
             for _ in range(100):
                 try:
                     with socket.create_connection(('127.0.0.1',port),timeout=.1):break
-                except OSError:time.sleep(.02)
+                except OSError:
+                    if process.poll() is not None:
+                        pytest.fail('Broker configuration failed: '+process.stderr.read().decode())
+                    time.sleep(.02)
             context=ssl.create_default_context(cafile=str(base/'ca.crt'))
             async with aiomqtt.Client('127.0.0.1',port=port,tls_context=context,username=account['username'],password=account['password']) as client:
                 await client.subscribe('growcentral/v1/devices/gc-soil-aabbcc/challenge')

@@ -128,7 +128,13 @@ def configure(device_id, host):
     hosts = local_hosts()
     if host not in hosts or not DEVICE_ID.fullmatch(device_id):
         raise ValueError('Ungültiger lokaler Broker oder Sensor.')
-    conf = MOSQUITTO / 'conf.d/grow-central-usb-tls.conf'
+    base_conf = MOSQUITTO / 'conf.d/grow-central.conf'
+    content = base_conf.read_text() if base_conf.exists() else ''
+    if not re.search(r'^\s*per_listener_settings\s+true\s*$', content, re.MULTILINE) or not re.search(r'^\s*listener\s+1883\s+127[.]0[.]0[.]1\s*$', content, re.MULTILINE):
+        raise RuntimeError('Der abgesicherte lokale GC-Broker muss zuerst eingerichtet sein.')
+    # Load after grow-central.conf: Mosquitto requires per-listener mode before
+    # all authentication settings, including the new TLS listener.
+    conf = MOSQUITTO / 'conf.d/zz-grow-central-usb-tls.conf'
     for other in (MOSQUITTO / 'conf.d').glob('*.conf'):
         if other != conf and re.search(r'^\s*listener\s+8883\b', other.read_text(), re.MULTILINE):
             raise RuntimeError('Port 8883 wird bereits manuell verwaltet; bestehende Konfiguration zuerst prüfen.')
