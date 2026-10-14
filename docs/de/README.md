@@ -24,7 +24,7 @@
 6. Quellen und Annahmen werden klar gekennzeichnet.
 7. Große Systemimages werden als Release-/Actions-Artefakte statt in der normalen Git-Historie veröffentlicht.
 
-## Stand alpha-0.7.1 · Hardware-Validierung
+## Historische Baseline alpha-0.7.1 · Hardware-Validierung
 
 - BLE Discovery: vorhanden
 - Connect / Disconnect: vorhanden
@@ -50,3 +50,10 @@
 - [Installation](INSTALLATION.md)
 
 Das Test-Image startet beim ersten Boot den geschützten Zugangspunkt `135er-GrowCentral-Setup-XXXX`. Die temporären Zugangsdaten `GrowCentral` / `grow-central-test` gelten für WLAN, Portal und SSH; das Portal erzwingt vor dem Hauptsystemstart ein neues Gerätepasswort. Die Anwendungstoken bleiben während der Hardwaretests auf `test` und müssen vor einem produktiven Einsatz ersetzt werden.
+
+## Aktueller Sensorstand · 14. Oktober 2026
+
+Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer Pi-4-Installation mit Hotfixes bestätigt. Das Original-Image 369 bleibt ein CANDIDATE und enthält Firmware 0.4.0. Kalibrierung, Dauerbetrieb und andere Hardwareklassen sind offen.
+
+- [Sensor setup and calibration](SOIL_SENSOR_GUIDE.md)
+- [Hardware evidence and remaining checks](SENSOR_HARDWARE_TEST_2026-10-14.md)

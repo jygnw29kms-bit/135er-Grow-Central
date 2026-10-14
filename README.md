@@ -25,12 +25,22 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Version | `alpha-0.7.5` |
 | Aktueller Pi-Candidate | **Build 369** |
 | Release-Tag | `pi-universal-alpha-0.7.5-369` |
-| Quellstand des Candidates | `16e80b7c9836125f5ee4f8cdf48b92fd67054f60` |
-| Veröffentlichung | 24. September 2026 |
+| Quellstand des Candidates | `456ed2519e0b66920f0bc6db284c962563eb5c7f` |
+| Veröffentlichung | 14. Oktober 2026 |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
 | Entwicklungsmodus | **Open Source / öffentlich** |
 
 Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historische Build-Dokumente bleiben nachvollziehbar, definieren aber nicht den aktuellen Projektstand. Der `master`-Branch kann bereits neuere Quellcodeänderungen als der letzte veröffentlichte Image-Candidate enthalten.
+
+## Bestätigter Sensor-Teststand · 14. Oktober 2026
+
+Auf einem Raspberry Pi 4 mit Build 369 und den dokumentierten Hotfixes wurden USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige mit Seeed XIAO ESP32-C3 / HW-390, Firmware **0.4.1**, bestätigt. Das unveränderte Image 369 enthält noch Firmware 0.4.0; der aktuelle Quellstand enthält die Korrekturen. Ein neuer Image-Build wird erst nach erfolgreicher Veröffentlichung zum aktuellen Candidate.
+
+- [Sensor einrichten und kalibrieren](docs/de/SOIL_SENSOR_GUIDE.md)
+- [Hardwarebefund und offene Prüfungen](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md)
+- [Aktueller Projektstatus](docs/PROJECT_STATUS.md)
+
+Der HW-390 misst einen kapazitiven Feuchte-Referenzwert. Temperatur, pH und EC erfordern zusätzliche Hardware. Der erfolgreiche Sensortest ist keine vollständige Validierung des Universal-Images oder anderer Hardwareklassen.
 
 ## Produktprinzipien
 

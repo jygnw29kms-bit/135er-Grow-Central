@@ -11,7 +11,7 @@ Measured engineering references on the first node
 - AIR_RAW: 3767
 - WATER_RAW: 1310
 
-Firmware 0.4.1 (build verified; hardware validation pending)
+Firmware 0.4.1 (build verified; USB/MQTT/soil display confirmed on one patched Pi 4; full hardware validation pending)
 - 12-bit ADC on A0/GPIO2
 - 64-sample acquisition windows
 - 12.5% trimmed mean for outlier suppression

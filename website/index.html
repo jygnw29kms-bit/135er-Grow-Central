@@ -200,11 +200,23 @@
             <p>Brücken für Zigbee2MQTT und klar definierte MQTT-Geräte erweitern die Plattform um zusätzliche Sensoren und Aktoren.</p>
           </article>
           <article class="integration-card">
-            <div class="integration-head"><div class="logo-token">ESP32</div><span class="state local">OPTIONAL</span></div>
-            <h3>Eigene Sensormodule</h3>
-            <p>Optionale ESP32-Module sind für Substratfeuchte, Temperatur, pH, EC und weitere Messwerte vorgesehen.</p>
+            <div class="integration-head"><div class="logo-token">ESP32</div><span class="state local">TEILTEST BESTÄTIGT</span></div>
+            <h3>Grow-Central-Bodensensor</h3>
+            <p>Seeed XIAO ESP32-C3 mit HW-390: USB-Aufnahme, lokale MQTT-Verbindung mit TLS und Bodenfeuchte-Anzeige wurden auf einem Pi 4 bestätigt. Temperatur, pH und EC benötigen zusätzliche Sensorhardware.</p>
           </article>
         </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="bodensensor">
+      <div class="wrap">
+        <div class="section-title"><div><div class="eyebrow">BODENFEUCHTE · AKTUELLER TESTSTAND</div><h2>Vom USB-Anschluss zur Raumhistorie.</h2></div><p>Der native Bodensensor lässt sich am Pi einrichten, einem Raum zuordnen und in der Sensorhistorie anzeigen. Der bestätigte Teiltest gilt für Pi 4, XIAO ESP32-C3 und HW-390 mit Firmware 0.4.1 und den dokumentierten Korrekturen.</p></div>
+        <div class="feature-grid">
+          <article><div class="num">01</div><h3>Sicher aufnehmen</h3><p>Der Assistent führt durch Firmware, WLAN und Raumzuweisung. Individuelle Sensorzugänge, TLS und signierte Identitätsprüfung schützen die lokale Verbindung.</p></article>
+          <article><div class="num">02</div><h3>Bodenfeuchte verfolgen</h3><p>Eine eigene Kachel und Historienspalte zeigen Bodenfeuchte getrennt von Luftfeuchte. Der Wert ist eine relative Referenz und kein exakter Wassergehalt.</p></article>
+          <article><div class="num">03</div><h3>Passend kalibrieren</h3><p>Trocken-/Nassreferenzen lassen sich per USB speichern. Gießgrenzen müssen anschließend am verwendeten Substrat geprüft werden. Ein Kalibrierungsdialog ist noch in Planung.</p><a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/SOIL_SENSOR_GUIDE.md" target="_blank" rel="noopener">Sensor-Anleitung</a></article>
+        </div>
+        <p>Der veröffentlichte Image-Candidate Build 369 benötigt die dokumentierten Hotfixes. Ein erfolgreicher Sensortest ersetzt keine vollständige Validierung des Images, anderer Hardwareklassen oder automatischer Bewässerung.</p>
       </div>
     </section>
 

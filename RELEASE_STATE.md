@@ -2,7 +2,7 @@
 
 - **Stand:** 14. Oktober 2026
 - **Repository-Version:** `alpha-0.7.5`
-- **Branch:** `refactor/separate-3d-printing`
+- **Branch:** `master`
 - **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 369**
 - **Candidate-Tag:** `pi-universal-alpha-0.7.5-369`
 - **Candidate-Commit:** `456ed2519e0b66920f0bc6db284c962563eb5c7f`
@@ -79,4 +79,6 @@ Ete’s Autoservice, Touran, God’s Eye und Dyson V11 BMS sind keine funktional
 - Quell-/Sicherheits-/Firmwareprüfungen erfolgreich; 309 Python-Tests im geprüften Entwicklungsstand.
 - Installierbare HA-Komponente: je 8 Laufzeittests gegen HA 2025.1.4 und 2026.10.1.
 - Nachgelagerte CI-/Dokumentationskorrekturen ändern keine im Image enthaltene Grow-Runtime.
-- Physische Pi-/USB-/Sensor-/Sprachassistentenprüfung bleibt offen; Status bleibt `CANDIDATE`.
+- Reale Teilprüfung auf Pi 4: USB-Sensoraufnahme, MQTT-TLS-Verbindung und Bodenfeuchte-Anzeige mit Firmware 0.4.1 und Hotfixes bestätigt. Details: [Hardwarebefund](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md).
+- Das unveränderte Image 369 enthält Firmware 0.4.0 und benötigt die dokumentierten Korrekturen. Aktueller Git-Quellstand und Image-Inhalt sind getrennt zu bewerten.
+- Neustart-/Dauertest, Substratkalibrierung, andere Hardwareklassen sowie Sprachassistenten bleiben offen; Status bleibt `CANDIDATE`.

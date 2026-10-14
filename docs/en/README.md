@@ -24,7 +24,7 @@
 6. Sources and assumptions are clearly labeled.
 7. Large system images are published as release/Actions artifacts rather than stored in normal Git history.
 
-## alpha-0.7.1 · Hardware validation status
+## Historical alpha-0.7.1 · Hardware validation baseline
 
 - BLE discovery: implemented
 - connect / disconnect: implemented
@@ -50,3 +50,10 @@
 - [Installation](INSTALLATION.md)
 
 On first boot, the test image starts the protected `135er-GrowCentral-Setup-XXXX` access point. The temporary `GrowCentral` / `grow-central-test` credentials apply to WLAN, SSH and the normal GUI at `http://10.42.0.1/`; setup runs in its System section and the fixed post-setup URL is `http://135er-Grow-Central.local/`. Port `8080` remains available for compatibility. Application tokens remain `test` during hardware validation and must be replaced before production use. Persistent multi-boot logs and automatic/manual redacted support bundles are available for every problem report.
+
+## Current sensor status · 14 October 2026
+
+Firmware 0.4.1: USB onboarding, MQTT over TLS and soil history display confirmed on one patched Pi 4 installation. The original image 369 remains a CANDIDATE and bundles firmware 0.4.0. Calibration, long-running stability and other hardware classes remain unverified.
+
+- [Sensor setup and calibration](../de/SOIL_SENSOR_GUIDE.md)
+- [Hardware evidence and remaining checks](../de/SENSOR_HARDWARE_TEST_2026-10-14.md)

@@ -2,7 +2,7 @@
 
 Öffentliche URL: `https://grow-central.de/`
 
-Grow Central wird vollständig Open Source entwickelt. Die Seite erklärt Local First, die optionale Cloud, unterstützte Hardwareklassen und Geräteintegrationen und verlinkt das öffentliche Repository sowie veröffentlichte Releases. Ein CANDIDATE wird erst nach realen Hardwaretests als VALIDATED eingestuft.
+Grow Central wird vollständig Open Source entwickelt. Die Seite erklärt Local First, die optionale Cloud, unterstützte Hardwareklassen und Geräteintegrationen und verlinkt das öffentliche Repository sowie veröffentlichte Releases. Ein Universal-Image bleibt die gemeinsame Installationsbasis. Ein CANDIDATE wird erst nach realen Hardwaretests als VALIDATED eingestuft.
 
 ## Öffentliche Dateien
 
@@ -15,3 +15,7 @@ Ziel: `/var/www/vhosts/grow-central.de/httpdocs/`.
 Der Workflow `.github/workflows/deploy-website-sftp.yml` erstellt die öffentliche Dateiliste und veröffentlicht sie per SFTP. `scripts/deploy-public-website.sh` stellt dieselben Dateien bei einem Plesk-Git-Deployment bereit; das vollständige Checkout liegt außerhalb von `httpdocs`.
 
 Die Gestaltung bleibt beim GrowCentral Nexus UI.
+
+## Stand 14. Oktober 2026
+
+Der bestätigte Pi-4-Teiltest für XIAO ESP32-C3/HW-390 (Firmware 0.4.1 nach Hotfixes) und die Bodenfeuchte-Historie sind beschrieben. Die Seite grenzt die relative Feuchtereferenz von Temperatur, pH, EC und exaktem Wassergehalt ab. Sie verlinkt die Kalibrierungsanleitung und kennzeichnet ausstehende Prüfungen. Image 369 wird nicht nachträglich ausgetauscht.

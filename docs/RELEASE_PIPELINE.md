@@ -1,6 +1,6 @@
 # Release-Pipeline – 135er-Grow Central
 
-**Stand:** 2026-09-02
+**Stand:** 2026-10-14
 **Kanonische Quellen:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md), [`HARDWARE_SUPPORT_POLICY.md`](HARDWARE_SUPPORT_POLICY.md)
 
 ## Grundsatz
@@ -29,9 +29,9 @@ Eine Commit-, Run- oder Buildnummer ist nicht automatisch hardwarevalidiert.
 ## Aktueller Stand
 
 - Version: `alpha-0.7.5`
-- aktueller Candidate: **Build 199** / `pi-universal-alpha-0.7.5-199`
-- Candidate-Commit: `34442bc41d2c79328d3d5c61eb63a744f4c433a6`
-- Build 199: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
+- aktueller Candidate: **Build 369** / `pi-universal-alpha-0.7.5-369`
+- Candidate-Commit: `456ed2519e0b66920f0bc6db284c962563eb5c7f`
+- Build 369: `CANDIDATE`, automatisierte Image-, Boot- und Release-Gates bestanden
 - reale, klassenbezogene Hardwarevalidierung steht noch aus
 - veröffentlichbare Releases und Artefakte werden über die öffentlichen Open-Source-Projektkanäle bereitgestellt
 

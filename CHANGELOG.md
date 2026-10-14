@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Sensor hardware findings (2026-10-14)
+
+- confirm native XIAO ESP32-C3 / HW-390 onboarding, MQTT TLS connectivity and soil history display on one Pi 4 installation after hotfixes; retain CANDIDATE status for the universal image
+- fix duplicate Mosquitto persistence configuration and support archive download consistency
+- keep USB-connected discovered sensors visible; replace manual hexadecimal entry with explicit confirmation and fresh signed identity proof
+- prefer Pi LAN IPv4 for sensor MQTT, retain network-step retries and add exact textual-IP DNS SANs for ESP32 TLS compatibility
+- firmware 0.4.1 reports the underlying TLS error, sensor UTC and stored CA length; extends connection deadlines
+- identify USB CA truncation: pace USB commands and verify stored PEM length before proceeding
+- display soil moisture separately from air humidity in sensor history and room cards
+- document AIR/WATER reference calibration, substrate-specific threshold checks and limitations; calibration UI and additional sensor hardware remain future work
+- synchronize public website and active release documentation; update stale release consistency gates
+
 ## alpha-0.7.5 – Grow-only candidate 369 (2026-10-14)
 
 - preserve guided USB discovery, signed sensor identity, verified firmware 0.4.0, individual MQTT TLS provisioning and room assignment
