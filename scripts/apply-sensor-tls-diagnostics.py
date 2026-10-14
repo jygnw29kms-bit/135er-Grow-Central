@@ -18,6 +18,7 @@ BASE = 'https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/' + 
 ZIP_SHA = 'c99662d6574d8ef7d044ea761e1cbbce98446375980f68863505d3b34d08c264'
 CODE_SHA = 'f55ddd216fa64ff14cce8d0cdb72f4aefb30b758e0413dcb5f722cf86e119924'
 OLD_SHA = '21858aae7267e737425b8ff76495bb325304b20a8ae6fcc26f8a3cbd9f0b2580'
+UNIT = '135er-grow-central.service'
 ROOT = Path('/opt/135er-grow-central')
 BACKUPS = Path('/var/backups/grow-central')
 FILES = {'bootloader.bin': 0, 'partitions.bin': 0x8000,
@@ -78,7 +79,7 @@ def main():
         backups = BACKUPS
         backups.mkdir(parents=True, exist_ok=True)
         backup = Path(tempfile.mkdtemp(prefix='sensor-041-', dir=backups))
-        run('systemctl', 'stop', 'grow-central.service')
+        run('systemctl', 'stop', UNIT)
         copied_code = copied_dist = changed = False
         try:
             shutil.copy2(target, backup/'usb.py')
@@ -95,7 +96,7 @@ def main():
                 (destination/src.name).chmod(0o644)
             run(str(ROOT/'.venv/bin/python'), '-c',
                 'from app.provisioning.usb import firmware_files; print("Firmware geprüft:", firmware_files())')
-            run('systemctl', 'start', 'grow-central.service')
+            run('systemctl', 'start', UNIT)
             for attempt in range(20):
                 try:
                     with urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=2) as response:
@@ -114,7 +115,7 @@ def main():
                 else:
                     for name in [*FILES, 'manifest.json']:
                         (destination/name).unlink(missing_ok=True)
-            subprocess.run(['systemctl', 'restart', 'grow-central.service'], check=False)
+            subprocess.run(['systemctl', 'restart', UNIT], check=False)
             raise
         print('Firmware 0.4.1 bereitgestellt. Sicherung:', backup)
         print('Sensor wurde NICHT geflasht. GC neu laden und im USB-Assistenten Firmware installieren.')

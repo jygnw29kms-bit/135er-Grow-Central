@@ -37,7 +37,7 @@ def test_failed_restart_restores_existing_firmware_and_code(tmp_path, monkeypatc
     calls = []
     def run(*args):
         calls.append(args)
-        if args == ('systemctl', 'start', 'grow-central.service'):
+        if args == ('systemctl', 'start', module.UNIT):
             raise RuntimeError('simulated service failure')
     monkeypatch.setattr(module, 'run', run)
     monkeypatch.setattr(module.subprocess, 'run', lambda *a, **kw: None)
@@ -47,4 +47,11 @@ def test_failed_restart_restores_existing_firmware_and_code(tmp_path, monkeypatc
     assert (destination/'manifest.json').read_bytes() == b'old manifest'
     assert (destination/'firmware.bin').read_bytes() == b'old firmware'
     assert not (destination/'bootloader.bin').exists()
-    assert ('systemctl', 'stop', 'grow-central.service') in calls
+    assert ('systemctl', 'stop', module.UNIT) in calls
+
+
+def test_installer_uses_image_application_unit():
+    module = load()
+    repo = Path(__file__).resolve().parents[1]
+    assert module.UNIT == '135er-grow-central.service'
+    assert f'/etc/systemd/system/{module.UNIT}' in (repo/'.github/workflows/build-pi3-image.yml').read_text()
