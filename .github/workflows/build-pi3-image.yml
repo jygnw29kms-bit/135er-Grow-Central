@@ -706,6 +706,8 @@ jobs:
           sudo mount "${LOOP}p2" "$ROOT"
           cleanup_boot() {
             set +e
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active mosquitto.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-provisioning.service
             sudo machinectl poweroff "$MACHINE" 2>/dev/null
             sleep 2
             sudo umount "$ROOT" 2>/dev/null
@@ -735,6 +737,8 @@ jobs:
             fi
             sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active 135er-grow-central.service
             sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-http.socket
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active mosquitto.service
+            sudo systemd-run --quiet --wait --pipe --machine="$MACHINE" /usr/bin/systemctl is-active grow-central-provisioning.service
             sudo machinectl poweroff "$MACHINE"
             wait "$nspawn_pid" || true
           }
