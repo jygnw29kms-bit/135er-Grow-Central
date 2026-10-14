@@ -1,12 +1,23 @@
 (() => {
   const byId = (id) => document.getElementById(id);
 
+  let providerErrors=0;
+
   function apply(data) {
-    const ok = data?.state === 'ok';
-    const warning = data?.state === 'warning';
+    const warning = data?.state === 'warning'||providerErrors>0;
     const provisioned = data?.provisioned === true;
     const cloud = data?.cloud || {};
     const providers = data?.device_runtime || {};
+
+    const issues=[...new Set([...(data.warnings||[]),...(data.blockers||[])])];
+    const count=issues.length+providerErrors;
+    const summary=!data.ok?'System prüfen':warning?'Lokal bereit · Hinweise':'System bereit';
+    const descriptions={setup_required:'Ersteinrichtung offen',setup_applying:'Einrichtung läuft',setup_warning:'Hinweis zur Einrichtung',setup_error:'Einrichtung fehlgeschlagen',cloud_not_connected:'Optionale Cloud nicht verbunden',device_runtime_empty:'Keine Geräteprovider registriert',runtime_unreachable:'Status nicht erreichbar'};
+    const details=issues.map(key=>descriptions[key]||key);if(providerErrors)details.push(`${providerErrors} Provider mit Verbindungsfehler`);
+    const label=byId('masterOnlineLabel');if(label){label.textContent=summary;label.parentElement.classList.toggle('warn',warning||!data.ok);label.parentElement.classList.toggle('online',data.ok&&!warning)}
+    const masterWarning=byId('masterWarningLabel');if(masterWarning){masterWarning.textContent=`${count} Hinweis${count===1?'':'e'}`;masterWarning.parentElement.classList.toggle('warn',count>0);masterWarning.parentElement.title=details.join(' · ')||'Keine gemeldeten Hinweise'}
+    const hero=byId('heroHealthLabel');if(hero)hero.textContent=summary;
+    const masterSub=byId('headlineSub');if(masterSub&&!byId('statusBanner'))masterSub.textContent=details.join(' · ')||'Lokaler Core bereit; Geräte einzeln prüfen.';
 
     const desktopBanner = byId('statusBanner');
     if (desktopBanner) {
@@ -43,7 +54,7 @@
     const connection = byId('connectionLabel');
     if (connection) connection.textContent = data?.ok ? 'LOCAL' : 'CHECK';
 
-    document.documentElement.dataset.runtime = data?.state || 'unknown';
+    document.documentElement.dataset.runtime = !data.ok?'error':warning?'warning':'ok';
     window.GrowCentralRuntime = data;
   }
 
@@ -51,12 +62,16 @@
     try {
       const response = await fetch('/api/runtime/health', {cache: 'no-store'});
       if (!response.ok) throw new Error(String(response.status));
-      apply(await response.json());
+      const data=await response.json();
+      if(typeof data.ok!=='boolean'||!['ok','warning','error'].includes(data.state))throw new Error('Invalid runtime health response');
+      apply(data);
     } catch (_) {
-      apply({ok: false, state: 'error', provisioned: false, cloud: {}, device_runtime: {provider_count: 0}});
+      apply({ok: false, state: 'error', provisioned: false, cloud: {}, device_runtime: {provider_count: 0}, blockers:['runtime_unreachable'], warnings:[]});
     }
   }
 
+  window.addEventListener('gc:provider-health',event=>{providerErrors=Number(event.detail?.errors)||0;if(window.GrowCentralRuntime)apply(window.GrowCentralRuntime)});
+  window.addEventListener('gc:core-refreshed',refresh);
   window.addEventListener('gc:refresh', refresh);
   refresh();
   setInterval(refresh, 15000);

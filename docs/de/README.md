@@ -57,3 +57,5 @@ Firmware 0.4.1: USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige auf einer 
 
 - [Sensor setup and calibration](SOIL_SENSOR_GUIDE.md)
 - [Hardware evidence and remaining checks](SENSOR_HARDWARE_TEST_2026-10-14.md)
+
+- [Aktuelle Projektprüfung und Arbeitsstand](PROJECT_REVIEW_2026-10-14.md)

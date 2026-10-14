@@ -28,14 +28,19 @@ Der ursprüngliche Fehler war ein abgeschnittener CA-Transfer über USB. Das Fir
 - Kamera-, Geräte- und Automationspfade mit modellabhängigen Berechtigungen;
 - FRITZ!, Tapo, Shelly, Home Assistant und weitere Providerpfade;
 - installierbare Home-Assistant-Komponente; Apple Home/Siri, Alexa und Google über gesondert einzurichtende HA-Brücken;
-- optionaler Cloud-Link, Diagnose und Supportarchive.
+- optionaler Cloud-Link, Diagnose und Supportarchive;
+- Final Master unter `/ui`, ergänzende Raumverwaltung/Sensor-Diagnose unter `/rooms`;
+- CSV-Historienexport, transaktionale Raumänderungen und Messwert-Plausibilitätsprüfung;
+- Laufzeit-Hinweise im Master statt fester Warnungszahlen.
+
+Lokale Automationen sind gespeicherte Definitionen. Die Darstellung „hinterlegt“ ist kein Nachweis eines laufenden Schedulers. Aktuelle Arbeitsprioritäten: [Roadmap](ROADMAP.md).
 
 ## Offen
 
 - vollständiger Pi-4-Installations-, Neustart- und Dauerbetriebtest; separate Pi-3-/Pi-5-Tests;
 - reale AIR/WATER- und Substratkalibrierung sowie validierte Bewässerungsgrenzen;
 - WYSIWYG-Menüeditor als lokaler Layoutentwurf hinzugefügt; keine bestätigte Übernahme in die produktive Navigation;
-- komfortable Kalibrierungs- und Diagnoseansicht: Befehle/Telemetrie existieren, entsprechende UI ist noch nicht implementiert;
+- serielle Kalibrierung aus dem Browser und ein belastbares Substratkalibrierungsmodell; Anleitung und per-Sensor-Diagnose sind unter `/rooms` implementiert;
 - BLE-Provisionierung und weitere Sensorhardware für Temperatur, pH oder EC;
 - Ende-zu-Ende-Tests der Sprachassistenten und optionalen Cloud;
 - vollständiger Realtest des neu veröffentlichten Image-Candidates 375.

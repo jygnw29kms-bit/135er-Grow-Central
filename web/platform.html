@@ -55,12 +55,12 @@
     <header class="topbar master-topbar">
   <div class="master-search"><span>⌕</span><input id="globalSearch" type="search" placeholder="Suche (Räume, Geräte, Sensoren …)" aria-label="Grow Central durchsuchen"></div>
   <div class="master-topstatus fm-topstatus">
-    <span class="fm-status-pill online"><i></i><b id="masterOnlineLabel">System Online</b></span>
+    <span class="fm-status-pill online"><i></i><b id="masterOnlineLabel">wird geprüft</b></span>
     <span class="fm-status-pill"><i class="dot-cyan"></i><b><span id="deviceCounter">0</span> Geräte</b></span>
-    <span class="fm-status-pill warn"><i></i><b>1 Warnung</b></span>
+    <span class="fm-status-pill warn"><i></i><b id="masterWarningLabel" role="status">Statusprüfung</b></span>
     <span class="clock"><b id="masterDate">—</b><small id="masterTime">—</small></span>
-    <span class="fm-bell">♧<b>2</b></span>
-    <span class="fm-user"><span class="fm-avatar">●</span><span><b>GrowCentral</b><small>Administrator</small></span><em>⌄</em></span>
+    <span class="fm-bell" title="Ereignis-Zusammenführung in Arbeit">♧</span>
+    <span class="fm-user"><span class="fm-avatar">●</span><span><b>GrowCentral</b><small>Lokaler Zugang</small></span><em>⌄</em></span>
   </div>
   <div class="runtime-controls" aria-hidden="true"><select id="growSelector"><option value="">Alle Growboxen</option></select><button id="simpleMode" class="active">Einfach</button><button id="advancedMode">Advanced</button><button id="refreshBtn">↻</button><span id="pageTitle">Übersicht</span></div>
 </header>
@@ -73,7 +73,7 @@
     </div>
     <div class="fm-hero-cards">
       <article><i>♣</i><span><small>Phase</small><b>In Arbeit</b><em>Wachstumsdaten folgen</em></span></article>
-      <article><i>◷</i><span><small>Nächste Aktion</small><b>—</b><em>Keine Regel aktiv</em></span></article>
+      <article><i>◷</i><span><small>Nächste Aktion</small><b>—</b><em>Kein Scheduler eingerichtet</em></span></article>
       <article><i>◈</i><span><small>Gesundheit</small><b id="heroHealthLabel">wird geprüft</b><em id="headlineSub">Lokale Dienste werden geladen.</em></span></article>
     </div>
     <span id="roomOnlineSummary" hidden>—</span><span id="roomCountSummary" hidden>—</span><span id="heroRoomLabel" hidden>—</span>
@@ -82,22 +82,22 @@
   <div class="master-metrics fm-metrics-six">
     <article class="master-metric green"><header><span class="metric-icon">♨</span><b>Temperatur</b></header><strong><span id="temp">—</span> <em>°C</em></strong><small id="tempHint">keine Daten</small><div class="spark spark-green"></div></article>
     <article class="master-metric blue"><header><span class="metric-icon">●</span><b>Luftfeuchte</b></header><strong><span id="rh">—</span> <em>%</em></strong><small id="rhHint">keine Daten</small><div class="spark spark-blue"></div></article>
-    <article class="master-metric cyan"><header><span class="metric-icon">◈</span><b>VPD</b><span class="state-badge">Optimal</span></header><strong><span id="vpd">—</span> <em>kPa</em></strong><small id="vpdHint">keine Daten</small><div class="spark spark-cyan"></div></article>
+    <article class="master-metric cyan"><header><span class="metric-icon">◈</span><b>VPD</b><span class="state-badge">Messwert</span></header><strong><span id="vpd">—</span> <em>kPa</em></strong><small id="vpdHint">keine Daten</small><div class="spark spark-cyan"></div></article>
     <article class="master-metric muted"><header><span class="metric-icon">☁</span><b>CO₂</b><span class="optional-badge">Optional</span></header><strong>— <em>ppm</em></strong><small>Optionaler Sensor</small></article>
     <article class="master-metric amber"><header><span class="metric-icon">☀</span><b>Lichtstärke</b></header><strong><span id="lightValue">—</span> <em>µmol</em></strong><small>Nur bei Messquelle</small><div class="spark spark-amber"></div></article>
     <article class="master-metric soil"><header><span class="metric-icon">♨</span><b>Bodenfeuchte</b><span class="progress-badge">In Arbeit</span></header><strong>—</strong><small>Kalibrierung erforderlich</small></article>
   </div>
 
   <div class="master-board-top fm-board-top">
-    <article class="master-panel room-overview-panel"><div class="master-panel-head"><h3>▣ Räume</h3><span><b>1 / 1</b> aktiv</span></div><div id="growSummary" class="master-room-summary"><div class="empty">Räume werden geladen…</div></div></article>
-    <article class="master-panel live-camera-panel"><div class="master-panel-head"><h3><i class="online-dot"></i> Live-Kamera – Test</h3><span>● LIVE</span></div><div class="camera-master-frame"><img id="overviewCameraSnapshot" alt="Lokaler Kamera-Snapshot" hidden><div class="camera-master-art" id="overviewCameraFallback"><span>◉</span><b>Lokale Kamera</b><small>Snapshot wird geprüft</small></div><span class="live-tag" id="overviewCameraState">LOCAL</span></div><div class="fm-camera-actions"><button>▣ Snapshot</button><button>● Aufnehmen</button><button>◷ Zeitraffer</button><button>⛶</button></div></article>
+    <article class="master-panel room-overview-panel"><div class="master-panel-head"><h3>▣ Räume</h3><span><b id="roomFreshCount">—</b> mit aktueller Messung</span></div><div id="growSummary" class="master-room-summary"><div class="empty">Räume werden geladen…</div></div></article>
+    <article class="master-panel live-camera-panel"><div class="master-panel-head"><h3><i class="online-dot"></i> Kamera – Test</h3><span>SNAPSHOT</span></div><div class="camera-master-frame"><img id="overviewCameraSnapshot" alt="Lokaler Kamera-Snapshot" hidden><div class="camera-master-art" id="overviewCameraFallback"><span>◉</span><b>Lokale Kamera</b><small>Snapshot wird geprüft</small></div><span class="live-tag" id="overviewCameraState">LOCAL</span></div><div class="fm-camera-actions"><button>▣ Snapshot</button><button>● Aufnehmen</button><button>◷ Zeitraffer</button><button>⛶</button></div></article>
     <article class="master-panel quick-control-panel"><div class="master-panel-head"><h3>✣ Schnellsteuerung – Test</h3><span>⚙</span></div><div class="fm-control-grid"><div><b>☀ Licht</b><button disabled>Ein</button><button disabled>Aus</button></div><div><b>♨ Bewässerung</b><button disabled>Start</button><button disabled>Stopp</button></div><div><b>✤ Umluft</b><button disabled>Auto</button><button disabled>Stufe 1</button><button disabled>Stufe 2</button><button disabled>Stufe 3</button></div><div><b>✤ Abluft</b><button disabled>Auto</button><button disabled>25 %</button><button disabled>50 %</button><button disabled>75 %</button><button disabled>100 %</button></div></div></article>
   </div>
 
   <div class="master-board-middle fm-board-middle">
     <article class="master-panel chart-panel"><div class="master-panel-head"><h3>▣ Klima-Verlauf (24 h)</h3><span class="mini-select">24 Stunden⌄</span></div><div class="fake-chart"><div class="chart-grid"></div><div class="fm-chart-empty">Historie in Arbeit</div></div></article>
     <article class="master-panel schedules-panel"><div class="master-panel-head"><h3>▣ Zeitpläne & Automationen</h3><button data-open="automation">＋ Neu</button></div><div id="overviewAutomationList" class="rule-list"><div class="empty">Noch keine lokalen Regeln angelegt.</div></div></article>
-    <article class="master-panel energy-master-panel"><div class="master-panel-head"><h3>☷ Energie & Leistung</h3><span class="mini-select">24 Stunden⌄</span></div><div class="energy-master-totals"><div><i>ϟ</i><span><small>Aktuelle Leistung</small><b><span id="power">—</span> W</b></span></div><div><i>▥</i><span><small>Tagesverbrauch</small><b id="energyTotalSmall">— kWh</b></span></div></div><div class="energy-chart"><div class="fm-bars"></div></div></article>
+    <article class="master-panel energy-master-panel"><div class="master-panel-head"><h3>☷ Energie & Leistung</h3><span class="mini-select">24 Stunden⌄</span></div><div class="energy-master-totals"><div><i>ϟ</i><span><small>Aktuelle Leistung</small><b><span id="power">—</span> W</b></span></div><div><i>▥</i><span><small>Zählerstand</small><b id="energyTotalSmall">— kWh</b></span></div></div><div class="energy-chart"><div class="fm-bars"></div></div></article>
   </div>
 
   <div class="master-board-bottom fm-board-bottom">
@@ -141,5 +141,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=20261014-integrated1"></script><script src="/static/room_views.js?v=20261014-integrated1"></script><script src="/static/runtime_status.js?v=1"></script><script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script><script src="/static/platform-master.js?v=20261014-mobile4"></script>
+<script src="/static/platform.js?v=20261014-runtime1"></script><script src="/static/room_views.js?v=20261014-integrated1"></script><script src="/static/runtime_status.js?v=2"></script><script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script><script src="/static/platform-master.js?v=20261014-runtime1"></script>
 </body></html>

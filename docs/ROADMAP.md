@@ -1,112 +1,73 @@
 # Roadmap – 135er-Grow Central
 
-**Stand:** 2026-10-14
-**Kanonischer Release-Status:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
+**Stand:** 14. Oktober 2026. Verbindlicher Release-Status:
+[`RELEASE_STATE.md`](../RELEASE_STATE.md).
 
-Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 369 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
+`alpha-0.7.5`, Pi-Candidate **Build 375**, Sensor-Firmware **0.4.1**.
+Quellcodeverbesserungen auf `master` erzeugen kein neues Pi-Image und ersetzen
+keine Hardwarevalidierung. Build 369 mit Hotfixes bleibt der dokumentierte
+reale Pi-4-Sensorteiltest.
 
-## Jetzt · Build 369 Hardwarevalidierung
+## Im aktuellen Quellstand umgesetzt
 
-- frischer Boot / Reboot;
-- First Boot, Setup AP, DHCP/DNS;
-- LAN/WLAN/mDNS und GUI-Persistenz;
-- FRITZ! Smart Home / Tapo auf verfügbarer Zielhardware;
-- Logitech C920/UVC;
-- firmware-/modell-/USB-ID-bewusste LED-Fähigkeitserkennung;
-- LED-Steuerung nur bei erkannter Unterstützung;
-- Elecrow 7-Zoll Touch-Kiosk;
-- Support-Bundle bei Abweichungen.
+- Final-Master-Oberfläche unter `/ui`, mobile Oberfläche und ergänzende
+  Raumverwaltung mit Sensor-Diagnose unter `/rooms`.
+- Validiertes Raumformular, aktuelle Messzeitpunkte, Schutz vor verspäteten
+  Antworten nach einem Raumwechsel und verständliche Fehlermeldungen.
+- Transaktionale Änderungen an Raumdaten, Pflanzen, Tagebüchern und
+  Sensorzuordnungen; Sensorabfragen erhalten zwischenzeitliche Änderungen.
+- Plausibilitätsprüfung von Messwerten und Übernahme der Temperatur-/Feuchte-
+  Felder vorhandener Smart-Home-Adapter.
+- CSV-Export der Raumhistorie mit expliziter Kennzeichnung unkalibrierter
+  Bodenfeuchte-Referenzwerte. UI standardmäßig bis zu 5000 Messpunkte;
+  API maximal 50000. Aufbewahrung derzeit maximal 50000 Messpunkte insgesamt.
+- Warnungsanzeigen aus dem Laufzeitstatus und sichtbare Unterscheidung
+  zwischen frischen und älteren gespeicherten Messungen.
+- Manuelle Sensoraufnahme, signierte Identität, individuelle MQTT-TLS-
+  Zugänge und geführte USB-Einrichtung. BLE-Provisionierung bleibt gesperrt.
+- Lokale Automationsdefinitionen: Speicherung implementiert; ein allgemeiner
+  Scheduler bzw. automatische Ausführung ist damit nicht bestätigt.
+- WYSIWYG-Layoutentwurf mit Import/Export; produktive Layoutübernahme offen.
+- GitHub-Workflow für synthetische Chromium-Prüfungen bei GUI-Änderungen, mit
+  festgelegter Playwright-Version und ohne Produktionszugänge.
 
-## Nächste Alpha-Ziele
+## Priorität 1: Nachweisbarer Betrieb auf Zielhardware
 
-### Umgesetzt im Entwicklungsstand vom 9. Oktober 2026
+Build 375 auf Pi 4 frisch installieren, Einrichtung, Neustart, Netzwerkübergang,
+MQTT-TLS, Sensoraufnahme und Dauerbetrieb prüfen. Pi 3 und Pi 5 separat prüfen.
+Kamera, LED-Steuerung, FRITZ!/Tapo und weitere Geräte nur mit passender realer
+Hardware validieren. Prüfergebnisse und Supportarchive dokumentieren.
 
-- Desktop/Mobile-Laufzeitstatus erkennt veraltete Cloud-Heartbeats und einen Wechsel des Cloud-Servers.
-- Cloud-Ausfälle erzeugen Hinweise; lokale Kernfunktionen bleiben unabhängig davon verfügbar.
-- Statusprüfungen behandeln fehlendes bzw. nicht antwortendes systemd und blockieren den asynchronen API-Ablauf nicht.
-- Cloud-Adressen werden als reine HTTPS-Ursprünge ohne eingebettete Zugangsdaten geprüft.
-- Cloud-Link V2 wiederholt den Diagnose-Handshake nach inkompatibler Health-Antwort oder fehlendem Telemetrie-Endpunkt.
+## Priorität 2: Kalibrierung und sichere Automationen
 
-Diese Änderungen sind Quellcodeverbesserungen und kein neuer veröffentlichter Image-Candidate. Quellen, Prüfungen und verbleibende Grenzen: [Analyse und Quellenabgleich](de/APP_REVIEW_2026-10-09.md).
+AIR/WATER-Referenzen und Substrat-Grenzwerte am realen Sensor prüfen. Die
+Diagnoseansicht bietet Anleitung und Messdaten; serielle Kalibrierbefehle werden
+noch nicht im Browser ausgeführt. Danach ein explizites Kalibrierungsmodell und
+nachvollziehbare Freigabe der Prozentanzeige entwickeln.
 
-### Geräte & Grow
+Einen lokalen Scheduler erst mit gültigen Zeit-/Temperaturbedingungen,
+Berechtigungsprüfung, Hysterese, Ausfallgrenzen und Tests für Neustart sowie
+veraltete Sensorwerte ergänzen. Unvalidierte Aktorbefehle bleiben gesperrt.
 
-- reale iConnect-Validierung für Mars Hydro FC3000 2024 und iFresh/DF100;
-- DF100M BLE weiterhin als Diagnose-/Fallback-Pfad;
-- Räume, Pflanzen und Growtagebuch weiter mit realen Sensordaten verbinden;
-- Automationsregeln und Fail-safe-Verhalten auf realer Hardware absichern.
+## Priorität 3: Historie und Betrieb
 
-### Energie & Historie
+- Zeitfilter, echte Diagramme, konfigurierbare Retention und belastbare
+  Energie-/Kostenberechnung auf Basis realer Zählerdaten.
+- Backup und geprüfte Wiederherstellung, kontrollierte Updates und Rollback.
+- Aktuelle Datenquellen vollständig in Klima-, Bewässerungs- und Geräteansichten
+  zusammenführen; geplante Funktionen weiterhin sichtbar kennzeichnen.
+- Bestehende Chromium-CI um weitere Abläufe ergänzen und auf echten iOS-/Android-Geräten prüfen.
 
-- belastbare Zeitreihen für Stunde/Tag/Woche/Monat/Jahr;
-- Kosten- und Verbrauchscharts;
-- Datenretention und Export;
-- Plausibilitätsprüfungen gegen reale Smart-Plug-Zähler.
+## Optionale Erweiterungen
 
-### Mobile
+Cloud **V7**, Home Assistant und Sprachassistenten bleiben zusätzliche Wege;
+der Pi bleibt die lokale Autorität. Ende-zu-Ende-Prüfungen benötigen die
+jeweiligen Dienste und Konten. Temperatur, pH und EC benötigen zusätzliche
+Sensorhardware. Projektfremde Dienste bleiben getrennt.
 
-- Nexus Mobile Android und iOS auf Realgeräten gegen den aktuellen Pi-Kandidaten testen;
-- iOS-Sideload-Prozess reproduzierbar dokumentieren;
-- sichere Serverzielverwaltung weiter verbessern;
-- keine doppelte Geräteimplementierung in den Apps einführen.
+## Release-Gate
 
-### Cloud / Server / APT
-
-- Cloud V6 auf Produktivserver reproduzierbar installieren/aktualisieren;
-- Remotezugriff nur über TLS/HTTPS bzw. abgesicherten Tunnel;
-- signierten APT-Pfad und Upgrade-/Rollback-Prozess weiter testen;
-- Release-State und Prüfsummen bei allen öffentlichen Installerpfaden veröffentlichen.
-
-### Security / Betrieb
-
-- Rechte und Audit weiter härten;
-- Backup/Restore real validieren;
-- Update-/Rollback-Gates vervollständigen;
-- Stable erst nach wiederholbaren Zieltests.
-
-## Design
-
-Alle neuen Pi-, Kiosk-, Mobile-, Website-, Repo- und Release-Oberflächen folgen dem [`GrowCentral Nexus UI`](DESIGN_SYSTEM_NEXUS.md). Logo und Branding bleiben unverändert.
-
-## Stable-Gate
-
-Eine Stable-/Beta-Hochstufung erfolgt erst, wenn die Kernpfade reproduzierbar auf Zielhardware getestet sind. Ein CI-erfolgreicher Build allein genügt nicht.
-
-## Native Sensoraufnahme · Entwicklungsstand 13. Oktober 2026
-
-Manuelle Aufnahme/Ablehnung, persistente Sperrzustände, Name/Raum-Zuweisung,
-P-256-Geräteidentität und aktuelle Nonce-Prüfung sind im Backend und in der
-Desktop-/Mobile-/Legacy-Oberfläche ergänzt. Firmware 0.4.0 baut für XIAO ESP32-C3;
-Hardwarevalidierung bleibt offen. Netzwerk-MQTT benötigt individuelle TLS-Zugänge;
-der anonyme Image-Listener ist auf Loopback begrenzt. BLE-Provisionierung bleibt offen und gesperrt. Individuelle lokale MQTT-TLS-Zugänge
-können inzwischen über den bestätigten USB-Assistenten eingerichtet werden.
-
-Details, Migration und überprüfte Grenzen: [Sensoraufnahme](de/SENSOR_PAIRING.md).
-
-## Home Assistant und Sprachassistenten — 2026-10-13
-
-Installierbare lokale HA-Komponente mit Config Flow, Polling, Sensoren und
-freigegebenen Schaltern. Separater API-Schlüssel und explizite Export-/Schaltlisten;
-keine Rückexport-Schleife für importierte HA-Geräte. Weitere konfigurierte
-Runtime-Sensoren können ausdrücklich als reine Messwerte ausgewählt werden.
-Apple Home/Siri über HomeKit Bridge, Alexa/Google über HA Cloud oder die offiziellen
-manuellen Account-Linking-Wege. Numerische Bodenfeuchte bleibt in HA; die aktuellen
-HomeKit-/Google-Sensorklassen unterstützen sie nicht. Kontokopplung und reale
-Sprachbefehle müssen auf der Zielinstallation geprüft werden.
-
-Einrichtung: [Home Assistant](de/HOME_ASSISTANT.md).
-
-## Geführte USB-Sensoraufnahme — 2026-10-13
-
-USB-Kandidaten am Pi werden automatisch im Gerätebereich gezeigt. Der Assistent
-prüft die aktuelle signierte USB-Identität, installiert bei Bedarf das geprüfte
-XIAO-C3-Firmwarepaket 0.4.0, richtet WLAN und individuelle lokale MQTT-TLS-Zugänge
-über USB ein und prüft danach dieselbe Identität im Netzwerk. Name/Raum und die
-bewusste Aufnahme schließen den Ablauf ab. Widerruf und Schlüsselwechsel bleiben
-manuell kontrolliert. Firmware wird im Image-CI separat gebaut und gebündelt;
-Flashbereiche schließen NVS aus. Der lokale Broker-Helfer verwendet einen Unix-
-Socket und öffnet keine allgemeine privilegierte Befehlsausführung.
-
-Software-/Seriell-/TLS-Tests und Desktop-/Mobile-Dialog sind geprüft; tatsächliches
-USB-Reset/Flash und WLAN auf XIAO/Pi bleiben Hardwaretests. BLE bleibt offen.
-Anleitung: [USB-Sensor einrichten](de/USB_SENSOR_SETUP.md).
+Kein Beta-/Stable-Status allein aufgrund erfolgreicher Softwaretests. Es gelten
+[Hardware Support Policy](HARDWARE_SUPPORT_POLICY.md),
+[Hardware Test Plan](HARDWARE_TEST_PLAN.md) und
+[Known Limitations](KNOWN_LIMITATIONS.md).

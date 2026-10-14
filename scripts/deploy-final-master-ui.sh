@@ -19,7 +19,7 @@ if [[ ${EUID} -ne 0 ]]; then
 fi
 
 install -d -o growcentral -g growcentral "$BACKUP/web" "$BACKUP/app"
-WEB_FILES=(platform.html platform.js platform-master.css platform-master.js platform-visual.css room_views.js console.html console.js console.css mobile.html mobile.js ui-editor.html ui-editor.js session_write.js mobile_runtime_fix.css mobile_runtime_fix.js)
+WEB_FILES=(platform.html platform.js runtime_status.js platform-master.css platform-master.js platform-visual.css room_views.js console.html console.js console.css mobile.html mobile.js ui-editor.html ui-editor.js session_write.js mobile_runtime_fix.css mobile_runtime_fix.js)
 IMAGE_FILES=(master-grow-hero.jpg master-grow-room.jpg)
 APP_FILES=(gui_shell.py)
 for f in "${WEB_FILES[@]}" "${IMAGE_FILES[@]}"; do [[ -f "$WEB/$f" ]] && cp -a "$WEB/$f" "$BACKUP/web/$f"; done

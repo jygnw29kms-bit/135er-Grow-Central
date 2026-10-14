@@ -4,7 +4,7 @@
   "status": "alpha-candidate",
   "platform": "Raspberry Pi Universal Image + optional Linux VPS",
   "primary_device": "Raspberry Pi local authority",
-  "esp32": false,
+  "esp32": true,
   "languages": ["de", "en"],
   "architecture": ["local", "cloud", "shared"],
   "hardware_support": {

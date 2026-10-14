@@ -13,12 +13,15 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let savedRoom=null,failSave=false,captures=1,delayFirst=false;
+ let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false;
+ let runtimeHealth={ok:true,state:'ok',provisioned:true,warnings:[],blockers:[],cloud:{enabled:false},device_runtime:{provider_count:10}};
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url()),pathname=url.pathname;
   if(url.hostname!=='gc.test')return route.fulfill({status:503,body:'External services are not part of this fixture'});
   if(pathname.startsWith('/api/')){
+   if(pathname.endsWith('/sensors.csv'))return route.fulfill({contentType:'text/csv',body:'timestamp,power_w\n2026-10-14T00:00:00Z,0\n'});
    let data={};
+   if(pathname==='/api/runtime/health'){if(failRuntime)return route.fulfill({status:503,body:'offline'});return route.fulfill({json:runtimeHealth})}
    if(pathname==='/api/v1/rooms'){
     if(route.request().method()==='POST'){if(failSave)return route.fulfill({status:503,json:{detail:'Test: Dienst nicht verfügbar'}});savedRoom=route.request().postDataJSON();data={...savedRoom,id:'room3'};rooms.push(data)}else data={rooms};
    }else if(pathname==='/api/v1/rooms/capture')data={ok:true,rooms_captured:captures};
@@ -45,6 +48,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  await page.getByText('EXCELLENT',{exact:true}).waitFor();
  assert.equal(await page.locator('#sensorDiagnosticsRows img').count(),0,'metadata must be escaped');
  assert.match(await page.locator('#sensorDiagnosticsRows').innerText(),/2710/);
+ const downloaded=page.waitForEvent('download');await page.locator('#exportSensorsBtn').click();assert.match((await downloaded).suggestedFilename(),/sensoren\.csv$/);
  await page.locator('#newRoomBtn').click();
  await page.locator('[name=name]').fill('  Neues Zelt  ');
  await page.locator('[name=temperature]').fill('0');
@@ -81,6 +85,19 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`master overflow at ${width}`);
   if(width===390)assert.equal(await page.locator('#mobileMenuToggle').getAttribute('aria-expanded'),'false');
  }
+ // Runtime status comes from the full health contract and clears on recovery.
+ await page.getByText('0 Hinweise',{exact:true}).waitFor();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('gc:provider-health',{detail:{errors:2}})));await page.getByText('2 Hinweise',{exact:true}).waitFor();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('gc:provider-health',{detail:{errors:0}})));await page.getByText('0 Hinweise',{exact:true}).waitFor();
+ runtimeHealth={...runtimeHealth,state:'warning',warnings:['cloud_not_connected'],cloud:{enabled:true,state:'stale'}};
+ await page.evaluate(()=>window.dispatchEvent(new Event('gc:refresh')));await page.getByText('1 Hinweis',{exact:true}).waitFor();
+ assert.match(await page.locator('#heroHealthLabel').innerText(),/Hinweise/);
+ failRuntime=true;await page.evaluate(()=>window.dispatchEvent(new Event('gc:refresh')));await page.getByText('System prüfen',{exact:true}).first().waitFor();
+ assert.match(await page.locator('#headlineSub').innerText(),/Status nicht erreichbar/);
+ failRuntime=false;runtimeHealth={...runtimeHealth,state:'ok',warnings:[],cloud:{enabled:false}};
+ await page.evaluate(()=>window.dispatchEvent(new Event('gc:refresh')));await page.getByText('0 Hinweise',{exact:true}).waitFor();
+ rooms[1].latest_sensor.timestamp='2020-01-01T00:00:00Z';await page.evaluate(()=>window.dispatchEvent(new Event('gc:refresh')));
+ await page.locator('#roomFreshCount').getByText('1 / 3',{exact:true}).waitFor({state:'attached'});
  await page.goto('http://gc.test/mobile');await page.locator('#mTemp').getByText('24.0',{exact:true}).waitFor();
  assert.equal(await page.locator('#mRh').innerText(),'—');assert.equal(await page.locator('#mPower').innerText(),'—');
  await page.goto('http://gc.test/editor');await page.locator('#canvas .widget').first().click();
@@ -96,6 +113,6 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  await page.evaluate(()=>localStorage.setItem('gc.fullUiLayoutDraft.v2',JSON.stringify({shell:{},pages:[]})));
  await page.reload();assert(await page.locator('#canvas .widget').count()>0,'invalid stored layout recovers to defaults');
  assert.deepEqual(errors,[],'no uncaught browser errors');
- console.log('PASS: room form, failures, sensor diagnostics, metadata escaping, capture feedback, room races, desktop/mobile metrics, responsive dialog, editor persistence');
+ console.log('PASS: Final Master, responsive rooms, diagnostics, CSV download, runtime failures/recovery, room races, desktop/mobile metrics and editor persistence');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

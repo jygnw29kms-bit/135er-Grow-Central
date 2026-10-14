@@ -57,3 +57,5 @@ Firmware 0.4.1: USB onboarding, MQTT over TLS and soil history display confirmed
 
 - [Sensor setup and calibration](../de/SOIL_SENSOR_GUIDE.md)
 - [Hardware evidence and remaining checks](../de/SENSOR_HARDWARE_TEST_2026-10-14.md)
+
+- [Current project review and implementation status](PROJECT_REVIEW_2026-10-14.md)

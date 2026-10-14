@@ -49,4 +49,7 @@ Historical build documents may contain older candidate numbers or Pi-3-focused t
 - AIR/WATER references give a relative engineering percentage, not volumetric water content; substrate-specific thresholds and calibration hardware tests remain open.
 - firmware 0.4.1 diagnostics identified truncated USB CA transfer; paced transfer established MQTT connectivity. Current backend checks stored CA length.
 - original image 369 still contains firmware 0.4.0; in-place hotfixes and future image contents must be distinguished.
-- per-sensor diagnostic/calibration UI is not implemented; room history aggregates assigned soil sensors.
+- per-sensor diagnostics and calibration instructions are available in `/rooms`; executing serial calibration commands from the browser is not implemented. Room history still aggregates assigned soil sensors.
+- the CSV export marks soil values as uncalibrated engineering references; it does not establish substrate calibration.
+- room history retains at most 50,000 samples globally; per-room retention and time-range charts remain open.
+- local automation definitions are persisted, but a general scheduler/execution engine is not implemented. Enabled definitions must not be interpreted as evidence of running actions.

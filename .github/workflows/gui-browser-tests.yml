@@ -1,0 +1,39 @@
+name: Grow Central GUI browser tests
+
+on:
+  push:
+    branches: [master]
+    paths: ['web/**', 'app/**', 'tests/browser/**', '.github/workflows/gui-browser-tests.yml']
+  pull_request:
+    paths: ['web/**', 'app/**', 'tests/browser/**', '.github/workflows/gui-browser-tests.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gui-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_PATH: ${{ runner.temp }}/gc-browser-tools/node_modules
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/gc-browser-cache
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser runner outside the checkout
+        run: npm install --prefix "$RUNNER_TEMP/gc-browser-tools" --ignore-scripts --no-save --package-lock=false playwright@1.62.1
+      - name: Install Chromium and native dependencies
+        run: node "$RUNNER_TEMP/gc-browser-tools/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Exercise synthetic desktop and mobile workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GC_CHROMIUM="$(node -p "require('playwright').chromium.executablePath()")"
+          node tests/browser/gui-smoke.cjs

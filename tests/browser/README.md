@@ -13,6 +13,7 @@ sensor hardware. It covers:
 - Final Master on `/ui`, separate room workspace on `/rooms`, and mobile navigation.
 - Calibration-required display without provisional soil percentages.
 - Room creation, zero-valued targets, optional fields and failed-save recovery.
+- CSV download and runtime warning/failure/recovery states.
 - Sensor diagnostics, escaped metadata and measurement-capture feedback.
 - Switching rooms while an earlier sensor request is still pending.
 - Layout overflow and room dialogs at widths 390, 768 and 1440 pixels.
@@ -23,3 +24,7 @@ Set `GC_SCREENSHOT_DIR` to a directory outside the checkout to retain console
 screenshots. The Python suite remains `python -m pytest -q`; MQTT TLS checks
 also need Mosquitto and `mosquitto_passwd` (or the `GC_TEST_MOSQUITTO` and
 `GC_TEST_MOSQUITTO_PASSWD` overrides).
+
+GitHub Actions runs this suite through `.github/workflows/gui-browser-tests.yml`
+with Playwright 1.62.1 and its matching Chromium. Local runs may use the installed
+system Chromium through `GC_CHROMIUM`. All external service requests are stubbed.

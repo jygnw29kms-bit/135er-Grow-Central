@@ -58,7 +58,8 @@ def _save(rows: list[dict]) -> None:
 
 @router.get("")
 async def list_automations():
-    return {"automations": _load(), "execution_policy": "stored_fritz_credentials"}
+    return {"automations": _load(), "execution_policy": "stored_fritz_credentials",
+            "execution_status": "definitions_only"}
 
 
 @router.post("", dependencies=[Depends(require_write_auth)])
