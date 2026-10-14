@@ -1,11 +1,11 @@
 # Roadmap – 135er-Grow Central
 
-**Stand:** 2026-10-09
+**Stand:** 2026-10-14
 **Kanonischer Release-Status:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 351 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
+Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 368 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
 
-## Jetzt · Build 351 Hardwarevalidierung
+## Jetzt · Build 368 Hardwarevalidierung
 
 - frischer Boot / Reboot;
 - First Boot, Setup AP, DHCP/DNS;
@@ -76,10 +76,10 @@ Eine Stable-/Beta-Hochstufung erfolgt erst, wenn die Kernpfade reproduzierbar au
 
 Manuelle Aufnahme/Ablehnung, persistente Sperrzustände, Name/Raum-Zuweisung,
 P-256-Geräteidentität und aktuelle Nonce-Prüfung sind im Backend und in der
-Desktop-/Mobile-/Legacy-Oberfläche ergänzt. Firmware 0.3.0 baut für XIAO ESP32-C3;
+Desktop-/Mobile-/Legacy-Oberfläche ergänzt. Firmware 0.4.0 baut für XIAO ESP32-C3;
 Hardwarevalidierung bleibt offen. Netzwerk-MQTT benötigt individuelle TLS-Zugänge;
-der anonyme Image-Listener ist auf Loopback begrenzt. BLE-Provisionierung und
-automatische Geheimnisübertragung sind weiterhin offen und gesperrt.
+der anonyme Image-Listener ist auf Loopback begrenzt. BLE-Provisionierung bleibt offen und gesperrt. Individuelle lokale MQTT-TLS-Zugänge
+können inzwischen über den bestätigten USB-Assistenten eingerichtet werden.
 
 Details, Migration und überprüfte Grenzen: [Sensoraufnahme](de/SENSOR_PAIRING.md).
 

@@ -23,8 +23,8 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Bereich | Stand |
 |---|---|
 | Version | `alpha-0.7.5` |
-| Aktueller Pi-Candidate | **Build 351** |
-| Release-Tag | `pi-universal-alpha-0.7.5-351` |
+| Aktueller Pi-Candidate | **Build 368** |
+| Release-Tag | `pi-universal-alpha-0.7.5-368` |
 | Quellstand des Candidates | `16e80b7c9836125f5ee4f8cdf48b92fd67054f60` |
 | Veröffentlichung | 24. September 2026 |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
@@ -110,4 +110,4 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 
 ## English summary
 
-135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 351 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 368 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
