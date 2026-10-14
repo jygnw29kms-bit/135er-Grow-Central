@@ -58,6 +58,17 @@ async function loadSensorDiagnostics(roomId){
   }catch(error){if(activeRoom?.id===roomId)root.textContent=`Sensor-Diagnose nicht verfügbar: ${error.message}`}
 }
 
+$('exportSensorsBtn').addEventListener('click',async()=>{
+  if(!activeRoom)return;const roomId=activeRoom.id,button=$('exportSensorsBtn');button.disabled=true;
+  try{
+    const response=await fetch(`/api/v1/rooms/${encodeURIComponent(roomId)}/sensors.csv?limit=5000`,{cache:'no-store'});
+    if(!response.ok||!response.headers.get('Content-Type')?.startsWith('text/csv'))throw new Error('Export nicht verfügbar. Anmeldung und Verbindung prüfen.');
+    const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');
+    link.href=url;link.download=`grow-central-${roomId}-sensoren.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    roomFeedback('CSV exportiert: bis zu 5000 Messpunkte. Bodenfeuchte enthält ausschließlich unkalibrierte Referenzwerte.');
+  }catch(error){reportRoomError(error)}finally{button.disabled=false}
+});
+
 function journalHtml(entries){return entries?.length?entries.map(e=>`<article class="journal-entry"><div><span>${esc(e.category)}</span><time>${new Date(e.created_at).toLocaleString('de-DE')}</time></div><strong>${esc(e.title)}</strong><p>${esc(e.text||'')}</p></article>`).join(''):'<div class="empty-room">Noch keine Tagebucheinträge.</div>'}
 async function loadRoomJournal(silent=false){if(!activeRoom)return;const roomId=activeRoom.id;const x=await api(`/api/v1/rooms/${roomId}/journal`);if(activeRoom?.id!==roomId)return;$('roomJournal').innerHTML=journalHtml(x.entries);$('roomLastJournal').innerHTML=journalHtml((x.entries||[]).slice(0,1));if(!silent&&roomTab==='journal')$('roomJournal').scrollTop=0}
 async function addRoomJournal(){if(!activeRoom)return;const title=prompt('Titel des Tagebucheintrags')?.trim();if(!title)return;const category=prompt('Kategorie: note, watering, feeding, training, defoliation, pest, flowering, harvest, other','note')||'note';const text=prompt('Notiz / Beobachtung','')||'';await writeApi(`/api/v1/rooms/${activeRoom.id}/journal`,{method:'POST',body:JSON.stringify({title,category,text})});await loadRoomJournal();await refreshRooms()}

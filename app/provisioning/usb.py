@@ -424,10 +424,9 @@ async def assign_device(port_id: str, body: Assignment):
         if network_proof.public_key != proof.public_key:
             raise ValueError('Identität passt nicht.')
         def assign():
-            current = rooms.load_state()
-            rooms.room_or_404(current, body.room_id)
-            current['assignments']['growcentral_esp32:' + proof.device_id] = body.room_id
-            rooms.save_state(current)
+            with rooms.edit_state() as current:
+                rooms.room_or_404(current, body.room_id)
+                current['assignments']['growcentral_esp32:' + proof.device_id] = body.room_id
         existing = TrustStore().get(proof.device_id)
         if existing and existing['status'] == 'TRUSTED':
             raise ValueError('Sensor bereits aufgenommen; bestehende Raumzuweisung in der Raumverwaltung ändern.')

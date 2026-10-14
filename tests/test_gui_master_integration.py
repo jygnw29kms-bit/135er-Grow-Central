@@ -1,4 +1,5 @@
 """Exercise the actual route order, not just the isolated GUI router."""
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -24,7 +25,8 @@ def test_master_and_room_workspace_routes_remain_distinct(monkeypatch, tmp_path)
     assert workspace.headers['cache-control'] == 'no-store'
 
 
-def test_room_workspace_requires_gui_authentication(monkeypatch, tmp_path):
+@pytest.mark.parametrize(('route','status'), [('/rooms',303),('/api/v1/rooms/example/sensors.csv',401)])
+def test_room_workspace_requires_gui_authentication(monkeypatch, tmp_path, route, status):
     from app import firstboot, auth_middleware
     from app.entrypoint import app
 
@@ -33,6 +35,7 @@ def test_room_workspace_requires_gui_authentication(monkeypatch, tmp_path):
     monkeypatch.setattr(firstboot, 'MARKER', provisioned)
     monkeypatch.setattr(auth_middleware, 'configured', lambda: True)
     monkeypatch.setattr(auth_middleware, 'authenticated', lambda request: False)
-    response = TestClient(app).get('/rooms', follow_redirects=False)
-    assert response.status_code == 303
-    assert response.headers['location'] == '/login'
+    response = TestClient(app).get(route, follow_redirects=False)
+    assert response.status_code == status
+    if status == 303:
+        assert response.headers['location'] == '/login'

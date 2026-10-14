@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
+import logging
+from contextlib import contextmanager
 import fcntl
 import json
 import math
@@ -10,10 +14,11 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Iterator, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.security import require_write_auth
 from app.devices.runtime import runtime
@@ -25,6 +30,7 @@ DATA_FILE = Path(os.getenv("GC_ROOMS_FILE", "/var/lib/135er-grow-central/rooms.j
 CAPTURE_INTERVAL_SECONDS = max(60, int(os.getenv("GC_ROOM_CAPTURE_INTERVAL", "300")))
 router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
 _capture_task: asyncio.Task | None = None
+logger = logging.getLogger(__name__)
 
 
 async def _native_gc_devices(timeout: float = 1.0) -> list[dict[str, Any]]:
@@ -83,35 +89,60 @@ def load_state() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeError("invalid rooms database") from exc
     base = empty_state()
-    if isinstance(raw, dict):
-        for key in base:
-            if key in raw:
-                base[key] = raw[key]
+    if not isinstance(raw, dict):
+        raise RuntimeError("invalid rooms database: expected an object")
+    for key, default in base.items():
+        if key not in raw:
+            continue
+        value = raw[key]
+        if not isinstance(value, type(default)):
+            raise RuntimeError(f"invalid rooms database: {key}")
+        if isinstance(value, list) and any(not isinstance(row, dict) for row in value):
+            raise RuntimeError(f"invalid rooms database: {key} entries")
+        base[key] = value
     return base
 
 
-def save_state(state: dict[str, Any]) -> None:
+@contextmanager
+def _state_lock() -> Iterator[None]:
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     lock_path = DATA_FILE.with_name(f".{DATA_FILE.name}.lock")
-    fd_lock = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
+    fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
     try:
-        os.fchmod(fd_lock, 0o600)
-        fcntl.flock(fd_lock, fcntl.LOCK_EX)
-        fd, temp = tempfile.mkstemp(prefix=f".{DATA_FILE.name}-", dir=DATA_FILE.parent)
-        try:
-            os.fchmod(fd, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                json.dump(state, handle, ensure_ascii=False, indent=2)
-                handle.write("\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temp, DATA_FILE)
-            os.chmod(DATA_FILE, 0o600)
-        finally:
-            Path(temp).unlink(missing_ok=True)
+        os.fchmod(fd, 0o600)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
     finally:
-        fcntl.flock(fd_lock, fcntl.LOCK_UN)
-        os.close(fd_lock)
+        os.close(fd)
+
+
+def _write_state(state: dict[str, Any]) -> None:
+    fd, temp = tempfile.mkstemp(prefix=f".{DATA_FILE.name}-", dir=DATA_FILE.parent)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=False, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, DATA_FILE)
+    finally:
+        Path(temp).unlink(missing_ok=True)
+
+
+def save_state(state: dict[str, Any]) -> None:
+    """Replace a complete snapshot. Production mutations should use edit_state."""
+    with _state_lock():
+        _write_state(state)
+
+
+@contextmanager
+def edit_state() -> Iterator[dict[str, Any]]:
+    """Lock the whole read/modify/write operation; never await inside this scope."""
+    with _state_lock():
+        state = load_state()
+        yield state
+        _write_state(state)
 
 
 def room_or_404(state: dict[str, Any], room_id: str) -> dict[str, Any]:
@@ -168,6 +199,8 @@ class PlantCreate(BaseModel):
 
 
 class SensorSample(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     temperature_c: float | None = Field(default=None, ge=-30, le=80)
     humidity_percent: float | None = Field(default=None, ge=0, le=100)
     co2_ppm: float | None = Field(default=None, ge=0, le=100000)
@@ -192,31 +225,32 @@ async def list_rooms():
 
 @router.post("", dependencies=[Depends(require_write_auth)])
 async def create_room(body: RoomCreate):
-    state = load_state()
-    row = {"id": new_id("room"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
-    state["rooms"].append(row)
-    save_state(state)
-    return row
+    with edit_state() as state:
+        row = {"id": new_id("room"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
+        state["rooms"].append(row)
+        return row
 
 
 @router.put("/{room_id}", dependencies=[Depends(require_write_auth)])
 async def update_room(room_id: str, body: RoomUpdate):
-    state = load_state(); row = room_or_404(state, room_id)
-    row.update(body.model_dump()); row["updated_at"] = now_iso(); save_state(state)
-    return row
+    with edit_state() as state:
+        row = room_or_404(state, room_id)
+        row.update(body.model_dump()); row["updated_at"] = now_iso()
+        return row
 
 
 @router.delete("/{room_id}", dependencies=[Depends(require_write_auth)])
 async def delete_room(room_id: str):
-    state = load_state(); room_or_404(state, room_id)
-    state["rooms"] = [r for r in state["rooms"] if r["id"] != room_id]
-    state["assignments"] = {d: r for d, r in state["assignments"].items() if r != room_id}
-    plant_ids = {p["id"] for p in state["plants"] if p["room_id"] == room_id}
-    state["plants"] = [p for p in state["plants"] if p["room_id"] != room_id]
-    state["room_journal"] = [e for e in state["room_journal"] if e["room_id"] != room_id]
-    state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] not in plant_ids]
-    state["sensor_history"] = [e for e in state["sensor_history"] if e["room_id"] != room_id]
-    save_state(state); return {"ok": True}
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        state["rooms"] = [r for r in state["rooms"] if r["id"] != room_id]
+        state["assignments"] = {d: r for d, r in state["assignments"].items() if r != room_id}
+        plant_ids = {p["id"] for p in state["plants"] if p["room_id"] == room_id}
+        state["plants"] = [p for p in state["plants"] if p["room_id"] != room_id]
+        state["room_journal"] = [e for e in state["room_journal"] if e["room_id"] != room_id]
+        state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] not in plant_ids]
+        state["sensor_history"] = [e for e in state["sensor_history"] if e["room_id"] != room_id]
+        return {"ok": True}
 
 
 @router.get("/{room_id}/devices")
@@ -257,15 +291,18 @@ async def assign_device(room_id: str, body: DeviceAssignment):
         exists = any(row["id"] == body.device_id for row in native)
     if not exists:
         raise HTTPException(404, "Gerät nicht gefunden")
-    state["assignments"][body.device_id] = room_id; save_state(state)
+    with edit_state() as current:
+        room_or_404(current, room_id)
+        current["assignments"][body.device_id] = room_id
     return {"ok": True, "device_id": body.device_id, "room_id": room_id}
 
 
 @router.delete("/{room_id}/devices/{device_id}", dependencies=[Depends(require_write_auth)])
 async def unassign_device(room_id: str, device_id: str):
-    state = load_state(); room_or_404(state, room_id)
-    if state["assignments"].get(device_id) == room_id: state["assignments"].pop(device_id, None); save_state(state)
-    return {"ok": True}
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        if state["assignments"].get(device_id) == room_id: state["assignments"].pop(device_id, None)
+        return {"ok": True}
 
 
 @router.get("/{room_id}/journal")
@@ -276,8 +313,9 @@ async def room_journal(room_id: str):
 
 @router.post("/{room_id}/journal", dependencies=[Depends(require_write_auth)])
 async def add_room_journal(room_id: str, body: JournalEntry):
-    state = load_state(); room_or_404(state, room_id)
-    row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(), "created_at": now_iso()}; state["room_journal"].append(row); save_state(state); return row
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(), "created_at": now_iso()}; state["room_journal"].append(row); return row
 
 
 @router.get("/{room_id}/plants")
@@ -288,22 +326,25 @@ async def list_plants(room_id: str):
 
 @router.post("/{room_id}/plants", dependencies=[Depends(require_write_auth)])
 async def create_plant(room_id: str, body: PlantCreate):
-    state = load_state(); room_or_404(state, room_id)
-    row = {"id": new_id("plant"), "room_id": room_id, **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}; state["plants"].append(row); save_state(state); return row
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = {"id": new_id("plant"), "room_id": room_id, **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}; state["plants"].append(row); return row
 
 
 @router.put("/{room_id}/plants/{plant_id}", dependencies=[Depends(require_write_auth)])
 async def update_plant(room_id: str, plant_id: str, body: PlantCreate):
-    state = load_state(); room_or_404(state, room_id); row = plant_or_404(state, plant_id)
-    if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    row.update(body.model_dump()); row["updated_at"] = now_iso(); save_state(state); return row
+    with edit_state() as state:
+        room_or_404(state, room_id); row = plant_or_404(state, plant_id)
+        if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        row.update(body.model_dump()); row["updated_at"] = now_iso(); return row
 
 
 @router.delete("/{room_id}/plants/{plant_id}", dependencies=[Depends(require_write_auth)])
 async def delete_plant(room_id: str, plant_id: str):
-    state = load_state(); room_or_404(state, room_id); row = plant_or_404(state, plant_id)
-    if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    state["plants"] = [p for p in state["plants"] if p["id"] != plant_id]; state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] != plant_id]; save_state(state); return {"ok": True}
+    with edit_state() as state:
+        room_or_404(state, room_id); row = plant_or_404(state, plant_id)
+        if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        state["plants"] = [p for p in state["plants"] if p["id"] != plant_id]; state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] != plant_id]; return {"ok": True}
 
 
 @router.get("/{room_id}/plants/{plant_id}/journal")
@@ -315,9 +356,10 @@ async def plant_journal(room_id: str, plant_id: str):
 
 @router.post("/{room_id}/plants/{plant_id}/journal", dependencies=[Depends(require_write_auth)])
 async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
-    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-    if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "created_at": now_iso()}; state["plant_journal"].append(row); save_state(state); return row
+    with edit_state() as state:
+        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+        if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "created_at": now_iso()}; state["plant_journal"].append(row); return row
 
 
 def append_sensor(state: dict[str, Any], room_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -335,30 +377,90 @@ async def sensor_history(room_id: str, limit: int = 500):
     return {"samples": rows}
 
 
+def _csv_cell(value: Any) -> Any:
+    if value is None or isinstance(value, float) and not math.isfinite(value):
+        return ""
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+        # Prevent user-entered source labels from executing as spreadsheet formulas.
+        return "'" + value
+    return value
+
+
+@router.get("/{room_id}/sensors.csv")
+async def export_sensor_history(room_id: str, limit: int = Query(default=5000, ge=1, le=50000)):
+    state = load_state()
+    room_or_404(state, room_id)
+    rows = [row for row in state["sensor_history"] if row["room_id"] == room_id][-limit:]
+    columns = ["timestamp", "temperature_c", "humidity_percent", "vpd_kpa", "co2_ppm",
+               "soil_reference_percent", "soil_calibration_status", "power_w", "energy_wh", "source"]
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(columns)
+    for row in rows:
+        export = {**row, "soil_reference_percent": row.get("soil_moisture_percent"),
+                  "soil_calibration_status": "calibration_required" if row.get("soil_moisture_percent") is not None else ""}
+        writer.writerow([_csv_cell(export.get(key)) for key in columns])
+    return Response(output.getvalue(), media_type="text/csv", headers={
+        "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+
 @router.post("/{room_id}/sensors", dependencies=[Depends(require_write_auth)])
 async def add_sensor_sample(room_id: str, body: SensorSample):
-    state = load_state(); room_or_404(state, room_id); row = append_sensor(state, room_id, body.model_dump()); save_state(state); return row
+    with edit_state() as state:
+        room_or_404(state, room_id); row = append_sensor(state, room_id, body.model_dump()); return row
+
+
+def _measurement(state: dict[str, Any], key: str, minimum: float, maximum: float | None = None, alias: str | None = None) -> float | None:
+    value = state.get(key)
+    if value is None and alias:
+        value = state.get(alias)
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not math.isfinite(number) or number < minimum or (maximum is not None and number > maximum):
+        return None
+    return number
 
 
 async def capture_room_sensors_once() -> int:
-    state = load_state()
-    if not state["rooms"] or not state["assignments"]: return 0
+    initial = load_state()
+    if not initial["rooms"] or not initial["assignments"]:
+        return 0
     overview = await device_overview(refresh=True)
     combined_devices = [row for row in overview.get("devices", []) if not str(row.get("id", "")).startswith("growcentral_esp32:")]
     combined_devices.extend(await _native_gc_devices(timeout=0.8))
     by_id = {d["id"]: d for d in combined_devices}
     count = 0
-    for room in state["rooms"]:
-        rows = [by_id[d] for d, rid in state["assignments"].items() if rid == room["id"] and d in by_id]
-        states = [r.get("state") or {} for r in rows if r.get("online")]
-        temps = [float(s["temperature_c"]) for s in states if s.get("temperature_c") is not None]
-        humidity = [float(s["humidity_percent"]) for s in states if s.get("humidity_percent") is not None]
-        soils = [float(s["soil_moisture"]) for s in states if s.get("soil_moisture") is not None]
-        powers = [float(s["power_w"]) for s in states if s.get("power_w") is not None]
-        energies = [float(s["energy_wh"]) for s in states if s.get("energy_wh") is not None]
-        if not (temps or humidity or soils or powers or energies): continue
-        append_sensor(state, room["id"], {"temperature_c": round(sum(temps)/len(temps),2) if temps else None, "humidity_percent": round(sum(humidity)/len(humidity),2) if humidity else None, "co2_ppm": None, "soil_moisture_percent": round(sum(soils)/len(soils),2) if soils else None, "power_w": round(sum(powers),3) if powers else None, "energy_wh": round(sum(energies),3) if energies else None, "source": "assigned-devices"}); count += 1
-    if count: save_state(state)
+    # Network reads can take seconds. Reload after them so UI edits, deletions,
+    # and sensor acceptance completed during the read cannot be overwritten.
+    with edit_state() as state:
+        for room in state["rooms"]:
+            rows = [by_id[d] for d, rid in state["assignments"].items() if rid == room["id"] and d in by_id]
+            states = [r.get("state") for r in rows if r.get("online") and isinstance(r.get("state"), dict)]
+            measurements = {
+                "temperature_c": ("temperature_c", -30, 80, "temperature"),
+                "humidity_percent": ("humidity_percent", 0, 100, "humidity"),
+                "co2_ppm": ("co2_ppm", 0, 100000, None),
+                "soil_moisture_percent": ("soil_moisture", 0, 100, None),
+                "power_w": ("power_w", 0, None, None),
+                "energy_wh": ("energy_wh", 0, None, None),
+            }
+            payload: dict[str, Any] = {}
+            for target, arguments in measurements.items():
+                values = [value for row in states if (value := _measurement(row, *arguments)) is not None]
+                total = sum(values)
+                payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
+            if all(value is None for value in payload.values()):
+                continue
+            append_sensor(state, room["id"], {**payload, "source": "assigned-devices"})
+            count += 1
     return count
 
 
@@ -370,7 +472,8 @@ async def capture_now():
 async def _capture_loop() -> None:
     while True:
         try: await capture_room_sensors_once()
-        except Exception: pass
+        except Exception:
+            logger.exception("Room sensor capture failed; next interval will retry")
         await asyncio.sleep(CAPTURE_INTERVAL_SECONDS)
 
 

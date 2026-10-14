@@ -42,10 +42,9 @@ async def accept_sensor(device_id: str, body: Acceptance):
         rooms.room_or_404(room_state, body.room_id)
         proof = await runtime.get('growcentral_esp32').prove_identity(device_id)
         def assign():
-            current = rooms.load_state()
-            rooms.room_or_404(current, body.room_id)
-            current['assignments'][f'growcentral_esp32:{device_id}'] = body.room_id
-            rooms.save_state(current)
+            with rooms.edit_state() as current:
+                rooms.room_or_404(current, body.room_id)
+                current['assignments'][f'growcentral_esp32:{device_id}'] = body.room_id
         row = await asyncio.to_thread(TrustStore().accept, device_id, name=body.name, room_id=body.room_id,
                                       fingerprint=confirmation[-16:], proved_key=proof.public_key, assign=assign)
         return {'ok': True, 'device': row, 'credential_transfer': 'disabled'}
