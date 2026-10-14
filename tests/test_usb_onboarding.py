@@ -57,7 +57,11 @@ class Sensor:
                 self.commands.append(command)
                 if command.startswith('USB ID '):
                     response = 'GC_USB_ID ' + self.signed(command[7:])
-                elif command.startswith('NET CA '): response = 'OK broker CA stored'
+                elif command.startswith('NET CA '):
+                    encoded = command[7:]
+                    self.ca_bytes = 54 + len(encoded) + (len(encoded) + 63) // 64
+                    response = 'OK broker CA stored'
+                elif command == 'NET INFO': response = f'GC_NET ca_bytes={self.ca_bytes}'
                 elif command.startswith('NET MQTT '): response = 'OK MQTT configuration saved'
                 elif command.startswith('NET WIFI '): response = 'OK WiFi configuration saved'
                 else: response = 'UNKNOWN COMMAND'
@@ -272,3 +276,19 @@ def test_mdns_broker_rejected_before_secret_transfer():
     with pytest.raises(ValidationError):
         usb.NetworkRequest(ssid='Test',password='test-password',broker_host='135er-grow-central.local')
     assert usb.NetworkRequest(ssid='Test',password='test-password',broker_host='192.168.178.80').broker_host=='192.168.178.80'
+
+
+def test_ca_acknowledgement_does_not_accept_truncated_certificate(monkeypatch):
+    class Connection:
+        def reset_input_buffer(self): pass
+        def write(self, value): return len(value)
+        def flush(self): pass
+        def readline(self, size):
+            return next(self.lines)
+    connection = Connection()
+    connection.lines = iter([b'OK broker CA stored\n', b'GC_NET ca_bytes=307\n'])
+    port = object.__new__(usb.USBSerial)
+    port.connection = connection
+    monkeypatch.setattr(usb.time, 'sleep', lambda delay: None)
+    with pytest.raises(ValueError, match='unvollständig'):
+        port.command('NET CA ' + 'A' * 492, lambda line: line == 'OK broker CA stored')

@@ -106,8 +106,14 @@ class USBSerial:
 
     def command(self, value, match, timeout=5):
         self.connection.reset_input_buffer()
-        self.connection.write((value + '\n').encode())
-        self.connection.flush()
+        payload = (value + '\n').encode()
+        # ESP32-C3 USB/JTAG defaults to a 256-byte RX queue.
+        # Pace long commands so the sensor can drain that queue.
+        for offset in range(0, len(payload), 32):
+            self.connection.write(payload[offset:offset + 32])
+            self.connection.flush()
+            if offset + 32 < len(payload):
+                time.sleep(0.03)
         deadline = time.monotonic() + timeout
         total = 0
         while time.monotonic() < deadline:
@@ -119,6 +125,13 @@ class USBSerial:
             if text.startswith('ERR '):
                 raise ValueError('Sensor hat den Einrichtungsschritt abgelehnt.')
             if match(text):
+                if value.startswith('NET CA '):
+                    encoded = value[7:].strip()
+                    expected = len('-----BEGIN CERTIFICATE-----\n') + len(encoded) + (len(encoded) + 63) // 64 + len('-----END CERTIFICATE-----\n')
+                    status = self.command('NET INFO', lambda line: bool(re.search(r'\bca_bytes=\d+', line)))
+                    actual = int(re.search(r'\bca_bytes=(\d+)', status).group(1))
+                    if actual != expected:
+                        raise ValueError('Sensor-CA unvollständig übertragen; USB-Einrichtung erneut versuchen.')
                 return text
         raise TimeoutError('Sensor antwortet nicht. USB-Kabel und Boot-Taste prüfen.')
 
