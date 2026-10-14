@@ -1,0 +1,35 @@
+name: Deploy Test Pi UI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, ARM64, growcentral, test-pi]
+    timeout-minutes: 5
+    steps:
+      - name: Verify restricted maintenance bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          stat -c '%u %g %a %n' /usr/bin/sudo
+          sudo -n /usr/local/sbin/growcentral-maint status
+      - name: Deploy staged Final Master UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n /usr/local/sbin/growcentral-maint deploy-ui
+      - name: Verify UI assets and health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1:8080/api/health
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/platform-visual.css)" = 200
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/master-grow-hero.jpg)" = 200
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/static/master-grow-room.jpg)" = 200
+          grep -q 'platform-visual.css' /opt/135er-grow-central/web/platform.html
+          grep -q '13593' /opt/135er-grow-central/web/platform.html
+          grep -q 'WEATHER_LAT=52.515' /opt/135er-grow-central/web/platform-master.js
