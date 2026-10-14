@@ -1,5 +1,6 @@
 name: Force Raspberry Pi Image Build via PR
 
+# Trigger request: 2026-08-22 18:34 Europe/Berlin
 on:
   pull_request:
     branches: [ master ]
