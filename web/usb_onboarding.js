@@ -96,7 +96,10 @@
       const result = await api('/broker');
       if (selected?.id !== identity || !form.isConnected) return;
       for (const name of result.hosts || []) { const o = make('option', name); o.value = name; host.append(o); }
-      if ([...host.options].some(option => option.value === location.hostname)) host.value = location.hostname;
+      const ipv4 = [...host.options].find(option => /^(?:\d{1,3}\.){3}\d{1,3}$/.test(option.value));
+      if (ipv4) host.value = ipv4.value;
+      if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(location.hostname) && [...host.options].some(option => option.value === location.hostname)) host.value = location.hostname;
+      form.append(make('p', 'Für diesen Sensor die LAN-IP des Pi verwenden. .local-Namen werden von der Sensor-Firmware nicht zuverlässig aufgelöst.'));
       submit.disabled = !result.ready || !host.options.length;
       if (!result.ready) error.textContent = result.message;
     } catch (e) { error.textContent = e.message; }
