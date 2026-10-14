@@ -1,0 +1,61 @@
+name: Grow Central Test Pi Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: growcentral-test-pi
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Test Pi smoke check
+    runs-on: [self-hosted, Linux, ARM64, growcentral, test-pi]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Host information
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HOST=$(hostname)"
+          echo "ARCH=$(uname -m)"
+          echo "KERNEL=$(uname -sr)"
+          echo "NODE=$(node --version 2>/dev/null || true)"
+          echo "PYTHON=$(python3 --version 2>/dev/null || true)"
+
+      - name: Verify Grow Central runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/gc-health.json -w '%{http_code}' http://127.0.0.1:8080/api/health || true)"
+          echo "HTTP=$code"
+          cat /tmp/gc-health.json || true
+          test "$code" = "200"
+
+      - name: Verify local UI assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            http://127.0.0.1:8080/static/platform-master.css \
+            http://127.0.0.1:8080/static/platform-master.js \
+            http://127.0.0.1:8080/static/room_views.js; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "$url" || true)"
+            echo "$code $url"
+            test "$code" = "200"
+          done
+
+      - name: Runner filesystem check
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -w "$RUNNER_TEMP"
+          test -w "$GITHUB_WORKSPACE"
+          df -h "$GITHUB_WORKSPACE"
