@@ -3,9 +3,9 @@
 **Stand:** 2026-10-14
 **Kanonischer Release-Status:** [`../RELEASE_STATE.md`](../RELEASE_STATE.md)
 
-Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 368 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
+Die frühere v0.3→v0.7-Funktionsliste ist historisch überholt. Das Projekt befindet sich aktuell bei `alpha-0.7.5`; gemäß dem kanonischen Release-Status ist Build 369 der veröffentlichte Raspberry-Pi-Hardwaretest-Candidate. Reale Hardwarevalidierung bleibt offen.
 
-## Jetzt · Build 368 Hardwarevalidierung
+## Jetzt · Build 369 Hardwarevalidierung
 
 - frischer Boot / Reboot;
 - First Boot, Setup AP, DHCP/DNS;

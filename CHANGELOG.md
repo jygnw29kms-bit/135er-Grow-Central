@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.7.5 – Grow-only candidate 369 (2026-10-14)
+
+- preserve guided USB discovery, signed sensor identity, verified firmware 0.4.0, individual MQTT TLS provisioning and room assignment
+- include the installable, explicitly scoped Home Assistant bridge for the documented Apple/Siri, Alexa and Google integrations
+- separate unrelated printer assets and deployment workflows from Grow Central and enforce project boundaries in CI/image builds
+- refresh canonical release metadata; publish image and companion checksums with source provenance
+- pass 309 source tests and eight HA runtime tests per supported HA version; real hardware validation remains pending
+
 ## alpha-0.7.5 – Build 199 and closed-development transition (2026-09-02)
 
 - set Build 199 / `34442bc41d2c79328d3d5c61eb63a744f4c433a6` as the current hardware-test `CANDIDATE`

@@ -35,14 +35,16 @@ Details: [Home Assistant](HOME_ASSISTANT.md).
 303 bestehende Backend-/Integrationsprüfungen erneut bestanden, einschließlich
 realer Mosquitto-TLS-, Zertifikats-/ACL- und USB-PTY-Prüfungen. Drei zusätzliche
 Projektgrenzen-Prüfungen sperren fremde Printer-Artefakte/Runtime-Integrationen,
-lassen die eigenen Grow-Kameras aber zu. Acht Prüfungen der installierbaren
-Home-Assistant-Komponente in echter HA-Testlaufzeit bestanden. Abhängigkeiten
+lassen die eigenen Grow-Kameras aber zu. Die Domainprüfung wurde mit drei weiteren Regressionstests auf Grow-Adressen
+und exakt erlaubte externe Downloads geprüft. Insgesamt 309 Python-Tests bestanden.
+Je acht Prüfungen der installierbaren Home-Assistant-Komponente gegen HA 2025.1.4
+und 2026.10.1 in echter HA-Testlaufzeit bestanden. Abhängigkeiten
 zeigen keine Konflikte. Firmware-, Sicherheits-, Syntax-, Boot/Reboot- und
 Pristine-Prüfungen bleiben Teil des neuen Image-CI.
 
-Zentraler Release-Status und README wurden auf den nachweislich veröffentlichten
-Candidate 368 statt des veralteten 351 aktualisiert. Der neue bereinigte Candidate
-wird erst nach erfolgreicher Veröffentlichung als aktueller Build eingetragen.
+Zentraler Release-Status und README nennen nach erfolgreicher Veröffentlichung
+den bereinigten Candidate 369. Image, Firmware und HA-Paket referenzieren denselben
+Quellstand; veröffentlichte Prüfsummen wurden kontrolliert.
 
 ## Grenzen
 
