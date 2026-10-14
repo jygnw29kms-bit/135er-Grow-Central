@@ -9,6 +9,7 @@ import socket
 import ssl
 import subprocess
 import time
+import textwrap
 from types import SimpleNamespace
 
 import aiomqtt
@@ -28,7 +29,9 @@ def service(monkeypatch, tmp_path):
     base=tmp_path/'broker'
     mosquitto=tmp_path/'mosquitto'
     (mosquitto/'conf.d').mkdir(parents=True)
-    (mosquitto/'conf.d/grow-central.conf').write_text('per_listener_settings true\nlistener 1883 127.0.0.1\nallow_anonymous true\n')
+    workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/build-pi3-image.yml').read_text()
+    snippet = workflow.split("cat >/etc/mosquitto/conf.d/grow-central.conf <<'EOF'\n", 1)[1].split('\n          EOF', 1)[0]
+    (mosquitto/'conf.d/grow-central.conf').write_text(textwrap.dedent(snippet) + '\n')
     monkeypatch.setattr(broker,'BASE',base)
     monkeypatch.setattr(broker,'MOSQUITTO',mosquitto)
     monkeypatch.setattr(broker,'local_hosts',lambda:['127.0.0.1','135er-grow-central.local'])
@@ -109,7 +112,8 @@ def test_generated_broker_certificates_accounts_and_acl_work(service):
             reserve.bind(('127.0.0.1',0));local_port=reserve.getsockname()[1]
         base_conf=mosquitto/'conf.d/grow-central.conf'
         base_conf.write_text(base_conf.read_text().replace('listener 1883',f'listener {local_port}'))
-        conf.write_text('include_dir '+str(mosquitto/'conf.d')+'\n')
+        # Debian's shipped main configuration already owns global persistence.
+        conf.write_text('persistence true\npersistence_location '+str(mosquitto)+'/\ninclude_dir '+str(mosquitto/'conf.d')+'\n')
         process=subprocess.Popen([BINARY,'-c',str(conf)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
             for _ in range(100):
