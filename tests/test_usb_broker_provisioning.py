@@ -123,3 +123,23 @@ def test_generated_broker_certificates_accounts_and_acl_work(service):
         finally:
             process.terminate();process.wait(timeout=5)
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('payload', [{'action':'info'}, {'action':'execute','command':'ignored'}, {'action':'info','extra':True}, ['info']])
+def test_real_unix_service_accepts_only_scoped_actions(service, monkeypatch, tmp_path, payload):
+    import socketserver
+    import threading
+    monkeypatch.setattr(broker.pwd,'getpwnam',lambda _:SimpleNamespace(pw_uid=os.getuid()))
+    path=tmp_path/'broker.sock'
+    server=socketserver.ThreadingUnixStreamServer(str(path),broker.Handler)
+    thread=threading.Thread(target=lambda:server.serve_forever(poll_interval=.02),daemon=True)
+    thread.start()
+    try:
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
+            client.settimeout(2);client.connect(str(path));client.sendall(json.dumps(payload).encode()+b'\n')
+            response=json.loads(client.recv(4096))
+        assert response['ok'] is (payload=={'action':'info'})
+        if response['ok']:assert response['hosts']==['127.0.0.1','135er-grow-central.local']
+        assert not service[0].exists()
+    finally:
+        server.shutdown();server.server_close();thread.join(timeout=2)

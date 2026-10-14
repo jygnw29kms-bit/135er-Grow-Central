@@ -65,7 +65,8 @@ def write_file(path, data, mode=0o600, gid=None):
 
 def certificates(hosts):
     BASE.mkdir(mode=0o750, parents=True, exist_ok=True)
-    os.chmod(BASE, 0o750)
+    # Mosquitto needs directory traversal; private CA/accounts remain root:0600.
+    os.chmod(BASE, 0o750)  # nosec B103
     broker_gid = grp.getgrnam('mosquitto').gr_gid
     os.chown(BASE, 0, broker_gid)
     now = datetime.now(timezone.utc)
@@ -193,7 +194,9 @@ def main():
     path.unlink(missing_ok=True)
     with socketserver.ThreadingUnixStreamServer(str(path), Handler) as server:
         os.chown(path, 0, grp.getgrnam('growcentral').gr_gid)
-        os.chmod(path, 0o660)
+        # This is an AF_UNIX socket, not a credential file. SO_PEERCRED also
+        # requires root or the exact growcentral UID before dispatching requests.
+        os.chmod(path, 0o660)  # nosec B103
         server.serve_forever()
 
 

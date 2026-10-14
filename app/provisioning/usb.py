@@ -48,6 +48,10 @@ OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe00
 LIMITS = {'bootloader.bin': 0x8000, 'partitions.bin': 0x1000, 'boot_app0.bin': 0x2000, 'firmware.bin': 0x140000}
 
 
+class DeviceBlocked(PermissionError):
+    """Persistent trust/key denial, distinct from OS USB access permissions."""
+
+
 def ports():
     result = []
     for port in list_ports.comports():
@@ -165,7 +169,7 @@ class USBManager:
         async def run():
             try:
                 await operation()
-            except PermissionError:
+            except DeviceBlocked:
                 session.state = 'BLOCKED'
                 session.message = 'Sperrstatus oder geänderte Identität: Entscheidung in der Sensorliste ausdrücklich prüfen und gegebenenfalls erneut freigeben.'
                 append_audit('usb.setup.blocked', port_id=session.id, device_id=session.device_id)
@@ -188,10 +192,13 @@ class USBManager:
                 return connection.proof()
         proof, announce = await asyncio.to_thread(probe)
         if session.public_key and session.public_key != proof.public_key:
-            raise PermissionError('USB-Geräteidentität wurde ausgetauscht.')
-        row = await asyncio.to_thread(TrustStore().discover, announce, proof)
+            raise DeviceBlocked('USB-Geräteidentität wurde ausgetauscht.')
+        try:
+            row = await asyncio.to_thread(TrustStore().discover, announce, proof)
+        except PermissionError as exc:
+            raise DeviceBlocked('Gespeicherte Identität oder Sperrstatus verhindert Aufnahme.') from exc
         if row['status'] in {'REJECTED', 'REVOKED'}:
-            raise PermissionError('Sensor ist gesperrt; zuerst explizit erneut freigeben.')
+            raise DeviceBlocked('Sensor ist gesperrt; zuerst explizit erneut freigeben.')
         session.device_id, session.public_key, session.fingerprint = proof.device_id, proof.public_key, proof.fingerprint
         session.name, session.firmware = row['name'] or announce.name, announce.firmware
         return proof
@@ -211,7 +218,7 @@ class USBManager:
         path = await asyncio.to_thread(resolve, session.id)
         append_audit('usb.flash.started', port_id=session.id, firmware=VERSION)
         args = [sys.executable, '-m', 'esptool', '--chip', 'esp32c3', '--port', path, '--baud', '460800',
-                '--before', 'default_reset', '--after', 'hard_reset', 'write_flash', '-z']
+                '--before', 'default-reset', '--after', 'hard-reset', 'write-flash', '-z']
         for name, offset in OFFSETS.items():
             args.extend([hex(offset), str(root / name)])
         # esptool validates ESP32-C3 before any write; offsets never include NVS.
@@ -258,7 +265,7 @@ class USBManager:
             try:
                 proof = await provider.prove_identity(session.device_id)
                 if proof.public_key != session.public_key:
-                    raise PermissionError('Netzwerk-Identität passt nicht zum USB-Sensor.')
+                    raise DeviceBlocked('Netzwerk-Identität passt nicht zum USB-Sensor.')
                 if (TrustStore().get(session.device_id) or {}).get('status') == 'TRUSTED':
                     session.state, session.message = 'READY', 'Bekannter Sensor ist verbunden und bereits einem Raum zugewiesen.'
                     return proof
@@ -408,8 +415,8 @@ async def assign_device(port_id: str, body: Assignment):
         session.state, session.message = 'READY', 'Sensor aufgenommen und dem Raum zugewiesen. Messwerte sind bereit.'
         append_audit('usb.sensor.accepted', device_id=proof.device_id, room_id=body.room_id)
         return {'ok': True, 'device': row, 'session': session.public()}
-    except (ValueError, PermissionError) as exc:
-        if isinstance(exc, PermissionError):
+    except (ValueError, DeviceBlocked) as exc:
+        if isinstance(exc, DeviceBlocked):
             session.state, session.message = 'BLOCKED', 'Sperrstatus und Geräteidentität in der Sensorliste prüfen.'
         raise HTTPException(409, 'Aufnahme nicht möglich; Identität, Sperrstatus und Raum prüfen.') from exc
     except (TimeoutError, OSError) as exc:
