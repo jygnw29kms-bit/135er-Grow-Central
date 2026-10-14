@@ -5,75 +5,113 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06090b">
 <meta name="color-scheme" content="dark">
-<title>Grow Central · UI Editor</title>
+<title>Grow Central · Full UI Builder</title>
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
-<link rel="stylesheet" href="/static/ui-editor.css?v=1">
+<link rel="stylesheet" href="/static/ui-editor.css?v=2">
 </head>
 <body>
 <div class="editor-shell">
   <header class="editor-topbar">
-    <div class="editor-brand"><img src="/static/brand-logo.png" alt="Grow Central"><div><small>GC://UI-LAYOUT</small><strong>WYSIWYG Menü-Editor</strong></div></div>
+    <div class="editor-brand"><img src="/static/brand-logo.png" alt="Grow Central"><div><small>GC://FULL-UI-BUILDER</small><strong>WYSIWYG Seiten- & Layout-Editor</strong></div></div>
     <div class="top-actions">
-      <button class="ghost" id="resetBtn">Zurücksetzen</button>
+      <button class="ghost" id="undoBtn">↶ Undo</button>
+      <button class="ghost" id="resetBtn">Werkzustand</button>
       <label class="ghost file-btn">JSON importieren<input id="importInput" type="file" accept="application/json,.json"></label>
       <button class="ghost" id="copyBtn">JSON kopieren</button>
-      <button class="primary" id="exportBtn">Layout exportieren</button>
+      <button class="primary" id="exportBtn">Komplettes Layout exportieren</button>
     </div>
   </header>
 
   <main class="workspace">
     <aside class="tool-panel">
-      <div class="panel-head"><div><small>BAUSTEINE</small><h2>Navigation</h2></div></div>
-      <p class="hint">Einträge links in der Vorschau per Drag & Drop verschieben. Anklicken öffnet die Eigenschaften.</p>
-      <button class="tool-action" id="addItemBtn"><b>＋</b><span>Menüpunkt hinzufügen</span></button>
-      <button class="tool-action" id="addGroupBtn"><b>≡</b><span>Trenner / Gruppe hinzufügen</span></button>
+      <div class="panel-head"><div><small>SEITENSTRUKTUR</small><h2>Navigation</h2></div></div>
+      <p class="hint">Hauptmenüs und Untermenüs per Drag & Drop sortieren. Klick auf eine Seite öffnet deren Ausgabe-Layout.</p>
+      <div class="tool-row"><button class="tool-action" id="addPageBtn"><b>＋</b><span>Hauptseite</span></button><button class="tool-action" id="addSubpageBtn"><b>↳</b><span>Untermenü</span></button></div>
+      <div id="pageTree" class="page-tree"></div>
+
       <div class="divider"></div>
-      <label class="toggle-row"><span>Unsichtbare Einträge anzeigen</span><input id="showHidden" type="checkbox" checked><i></i></label>
-      <label class="toggle-row"><span>Advanced-Einträge anzeigen</span><input id="showAdvanced" type="checkbox" checked><i></i></label>
+      <div class="panel-head"><div><small>BAUSTEINE</small><h2>Inhalt</h2></div></div>
+      <p class="hint">Baustein anklicken, um ihn auf der aktuellen Seite einzufügen. Im Canvas anschließend verschieben und skalieren.</p>
+      <div class="palette" id="widgetPalette">
+        <button data-widget="hero"><b>▰</b><span>Kopfbereich</span></button>
+        <button data-widget="status"><b>✓</b><span>Statusbanner</span></button>
+        <button data-widget="metric"><b>24°</b><span>Messwert</span></button>
+        <button data-widget="panel"><b>▣</b><span>Panel / Karte</span></button>
+        <button data-widget="table"><b>☷</b><span>Tabelle / Liste</span></button>
+        <button data-widget="filters"><b>≡</b><span>Filterleiste</span></button>
+        <button data-widget="camera"><b>◉</b><span>Kamera</span></button>
+        <button data-widget="spacer"><b>↕</b><span>Abstand</span></button>
+      </div>
+
       <div class="divider"></div>
-      <small class="section-label">ANSICHT</small>
+      <small class="section-label">VORSCHAU</small>
       <div class="segmented" id="deviceSwitch"><button class="active" data-device="desktop">Desktop</button><button data-device="tablet">Tablet</button><button data-device="mobile">Mobil</button></div>
+      <label class="toggle-row"><span>Advanced anzeigen</span><input id="showAdvanced" type="checkbox" checked><i></i></label>
+      <label class="toggle-row"><span>Raster anzeigen</span><input id="showGrid" type="checkbox" checked><i></i></label>
       <div class="save-state" id="saveState">Entwurf lokal gespeichert</div>
     </aside>
 
     <section class="stage-wrap">
-      <div class="stage-toolbar"><div><span class="status-dot"></span><b>LIVE PREVIEW</b><small>nur Entwurf · Produktions-UI bleibt unverändert</small></div><a href="/" target="_blank" rel="noopener">Aktuelle Grow-Central UI ↗</a></div>
+      <div class="stage-toolbar">
+        <div><span class="status-dot"></span><b>WYSIWYG CANVAS</b><small>vollständiger UI-Entwurf · Produktions-UI bleibt unverändert</small></div>
+        <div class="canvas-actions"><button id="moveUpBtn">↑</button><button id="moveDownBtn">↓</button><button id="duplicateBtn">Duplizieren</button><a href="/" target="_blank" rel="noopener">Produktiv ↗</a></div>
+      </div>
       <div class="stage desktop" id="stage">
-        <div class="preview-shell">
-          <aside class="preview-sidebar">
-            <div class="preview-brand"><img src="/static/brand-logo.png" alt="Grow Central"><span>LOCAL-FIRST CONTROL CENTER</span></div>
+        <div class="preview-shell" id="previewShell">
+          <aside class="preview-sidebar" id="previewSidebar">
+            <div class="preview-brand"><img src="/static/brand-logo.png" alt="Grow Central"><span id="previewBrandText">LOCAL-FIRST CONTROL CENTER</span></div>
             <nav id="previewNav"></nav>
             <div class="preview-foot"><div><i></i><span><small>GROW-CENTRAL CORE</small><b>local online</b></span></div><em>Layout-Entwurf</em></div>
           </aside>
           <section class="preview-main">
-            <header><div><small>135ER GROW CENTRAL</small><h1 id="previewTitle">Übersicht</h1></div><span>LOCAL</span></header>
-            <div class="preview-content">
-              <div class="fake-status"><span>✓</span><div><small>WYSIWYG PREVIEW</small><h2 id="fakeHeadline">Dein Grow auf einen Blick</h2><p>Menüpositionen, Namen und Icons werden hier direkt dargestellt.</p></div></div>
-              <div class="fake-metrics"><article><small>TEMPERATUR</small><b>24.3</b><span>°C</span></article><article><small>LUFTFEUCHTE</small><b>58</b><span>%</span></article><article><small>VPD</small><b>1.18</b><span>kPa</span></article><article><small>LEISTUNG</small><b>287</b><span>W</span></article></div>
-              <div class="fake-panels"><article><small>GROW-RAUM</small><h3>Aktueller Betrieb</h3><div></div></article><article><small>GERÄTESTATUS</small><h3>Lokale Geräte</h3><div></div></article></div>
-            </div>
+            <header class="preview-topbar" id="previewTopbar"><div><small>135ER GROW CENTRAL</small><h1 id="previewTitle">Übersicht</h1></div><div class="preview-actions"><span>ALL GROWS</span><span>LOCAL</span><b>↻</b></div></header>
+            <div class="canvas-grid" id="canvas"></div>
           </section>
         </div>
       </div>
     </section>
 
     <aside class="property-panel">
-      <div id="emptyProps" class="empty-props"><span>◇</span><h3>Element auswählen</h3><p>Klicke in der Vorschau auf einen Menüpunkt oder Gruppentrenner.</p></div>
-      <form id="propsForm" hidden>
-        <div class="panel-head"><div><small>ELEMENT</small><h2 id="propsHeading">Menüpunkt</h2></div><button type="button" class="icon-danger" id="deleteBtn" title="Löschen">×</button></div>
-        <input type="hidden" id="propId">
-        <label class="field item-only">Bezeichnung<input id="propLabel" maxlength="40"></label>
-        <label class="field item-only">Icon / Zeichen<input id="propIcon" maxlength="8" placeholder="⌂"></label>
-        <label class="field item-only">Ziel / View-ID<input id="propTarget" maxlength="80" placeholder="overview"></label>
-        <label class="field group-only">Gruppenname<input id="propGroupLabel" maxlength="40" placeholder="STEUERUNG"></label>
-        <label class="field item-only">Typ<select id="propMode"><option value="simple">Immer sichtbar</option><option value="advanced">Nur Advanced</option></select></label>
-        <label class="toggle-row"><span>Element sichtbar</span><input id="propVisible" type="checkbox"><i></i></label>
-        <label class="toggle-row item-only"><span>Standard / Startseite</span><input id="propDefault" type="checkbox"><i></i></label>
-        <div class="property-note item-only">Die Ziel-ID wird beim späteren Verdrahten gegen die echten Grow-Central Views geprüft. Unbekannte Ziele werden nicht blind übernommen.</div>
-      </form>
+      <div class="tabs"><button class="active" data-tab="element">Element</button><button data-tab="page">Seite</button><button data-tab="shell">Rahmen</button></div>
+      <section class="tabpane active" id="tab-element">
+        <div id="emptyProps" class="empty-props"><span>◇</span><h3>Baustein auswählen</h3><p>Klicke im Canvas auf einen Inhaltsbaustein.</p></div>
+        <form id="widgetForm" hidden>
+          <div class="panel-head"><div><small>BAUSTEIN</small><h2 id="widgetHeading">Panel</h2></div><button type="button" class="icon-danger" id="deleteWidgetBtn">×</button></div>
+          <label class="field">Titel<input id="widgetTitle" maxlength="80"></label>
+          <label class="field">Untertitel / Kicker<input id="widgetKicker" maxlength="80"></label>
+          <label class="field">Inhalt / Hinweis<textarea id="widgetText" rows="4" maxlength="300"></textarea></label>
+          <div class="field-grid"><label class="field">Breite<select id="widgetWidth"><option value="3">3 / 12</option><option value="4">4 / 12</option><option value="6">6 / 12</option><option value="8">8 / 12</option><option value="9">9 / 12</option><option value="12">12 / 12</option></select></label><label class="field">Höhe<select id="widgetHeight"><option value="s">Klein</option><option value="m">Mittel</option><option value="l">Groß</option></select></label></div>
+          <label class="field">Datenbindung / bestehende ID<input id="widgetBinding" maxlength="80" placeholder="z. B. deviceList"></label>
+          <label class="toggle-row"><span>Sichtbar</span><input id="widgetVisible" type="checkbox"><i></i></label>
+          <label class="toggle-row"><span>Nur Advanced</span><input id="widgetAdvanced" type="checkbox"><i></i></label>
+        </form>
+      </section>
+
+      <section class="tabpane" id="tab-page">
+        <div class="panel-head"><div><small>AKTUELLE SEITE</small><h2>Seiteneinstellungen</h2></div><button class="icon-danger" id="deletePageBtn">×</button></div>
+        <label class="field">Menüname<input id="pageLabel" maxlength="50"></label>
+        <label class="field">Seitentitel<input id="pageTitle" maxlength="80"></label>
+        <div class="field-grid"><label class="field">Icon<input id="pageIcon" maxlength="8"></label><label class="field">View-ID<input id="pageTarget" maxlength="60"></label></div>
+        <label class="field">Untermenü von<select id="pageParent"></select></label>
+        <label class="toggle-row"><span>Seite sichtbar</span><input id="pageVisible" type="checkbox"><i></i></label>
+        <label class="toggle-row"><span>Nur Advanced</span><input id="pageAdvanced" type="checkbox"><i></i></label>
+        <label class="toggle-row"><span>Startseite</span><input id="pageDefault" type="checkbox"><i></i></label>
+        <div class="property-note">Untermenüs werden im Preview eingerückt dargestellt und bleiben im Export als echte Parent/Child-Struktur erhalten.</div>
+      </section>
+
+      <section class="tabpane" id="tab-shell">
+        <div class="panel-head"><div><small>GLOBAL</small><h2>Seitenrahmen</h2></div></div>
+        <label class="field">Branding-Zeile<input id="shellBrand" maxlength="80"></label>
+        <label class="field">Sidebar-Breite<input id="shellSidebarWidth" type="range" min="180" max="320" step="4"><output id="shellSidebarOut"></output></label>
+        <label class="field">Inhaltsabstand<input id="shellGap" type="range" min="4" max="28" step="2"><output id="shellGapOut"></output></label>
+        <label class="toggle-row"><span>Topbar anzeigen</span><input id="shellTopbar" type="checkbox"><i></i></label>
+        <label class="toggle-row"><span>Sidebar anzeigen</span><input id="shellSidebar" type="checkbox"><i></i></label>
+        <label class="toggle-row"><span>Abgerundete Karten</span><input id="shellRounded" type="checkbox"><i></i></label>
+        <div class="property-note">Diese Einstellungen verändern den kompletten Ausgabe-Rahmen aller Seiten, nicht nur das Menü.</div>
+      </section>
     </aside>
   </main>
 </div>
-<script src="/static/ui-editor.js?v=1"></script>
+<script src="/static/ui-editor.js?v=2"></script>
 </body>
 </html>
