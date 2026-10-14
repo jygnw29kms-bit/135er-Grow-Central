@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06090b">
+<meta name="color-scheme" content="dark">
+<title>Grow Central · UI Editor</title>
+<link rel="icon" type="image/png" href="/static/brand-mark.png">
+<link rel="stylesheet" href="/static/ui-editor.css?v=1">
+</head>
+<body>
+<div class="editor-shell">
+  <header class="editor-topbar">
+    <div class="editor-brand"><img src="/static/brand-logo.png" alt="Grow Central"><div><small>GC://UI-LAYOUT</small><strong>WYSIWYG Menü-Editor</strong></div></div>
+    <div class="top-actions">
+      <button class="ghost" id="resetBtn">Zurücksetzen</button>
+      <label class="ghost file-btn">JSON importieren<input id="importInput" type="file" accept="application/json,.json"></label>
+      <button class="ghost" id="copyBtn">JSON kopieren</button>
+      <button class="primary" id="exportBtn">Layout exportieren</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="tool-panel">
+      <div class="panel-head"><div><small>BAUSTEINE</small><h2>Navigation</h2></div></div>
+      <p class="hint">Einträge links in der Vorschau per Drag & Drop verschieben. Anklicken öffnet die Eigenschaften.</p>
+      <button class="tool-action" id="addItemBtn"><b>＋</b><span>Menüpunkt hinzufügen</span></button>
+      <button class="tool-action" id="addGroupBtn"><b>≡</b><span>Trenner / Gruppe hinzufügen</span></button>
+      <div class="divider"></div>
+      <label class="toggle-row"><span>Unsichtbare Einträge anzeigen</span><input id="showHidden" type="checkbox" checked><i></i></label>
+      <label class="toggle-row"><span>Advanced-Einträge anzeigen</span><input id="showAdvanced" type="checkbox" checked><i></i></label>
+      <div class="divider"></div>
+      <small class="section-label">ANSICHT</small>
+      <div class="segmented" id="deviceSwitch"><button class="active" data-device="desktop">Desktop</button><button data-device="tablet">Tablet</button><button data-device="mobile">Mobil</button></div>
+      <div class="save-state" id="saveState">Entwurf lokal gespeichert</div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div class="stage-toolbar"><div><span class="status-dot"></span><b>LIVE PREVIEW</b><small>nur Entwurf · Produktions-UI bleibt unverändert</small></div><a href="/" target="_blank" rel="noopener">Aktuelle Grow-Central UI ↗</a></div>
+      <div class="stage desktop" id="stage">
+        <div class="preview-shell">
+          <aside class="preview-sidebar">
+            <div class="preview-brand"><img src="/static/brand-logo.png" alt="Grow Central"><span>LOCAL-FIRST CONTROL CENTER</span></div>
+            <nav id="previewNav"></nav>
+            <div class="preview-foot"><div><i></i><span><small>GROW-CENTRAL CORE</small><b>local online</b></span></div><em>Layout-Entwurf</em></div>
+          </aside>
+          <section class="preview-main">
+            <header><div><small>135ER GROW CENTRAL</small><h1 id="previewTitle">Übersicht</h1></div><span>LOCAL</span></header>
+            <div class="preview-content">
+              <div class="fake-status"><span>✓</span><div><small>WYSIWYG PREVIEW</small><h2 id="fakeHeadline">Dein Grow auf einen Blick</h2><p>Menüpositionen, Namen und Icons werden hier direkt dargestellt.</p></div></div>
+              <div class="fake-metrics"><article><small>TEMPERATUR</small><b>24.3</b><span>°C</span></article><article><small>LUFTFEUCHTE</small><b>58</b><span>%</span></article><article><small>VPD</small><b>1.18</b><span>kPa</span></article><article><small>LEISTUNG</small><b>287</b><span>W</span></article></div>
+              <div class="fake-panels"><article><small>GROW-RAUM</small><h3>Aktueller Betrieb</h3><div></div></article><article><small>GERÄTESTATUS</small><h3>Lokale Geräte</h3><div></div></article></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <aside class="property-panel">
+      <div id="emptyProps" class="empty-props"><span>◇</span><h3>Element auswählen</h3><p>Klicke in der Vorschau auf einen Menüpunkt oder Gruppentrenner.</p></div>
+      <form id="propsForm" hidden>
+        <div class="panel-head"><div><small>ELEMENT</small><h2 id="propsHeading">Menüpunkt</h2></div><button type="button" class="icon-danger" id="deleteBtn" title="Löschen">×</button></div>
+        <input type="hidden" id="propId">
+        <label class="field item-only">Bezeichnung<input id="propLabel" maxlength="40"></label>
+        <label class="field item-only">Icon / Zeichen<input id="propIcon" maxlength="8" placeholder="⌂"></label>
+        <label class="field item-only">Ziel / View-ID<input id="propTarget" maxlength="80" placeholder="overview"></label>
+        <label class="field group-only">Gruppenname<input id="propGroupLabel" maxlength="40" placeholder="STEUERUNG"></label>
+        <label class="field item-only">Typ<select id="propMode"><option value="simple">Immer sichtbar</option><option value="advanced">Nur Advanced</option></select></label>
+        <label class="toggle-row"><span>Element sichtbar</span><input id="propVisible" type="checkbox"><i></i></label>
+        <label class="toggle-row item-only"><span>Standard / Startseite</span><input id="propDefault" type="checkbox"><i></i></label>
+        <div class="property-note item-only">Die Ziel-ID wird beim späteren Verdrahten gegen die echten Grow-Central Views geprüft. Unbekannte Ziele werden nicht blind übernommen.</div>
+      </form>
+    </aside>
+  </main>
+</div>
+<script src="/static/ui-editor.js?v=1"></script>
+</body>
+</html>
