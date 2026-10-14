@@ -9,16 +9,16 @@
 <link rel="icon" type="image/png" href="/static/brand-mark.png">
 <link rel="stylesheet" href="/static/platform.css?v=3">
 <link rel="stylesheet" href="/static/platform-master.css?v=20261014-final">
-<link rel="stylesheet" href="/static/platform-visual.css?v=20261014-master3">
+<link rel="stylesheet" href="/static/platform-visual.css?v=20261014-master5">
 <script>if(matchMedia('(max-width:600px) and (pointer:coarse)').matches&&!localStorage.getItem('gc.desktop'))location.replace('/mobile');</script>
 <link rel="stylesheet" href="/static/sensor_pairing.css?v=2">
 </head>
 <body>
 <div class="app-shell master-shell">
   <aside class="sidebar master-sidebar">
-    <a class="brand master-brand" href="/" aria-label="Grow Central Übersicht">
-      <img src="/static/brand-logo.png" alt="135er Grow Central">
-      <span>135ER · GROW CENTRAL</span>
+    <a class="brand master-brand fm-brand" href="/" aria-label="Grow Central Übersicht">
+      <img src="/static/brand-mark.png" alt="">
+      <span><b>Grow<span>Central</span></b><small>INTELLIGENTE GROW-STEUERUNG</small></span>
     </a>
 
     <nav id="mainNav" aria-label="Hauptnavigation" class="master-nav">
@@ -31,9 +31,11 @@
       <button data-view="lighting"><i>☼</i><span>Beleuchtung</span></button>
       <button data-view="automation"><i>◷</i><span>Zeitpläne</span></button>
       <button data-view="recipes"><i>▤</i><span>Rezepte</span><b class="nav-progress">In Arbeit</b></button>
+      <button data-view="growlog"><i>▧</i><span>Growtagebuch</span></button>
       <small class="nav-group-title">KAMERAS</small>
       <button data-view="camera"><i>◉</i><span>Live-Ansicht</span></button>
       <button data-view="recordings"><i>▣</i><span>Aufnahmen</span></button>
+      <button data-view="timelapse"><i>◷</i><span>Zeitraffer</span></button>
       <small class="nav-group-title">SYSTEM</small>
       <button data-view="settings"><i>⚙</i><span>Einstellungen</span></button>
       <button data-view="users"><i>♟</i><span>Benutzer</span></button>
@@ -51,58 +53,62 @@
 
   <main class="master-main">
     <header class="topbar master-topbar">
-      <div class="master-search"><span>⌕</span><input id="globalSearch" type="search" placeholder="Suche…" aria-label="Grow Central durchsuchen"><kbd>Ctrl + K</kbd></div>
-      <div class="master-topstatus">
-        <span class="top-online"><i></i><b id="masterOnlineLabel">System Online</b></span>
-        <span title="Netzwerk">⌁</span><span title="Bluetooth">ᛒ</span><span title="Cloud-Link">☁</span>
-        <span class="clock"><b id="masterDate">—</b><small id="masterTime">—</small></span>
-        <button class="top-icon" title="Benachrichtigungen">●</button><button class="top-avatar" title="Benutzer">●</button>
-      </div>
-      <div class="runtime-controls" aria-hidden="true">
-        <select id="growSelector" aria-label="Growbox auswählen"><option value="">Alle Growboxen</option></select>
-        <div class="mode-switch"><button id="simpleMode" class="active">Einfach</button><button id="advancedMode">Advanced</button></div>
-        <button class="icon-btn" id="refreshBtn">↻</button><span id="pageTitle">Übersicht</span>
-      </div>
-    </header>
+  <div class="master-search"><span>⌕</span><input id="globalSearch" type="search" placeholder="Suche (Räume, Geräte, Sensoren …)" aria-label="Grow Central durchsuchen"></div>
+  <div class="master-topstatus fm-topstatus">
+    <span class="fm-status-pill online"><i></i><b id="masterOnlineLabel">System Online</b></span>
+    <span class="fm-status-pill"><i class="dot-cyan"></i><b><span id="deviceCounter">0</span> Geräte</b></span>
+    <span class="fm-status-pill warn"><i></i><b>1 Warnung</b></span>
+    <span class="clock"><b id="masterDate">—</b><small id="masterTime">—</small></span>
+    <span class="fm-bell">♧<b>2</b></span>
+    <span class="fm-user"><span class="fm-avatar">●</span><span><b>GrowCentral</b><small>Administrator</small></span><em>⌄</em></span>
+  </div>
+  <div class="runtime-controls" aria-hidden="true"><select id="growSelector"><option value="">Alle Growboxen</option></select><button id="simpleMode" class="active">Einfach</button><button id="advancedMode">Advanced</button><button id="refreshBtn">↻</button><span id="pageTitle">Übersicht</span></div>
+</header>
 
-    <section id="overview" class="view active master-view">
-      <div class="master-hero">
-        <div class="hero-copy"><span>Willkommen bei</span><h1>GrowCentral</h1><h2>Deine intelligente Grow-Steuerung</h2><p>Überwachen. Steuern. Automatisieren.</p></div>
-        <div class="hero-progress"><div class="progress-ring"><b id="roomOnlineSummary">—</b><small>Online</small></div><div><small>AKTIVE RÄUME</small><strong id="roomCountSummary">werden geladen</strong></div></div>
-        <div class="hero-health"><div><i>▣</i><span><b id="heroRoomLabel">Räume</b><small>lokal verwaltet</small></span></div><div><i>◫</i><span><b id="deviceCounter">0 / 0</b><small>Geräte</small></span></div><div><i>✓</i><span><b id="heroHealthLabel">System wird geprüft</b><small id="headlineSub">Lokale Dienste werden geladen.</small></span></div></div>
-      </div>
+    <section id="overview" class="view active master-view fm-overview">
+  <div class="master-hero fm-hero">
+    <div class="hero-copy">
+      <span>Willkommen bei</span><h1>Grow<span>Central</span></h1><h2>Deine intelligente Grow-Steuerung</h2><p>Überwachen. Steuern. Automatisieren. Alles im Blick.</p>
+      <div class="fm-hero-actions"><button data-open="grow">＋ Raum anlegen</button><button data-open="devices">▦ Geräte verwalten</button></div>
+    </div>
+    <div class="fm-hero-cards">
+      <article><i>♣</i><span><small>Phase</small><b>In Arbeit</b><em>Wachstumsdaten folgen</em></span></article>
+      <article><i>◷</i><span><small>Nächste Aktion</small><b>—</b><em>Keine Regel aktiv</em></span></article>
+      <article><i>◈</i><span><small>Gesundheit</small><b id="heroHealthLabel">wird geprüft</b><em id="headlineSub">Lokale Dienste werden geladen.</em></span></article>
+    </div>
+    <span id="roomOnlineSummary" hidden>—</span><span id="roomCountSummary" hidden>—</span><span id="heroRoomLabel" hidden>—</span>
+  </div>
 
-      <div class="master-metrics">
-        <article class="master-metric green"><header><span class="metric-icon">♨</span><b>Temperatur</b></header><strong><span id="temp">—</span> <em>°C</em></strong><small id="tempHint">keine Daten</small><div class="spark spark-green"></div></article>
-        <article class="master-metric blue"><header><span class="metric-icon">●</span><b>Luftfeuchtigkeit</b></header><strong><span id="rh">—</span> <em>%</em></strong><small id="rhHint">keine Daten</small><div class="spark spark-blue"></div></article>
-        <article class="master-metric muted"><header><span class="metric-icon">☁</span><b>CO₂</b><span class="progress-badge">In Arbeit</span></header><strong>— <em>ppm</em></strong><small>Optionaler Sensor</small><div class="spark spark-muted"></div></article>
-        <article class="master-metric amber"><header><span class="metric-icon">☀</span><b>Lichtstärke</b></header><strong><span id="lightValue">—</span> <em>µmol</em></strong><small>Nur bei Messquelle</small><div class="spark spark-amber"></div></article>
-        <article class="master-metric cyan"><header><span class="metric-icon">≋</span><b>VPD</b></header><strong><span id="vpd">—</span> <em>kPa</em></strong><small id="vpdHint">keine Daten</small><div class="spark spark-cyan"></div></article>
-      </div>
+  <div class="master-metrics fm-metrics-six">
+    <article class="master-metric green"><header><span class="metric-icon">♨</span><b>Temperatur</b></header><strong><span id="temp">—</span> <em>°C</em></strong><small id="tempHint">keine Daten</small><div class="spark spark-green"></div></article>
+    <article class="master-metric blue"><header><span class="metric-icon">●</span><b>Luftfeuchte</b></header><strong><span id="rh">—</span> <em>%</em></strong><small id="rhHint">keine Daten</small><div class="spark spark-blue"></div></article>
+    <article class="master-metric cyan"><header><span class="metric-icon">◈</span><b>VPD</b><span class="state-badge">Optimal</span></header><strong><span id="vpd">—</span> <em>kPa</em></strong><small id="vpdHint">keine Daten</small><div class="spark spark-cyan"></div></article>
+    <article class="master-metric muted"><header><span class="metric-icon">☁</span><b>CO₂</b><span class="optional-badge">Optional</span></header><strong>— <em>ppm</em></strong><small>Optionaler Sensor</small></article>
+    <article class="master-metric amber"><header><span class="metric-icon">☀</span><b>Lichtstärke</b></header><strong><span id="lightValue">—</span> <em>µmol</em></strong><small>Nur bei Messquelle</small><div class="spark spark-amber"></div></article>
+    <article class="master-metric soil"><header><span class="metric-icon">♨</span><b>Bodenfeuchte</b><span class="progress-badge">In Arbeit</span></header><strong>—</strong><small>Kalibrierung erforderlich</small></article>
+  </div>
 
-      <div id="statusBanner" class="status-banner master-health-banner" hidden><div><span class="status-icon">✓</span><div><small>SYSTEM STATUS</small><h2 id="headline">Grow Central wird geprüft…</h2><p>Lokale Dienste und Geräte werden geladen.</p></div></div><span class="timestamp"><small>LETZTES UPDATE</small><b id="lastUpdate">—</b></span></div>
+  <div class="master-board-top fm-board-top">
+    <article class="master-panel room-overview-panel"><div class="master-panel-head"><h3>▣ Räume</h3><span><b>1 / 1</b> aktiv</span></div><div id="growSummary" class="master-room-summary"><div class="empty">Räume werden geladen…</div></div></article>
+    <article class="master-panel live-camera-panel"><div class="master-panel-head"><h3><i class="online-dot"></i> Live-Kamera – Test</h3><span>● LIVE</span></div><div class="camera-master-frame"><img id="overviewCameraSnapshot" alt="Lokaler Kamera-Snapshot" hidden><div class="camera-master-art" id="overviewCameraFallback"><span>◉</span><b>Lokale Kamera</b><small>Snapshot wird geprüft</small></div><span class="live-tag" id="overviewCameraState">LOCAL</span></div><div class="fm-camera-actions"><button>▣ Snapshot</button><button>● Aufnehmen</button><button>◷ Zeitraffer</button><button>⛶</button></div></article>
+    <article class="master-panel quick-control-panel"><div class="master-panel-head"><h3>✣ Schnellsteuerung – Test</h3><span>⚙</span></div><div class="fm-control-grid"><div><b>☀ Licht</b><button disabled>Ein</button><button disabled>Aus</button></div><div><b>♨ Bewässerung</b><button disabled>Start</button><button disabled>Stopp</button></div><div><b>✤ Umluft</b><button disabled>Auto</button><button disabled>Stufe 1</button><button disabled>Stufe 2</button><button disabled>Stufe 3</button></div><div><b>✤ Abluft</b><button disabled>Auto</button><button disabled>25 %</button><button disabled>50 %</button><button disabled>75 %</button><button disabled>100 %</button></div></div></article>
+  </div>
 
-      <div class="master-board-top">
-        <article class="master-panel room-overview-panel"><div class="master-panel-head"><h3>Raumübersicht</h3><button data-open="grow">Alle Räume anzeigen ›</button></div><div id="growSummary" class="master-room-summary"><div class="empty">Räume werden geladen…</div></div></article>
-        <article class="master-panel live-camera-panel"><div class="master-panel-head"><h3><i class="online-dot"></i> Live-Kamera</h3><button data-open="camera">Vollbild</button></div><div class="camera-master-frame"><img id="overviewCameraSnapshot" alt="Lokaler Kamera-Snapshot" hidden><div class="camera-master-art" id="overviewCameraFallback"><span>◉</span><b>Lokale Kamera</b><small>Snapshot wird geprüft</small></div><span class="live-tag" id="overviewCameraState">LOCAL</span></div></article>
-        <article class="master-panel quick-control-panel"><div class="master-panel-head"><h3>Schnellsteuerung</h3><span>⚙</span></div><div class="quick-master-list"><div><span><i class="sun">☀</i>Beleuchtung</span><button class="switch-ui disabled" disabled title="Wird nur bei freigegebener Geräte-Steuerung aktiv"></button></div><div><span><i class="drop">●</i>Bewässerung</span><button class="switch-ui disabled" disabled title="Wird nur bei freigegebener Geräte-Steuerung aktiv"></button></div><div><span><i class="fan">✤</i>Umluft</span><button class="switch-ui disabled" disabled title="Wird nur bei freigegebener Geräte-Steuerung aktiv"></button></div><div><span><i class="fan">✤</i>Abluft</span><button class="switch-ui disabled" disabled title="Wird nur bei freigegebener Geräte-Steuerung aktiv"></button></div><div><span><i>☁</i>CO₂ Anlage <b class="progress-badge">In Arbeit</b></span><button class="switch-ui disabled" disabled></button></div></div><p class="control-note">Schaltflächen werden erst aktiv, wenn ein Gerät eine validierte Schreib-Capability meldet.</p></article>
-      </div>
+  <div class="master-board-middle fm-board-middle">
+    <article class="master-panel chart-panel"><div class="master-panel-head"><h3>▣ Klima-Verlauf (24 h)</h3><span class="mini-select">24 Stunden⌄</span></div><div class="fake-chart"><div class="chart-grid"></div><div class="fm-chart-empty">Historie in Arbeit</div></div></article>
+    <article class="master-panel schedules-panel"><div class="master-panel-head"><h3>▣ Zeitpläne & Automationen</h3><button data-open="automation">＋ Neu</button></div><div id="overviewAutomationList" class="rule-list"><div class="empty">Noch keine lokalen Regeln angelegt.</div></div></article>
+    <article class="master-panel energy-master-panel"><div class="master-panel-head"><h3>☷ Energie & Leistung</h3><span class="mini-select">24 Stunden⌄</span></div><div class="energy-master-totals"><div><i>ϟ</i><span><small>Aktuelle Leistung</small><b><span id="power">—</span> W</b></span></div><div><i>▥</i><span><small>Tagesverbrauch</small><b id="energyTotalSmall">— kWh</b></span></div></div><div class="energy-chart"><div class="fm-bars"></div></div></article>
+  </div>
 
-      <div class="master-board-middle">
-        <article class="master-panel chart-panel"><div class="master-panel-head"><h3>Klima-Verlauf (24 h)</h3><span class="mini-select">Temperatur & Luftfeuchtigkeit⌄</span></div><div class="fake-chart"><div class="chart-grid"></div><svg viewBox="0 0 600 150" preserveAspectRatio="none"><polyline class="line-a" points="0,92 45,72 85,84 125,63 165,70 210,44 250,56 295,49 335,65 380,61 420,89 460,78 505,94 548,80 600,91"/><polyline class="line-b" points="0,75 45,82 85,88 125,96 165,105 210,115 250,121 295,116 335,108 380,103 420,98 460,92 505,88 548,85 600,82"/></svg><div class="chart-legend"><span><i class="a"></i>Layout-Vorschau</span><span><i class="b"></i>Historie in Arbeit</span></div></div></article>
-        <article class="master-panel schedules-panel"><div class="master-panel-head"><h3>Zeitpläne & Automationen</h3><button data-open="automation">Alle anzeigen ›</button></div><div id="overviewAutomationList" class="rule-list"><div class="empty">Automationen werden geladen…</div></div></article>
-        <article class="master-panel energy-master-panel"><div class="master-panel-head"><h3>Energie & Leistung</h3><button data-open="energy">Details ›</button></div><div class="energy-chart"><svg viewBox="0 0 420 120" preserveAspectRatio="none"><polyline points="0,80 35,68 70,73 105,64 140,58 175,43 210,52 245,60 280,38 315,46 350,30 385,34 420,48"/></svg></div><div class="energy-master-totals"><div><i>ϟ</i><span><small>Aktuelle Leistung</small><b><span id="power">—</span> W</b><em id="powerHint">keine Messgeräte</em></span></div><div><i>▥</i><span><small>Gesamt</small><b id="energyTotalSmall">— kWh</b></span></div></div></article>
-      </div>
+  <div class="master-board-bottom fm-board-bottom">
+    <article class="master-panel events-panel"><div class="master-panel-head"><h3>▣ Letzte Ereignisse</h3><button>Alle anzeigen</button></div><div class="events-list"><div><i class="good"></i><time>—</time><span>Ereignis-Zusammenführung wird vorbereitet.</span></div><div><i class="info"></i><time>—</time><span>Keine erfundenen Ereignisse oder Zeiten.</span></div></div></article>
+    <article class="master-panel system-master-panel"><div class="master-panel-head"><h3>▣ Gerätestatus</h3><button data-open="devices">Alle Geräte</button></div><div id="runtimePreview" class="health-list"><div class="empty">Runtime wird geprüft…</div></div><span id="runtimeCounter" hidden>—</span></article>
+    <article class="master-panel progress-panel"><div class="master-panel-head"><h3>◈ Nährstoffe</h3><span class="progress-badge">In Arbeit</span></div><div class="fm-tanks"><span><i></i><b>Tank A</b><small>Grow</small></span><span><i></i><b>Tank B</b><small>Bloom</small></span><span><i></i><b>Tank C</b><small>CalMag</small></span></div></article>
+    <article class="master-panel weather-panel"><div class="master-panel-head"><h3>☀ Wetter</h3><span class="weather-location">13593 · Berlin-Spandau</span></div><div class="weather-live"><span id="weatherIcon">◌</span><div><b id="weatherTemp">— °C</b><small id="weatherText">Wetter wird geladen…</small><em id="weatherMeta">—</em></div></div></article>
+  </div>
+</section>
 
-      <div class="master-board-bottom">
-        <article class="master-panel events-panel"><div class="master-panel-head"><h3>Letzte Ereignisse</h3><span class="progress-badge">In Arbeit</span></div><div class="events-list"><div><i class="good"></i><time>—</time><span>Ereignis-Zusammenführung wird vorbereitet.</span></div><div><i class="info"></i><time>—</time><span>Keine erfundenen Ereignisse oder Zeiten.</span></div></div></article>
-        <article class="master-panel system-master-panel"><div class="master-panel-head"><h3>Systemstatus</h3></div><div id="runtimePreview" class="health-list"><div class="empty">Runtime wird geprüft…</div></div><button class="master-bottom-action" data-open="settings">Systemdetails öffnen</button><span id="runtimeCounter" hidden>—</span></article>
-        <article class="master-panel progress-panel"><div class="master-panel-head"><h3>Nährstoffe</h3><span class="progress-badge">In Arbeit</span></div><div class="progress-empty"><span>♢</span><p>Tank- und Dosierdaten werden erst nach validierter Hardware eingeblendet.</p></div></article>
-        <article class="master-panel weather-panel"><div class="master-panel-head"><h3>Wetter</h3><span class="weather-location">13593 · Berlin-Spandau</span></div><div class="weather-live"><span id="weatherIcon">◌</span><div><b id="weatherTemp">— °C</b><small id="weatherText">Wetter wird geladen…</small><em id="weatherMeta">—</em></div></div></article>
-      </div>
-    </section>
-
-    <section id="grow" class="view master-view room-board"><div class="master-section-head"><div><small>ANBAU / RÄUME</small><h2>Räume</h2><p>Alle Growboxen, Sensorwerte, Gerätezuordnungen und Pflanzen in einer gemeinsamen Raumansicht.</p></div><a class="master-primary advanced-only" href="/legacy#rooms">Raum verwalten</a></div><div id="growCards" class="cards-grid master-room-grid"><article class="master-panel empty-state"><b>Räume werden geladen…</b></article></div></section>
+<section id="grow" class="view master-view room-board"><div class="master-section-head"><div><small>ANBAU / RÄUME</small><h2>Räume</h2><p>Alle Growboxen, Sensorwerte, Gerätezuordnungen und Pflanzen in einer gemeinsamen Raumansicht.</p></div><a class="master-primary advanced-only" href="/legacy#rooms">Raum verwalten</a></div><div id="growCards" class="cards-grid master-room-grid"><article class="master-panel empty-state"><b>Räume werden geladen…</b></article></div></section>
 
     <section id="devices" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GERÄTE</small><h2>Geräte</h2><p>Herstellerunabhängige Geräteliste mit sicherer Erkennung, Status und Live-Werten.</p></div><button class="master-primary" id="discoverBtn">Geräte suchen</button></div><section id="sensorPairing" class="pairing-panel"><h3>Grow-Central Sensoren</h3><p>Erkennung automatisch, Aufnahme nur durch dich. Neue Sensoren erhalten erst nach Identitätsprüfung, Name und Raumzuweisung produktiven Zugriff.</p></section><div class="filterbar"><button class="active" data-filter="all">Alle</button><button data-filter="online">Online</button><button data-filter="sensor">Sensoren</button><button data-filter="light">Licht</button><button data-filter="fan">Lüfter</button><button data-filter="switch">Schalter</button><button class="advanced-only" data-filter="provider">Provider</button></div><article class="master-panel"><div class="table-head"><span>GERÄT</span><span>TYP</span><span>PROVIDER</span><span>STATUS / WERTE</span></div><div id="deviceList" class="device-table"><div class="empty">Geräte werden geladen…</div></div></article><article class="master-panel advanced-only provider-panel"><div class="master-panel-head"><h3>Unterstützte Plattformen</h3><span id="providerCount">—</span></div><div class="provider-grid" id="providerGrid"></div></article><div id="devicePreview" hidden></div></section>
 
@@ -116,9 +122,13 @@
 
     <section id="recipes" class="view master-view"><div class="master-section-head"><div><small>ANBAU / REZEPTE</small><h2>Rezepte <span class="progress-badge">In Arbeit</span></h2><p>Wiederverwendbare Grow-Profile für Phasen, Sollwerte und Zeitpläne.</p></div></div><article class="master-panel progress-page"><span>▤</span><h3>Rezept-Engine wird vorbereitet</h3><p>Diese Funktion wird erst produktiv freigegeben, wenn Sollwert-, Geräte- und Sicherheitsmodell vollständig zusammengeführt sind.</p></article></section>
 
-    <section id="camera" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / LIVE-ANSICHT</small><h2>Live-Ansicht</h2><p>Lokale UVC-/V4L2-Kameras, Snapshot und Diagnose.</p></div><a class="master-primary advanced-only" href="/legacy#camera">Kamera konfigurieren</a></div><div id="cameraGrid" class="camera-grid master-camera-grid"><div class="empty">Kamera wird geprüft…</div></div></section>
+    <section id="growlog" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GROWTAGEBUCH</small><h2>Growtagebuch</h2><p>Chronik des Grows.</p></div></div><article class="master-panel progress-page"><span>▧</span><h3>Growtagebuch</h3><p>In Arbeit.</p><span class="progress-badge">In Arbeit</span></article></section>
 
-    <section id="recordings" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / AUFNAHMEN</small><h2>Aufnahmen</h2><p>Snapshots, Zeitraffer und lokal gespeicherte Kameraereignisse.</p></div></div><div class="master-two-col"><article class="master-panel"><div class="master-panel-head"><h3>Snapshots</h3><span class="state-badge">Verfügbar</span></div><div class="progress-empty"><span>▣</span><p>Snapshots werden über die lokale Kamera-API erzeugt.</p></div></article><article class="master-panel"><div class="master-panel-head"><h3>Zeitraffer</h3><span class="progress-badge">In Arbeit</span></div><div class="progress-empty"><span>◷</span><p>Automatische Zeitraffer-Sequenzen werden erst nach Speicher- und Aufbewahrungskonzept freigeschaltet.</p></div></article></div></section>
+<section id="camera" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / LIVE-ANSICHT</small><h2>Live-Ansicht</h2><p>Lokale UVC-/V4L2-Kameras, Snapshot und Diagnose.</p></div><a class="master-primary advanced-only" href="/legacy#camera">Kamera konfigurieren</a></div><div id="cameraGrid" class="camera-grid master-camera-grid"><div class="empty">Kamera wird geprüft…</div></div></section>
+
+    <section id="timelapse" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / ZEITRAFFER</small><h2>Zeitraffer</h2><p>Automatische Zeitraffer-Sequenzen.</p></div></div><article class="master-panel progress-page"><span>◷</span><h3>Zeitraffer</h3><p>In Arbeit.</p><span class="progress-badge">In Arbeit</span></article></section>
+
+<section id="recordings" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / AUFNAHMEN</small><h2>Aufnahmen</h2><p>Snapshots, Zeitraffer und lokal gespeicherte Kameraereignisse.</p></div></div><div class="master-two-col"><article class="master-panel"><div class="master-panel-head"><h3>Snapshots</h3><span class="state-badge">Verfügbar</span></div><div class="progress-empty"><span>▣</span><p>Snapshots werden über die lokale Kamera-API erzeugt.</p></div></article><article class="master-panel"><div class="master-panel-head"><h3>Zeitraffer</h3><span class="progress-badge">In Arbeit</span></div><div class="progress-empty"><span>◷</span><p>Automatische Zeitraffer-Sequenzen werden erst nach Speicher- und Aufbewahrungskonzept freigeschaltet.</p></div></article></div></section>
 
     <section id="energy" class="view master-view advanced-only"><div class="master-section-head"><div><small>SYSTEM / ENERGIE</small><h2>Energie</h2><p>Zusammengefasste Leistung kompatibler Steckdosen und Geräte.</p></div></div><div class="metric-grid compact"><article class="metric"><header><span>LIVE</span></header><strong id="energyPower">—</strong><footer><span>W</span></footer></article><article class="metric"><header><span>ENERGIE</span></header><strong id="energyTotal">—</strong><footer><span>kWh</span></footer></article><article class="metric"><header><span>ONLINE</span></header><strong id="energyOnline">—</strong><footer><span>Geräte</span></footer></article><article class="metric"><header><span>AKTIV</span></header><strong id="energyOn">—</strong><footer><span>Schalter</span></footer></article></div><article class="master-panel"><div id="energyDevices" class="device-mini-list"><div class="empty">Keine Energiedaten.</div></div></article><span id="energyNow" hidden>—</span></section>
 
@@ -131,5 +141,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=2"></script><script src="/static/room_views.js?v=20261014-master3"></script><script src="/static/runtime_status.js?v=1"></script><script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script><script src="/static/platform-master.js?v=20261014-master3"></script>
+<script src="/static/platform.js?v=2"></script><script src="/static/room_views.js?v=20261014-master5"></script><script src="/static/runtime_status.js?v=1"></script><script src="/static/sensor_pairing.js?v=2"></script><script src="/static/usb_onboarding.js?v=1"></script><script src="/static/platform-master.js?v=20261014-master5"></script>
 </body></html>
