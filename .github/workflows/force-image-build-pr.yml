@@ -21,6 +21,7 @@ jobs:
       - name: Dispatch universal image build on master
         run: |
           set -euo pipefail
+          echo "Building current master release-integration state after CI test alignment."
           START_TS="$(date -u +%s)"
           gh workflow run "$TARGET_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref master
           echo "START_TS=$START_TS" >> "$GITHUB_ENV"
