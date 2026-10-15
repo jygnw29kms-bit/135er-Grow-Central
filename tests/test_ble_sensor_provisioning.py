@@ -11,10 +11,12 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from app.provisioning import ble
 from app.devices.gc_identity import verify_message
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import CalibrationStore
 from app import rooms
 
 ID='gc-soil-aabbcc'
-ANN={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'GC Soil','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.5.0','capabilities':['soil_moisture']}
+HARDWARE_UID='0011223344556677'
+ANN={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'GC Soil','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.5.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
 
 class FakeSensor:
     def __init__(self,confirm=True):
@@ -41,7 +43,7 @@ class FakeSensor:
             if len(self.parts)==self.total:
                 raw=base64.b64decode(''.join(self.parts[i] for i in range(self.total)));plain=AESGCM(self.shared).decrypt(raw[:12],raw[12:],ID.encode()).decode();self.config=plain
                 self.notify(0,('D|'+self.nonce).encode())
-    def network_proof(self):return verify_message(self.signed('proof',{'nonce':'network','state':{'soil_moisture':42}}),kind='proof',device_id=ID)
+    def network_proof(self):return verify_message(self.signed('proof',{'nonce':'network','hardware_uid':HARDWARE_UID,'calibration':ANN['calibration'],'state':{'soil_moisture':42,'meta':{'firmware':'0.5.0','sensor_ok':True,'quality':'GOOD'}}}),kind='proof',device_id=ID)
 
 class FakeClient:
     sensor=None
@@ -61,7 +63,7 @@ class FakeScanner:
 def appenv(monkeypatch,tmp_path):
     ble._candidates.clear();sensor=FakeSensor();FakeClient.sensor=sensor
     monkeypatch.setattr(ble,'BleakClient',FakeClient);monkeypatch.setattr(ble,'BleakScanner',FakeScanner)
-    monkeypatch.setenv('GC_DEVICE_TRUST_DB',str(tmp_path/'trust.db'));monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
+    monkeypatch.setenv('GC_DEVICE_TRUST_DB',str(tmp_path/'trust.db'));monkeypatch.setenv('GC_CALIBRATION_DB',str(tmp_path/'calibration.db'));monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
     rooms.save_state({**rooms.empty_state(),'rooms':[{'id':'room1','name':'Zelt'}]})
     calls=[]
     def broker(action,**kwargs):
@@ -75,11 +77,17 @@ def appenv(monkeypatch,tmp_path):
     app=FastAPI();app.include_router(ble.router);app.dependency_overrides[ble.require_write_auth]=lambda:None
     return TestClient(app),sensor,calls
 
+
+def seed_calibration():
+    row=TrustStore().get(ID)
+    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.5.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
+
 def test_secure_ble_discovery_and_manual_provision(appenv):
     client,sensor,calls=appenv
     found=client.post('/api/devices/ble/scan?timeout=1').json()['devices'];assert found[0]['device_id']==ID
     inspected=client.post(f'/api/devices/ble/{ID}/inspect');assert inspected.status_code==200
     row=TrustStore().get(ID);assert row['status']=='DISCOVERED' and row['identity_verified'] is True
+    seed_calibration()
     response=client.post(f'/api/devices/ble/{ID}/provision',json={'ssid':'GrowWiFi','password':'wifi-secret','broker_host':'192.168.1.20','name':'Topf links','room_id':'room1'})
     assert response.status_code==200,response.text
     assert TrustStore().get(ID)['status']=='TRUSTED';assert rooms.load_state()['assignments']['growcentral_esp32:'+ID]=='room1'
@@ -93,6 +101,14 @@ def test_rejected_sensor_never_receives_credentials(appenv):
 
 def test_missing_physical_boot_confirmation_blocks_secret_creation(appenv,monkeypatch):
     client,sensor,calls=appenv;sensor.confirm=False;monkeypatch.setattr(ble,'PAIR_TIMEOUT',0.05)
-    client.post('/api/devices/ble/scan?timeout=1');client.post(f'/api/devices/ble/{ID}/inspect')
+    client.post('/api/devices/ble/scan?timeout=1');client.post(f'/api/devices/ble/{ID}/inspect');seed_calibration()
     response=client.post(f'/api/devices/ble/{ID}/provision',json={'ssid':'GrowWiFi','password':'wifi-secret','broker_host':'192.168.1.20','name':'Topf','room_id':'room1'})
     assert response.status_code==408 and calls==[] and TrustStore().get(ID)['status']=='DISCOVERED'
+
+
+def test_new_soil_sensor_cannot_use_ble_as_primary_commissioning(appenv):
+    client,sensor,calls=appenv
+    client.post('/api/devices/ble/scan?timeout=1');client.post(f'/api/devices/ble/{ID}/inspect')
+    response=client.post(f'/api/devices/ble/{ID}/provision',json={'ssid':'GrowWiFi','password':'wifi-secret','broker_host':'192.168.1.20','name':'Topf','room_id':'room1'})
+    assert response.status_code==409
+    assert calls==[] and sensor.config is None and TrustStore().get(ID)['status']=='DISCOVERED'
