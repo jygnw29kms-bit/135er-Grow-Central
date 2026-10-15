@@ -15,6 +15,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 if key not in known:
                     known.add(key)
                     entities.append(GrowCentralSensor(coordinator, entry, identifier, metric))
+                    # Home Assistant correctly models soil moisture as
+                    # SensorDeviceClass.MOISTURE. HomeKit Bridge, however, only
+                    # exports percentage sensors with the humidity device class.
+                    # Keep the semantically correct entity and add a dedicated
+                    # compatibility entity for Apple Home instead of lying about
+                    # the original sensor type.
+                    if metric == 'soil_moisture':
+                        entities.append(GrowCentralHomeKitSoilMoistureSensor(
+                            coordinator, entry, identifier, metric
+                        ))
         async_add_entities(entities)
 
     discover()
@@ -40,3 +50,26 @@ class GrowCentralSensor(GrowCentralEntity, SensorEntity):
     @property
     def available(self):
         return super().available and self.metric in self.row.get('measurements', {})
+
+
+class GrowCentralHomeKitSoilMoistureSensor(GrowCentralSensor):
+    """HomeKit-compatible mirror of a soil-moisture percentage.
+
+    Apple Home/HomeKit Bridge does not expose Home Assistant's numerical
+    ``moisture`` sensor class. A mirrored humidity-class entity is therefore
+    provided solely for HomeKit presentation while the primary entity retains
+    the correct soil-moisture semantics inside Grow Central/Home Assistant.
+    """
+
+    def __init__(self, coordinator, entry, identifier, metric):
+        super().__init__(coordinator, entry, identifier, metric)
+        self._attr_unique_id = entry.entry_id + ':' + identifier + ':' + metric + ':homekit'
+        self._attr_name = 'Bodenfeuchte (Apple Home)'
+        self._attr_device_class = 'humidity'
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            'grow_central_semantic': 'soil_moisture',
+            'grow_central_homekit_compatibility': True,
+        }
