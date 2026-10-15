@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import os
 import secrets
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +25,7 @@ COOKIE_NAME = "gc_gui_session"
 SESSION_TTL = 12 * 60 * 60
 PBKDF2_ITERATIONS = 240_000
 ROOT = Path(__file__).resolve().parent.parent
+SESSION_FILE = Path(os.getenv("GC_GUI_SESSIONS_FILE", "/var/lib/135er-grow-central/gui-sessions.json"))
 
 
 @dataclass
@@ -31,6 +34,60 @@ class GuiSession:
 
 
 SESSIONS: dict[str, GuiSession] = {}
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _load_persistent_sessions() -> dict[str, float]:
+    try:
+        raw = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {}
+    now = time.time()
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, float] = {}
+    for key, value in raw.items():
+        try:
+            expiry = float(value)
+        except (TypeError, ValueError):
+            continue
+        if len(key) == 64 and expiry > now:
+            result[key] = expiry
+    return result
+
+
+def _save_persistent_sessions(rows: dict[str, float]) -> None:
+    SESSION_FILE.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
+    payload = json.dumps(rows, separators=(",", ":"), sort_keys=True) + "\n"
+    fd, tmp = tempfile.mkstemp(prefix=".gui-sessions-", suffix=".json", dir=SESSION_FILE.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(tmp, 0o640)
+        os.replace(tmp, SESSION_FILE)
+    finally:
+        try:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def _persist_session(token: str, expires_at: float) -> None:
+    rows = _load_persistent_sessions()
+    rows[_token_hash(token)] = expires_at
+    _save_persistent_sessions(rows)
+
+
+def _remove_persistent_session(token: str) -> None:
+    rows = _load_persistent_sessions()
+    rows.pop(_token_hash(token), None)
+    _save_persistent_sessions(rows)
 
 
 class LoginBody(BaseModel):
@@ -69,10 +126,14 @@ def authenticated(request: Request) -> bool:
     if not token:
         return False
     current = SESSIONS.get(token)
-    if not current or current.expires <= time.monotonic():
-        SESSIONS.pop(token, None)
+    if current and current.expires > time.monotonic():
+        return True
+    SESSIONS.pop(token, None)
+    persistent = _load_persistent_sessions().get(_token_hash(token))
+    if not persistent or persistent <= time.time():
         return False
-    current.expires = time.monotonic() + SESSION_TTL
+    remaining = max(1.0, persistent - time.time())
+    SESSIONS[token] = GuiSession(expires=time.monotonic() + remaining)
     return True
 
 
@@ -133,6 +194,7 @@ async def login(body: LoginBody, response: Response):
         raise HTTPException(401, "Benutzername oder Passwort falsch")
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = GuiSession(expires=time.monotonic() + SESSION_TTL)
+    _persist_session(token, time.time() + SESSION_TTL)
     response.set_cookie(COOKIE_NAME, token, max_age=SESSION_TTL, httponly=True, samesite="strict", secure=False, path="/")
     return {"ok": True, "username": expected_user}
 
@@ -142,6 +204,7 @@ async def logout(request: Request, response: Response):
     token = request.cookies.get(COOKIE_NAME, "")
     if token:
         SESSIONS.pop(token, None)
+        _remove_persistent_session(token)
     response.delete_cookie(COOKIE_NAME, path="/")
     return {"ok": True}
 
