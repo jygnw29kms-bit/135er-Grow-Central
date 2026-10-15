@@ -167,7 +167,9 @@ class GrowCentralEsp32Provider(DeviceProvider):
             if type(filtered_raw) in (int, float) and math.isfinite(float(filtered_raw)):
                 reported = state.get('soil_moisture')
                 metrics = derive_soil_reference_metrics(float(filtered_raw), calibration['points'])
-                state.update(metrics)
+                state['soil_moisture'] = metrics['soil_moisture_percent']
+                for key in ('soil_substrate_reference_percent', 'soil_substrate_index_percent', 'soil_substrate_delta_pp', 'soil_substrate_state'):
+                    state[key] = metrics[key]
                 meta['calculation_source'] = 'server_three_point_reference'
                 if type(reported) in (int, float) and math.isfinite(float(reported)):
                     meta['sensor_reported_soil_moisture'] = round(float(reported), 3)
