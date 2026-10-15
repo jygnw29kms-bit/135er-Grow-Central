@@ -302,7 +302,11 @@ class USBManager:
                 network_ready = False
                 session.wifi_configured = session.mqtt_configured = session.mqtt_connected = session.ca_configured = False
             session.state = 'NETWORK'
-            session.message = ('WLAN/TLS-MQTT verbunden. Aktuelle Sensoridentität wird automatisch geprüft.' if network_ready else 'Kalibrierung geprüft. Jetzt WLAN/TLS-MQTT einrichten.')
+            if network_ready:
+                session.message = 'WLAN/TLS-MQTT verbunden. Aktuelle Sensoridentität wird automatisch geprüft.'
+                await self.wait_online(session)
+            else:
+                session.message = 'Kalibrierung geprüft. Jetzt WLAN/TLS-MQTT einrichten.'
         else:
             session.state, session.message = 'CALIBRATION', 'Identität und Hardware-ID geprüft. Jetzt Sensor vollständig kalibrieren.'
 
