@@ -1,5 +1,7 @@
 # Native Sensoraufnahme · 13. Oktober 2026
 
+> **Produktionsregel ab Firmware 0.5.1:** Die Erstaufnahme eines neuen Soil-Sensors ist USB-first. Der Sensor bleibt bis zur vollständigen Firmware-/Hardwareidentitätsprüfung, Pflichtkalibrierung, TLS-MQTT-Prüfung sowie bestätigter Name-/Raumzuweisung `DISCOVERED`. Erst der finale Check setzt `TRUSTED`/`Einsatzbereit`. BLE bleibt Recovery-/Servicepfad und ist nicht mehr der primäre Erstaufnahmeweg. Der genaue Ablauf steht in [USB_SENSOR_SETUP.md](USB_SENSOR_SETUP.md).
+
 Die Vorgaben stammen aus dem vom Nutzer geteilten [Chat](https://chatgpt.com/share/6ace61d2-cc28-83eb-bab0-7651912da6d1). Der Remote-Stand `1cef7d9` enthält bereits HW-390/XIAO-Bodenfeuchte, MQTT, Raumzuordnung und Substratanzeige. Die hier ergänzte Änderung betrifft die manuelle Vertrauensentscheidung und deren Durchsetzung. Touran-Code bleibt unberührt.
 
 ## Implementierter Ablauf
@@ -15,7 +17,7 @@ Der Flow ist in Desktop-, Mobile- und Legacy-Oberfläche vorhanden; die produkti
 
 ## Geräteidentität und Replay-Schutz
 
-Firmware **0.3.0** erzeugt ein individuelles P-256-Schlüsselpaar im NVS. Hardware-Entropie wird zur Erzeugung aktiviert und vor ADC-Messungen wieder deaktiviert. Der private Schlüssel wird nicht über API oder serielle Diagnose ausgegeben. Seine Speicherung ist noch **nicht** gegen physische Flash-Auslese geschützt; Secure Boot/Flash-/NVS-Verschlüsselung sind nicht eingerichtet.
+Firmware **0.5.1** erzeugt bzw. bewahrt ein individuelles P-256-Schlüsselpaar im NVS und bindet zusätzlich die aus dem ESP32-C3-eFuse abgeleitete Hardware-UID in die signierte Geräteankündigung ein. Hardware-Entropie wird zur Erzeugung aktiviert und vor ADC-Messungen wieder deaktiviert. Der private Schlüssel wird nicht über API oder serielle Diagnose ausgegeben. Seine Speicherung ist noch **nicht** gegen physische Flash-Auslese geschützt; Secure Boot/Flash-/NVS-Verschlüsselung sind nicht eingerichtet.
 
 Envelope:
 
@@ -41,7 +43,7 @@ Die Pi-Image-Konfiguration öffnet anonymes MQTT nicht mehr im LAN: Port 1883 bi
 
 Für den TLS-Listener müssen Broker-Zertifikat/-Schlüssel, CA, Passwortdatei und ACL auf dem Pi existieren und für Mosquitto passend lesbar sein. Der Server-SAN muss dem tatsächlich verwendeten Hostnamen bzw. der IP entsprechen. Für jedes Gerät einen eigenen Mosquitto-Benutzer anlegen, dessen Name exakt der Geräte-ID entspricht. Die Sensor-ACL erlaubt ausschließlich seine eigenen announce/state/availability/proof-Topics und das Lesen seiner challenge. Keine fremden Topics oder `set`-Befehle. Der Backend-Benutzer `growcentral` kann lesen und Challenges senden.
 
-Sensor-Konfiguration erfolgt **derzeit lokal per USB**, bevor er den Broker erreichen und sich melden kann. Das ist noch nicht der im Chat gewünschte BLE-Erstkontakt ohne WLAN-Konfiguration:
+Sensor-Konfiguration erfolgt im Produktionsablauf **verbindlich lokal per USB**, bevor der Sensor als einsatzbereit gilt:
 
 ```text
 NET WIFI <ssid>|<password>
@@ -54,13 +56,13 @@ CA und individuelle Zugangsdaten sind echte Inbetriebnahmevoraussetzungen. Gehei
 
 Das Backend kann lokal über Loopback 1883 lesen; für eine eigene TLS-Verbindung `GC_MQTT_TLS=true`, `GC_MQTT_PORT=8883`, `GC_MQTT_CA_FILE` sowie private Benutzer-/Passwortbindungen konfigurieren. Der produktive Dienst liest `/opt/135er-grow-central/.env` über seine systemd-EnvironmentFile. Broker-Passwörter dürfen nicht pauschal an alle Geräte verteilt werden.
 
-Ab Firmware **0.5.0** ist zusätzlich eine sichere BLE-Erstprovisionierung implementiert. Ein unkonfigurierter Sensor wirbt ausschließlich den Grow-Central-Provisioning-Service aus; Grow-Central erkennt ihn automatisch, nimmt ihn aber niemals automatisch auf. Vor der Übertragung von WLAN- oder MQTT-Geheimnissen sind alle folgenden Bedingungen erforderlich:
+Ab Firmware **0.5.0** ist zusätzlich eine sichere BLE-Provisionierung als Recovery-/Servicepfad implementiert. Ein unkonfigurierter Sensor wirbt ausschließlich den Grow-Central-Provisioning-Service aus; Grow-Central erkennt ihn automatisch, nimmt ihn aber niemals automatisch auf. Vor der Übertragung von WLAN- oder MQTT-Geheimnissen sind alle folgenden Bedingungen erforderlich:
 
 1. Der Nutzer startet die Aufnahme ausdrücklich in der Geräteansicht.
 2. Pi und Sensor erzeugen pro Sitzung neue P-256-ECDH-Schlüssel.
 3. Der Sensor signiert seinen ephemeren Sitzungsschlüssel, die frische 256-Bit-Nonce und seine Geräteankündigung mit seiner dauerhaften P-256-Geräteidentität.
 4. Beide Seiten leiten mit HKDF-SHA256 einen nur für diese Sitzung gültigen AES-256-GCM-Schlüssel ab.
-5. Der Nutzer muss den **BOOT-Taster direkt am verbundenen XIAO mindestens etwa 0,8 Sekunden drücken**. Ohne diese physische Bestätigung werden weder Broker-Zugang noch WLAN-Kennwort erzeugt bzw. übertragen. Das Pairing-Fenster läuft nach 60 Sekunden ab.
+5. Der Nutzer muss den **BOOT-Taster direkt am XIAO mindestens etwa 0,8 Sekunden drücken**. Ohne diese physische Bestätigung werden im BLE-Servicepfad keine Zugangsdaten übertragen. Der Produktions-Erstweg bleibt USB-first.
 6. Erst danach überträgt GC SSID, WLAN-Kennwort, Broker-CA und einen individuellen MQTT-Account AES-GCM-geschützt.
 7. Nach der BLE-Konfiguration muss derselbe Langzeitschlüssel zusätzlich über TLS-MQTT einen frischen Nonce-Proof liefern. Erst danach setzt GC den Sensor auf `TRUSTED` und speichert Name plus Raumzuordnung.
 

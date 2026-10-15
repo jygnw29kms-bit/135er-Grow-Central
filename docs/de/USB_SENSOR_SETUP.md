@@ -1,87 +1,72 @@
-# USB-Sensor in Grow Central einrichten
+# USB-Erstinbetriebnahme eines Grow-Central-Sensors
 
-Der geführte Ablauf ist für **Seeed XIAO ESP32-C3 mit GC Soil / HW-390** vorgesehen.
-Das USB-Datenkabel wird am **Raspberry Pi**, nicht am Browser-PC, angeschlossen.
-GC zeigt passende USB-Kandidaten im Gerätebereich automatisch an. USB VID/PID
-allein bestätigt den Boardtyp nicht; vor dem Flashen muss der Nutzer den
-angeschlossenen XIAO ESP32-C3 ausdrücklich bestätigen. Andere ESP32-Modelle werden
-von esptool vor Schreibbeginn abgewiesen; eine automatische Unterscheidung aller
-Boards mit demselben ESP32-C3-Chip ist nicht möglich.
+Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO ESP32-C3 mit GC Soil / HW-390**. Der Sensor wird für die komplette Erstinbetriebnahme per Daten-USB direkt am Grow-Central-Raspberry-Pi angeschlossen. Erst nach allen Prüfungen darf er abgezogen, in den vorgesehenen Raum gebracht und in das Substrat eingesetzt werden.
 
-## Ablauf
+## Verbindlicher Ablauf
 
-1. **USB erkannt:** „Einrichten“ öffnen und „Angeschlossenen Sensor prüfen“ wählen.
-   Ist die aktuelle GC-Firmware schon vorhanden, wird die signierte USB-Identität
-   mit einer neuen Zufallsanfrage geprüft. Andernfalls folgt der Firmware-Schritt.
-2. **Firmware installieren:** Board und Installation bestätigen. GC prüft das
-   eingebettete Paket auf Modell, Version, SHA-256 und feste Flashbereiche und
-   installiert Firmware 0.4.1 im aktuellen Quellstand (Original-Image 369: 0.4.0). Das USB-Kabel dabei nicht trennen. Bei manuellen
-   Bootloader-Boards gegebenenfalls BOOT beim Anschließen halten und danach neu
-   versuchen. GC führt kein `erase_flash` aus; NVS-Identität und Kalibrierung
-   bleiben in ihren eigenen Speicherbereichen erhalten.
-3. **WLAN einrichten:** SSID, WLAN-Kennwort und den erreichbaren LAN-Broker dieses
-   Pi auswählen. GC erstellt beim ersten Bedarf eine eigene lokale CA, ein
-   Serverzertifikat mit den lokalen Hostnamen/IP-Adressen und einen individuellen
-   MQTT-Zugang. CA und Zugang werden direkt per USB an genau den geprüften Sensor
-   übertragen. Private Schlüssel und MQTT-Kennwörter werden nicht an den Browser
-   ausgegeben. WLAN-Kennwörter erscheinen nicht in Antworten oder Job-Protokollen.
-   Die Verwaltung des Brokers kann seine bestehenden Verbindungen kurz neu starten.
-4. **Verbindung prüfen:** GC fordert eine aktuelle signierte MQTT-Antwort an und
-   vergleicht sie mit der USB-Identität. Falsche WLAN-Daten oder ein unerreichbarer
-   Pi-Broker führen nicht zu einer erfolgreichen Aufnahme. „Vorhandene Verbindung
-   prüfen“ kann die WLAN-Einrichtung bei bereits konfigurierten Sensoren überspringen.
-5. **Name und Raum:** Sensorname und Raum/Growbox auswählen oder einen Raum anlegen.
-   Die bewusste Aufnahme erlaubt erst jetzt produktive Raumdaten. Ein abgelehnter
-   oder widerrufener Sensor muss zuvor in der Sperrliste ausdrücklich erneut
-   freigegeben werden. Ein wechselnder Geräteschlüssel wird nicht stillschweigend
-   angenommen. Bereits angenommene Sensoren behalten ihre Zuordnung.
+1. **USB-Erkennung und Boardprüfung**  
+   Grow-Central erkennt nur unterstützte serielle USB-Kandidaten. Der Bediener bestätigt ausdrücklich den XIAO ESP32-C3. `esptool` prüft den tatsächlichen ESP32-C3 zusätzlich vor jedem Schreibvorgang.
 
-Der Dialog kann während eines laufenden Schritts geschlossen werden; der Job läuft
-auf dem Pi weiter. Beim Trennen des USB-Kabels oder Neustart des GC-Dienstes kann ein
-Vorgang abbrechen. Danach den Sensor erneut prüfen; keine automatische Flash-
-Wiederholung durchführen. USB-Erkennung ist im geöffneten Gerätebereich alle drei
-Sekunden aktiv. Nicht angeschlossene Kandidaten werden nicht als verfügbar gezeigt.
+2. **Firmware installieren oder prüfen**  
+   Grow-Central verwendet ausschließlich das zum Image gehörende, per Manifest und SHA-256 geprüfte Firmwarepaket. Ein neuerer Sensor wird niemals automatisch auf eine ältere gebündelte Firmware zurückgesetzt. Updates schreiben nur Bootloader, Partitionstabelle, OTA-Metadaten und Applikation; NVS wird nicht mit `erase_flash` gelöscht.
 
-## Lokale Dienste und Grenzen
+3. **Kryptografische Geräteidentität und Hardwarebindung**  
+   Nach dem Start fordert Grow-Central über USB einen frischen 256-Bit-Nonce-Proof an. Der Sensor signiert ihn mit seinem individuellen P-256-Langzeitschlüssel. Zusätzlich gehört die aus dem ESP32-C3-eFuse abgeleitete Hardware-UID zum signierten Datensatz. Grow-Central bindet zusammen:
+   - Geräte-ID `gc-soil-xxxxxx`
+   - P-256 Public Key / SHA-256-Fingerprint
+   - eFuse-Hardware-UID
+   - Modell und Firmwareversion
 
-Das passende neue Test-Image enthält pyserial, esptool, ein geprüftes Firmware-
-Paket, die dialout-Berechtigung und `grow-central-provisioning.service`. Build 365
-enthält diesen USB-Ablauf noch nicht. Bestehende Installationen benötigen die
-entsprechende Aktualisierung; die Oberfläche meldet ein fehlendes Paket oder den
-nicht verfügbaren lokalen Broker-Dienst.
+   Ändert sich während der Einrichtung Schlüssel oder Hardware-UID, wird der Ablauf sofort gesperrt. Ein bereits gespeicherter, abgelehnter oder widerrufener Sensor wird nicht stillschweigend wieder freigegeben.
 
-Der privilegierte Broker-Dienst kommuniziert ausschließlich über einen lokalen
-Unix-Socket mit dem GC-Dienst. Er erlaubt nur die Einrichtung des festen lokalen
-MQTT-Brokers und von `gc-soil-xxxxxx`-Konten. Geräte dürfen nur ihre eigenen
-Announcement-/State-/Availability-/Proof-Topics senden und ihre Challenge lesen.
-Der anonyme Listener bleibt auf 127.0.0.1:1883 begrenzt; Sensoren verwenden TLS/8883.
-CA, Konten und Serverzertifikat liegen unter
-`/etc/mosquitto/grow-central-sensor-broker`. Private CA-/Kontodateien gehören root
-und sind Modus 0600; Mosquitto liest nur die vorgesehenen Zertifikate, ACL und
-Passworthashes. Bestehende manuelle Listener auf 8883 werden nicht überschrieben.
+4. **Pflichtkalibrierung am angeschlossenen Sensor**  
+   Ein Sensor wird ohne abgeschlossene Kalibrierung niemals als einsatzbereit markiert.
+   - **Trockenreferenz:** Sensorfläche sauber und trocken in Luft halten, dann `CAL AIR` ausführen.
+   - **Nassreferenz:** nur die Sensorfläche/Probe in die Referenz eintauchen; XIAO und Elektronik trocken halten, dann `CAL WATER` ausführen.
+   - Grow-Central akzeptiert die Kalibrierung nur, wenn beide Punkte persistent im Sensor gespeichert sind und die Messspanne plausibel ist (`air_raw > wet_raw + 100`).
 
-Bei einer geänderten Pi-IP erneut über USB einrichten: das Serverzertifikat wird
-um aktuelle lokale Adressen ergänzt, die CA und das individuelle Kennwort bleiben
-bestehen. Eine ablaufende CA wird nicht automatisch gewechselt, weil bereits
-konfigurierte Sensoren der alten CA vertrauen. Systemzeit/NTP und die Erreichbarkeit
-des gewählten Pi-LAN-Hosts müssen für TLS stimmen.
+   `RESET CAL` setzt die Pflichtfreigabe wieder zurück. Danach muss die Kalibrierung vollständig wiederholt werden.
 
-Dieses Software-Onboarding ersetzt keine elektrische Prüfung oder Substrat-
-Kalibrierung. „Bereit“ bestätigt Identität, Verbindung und Zuordnung; gültige
-Bodenfeuchtewerte hängen zusätzlich vom angeschlossenen Messfühler ab. Ein Image-
-Userspace-Boot ist kein echter Kernelboot. USB-Reset, Flash, WLAN/TLS und Sensorwerte
-müssen auf der Zielhardware geprüft werden. BLE-Provisionierung bleibt nicht implementiert.
+5. **WLAN und TLS-MQTT per USB einrichten**  
+   Erst nach erfolgreicher Kalibrierung erzeugt Grow-Central einen individuellen Brokerzugang. CA, MQTT-Zugang und WLAN-Daten werden direkt an genau den zuvor verifizierten USB-Sensor übertragen. Geheimnisse werden nicht an den Browser zurückgegeben und nicht in Audit-Logs geschrieben.
 
-## Hardwaretest
+6. **Netzwerkidentität erneut beweisen**  
+   Der Sensor verbindet sich selbstständig mit WLAN und TLS-MQTT. Grow-Central fordert anschließend einen neuen Nonce-Proof über MQTT an. Der Proof muss denselben Langzeitschlüssel und dieselbe Hardware-UID wie die USB-Prüfung tragen. Außerdem muss die Firmware weiterhin eine abgeschlossene Kalibrierung melden.
 
-- Neues Image auf separater Testkarte starten; USB-Datenkabel direkt am Pi.
-- Unbekanntes Board vor Installation prüfen, XIAO-C3 bestätigen.
-- Flash und Wiedererkennung beobachten; beim Update Identität/Kalibrierung vergleichen.
-- WLAN/TLS-Verbindung bestätigen und Name/Raum zuweisen; Sensorwerte prüfen.
-- USB nach erfolgreicher Einrichtung trennen: Messwerte müssen weiter über WLAN kommen.
-- Fehlerfälle: falsches WLAN, abgezogenes Kabel, fehlender Broker, falsches Board.
-- Ablehnung/Widerruf und Neustart dürfen keine automatische Freigabe erzeugen.
+7. **Name und Raum bewusst festlegen**  
+   Erst jetzt werden Sensorname und Raum/Growbox ausgewählt. Die Oberfläche verlangt eine zusätzliche ausdrückliche Bestätigung, dass **dieser physische Sensor** zum ausgewählten Raum gehört. Ohne diese Bestätigung gibt es keine produktive Raumzuweisung.
 
-## Aktueller bestätigter Stand
+8. **Finaler Einsatzbereit-Check**  
+   Vor `READY` prüft Grow-Central noch einmal:
+   - identischer Public Key/Fingerprint
+   - identische eFuse-Hardware-UID
+   - Kalibrierung vollständig und plausibel
+   - TLS-MQTT-Verbindung aktiv
+   - frischer Netzwerk-Proof
+   - `sensor_ok = true`
+   - Signalqualität mindestens `FAIR`
+   - Name und Raum gespeichert
 
-USB-Aufnahme, MQTT über TLS und Bodenfeuchte-Anzeige wurden auf einem Pi 4 mit Build 369 und Hotfixes bestätigt. Der CA-Transfer muss vollständig sein: aktuelles Backend sendet paketweise und prüft die gespeicherte PEM-Länge. Reale Kalibrierung und Neustart-/Dauertests bleiben offen. Siehe [Sensor-Anleitung](SOIL_SENSOR_GUIDE.md) und [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md).
+   Erst danach lautet der Status **Einsatzbereit**. Jetzt darf der Sensor vom USB getrennt, in den zugewiesenen Raum gebracht und mit der Sensorfläche in das Substrat eingesetzt werden.
+
+## Sicherheitszustände
+
+Ein neu erkannter Sensor bleibt bis zum Abschluss `DISCOVERED`. Produktive Raumdaten werden ausschließlich von `TRUSTED`-Sensoren angenommen. `REJECTED` und `REVOKED` bleiben persistent gespeichert und werden durch erneutes Anstecken oder Rediscovery nicht automatisch aufgehoben.
+
+## Clone-/Vertauschungsschutz
+
+Der aktuelle XIAO-Schutz kombiniert physischen USB-Besitz, frische Nonces, den individuellen P-256-Schlüssel, den öffentlichen Fingerprint und die eFuse-Hardware-UID. Damit werden versehentliche Vertauschungen sowie ein kopierter Geräteschlüssel auf anderer unveränderter Hardware erkannt.
+
+Das ist noch kein Schutz gegen einen Angreifer mit vollständiger physischer Kontrolle, der Firmware und Flashinhalt gezielt extrahiert und manipuliert. Für diesen höheren Schutzgrad sind später Secure Boot, Flash-/NVS-Verschlüsselung oder ein externer Secure Element erforderlich. Grow-Central behauptet deshalb keine absolute Hardware-Unklonbarkeit.
+
+## Kalibrierungsbedeutung
+
+Die AIR-/Nassreferenz ist eine technische relative Feuchteskala und keine bestätigte volumetrische Wassergehaltsmessung. Sie macht den Sensor für Grow-Central reproduzierbar einsatzfähig. Substratabhängige Feinprofile können später ergänzend eingeführt werden, ohne die sichere Erstaufnahme zu ersetzen.
+
+## BLE
+
+BLE bleibt in Firmware 0.5.x als verschlüsselter Recovery-/Servicepfad erhalten. Es ist **nicht mehr der primäre Produktionsweg für die Erstaufnahme eines neuen Sensors**. Ein neuer Sensor wird zuerst vollständig über USB identifiziert, kalibriert, provisioniert und einem Raum zugeordnet.
+
+## Verhalten nach der Freigabe
+
+Nach `Einsatzbereit` arbeitet der Sensor autonom weiter. WLAN- oder MQTT-Ausfall stoppt die Messung nicht. Nach erfolgreicher Verbindung sendet er signierte Messwerte und beantwortet frische Identitäts-Challenges. Eine spätere Änderung von Hardware-ID oder Geräteschlüssel führt nicht zu stiller Wiederaufnahme.
