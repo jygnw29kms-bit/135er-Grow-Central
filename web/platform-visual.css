@@ -141,3 +141,9 @@ html,body{margin:0;background:#061014}.master-shell{width:1546px!important;min-h
 .gc-optional-metric[hidden]{display:none!important}
 html[data-show-co2="true"] .gc-optional-metric[data-optional-metric="co2"]{display:block!important}
 html[data-show-co2="true"] .fm-metrics-six{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+
+/* Long Final-Master navigation: keep lower entries above the fixed room/core footer. */
+@media(min-width:701px){
+  .master-nav{max-height:790px!important;overflow-y:auto!important;overscroll-behavior:contain!important;scrollbar-width:thin!important}
+}
+
