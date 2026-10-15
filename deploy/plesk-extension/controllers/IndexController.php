@@ -65,6 +65,39 @@ class IndexController extends pm_Controller_Action
             ],
         ];
 
+        $coreVersion = is_array($core) ? ($core['version'] ?? $core['api_version'] ?? 'erkannt') : 'nicht erreichbar';
+        $adminVersion = is_array($admin) ? ($admin['version'] ?? 'erkannt') : 'nicht erreichbar';
+        $compatibility = [
+            [
+                'component' => 'Cloud-Core',
+                'expected' => 'V6 kompatibel',
+                'actual' => (string) $coreVersion,
+                'ready' => is_array($core),
+                'note' => 'Öffentliche API, Gerätebindung und Remote-Dienste',
+            ],
+            [
+                'component' => 'Cloud-Administration',
+                'expected' => 'V7',
+                'actual' => (string) $adminVersion,
+                'ready' => is_array($admin) && ((string) $adminVersion === '7' || (string) $adminVersion === '7.0'),
+                'note' => 'Freischaltungen, Pakete, Gerätestatus und Administration',
+            ],
+            [
+                'component' => 'Geräteprotokoll',
+                'expected' => 'gc-device-v1 + Ed25519',
+                'actual' => 'serverseitig vorbereitet',
+                'ready' => is_array($core) && is_array($admin),
+                'note' => 'Pi/ESP müssen ihre Laufzeitversion separat melden',
+            ],
+            [
+                'component' => 'Apple Home / HomeKit',
+                'expected' => 'HomeKit-Diagnose Schema 1',
+                'actual' => 'lokal auf dem Pi',
+                'ready' => true,
+                'note' => 'Cloud bleibt optional; Publikationsstatus wird lokal geführt',
+            ],
+        ];
+
         $this->view->assign([
             'checks' => $checks,
             'core' => $core,
@@ -72,6 +105,7 @@ class IndexController extends pm_Controller_Action
             'stats' => $stats,
             'devices' => is_array($devices) ? $devices : [],
             'settings' => $settings,
+            'compatibility' => $compatibility,
             'adminTokenConfigured' => strlen($token) >= 32,
             'fileManagerUrl' => '/smb/file-manager/list/domainId/8',
             'monitoringUrl' => '/modules/monitoring/',
