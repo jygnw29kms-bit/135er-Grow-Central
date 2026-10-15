@@ -17,11 +17,11 @@ LED_CONTROL_CANDIDATES = (
 )
 
 
-def install(camera_module: Any) -> None:
+def install(camera_module: Any, profile=None) -> None:
     if getattr(camera_module, "_GC_POLICY_INSTALLED", False):
         return
 
-    profile = current_profile()
+    profile = current_profile() if profile is None else profile
     max_width = profile.camera_max_width
     max_height = profile.camera_max_height
 
@@ -29,6 +29,9 @@ def install(camera_module: Any) -> None:
     original_resolve_mode = camera_module._resolve_capture_mode
     original_controls = camera_module._controls_sync
     original_set_control = camera_module._set_control_sync
+
+    camera_module._GC_BASE_PARSE_MJPEG_MODES = original_parse_modes
+    camera_module._GC_BASE_RESOLVE_CAPTURE_MODE = original_resolve_mode
 
     def parse_modes_profiled(text: str):
         modes = original_parse_modes(text)

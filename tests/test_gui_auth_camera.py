@@ -93,7 +93,7 @@ def test_camera_mjpeg_modes_exclude_uncompressed_formats_and_allow_1080p():
             Size: Discrete 320x240
                 Interval: Discrete 0.033s (30.000 fps)
     """
-    assert camera._parse_mjpeg_modes(output) == [
+    assert camera._GC_BASE_PARSE_MJPEG_MODES(output) == [
         {"width": 640, "height": 480, "fps": [10.0, 30.0], "label": "640 × 480"},
         {"width": 1920, "height": 1080, "fps": [5.0], "label": "1920 × 1080"},
     ]
