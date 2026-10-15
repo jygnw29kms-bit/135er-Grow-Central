@@ -476,3 +476,12 @@ Priorität:
 5. aktuellen Onboarding-/Calibration-Code zuerst lesen, bevor etwas geändert wird.
 6. dann bei **Sensor-Kalibrierung + Kamera + Video-UX-Markierungen + HighRes-Assets** fortsetzen.
 7. Final-Master und Mobile-Final-Master nicht verwässern.
+
+## Verbindlich: privates Fortsetzungs-Testimage
+- Das spezielle Testimage fuer den aktuell verwendeten Grow-Central-Test-Pi ist **kein Factory-/Pristine-Image**.
+- Es muss den Zustand **nach erfolgreichem Boot und abgeschlossener Einrichtung** enthalten, damit nach einem Restore auf denselben Pi **keine erneute Ersteinrichtung** notwendig ist.
+- Persistieren: bestehende Grow-Central-Konfiguration, Netzwerkprofile, Sensor-/Kalibrierzustand, lokale Daten sowie die bestehende Remote-Desktop-Commander-Identitaet unter `/home/GrowCentral/.desktop-commander-device` und die dazugehoerige Benutzerumgebung.
+- Ziel: Nach Einschalten/Restore startet Grow-Central direkt produktiv und die bestehende Remote-Verbindung kann wieder anknuepfen, sodass die Arbeit unmittelbar fortgesetzt werden kann.
+- Dieses personalisierte Fortsetzungsimage darf **niemals** in ein oeffentliches GitHub-Artefakt, Release oder Repo committed werden, da es private Konfiguration/Identitaet enthalten kann.
+- Das oeffentliche Release-/Factory-Image bleibt davon getrennt und weiterhin pristine mit normalem First-Boot-Setup.
+- Restore ist fuer **denselben physischen Test-Pi** vorgesehen; nicht parallel auf mehrere Geraete klonen (Identitaets-/Machine-ID-/Remote-Agent-Kollisionen vermeiden).
