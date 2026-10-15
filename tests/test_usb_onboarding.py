@@ -256,7 +256,7 @@ def test_disconnected_job_status_remains_queryable(setup, monkeypatch):
     monkeypatch.setattr(usb,'ports',lambda:[])
     result=client.get('/api/devices/usb').json()
     assert result['devices']==[]
-    assert result['sessions'][0]['state']=='NETWORK'
+    assert result['sessions'][0]['state']=='CALIBRATION'
     assert client.post('/api/devices/usb/port-1/connection').status_code==404
 
 
