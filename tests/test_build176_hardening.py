@@ -21,8 +21,12 @@ def test_v7_proxy_limits_accept_cloud_link_support_bundle_cap():
     agent = read("local/cloud_link/agent.py")
     example = read("deploy/nginx/grow-central-cloud.conf.example")
     assert "32 * 1024 * 1024" in agent
-    assert routing.count("client_max_body_size 40m;") >= 2
-    assert "135ER-GROWCENTRAL-V7-PROXY-LIMIT" in routing
+    # Standalone nginx owns one explicit 40 MiB limit. In Plesk mode Grow
+    # Central must not add a second same-context directive because nginx rejects
+    # duplicate client_max_body_size values and Plesk owns that setting.
+    assert routing.count("client_max_body_size 40m;") == 1
+    assert "clean_legacy_plesk_limit" in routing
+    assert "Plesk owns client_max_body_size" in routing
     assert "client_max_body_size 40m;" in example
 
 
