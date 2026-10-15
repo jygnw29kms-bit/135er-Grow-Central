@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# This installer is intentionally part of the production deploy path: changes
+# here trigger the Grow-Central Cloud/Plesk synchronization workflow.
 SERVICE="${SERVICE:-135er-growcentral-cloud}"
 PLATFORM_SERVICE="${PLATFORM_SERVICE:-135er-growcentral-cloud-platform}"
 APP_USER="${APP_USER:-growcentral-cloud}"
