@@ -403,7 +403,7 @@ async def export_sensor_history(room_id: str, limit: int = Query(default=5000, g
     writer.writerow(columns)
     for row in rows:
         export = {**row, "soil_reference_percent": row.get("soil_moisture_percent"),
-                  "soil_calibration_status": row.get("soil_calibration_status", "")}
+                  "soil_calibration_status": row.get("soil_calibration_status") or ("calibration_required" if row.get("soil_moisture_percent") is not None else "")}
         writer.writerow([_csv_cell(export.get(key)) for key in columns])
     return Response(output.getvalue(), media_type="text/csv", headers={
         "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
