@@ -57,8 +57,8 @@ def version_tuple(value: str) -> tuple[int, ...]:
 def installed_firmware(path: str) -> str | None:
     try:
         with USBSerial(path) as connection:
-            line = connection.command('NET INFO', lambda value: bool(re.search(r'\bfw=\d+(?:\.\d+){1,3}\b', value)), timeout=3)
-        match = re.search(r'\bfw=(\d+(?:\.\d+){1,3})\b', line)
+            line = connection.command('INFO', lambda value: bool(re.search(r'\bfirmware=\d+(?:\.\d+){1,3}\b', value)), timeout=3)
+        match = re.search(r'\bfirmware=(\d+(?:\.\d+){1,3})\b', line)
         return match.group(1) if match else None
     except (OSError, TimeoutError, ValueError, serial.SerialException):
         return None

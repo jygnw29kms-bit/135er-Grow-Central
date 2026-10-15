@@ -61,7 +61,8 @@ class Sensor:
                     encoded = command[7:]
                     self.ca_bytes = 54 + len(encoded) + (len(encoded) + 63) // 64
                     response = 'OK broker CA stored'
-                elif command == 'NET INFO': response = f'GC_NET ca_bytes={self.ca_bytes}'
+                elif command == 'INFO': response = f'Grow-Central Soil Node gc-soil-aabbcc firmware={self.version}'
+                elif command == 'NET INFO': response = f'GC_NET ca_bytes={getattr(self, "ca_bytes", 0)}'
                 elif command.startswith('NET MQTT '): response = 'OK MQTT configuration saved'
                 elif command.startswith('NET WIFI '): response = 'OK WiFi configuration saved'
                 else: response = 'UNKNOWN COMMAND'
@@ -292,3 +293,14 @@ def test_ca_acknowledgement_does_not_accept_truncated_certificate(monkeypatch):
     monkeypatch.setattr(usb.time, 'sleep', lambda delay: None)
     with pytest.raises(ValueError, match='unvollständig'):
         port.command('NET CA ' + 'A' * 492, lambda line: line == 'OK broker CA stored')
+
+
+def test_flash_refuses_firmware_downgrade(setup, monkeypatch):
+    client, sensor, _, _ = setup
+    sensor.version = '9.0.0'
+    calls = []
+    monkeypatch.setattr(usb.subprocess, 'run', lambda *args, **kwargs: calls.append(args))
+    response = client.post('/api/devices/usb/port-1/flash', json={'board':'seeed_xiao_esp32c3','confirmed':True})
+    assert response.status_code == 409
+    assert 'Downgrade blockiert' in response.json()['detail']
+    assert calls == []
