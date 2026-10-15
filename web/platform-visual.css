@@ -146,4 +146,3 @@ html[data-show-co2="true"] .fm-metrics-six{grid-template-columns:repeat(5,minmax
 @media(min-width:701px){
   .master-nav{max-height:790px!important;overflow-y:auto!important;overscroll-behavior:contain!important;scrollbar-width:thin!important}
 }
-
