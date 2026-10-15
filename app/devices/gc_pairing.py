@@ -58,9 +58,24 @@ async def accept_sensor(device_id: str, body: Acceptance):
         raise HTTPException(504, 'Sensor bestätigt seine Identität nicht; Firmware und Verbindung prüfen') from exc
 
 
+def _remove_room_assignment(device_id: str) -> None:
+    # Trust state is authoritative, but stale room assignments would still
+    # inflate room counters and confuse the operator after revoke/reject.
+    from app import rooms
+    global_id = f'growcentral_esp32:{device_id}'
+    with rooms.edit_state() as state:
+        state['assignments'].pop(global_id, None)
+
+
 async def _transition(device_id, status):
     try:
         row = await asyncio.to_thread(TrustStore().transition, device_id, status)
+        # The security decision is persisted first. Cleanup is deliberately
+        # secondary: a room storage failure must never undo a revocation.
+        try:
+            await asyncio.to_thread(_remove_room_assignment, device_id)
+        except OSError:
+            pass
         return {'ok': True, 'device': row}
     except KeyError as exc:
         raise HTTPException(404, 'Sensor nicht gefunden') from exc

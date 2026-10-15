@@ -214,7 +214,12 @@ class SensorSample(BaseModel):
 async def list_rooms():
     state = load_state()
     counts: dict[str, int] = {}
+    trust = TrustStore()
     for device_id, room_id in state["assignments"].items():
+        if device_id.startswith("growcentral_esp32:"):
+            native_id = device_id.split(":", 1)[1]
+            if (trust.get(native_id) or {}).get("status") != "TRUSTED":
+                continue
         counts[room_id] = counts.get(room_id, 0) + 1
     result = []
     for room in state["rooms"]:

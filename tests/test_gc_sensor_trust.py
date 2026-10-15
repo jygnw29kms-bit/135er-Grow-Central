@@ -227,3 +227,32 @@ def test_sensor_acceptance_without_hex_typing_requires_confirmation_and_fresh_ke
     response=client.post(f'/api/devices/trust/{ID}/accept',json={**body,'identity_confirmed':True})
     assert response.status_code==200,response.text
     assert calls==[ID] and store.get(ID)['status']=='TRUSTED'
+
+
+def test_revoke_and_release_remove_native_room_assignment(discovered, monkeypatch, tmp_path):
+    store, key, row = discovered
+    monkeypatch.setattr(rooms, 'DATA_FILE', tmp_path / 'rooms.json')
+    state = rooms.empty_state(); state['rooms'] = [{'id': 'room1', 'name': 'Zelt'}]; rooms.save_state(state)
+    def assign():
+        with rooms.edit_state() as current:
+            current['assignments'][f'growcentral_esp32:{ID}'] = 'room1'
+    accept(store, row, assign)
+    assert rooms.load_state()['assignments'][f'growcentral_esp32:{ID}'] == 'room1'
+    asyncio.run(gc_pairing._transition(ID, 'REVOKED'))
+    assert store.get(ID)['status'] == 'REVOKED'
+    assert f'growcentral_esp32:{ID}' not in rooms.load_state()['assignments']
+    asyncio.run(gc_pairing._transition(ID, 'DISCOVERED'))
+    assert store.get(ID)['status'] == 'DISCOVERED'
+    assert f'growcentral_esp32:{ID}' not in rooms.load_state()['assignments']
+
+
+def test_room_counter_ignores_stale_untrusted_native_assignment(discovered, monkeypatch, tmp_path):
+    store, key, row = discovered
+    monkeypatch.setattr(rooms, 'DATA_FILE', tmp_path / 'rooms.json')
+    state = rooms.empty_state(); state['rooms'] = [{'id': 'room1', 'name': 'Zelt'}]
+    state['assignments'][f'growcentral_esp32:{ID}'] = 'room1'; rooms.save_state(state)
+    result = asyncio.run(rooms.list_rooms())
+    assert result['rooms'][0]['device_count'] == 0
+    accept(store, row)
+    result = asyncio.run(rooms.list_rooms())
+    assert result['rooms'][0]['device_count'] == 1
