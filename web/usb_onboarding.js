@@ -16,6 +16,7 @@
   document.body.append(dialog);
   dialog.querySelector('.usb-close').onclick = () => dialog.close();
   let devices = [], selected = null, renderedState = '', firmwareReady = false, activeRequest = false, polling = false;
+  const autoInspected = new Set();
   const content = dialog.querySelector('.usb-content');
   const error = dialog.querySelector('.usb-error');
   async function api(path, options = {}) {
@@ -207,6 +208,16 @@
     polling = true;
     try {
       const result = await api(''); devices = result.devices || []; firmwareReady = result.firmware_ready;
+      // After a Pi/service reboot USB sessions are intentionally empty. Re-establish
+      // only the signed hardware identity automatically; never flash or provision here.
+      for (const device of devices) {
+        if (device.state === 'DETECTED' && !device.busy && !device.device_id && !autoInspected.has(device.id)) {
+          autoInspected.add(device.id);
+          api('/' + encodeURIComponent(device.id) + '/inspect', {method:'POST'})
+            .then(() => setTimeout(refresh, 250))
+            .catch(e => { status.textContent = 'USB-Identit?tspr?fung: ' + e.message; });
+        }
+      }
       list.replaceChildren();
       for (const device of devices) {
         const row = make('article', null, 'pairing-card'); const info = make('div');
