@@ -2,8 +2,8 @@
 <module>
   <id>grow-central</id>
   <name>135er Grow Central</name>
-  <description>Plesk-Administration für Grow-Central Cloud, Geräte, Pakete und Feature-Freischaltungen.</description>
-  <version>1.1.1</version>
+  <description>Plesk-Administration für Grow-Central Cloud, Geräte, Pakete, HomeKit-/Plattformstatus und Feature-Freischaltungen.</description>
+  <version>1.2.0</version>
   <release>1</release>
   <vendor>135er-Heli</vendor>
   <url>https://grow-central.de/</url>
