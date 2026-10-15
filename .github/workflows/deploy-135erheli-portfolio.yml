@@ -23,7 +23,7 @@ jobs:
           ref: main
           path: site
 
-      - name: Deploy through existing dezender server access
+      - name: Configure Plesk site and deploy
         env:
           SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
@@ -44,18 +44,50 @@ jobs:
           sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/135erheli-site.tar.gz"
 
           REMOTE='set -euo pipefail
-          TARGET="/var/www/vhosts/135erheli.de/httpdocs"
-          mkdir -p "$TARGET"
+          FQDN="135erheli.de"
+          TARGET="/var/www/vhosts/$FQDN/httpdocs"
+
+          command -v plesk >/dev/null
+          echo "== Plesk site before =="
+          plesk bin site --info "$FQDN"
+
+          # Let Plesk own the hosting definition and document root.
+          plesk bin site --update "$FQDN" -hosting true -www-root httpdocs -seo-redirect non-www
+          plesk sbin httpdmng --reconfigure-domain "$FQDN"
+
+          test -d "$TARGET"
+          OWNER="$(stat -c %U "$TARGET")"
+          GROUP="$(stat -c %G "$TARGET")"
+          echo "Plesk webroot: $TARGET ($OWNER:$GROUP)"
+
           rm -rf /tmp/135erheli-stage
           mkdir -p /tmp/135erheli-stage
           tar -xzf /tmp/135erheli-site.tar.gz -C /tmp/135erheli-stage
-          install -m 0755 -d "$TARGET/assets"
-          install -m 0644 /tmp/135erheli-stage/index.html "$TARGET/index.html"
-          install -m 0644 /tmp/135erheli-stage/styles.css "$TARGET/styles.css"
-          install -m 0644 /tmp/135erheli-stage/app.js "$TARGET/app.js"
-          cp -f /tmp/135erheli-stage/assets/* "$TARGET/assets/"
-          chmod 0644 "$TARGET"/assets/*
-          chown --reference="$TARGET" "$TARGET/index.html" "$TARGET/styles.css" "$TARGET/app.js" "$TARGET/assets" "$TARGET"/assets/*
+
+          find "$TARGET" -mindepth 1 -maxdepth 1 \
+            ! -name .well-known \
+            ! -name web.config \
+            -exec rm -rf {} +
+
+          install -m 0755 -o "$OWNER" -g "$GROUP" -d "$TARGET/assets"
+          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/index.html "$TARGET/index.html"
+          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/styles.css "$TARGET/styles.css"
+          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/app.js "$TARGET/app.js"
+          cp -a /tmp/135erheli-stage/assets/. "$TARGET/assets/"
+          chown -R "$OWNER:$GROUP" "$TARGET/assets"
+          find "$TARGET/assets" -type d -exec chmod 0755 {} +
+          find "$TARGET/assets" -type f -exec chmod 0644 {} +
+
+          plesk sbin httpdmng --reconfigure-domain "$FQDN"
+          nginx -t
+          systemctl reload nginx
+
+          echo "== Plesk site after =="
+          plesk bin site --info "$FQDN"
+          ls -la "$TARGET"
+          test -s "$TARGET/index.html"
+          grep -q "JL1976 HOME LAB" "$TARGET/index.html"
+
           rm -rf /tmp/135erheli-stage /tmp/135erheli-site.tar.gz'
 
           B64="$(printf '%s' "$REMOTE" | base64 -w0)"
@@ -70,11 +102,11 @@ jobs:
         run: |
           set -euo pipefail
           for i in {1..12}; do
-            if curl -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
+            if curl --http1.1 -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
               && grep -q 'JL1976 HOME LAB' /tmp/135erheli.html \
-              && curl -LfsS https://135erheli.de/assets/hero-homebrew.svg -o /tmp/hero.svg \
+              && curl --http1.1 -LfsS https://135erheli.de/assets/hero-homebrew.svg -o /tmp/hero.svg \
               && grep -q 'JL1976' /tmp/hero.svg; then
-              echo '135erHeli.de homebrew build is live.'
+              echo '135erHeli.de Plesk site is live.'
               exit 0
             fi
             sleep 5
