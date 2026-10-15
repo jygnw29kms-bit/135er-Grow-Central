@@ -1,26 +1,25 @@
 """Signed Pi -> Grow Central platform status reporting.
 
 The reporter is deliberately optional and local-first. Missing cloud pairing,
-network failures or rejected reports never block local automation/HomeKit.
-It reuses the Grow Central Ed25519 cloud-device identity; it never creates a
-second identity just for status reporting.
+network failures or rejected reports never block local automation/HomeKit. It
+reuses the persistent Grow Central Ed25519 cloud-device identity.
 """
 from __future__ import annotations
 
 import base64
 import hashlib
 import json
-import os
 from pathlib import Path
 import time
 from typing import Any
 
 import httpx
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-IDENTITY_DIR = Path(os.getenv("GC_CLOUD_IDENTITY_DIR", "/var/lib/135er-grow-central/cloud-identity"))
-DEVICE_ID_FILE = Path(os.getenv("GC_CLOUD_DEVICE_ID_FILE", str(IDENTITY_DIR / "device-id")))
-PRIVATE_KEY_FILE = Path(os.getenv("GC_CLOUD_DEVICE_KEY_FILE", str(IDENTITY_DIR / "device-ed25519.key")))
+try:
+    from .device_identity import ensure_identity
+except ImportError:
+    from device_identity import ensure_identity  # type: ignore[no-redef]
+
 VERSION_FILE = Path("/opt/135er-grow-central/VERSION")
 
 
@@ -31,28 +30,19 @@ def _read(path: Path) -> str:
         return ""
 
 
-def _b64decode(value: str) -> bytes:
-    value = value.strip()
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
-
-
 def _b64encode(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
 
 
-def identity() -> tuple[str, Ed25519PrivateKey] | None:
-    """Load the already-paired cloud identity, without generating credentials."""
-    device_id = os.getenv("GC_PLATFORM_DEVICE_ID", "").strip() or _read(DEVICE_ID_FILE)
-    key_text = os.getenv("GC_PLATFORM_PRIVATE_KEY", "").strip() or _read(PRIVATE_KEY_FILE)
-    if len(device_id) != 36 or not key_text:
-        return None
+def identity():
+    """Load the local cryptographic identity only when it is cloud-approved."""
     try:
-        raw = _b64decode(key_text)
-        if len(raw) != 32:
-            return None
-        return device_id, Ed25519PrivateKey.from_private_bytes(raw)
-    except (ValueError, TypeError):
+        loaded = ensure_identity()
+    except (OSError, RuntimeError, ValueError):
         return None
+    if not loaded.device_id:
+        return None
+    return loaded.device_id, loaded.private_key
 
 
 def canonical_report(report: dict[str, Any]) -> str:
@@ -87,11 +77,7 @@ async def send_platform_report(
     local_headers: dict[str, str],
     capabilities: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Send one authenticated compatibility/status report.
-
-    Returns a compact state dictionary instead of raising for normal pairing or
-    connectivity conditions, so callers can keep all local services running.
-    """
+    """Send one authenticated compatibility/status report without blocking local operation."""
     loaded = identity()
     if loaded is None:
         return {"state": "unpaired", "sent": False, "reason": "cloud_device_identity_missing"}
@@ -107,8 +93,7 @@ async def send_platform_report(
         if challenge.status_code == 404:
             return {"state": "unpaired", "sent": False, "reason": "device_not_registered"}
         challenge.raise_for_status()
-        challenge_body = challenge.json()
-        nonce = str(challenge_body["nonce"])
+        nonce = str(challenge.json()["nonce"])
 
         homekit = await _homekit_summary(client, local_api, local_headers)
         report: dict[str, Any] = {
