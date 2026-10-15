@@ -52,3 +52,22 @@ loginctl show-user GrowCentral -p Linger
 ```
 
 Beide Dienste sollen `active (running)` melden und `Linger=yes` soll gesetzt sein.
+
+## Prüfung vor einem vollständigen Code-Update
+
+Workflow: `.github/workflows/test-pi-preflight.yml` (nur `workflow_dispatch`).
+Er vergleicht die installierten Backend-/GUI-Dateien mit dem gewählten Git-Stand,
+prüft Health, Dienststatus, vorhandene Python-Abhängigkeiten und den Status der
+bestehenden eingeschränkten Wartungsschnittstelle. Einstellungen, Zugangsdaten
+und Sensor-/Raumdaten werden nicht ausgegeben oder geändert.
+
+`growcentral-maint deploy-ui` und `scripts/deploy-final-master-ui.sh` sind
+UI-Updatepfade. Sie belegen keine vollständige Installation der neuen Raum-API,
+CSV-Exportlogik und transaktionalen Sensorzuordnung. Vor einem vollständigen
+Testupdate müssen installierter Stand und erlaubter Wartungspfad geprüft werden;
+Anwendungscode und lokale Daten sind vor dem Neustart zu sichern.
+
+Für Start und Auswertung eines Workflows aus Codex wird Zugriff auf
+`api.github.com` sowie geeignete GitHub-Actions-Berechtigung benötigt. Erfolgreicher
+HTTPS-Git-Zugriff allein belegt diese API-Berechtigung nicht. Ein hinzugefügter
+Workflow oder eine gespeicherte Netzwerkfreigabe bedeutet noch kein Pi-Deployment.

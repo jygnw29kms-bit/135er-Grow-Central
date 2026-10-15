@@ -1,0 +1,61 @@
+name: Grow Central Test Pi Update Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: growcentral-test-pi
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect installed code and maintenance access
+    runs-on: [self-hosted, Linux, ARM64, growcentral, test-pi]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify target and service
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          printf 'TARGET=%s\n' "$(hostname)"
+          printf 'SOURCE_COMMIT=%s\n' "$(git rev-parse HEAD)"
+          systemctl show 135er-grow-central.service --property=ActiveState --property=SubState --property=MainPID
+          curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8080/api/health
+      - name: Compare installed application and UI without reading settings or data
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(app/rooms.py app/automation.py app/gui_shell.py app/devices/gc_pairing.py app/provisioning/usb.py web/platform.html web/platform.js web/platform-master.js web/runtime_status.js web/console.html web/console.js web/room_views.js web/mobile.html web/mobile.js)
+          for file in "${files[@]}"; do
+            installed="/opt/135er-grow-central/$file"
+            if [[ ! -r "$installed" ]]; then
+              printf 'MISSING_OR_UNREADABLE %s\n' "$file"
+            elif cmp --silent "$file" "$installed"; then
+              printf 'MATCH %s\n' "$file"
+            else
+              printf 'DIFFERS %s\n' "$file"
+              sha256sum "$file" "$installed"
+            fi
+          done
+          if [[ -x /opt/135er-grow-central/.venv/bin/python ]]; then
+            /opt/135er-grow-central/.venv/bin/python -m pip check
+          fi
+      - name: Inspect existing restricted maintenance bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -x /usr/local/sbin/growcentral-maint ]] && command -v sudo >/dev/null; then
+            if sudo -n /usr/local/sbin/growcentral-maint status; then
+              echo MAINTENANCE_STATUS_AVAILABLE
+            else
+              echo MAINTENANCE_STATUS_DENIED
+            fi
+          else
+            echo MAINTENANCE_BRIDGE_UNAVAILABLE
+          fi
+          echo PREFLIGHT_ONLY_NO_APPLICATION_FILES_CHANGED
