@@ -136,3 +136,53 @@ html,body{margin:0;background:#061014}.master-shell{width:1546px!important;min-h
   body.mobile-nav-open{overflow:hidden!important}
   .master-nav{height:calc(100dvh - 80px)!important;max-height:none!important;min-height:0!important}
 }
+
+/* === FINAL MASTER DESKTOP FLUID v1 === */
+@media (min-width: 701px){
+  html,body{width:100%!important;min-width:0!important;overflow-x:hidden!important}
+  .master-shell{width:100%!important;min-width:0!important;min-height:100vh!important;grid-template-columns:194px minmax(0,1fr)!important}
+  .master-sidebar{width:194px!important;min-height:100vh!important}
+  .master-main{width:auto!important;min-width:0!important;padding:0!important}
+  .master-view,.fm-overview{width:100%!important;max-width:none!important;margin:0!important}
+  .master-topbar{width:100%!important;box-sizing:border-box!important}
+  .fm-hero{width:100%!important;box-sizing:border-box!important;grid-template-columns:minmax(440px,42%) minmax(0,1fr)!important}
+  .fm-hero-cards{grid-template-columns:minmax(190px,1.25fr) minmax(150px,.9fr) minmax(150px,.9fr)!important;max-width:620px;width:min(48vw,620px)!important}
+  .fm-metrics-six{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+  .fm-board-top{grid-template-columns:minmax(0,30fr) minmax(0,36fr) minmax(0,34fr)!important}
+  .fm-board-middle{grid-template-columns:minmax(0,37fr) minmax(0,27fr) minmax(0,36fr)!important}
+  .fm-board-bottom{grid-template-columns:minmax(0,30fr) minmax(0,28fr) minmax(0,19fr) minmax(0,23fr)!important}
+  .fm-board-top,.fm-board-middle,.fm-board-bottom,.fm-metrics-six{width:auto!important;margin-left:14px!important;margin-right:14px!important}
+  .fm-board-top>.master-panel,.fm-board-middle>.master-panel,.fm-board-bottom>.master-panel{min-width:0!important;width:auto!important}
+  .master-two-col{grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr)!important}
+  .master-room-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))!important}
+  .master-camera-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))!important}
+  .provider-grid,#providerGridExtensions{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;gap:10px!important;width:100%!important}
+  #extensions.master-view,#settings.master-view,#devices.master-view,#grow.master-view,#climate.master-view,#irrigation.master-view,#lighting.master-view,#automation.master-view,#recipes.master-view,#growlog.master-view,#camera.master-view,#recordings.master-view,#timelapse.master-view,#users.master-view,#backups.master-view,#updates.master-view{padding:0 18px 28px!important;box-sizing:border-box!important}
+  .master-section-head{width:100%!important;box-sizing:border-box!important}
+  .master-panel{box-sizing:border-box!important}
+}
+
+@media (min-width: 1700px){
+  .master-sidebar{width:220px!important}.master-shell{grid-template-columns:220px minmax(0,1fr)!important}
+  .master-nav button{font-size:11px!important}.master-nav button i{font-size:15px!important}
+  .fm-hero{min-height:235px!important;height:235px!important;padding-left:42px!important;padding-right:42px!important}
+  .hero-copy h1{font-size:52px!important}.hero-copy h2{font-size:20px!important}.hero-copy p{font-size:12px!important}
+  .fm-metrics-six .master-metric{min-height:118px!important;height:118px!important}
+  .fm-board-top>.master-panel{height:255px!important}.live-camera-panel .camera-master-frame{height:188px!important}
+  .fm-board-middle>.master-panel{height:215px!important}.fm-board-bottom>.master-panel{height:194px!important}
+}
+
+/* === FINAL MASTER DESKTOP POLISH v2 === */
+@media (min-width:701px){
+  .fm-topstatus{justify-content:flex-end!important}
+  .master-search{flex:0 0 clamp(300px,24vw,430px)!important}
+  .master-section-head{padding-top:22px!important;padding-bottom:16px!important}
+  #extensions .master-panel,#devices .master-panel,#settings .master-panel{width:100%!important}
+  #extensions .provider-grid,#providerGridExtensions{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;align-items:stretch!important}
+  #extensions .provider-grid>*{min-width:0!important;width:auto!important}
+}
+@media (min-width:1900px){
+  .fm-topstatus{left:auto!important;width:auto!important;right:22px!important}
+  .fm-hero-cards{width:min(44vw,700px)!important;max-width:700px!important}
+  .fm-metrics-six,.fm-board-top,.fm-board-middle,.fm-board-bottom{gap:10px!important}
+}
