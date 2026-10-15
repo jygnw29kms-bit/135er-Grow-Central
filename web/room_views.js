@@ -25,5 +25,6 @@
   document.getElementById('growSelector')?.addEventListener('change',render);
   document.addEventListener('gc:climate-loaded',()=>applyPrimary(failed?null:rooms.find(r=>r.id===document.getElementById('growSelector')?.value)||rooms[0]));
   document.getElementById('refreshBtn')?.addEventListener('click',load);document.getElementById('mRefresh')?.addEventListener('click',load);
+  window.addEventListener('gc:refresh',load);
   load();setInterval(load,60000);
 })();
