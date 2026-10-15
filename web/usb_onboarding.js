@@ -16,6 +16,7 @@
   document.body.append(dialog);
   dialog.querySelector('.usb-close').onclick = () => dialog.close();
   let devices = [], selected = null, renderedState = '', firmwareReady = false, activeRequest = false, polling = false;
+  const autoConnectionAttempted = new Set();
   const autoInspected = new Set();
   const content = dialog.querySelector('.usb-content');
   const error = dialog.querySelector('.usb-error');
@@ -234,6 +235,19 @@
         const current = devices.find(device => device.id === selected.id);
         if (current) { selected = current; renderDialog(); }
         else { const session=(result.sessions||[]).find(item=>item.id===selected.id);if(session){selected={...selected,...session};renderDialog();}error.textContent='USB-Gerät wurde getrennt. Wieder an den Pi anschließen.';content.querySelectorAll('button').forEach(b=>{b.disabled=true;});renderedState=''; }
+      }
+      for (const device of devices) {
+        const networkReady = device.state === 'NETWORK' && device.device_id && device.wifi_configured === true && device.mqtt_configured === true && device.mqtt_connected === true && device.ca_configured === true && !device.busy;
+        if (networkReady && !autoConnectionAttempted.has(device.id)) {
+          autoConnectionAttempted.add(device.id);
+          try {
+            await api('/' + encodeURIComponent(device.id) + '/connection', {method:'POST'});
+          } catch (e) {
+            autoConnectionAttempted.delete(device.id);
+            status.textContent = e.message;
+          }
+        }
+        if (device.state === 'ASSIGN' || device.state === 'READY') autoConnectionAttempted.delete(device.id);
       }
       window.dispatchEvent(new CustomEvent('gc:usb-sessions', {detail:devices}));
     } catch (e) { status.textContent = e.message; }
