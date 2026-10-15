@@ -1,4 +1,4 @@
-"""Read-only cloud-link status for the local GUI."""
+"""Cloud-link status and local device-code pairing API for the Grow Central GUI."""
 from __future__ import annotations
 
 import asyncio
@@ -9,13 +9,21 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from app.cloud_link_state import connection_state
 from local.cloud_link.cloud_url import https_origin
+from local.cloud_link.device_identity import ensure_identity
+from local.cloud_link.device_pairing import clear_state, load_state, poll_pairing, start_pairing
 
 router = APIRouter(prefix="/api/cloud", tags=["cloud-status"])
 ENV_FILE = Path("/opt/135er-grow-central/local/cloud_link/.env")
 RUNTIME_FILE = Path("/var/lib/135er-grow-central/cloud-link-status.json")
+
+
+class PairStartRequest(BaseModel):
+    name: str = Field(default="GrowCentral", min_length=1, max_length=120)
 
 
 def _read_env() -> dict[str, str]:
@@ -30,6 +38,17 @@ def _read_env() -> dict[str, str]:
     except OSError:
         pass
     return values
+
+
+def _cloud_origin() -> str:
+    env = _read_env()
+    origin = env.get("GC_CLOUD_URL", os.getenv("GC_CLOUD_URL", "")).rstrip("/")
+    if not origin:
+        raise HTTPException(status_code=503, detail="Cloud-Adresse fehlt")
+    try:
+        return https_origin(origin)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="Cloud-Adresse ist kein gültiger HTTPS-Ursprung") from exc
 
 
 def _read_runtime() -> dict:
@@ -51,6 +70,26 @@ def _service_active() -> bool:
     except (OSError, subprocess.TimeoutExpired):
         return False
     return result.returncode == 0
+
+
+def _pairing_public_state() -> dict:
+    try:
+        identity = ensure_identity()
+    except (OSError, RuntimeError, ValueError):
+        return {"status": "identity_unavailable"}
+    if identity.device_id:
+        return {"status": "paired", "device_id": identity.device_id}
+    pending = load_state()
+    if not pending:
+        return {"status": "not_started"}
+    return {
+        "status": str(pending.get("status", "authorization_pending")),
+        "user_code": pending.get("user_code"),
+        "verification_uri": pending.get("verification_uri"),
+        "verification_uri_complete": pending.get("verification_uri_complete"),
+        "expires_at": pending.get("expires_at"),
+        "interval": pending.get("interval", 5),
+    }
 
 
 @router.get("/status")
@@ -110,5 +149,44 @@ async def cloud_status():
         "closed_test_mode": env.get("GC_CLOUD_TEST_MODE", os.getenv("GC_CLOUD_TEST_MODE", "false")).lower() == "true",
         "latency_ms": latency_ms,
         "detail": detail,
+        "pairing": _pairing_public_state(),
         "runtime": {**runtime, "cloud_origin": origin},
     }
+
+
+@router.post("/pair/start")
+async def cloud_pair_start(body: PairStartRequest):
+    origin = _cloud_origin()
+    try:
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            return await start_pairing(client, cloud_url=origin, name=body.name)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail="Cloud-Pairing konnte nicht gestartet werden") from exc
+    except (httpx.HTTPError, OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Cloud-Pairing ist derzeit nicht verfügbar") from exc
+
+
+@router.get("/pair/status")
+async def cloud_pair_status():
+    public = _pairing_public_state()
+    if public.get("status") in {"paired", "not_started", "identity_unavailable"}:
+        return public
+    origin = _cloud_origin()
+    try:
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            return await poll_pairing(client, cloud_url=origin)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail="Cloud-Pairing-Status konnte nicht geprüft werden") from exc
+    except (httpx.HTTPError, OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Cloud-Pairing-Status ist derzeit nicht verfügbar") from exc
+
+
+@router.post("/pair/cancel")
+async def cloud_pair_cancel():
+    # Cancels only an unapproved local device-code flow. An already approved
+    # installation must be revoked through the cloud account/device controls.
+    identity = ensure_identity()
+    if identity.device_id:
+        raise HTTPException(status_code=409, detail="Bereits verbundene Installation muss in der Cloud widerrufen werden")
+    clear_state()
+    return {"ok": True, "status": "not_started"}
