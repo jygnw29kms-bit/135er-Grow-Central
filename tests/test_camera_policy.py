@@ -1,11 +1,11 @@
-from types import SimpleNamespace
-
 import pytest
 
-from app import camera
+from app import camera, camera_policy
+from shared.hardware_profile import FULL_STANDARD
 
 
-def test_camera_policy_allows_full_support_1080p():
+def test_camera_policy_allows_full_support_1080p(monkeypatch):
+    monkeypatch.setattr(camera_policy, "current_profile", lambda: FULL_STANDARD)
     sample = """
 [0]: 'MJPG'
     Size: Discrete 640x480
@@ -20,10 +20,11 @@ def test_camera_policy_allows_full_support_1080p():
 
 
 def test_camera_policy_allows_direct_1080p_on_full_support(monkeypatch):
-    devices=[{"id":"cam0","device":"/dev/video0","mjpeg_modes":[{"width":1920,"height":1080,"fps":[30.0],"label":"1920 × 1080"}]}]
-    monkeypatch.setattr(camera,"_discover_devices_sync",lambda:(devices,0))
-    _,_,mode=camera._resolve_capture_mode("cam0",1920,1080)
-    assert (mode["width"],mode["height"])==(1920,1080)
+    monkeypatch.setattr(camera_policy, "current_profile", lambda: FULL_STANDARD)
+    devices = [{"id": "cam0", "device": "/dev/video0", "mjpeg_modes": [{"width": 1920, "height": 1080, "fps": [30.0], "label": "1920 × 1080"}]}]
+    monkeypatch.setattr(camera, "_discover_devices_sync", lambda: (devices, 0))
+    _, _, mode = camera._resolve_capture_mode("cam0", 1920, 1080)
+    assert (mode["width"], mode["height"]) == (1920, 1080)
 
 
 def test_camera_policy_is_installed_once():
