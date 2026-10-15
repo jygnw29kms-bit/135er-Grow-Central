@@ -4,7 +4,7 @@ from app import camera as _camera
 from app.camera_policy import install as _install_camera_policy
 from app.camera import router as camera_router
 from app.camera_led import install as install_camera_led
-from app.automation import router as automation_router
+from app.automation import router as automation_router, install as install_automation
 from app.recipes import router as recipes_router
 from app.timelapse import router as timelapse_router
 from app.auth_middleware import GuiAuthMiddleware
@@ -48,6 +48,7 @@ app.include_router(maintenance_router)
 app.include_router(calibration_router)
 install_mdns_alias(app)
 install_rooms(app)
+install_automation(app)
 
 install_observer(app)
 install_ble_observer(app)

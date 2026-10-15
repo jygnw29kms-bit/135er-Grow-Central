@@ -13,7 +13,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false,lightCommands=[];
+ let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false,lightCommands=[],automationRuns=[];
  let runtimeHealth={ok:true,state:'ok',provisioned:true,warnings:[],blockers:[],cloud:{enabled:false},device_runtime:{provider_count:10}};
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url()),pathname=url.pathname;
@@ -25,10 +25,13 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    if(pathname==='/api/v1/rooms'){
     if(route.request().method()==='POST'){if(failSave)return route.fulfill({status:503,json:{detail:'Test: Dienst nicht verfügbar'}});savedRoom=route.request().postDataJSON();data={...savedRoom,id:'room3'};rooms.push(data)}else data={rooms};
    }else if(pathname==='/api/v1/rooms/capture')data={ok:true,rooms_captured:captures};
-   else if(pathname.endsWith('/sensors')){if(delayFirst&&pathname.includes('room1'))await new Promise(r=>setTimeout(r,300));const base=pathname.includes('room2')?19:24;data={samples:[{...sample(base-1),humidity_percent:52,power_w:80},{...sample(base),humidity_percent:55,power_w:95},{...sample(base+1),humidity_percent:58,power_w:110}]}}
+   else if(pathname.endsWith('/sensors')){if(delayFirst&&pathname.includes('room1'))await new Promise(r=>setTimeout(r,300));const base=pathname.includes('room2')?19:24;data={samples:[{...sample(base-1),humidity_percent:52,power_w:80},{...sample(base+1),humidity_percent:58,power_w:110},{...sample(base),humidity_percent:55,power_w:95}]}}
    else if(pathname.match(/rooms\/[^/]+\/devices$/))data={devices:[{id:'growcentral_esp32:soil1',name:'Substratsonde',provider_id:'growcentral_esp32',assigned:true,online:true,state:{soil_moisture:42.5,meta:{raw:2710,filtered_raw:2709.5,quality:'EXCELLENT',moisture_state:'AIR_DRY',air_raw:3000,water_raw:1200,rssi_dbm:-60,uptime_ms:3600000,firmware:'<img src=x onerror=alert(1)>',sensor_ok:true,min:0}}}]};
    else if(pathname.endsWith('/journal'))data={entries:[]};
    else if(pathname.endsWith('/plants'))data={plants:[]};
+   else if(pathname==='/api/v1/automations/runtime')data={scheduler:'running',last_runs:{}};
+   else if(pathname==='/api/v1/automations/gc-1/run'&&route.request().method()==='POST'){automationRuns.push('gc-1');data={ok:true,automation_id:'gc-1',confirmed:true,on:true};}
+   else if(pathname==='/api/v1/automations'&&route.request().method()==='GET')data={automations:[{id:'gc-1',name:'Test Zeitregel',trigger:'time',trigger_value:'08:00',device_id:'fritz-lampe',ain:'08761 0001',on:true,enabled:true}],execution_status:'time_and_manual'};
    else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness'],model:'Synthetic'}],errors:[]};
    else if(pathname==='/api/devices/mqtt/lamp1/state')data={state:{online:true,power:false,brightness:50}};
    else if(pathname==='/api/devices/mqtt/lamp1/command'&&route.request().method()==='POST'){lightCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
@@ -85,6 +88,11 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  await page.locator('.gc-light-brightness').evaluate(el=>{el.value='70';el.dispatchEvent(new Event('change',{bubbles:true}))});
  await page.waitForTimeout(100);
  assert(lightCommands.some(c=>c.capability==='brightness'&&c.value===70),'lighting page writes confirmed brightness command');
+ await page.locator('#mainNav [data-view=automation]').click();
+ await page.locator('.gc-auto-run').first().waitFor({state:'visible'});
+ await page.locator('.gc-auto-run').first().click();
+ await page.waitForTimeout(100);
+ assert.deepEqual(automationRuns,['gc-1'],'manual automation action reaches confirmed run endpoint');
  await page.locator('#overviewClimateHistory svg').waitFor({state:'attached'});
  assert.equal(await page.locator('#overviewClimateHistory polyline').count(),2,'overview climate history renders temperature and humidity');
  await page.locator('#overviewEnergyHistory svg').waitFor({state:'attached'});
