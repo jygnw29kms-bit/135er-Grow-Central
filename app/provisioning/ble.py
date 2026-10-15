@@ -23,6 +23,7 @@ from app.security import require_write_auth
 from app.devices.gc_identity import verify_message
 from app.devices.gc_esp32_protocol import parse_announcement
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import CalibrationStore
 from .broker import request_broker
 
 SERVICE_UUID='7b0d0001-6f2a-4c2d-9d8a-135e2c000001'
@@ -203,6 +204,11 @@ async def provision(device_id:str,body:ProvisionRequest):
     existing=await asyncio.to_thread(TrustStore().get,device_id)
     if not existing or existing['status']!='DISCOVERED': raise HTTPException(409,'Sensor muss auf „Neu – Entscheidung offen“ stehen.')
     rooms.room_or_404(rooms.load_state(),body.room_id)
+    metadata=existing.get('metadata') or {}
+    if 'soil_moisture' in metadata.get('capabilities',[]):
+        calibration=await asyncio.to_thread(CalibrationStore().get,device_id)
+        if not calibration or not calibration.get('valid') or calibration.get('fingerprint')!=existing.get('fingerprint'):
+            raise HTTPException(409,'Neue Bodenfeuchtesensoren zuerst vollständig per USB prüfen und kalibrieren; BLE ist nur Recovery.')
     nonce=secrets.token_hex(32);private=ec.generate_private_key(ec.SECP256R1())
     public=private.public_key().public_bytes(serialization.Encoding.X962,serialization.PublicFormat.UncompressedPoint)
     channel=_Channel()
@@ -237,6 +243,12 @@ async def provision(device_id:str,body:ProvisionRequest):
         from app.devices.runtime import runtime
         network_proof=await runtime.get('growcentral_esp32').prove_identity(device_id)
         if network_proof.public_key!=existing['public_key']: raise PermissionError('network identity changed')
+        if 'soil_moisture' in metadata.get('capabilities',[]):
+            state=network_proof.body.get('state') or {}; meta=state.get('meta') if isinstance(state,dict) else {}
+            firmware=meta.get('firmware') if isinstance(meta,dict) else metadata.get('firmware')
+            await asyncio.to_thread(CalibrationStore().require_valid,device_id,fingerprint=existing.get('fingerprint'),public_key=network_proof.public_key,hardware_uid=network_proof.body.get('hardware_uid'),firmware_version=firmware)
+            if not (network_proof.body.get('calibration') or {}).get('ready'):
+                raise PermissionError('sensor calibration no longer valid')
         def assign():
             with rooms.edit_state() as state:
                 rooms.room_or_404(state,body.room_id)

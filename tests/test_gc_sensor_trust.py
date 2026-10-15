@@ -12,12 +12,14 @@ from app.devices.gc_identity import verify_message
 from app.devices.gc_trust import TrustStore
 from app.devices.gc_esp32_protocol import parse_announcement, device_topic
 from app.devices.gc_esp32 import GrowCentralEsp32Provider
+from app.devices.gc_calibration import CalibrationStore
 from app.devices import gc_pairing
 from app.security import require_write_auth
 from app import rooms
 
 ID='gc-soil-test'
-ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','capabilities':['soil_moisture']}
+HARDWARE_UID='0011223344556677'
+ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
 
 def packet(key, kind='announce', seq=1, body=None, device_id=ID):
     raw=json.dumps({'device_id':device_id,'kind':kind,'seq':seq,'body':ANNOUNCE if body is None else body},separators=(',',':'))
@@ -27,9 +29,14 @@ def packet(key, kind='announce', seq=1, body=None, device_id=ID):
 @pytest.fixture
 def discovered(tmp_path,monkeypatch):
     monkeypatch.setenv('GC_DEVICE_TRUST_DB',str(tmp_path/'trust.db'))
+    monkeypatch.setenv('GC_CALIBRATION_DB',str(tmp_path/'calibration.db'))
     key=ec.generate_private_key(ec.SECP256R1());message=verify_message(packet(key),kind='announce')
     store=TrustStore();row=store.discover(parse_announcement(json.dumps(ANNOUNCE)),message)
     return store,key,row
+
+
+def add_calibration(row):
+    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
 
 def accept(store,row,assign=lambda:None):
     return store.accept(ID,name='Topf links',room_id='room1',fingerprint=row['fingerprint'][-16:],proved_key=row['public_key'],assign=assign)
@@ -109,7 +116,7 @@ def test_unauthorized_state_never_contacts_broker(discovered,monkeypatch):
 
 @pytest.mark.parametrize("value", [42, None, 101, float("nan"), True, "42"])
 def test_provider_uses_live_nonce_and_ignores_replayed_proof(discovered,monkeypatch,value):
-    store,key,row=discovered;accept(store,row);provider=GrowCentralEsp32Provider();calls=[]
+    store,key,row=discovered;accept(store,row);add_calibration(row);provider=GrowCentralEsp32Provider();calls=[]
     class FakeClient:
         async def __aenter__(self):return self
         async def __aexit__(self,*args):pass
@@ -121,11 +128,11 @@ def test_provider_uses_live_nonce_and_ignores_replayed_proof(discovered,monkeypa
         def messages(self):
             async def stream():
                 for n,seq in [('replayed',2),(self.nonce,3)]:
-                    yield SimpleNamespace(topic=device_topic(provider.root,ID,'proof'),payload=packet(key,'proof',seq=seq,body={'nonce':n,'state':{'soil_moisture':value}}))
+                    yield SimpleNamespace(topic=device_topic(provider.root,ID,'proof'),payload=packet(key,'proof',seq=seq,body={'nonce':n,'hardware_uid':HARDWARE_UID,'calibration':ANNOUNCE['calibration'],'state':{'soil_moisture':value,'meta':{'firmware':'0.3.0','sensor_ok':True,'quality':'GOOD'}}}))
             return stream()
     monkeypatch.setattr(provider,'_client',FakeClient)
     if value is None or type(value) is int and value == 42:
-        assert asyncio.run(provider.state(ID))=={'soil_moisture':value,'meta':{},'online':True}
+        result=asyncio.run(provider.state(ID)); assert result['soil_moisture']==value and result['meta']['calibration_status']=='valid' and result['online'] is True
     else:
         with pytest.raises(ValueError):asyncio.run(provider.state(ID))
     assert calls[0][0]=='subscribe' and calls[1][0]=='publish'
@@ -133,13 +140,13 @@ def test_provider_uses_live_nonce_and_ignores_replayed_proof(discovered,monkeypa
 
 
 def test_manual_accept_api_requires_name_room_proof_and_authorization(discovered,monkeypatch,tmp_path):
-    store,key,row=discovered;monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
+    store,key,row=discovered;add_calibration(row);monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
     state=rooms.empty_state();state['rooms']=[{'id':'room1','name':'Zelt'}];rooms.save_state(state)
     app=FastAPI();app.include_router(gc_pairing.router)
     body={'name':'Topf links','room_id':'room1','fingerprint_confirmation':row['fingerprint'][-16:]}
     assert TestClient(app).post(f'/api/devices/trust/{ID}/accept',json=body).status_code in (401,503)
     app.dependency_overrides[require_write_auth]=lambda:None
-    async def prove(device_id):return verify_message(packet(key,'proof',seq=2,body={'nonce':'fresh','state':{}}),kind='proof')
+    async def prove(device_id):return verify_message(packet(key,'proof',seq=2,body={'nonce':'fresh','hardware_uid':HARDWARE_UID,'calibration':ANNOUNCE['calibration'],'state':{'meta':{'firmware':'0.3.0','sensor_ok':True,'quality':'GOOD'}}}),kind='proof')
     from app.devices.runtime import runtime
     monkeypatch.setattr(runtime.get('growcentral_esp32'),'prove_identity',prove)
     client=TestClient(app)
@@ -208,7 +215,7 @@ def test_legacy_native_alias_cannot_bypass_trust_for_room_history(discovered,mon
 
 
 def test_sensor_acceptance_without_hex_typing_requires_confirmation_and_fresh_key(discovered, monkeypatch, tmp_path):
-    store,key,row=discovered
+    store,key,row=discovered;add_calibration(row)
     monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json')
     state=rooms.empty_state();state['rooms']=[{'id':'room1','name':'Test'}];rooms.save_state(state)
     app=FastAPI();app.include_router(gc_pairing.router);app.dependency_overrides[require_write_auth]=lambda:None
@@ -216,7 +223,7 @@ def test_sensor_acceptance_without_hex_typing_requires_confirmation_and_fresh_ke
     calls=[]
     async def prove(device_id):
         calls.append(device_id)
-        return verify_message(packet(key,'proof',seq=2,body={'nonce':'fresh','state':{}}),kind='proof')
+        return verify_message(packet(key,'proof',seq=2,body={'nonce':'fresh','hardware_uid':HARDWARE_UID,'calibration':ANNOUNCE['calibration'],'state':{'meta':{'firmware':'0.3.0','sensor_ok':True,'quality':'GOOD'}}}),kind='proof')
     monkeypatch.setattr(runtime.get('growcentral_esp32'),'prove_identity',prove)
     client=TestClient(app)
     body={'name':'Boden','room_id':'room1','fingerprint_confirmation':row['fingerprint']}

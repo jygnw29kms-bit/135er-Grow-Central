@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from app.provisioning import usb
 from app.devices.gc_identity import verify_message
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import CalibrationStore
 from app import rooms
 
 
@@ -90,6 +91,7 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(usb, 'ports', lambda: [{'id':'port-1','port':sensor.path,'label':'USB test','serial':'fixture'}])
     monkeypatch.setattr(usb, 'manager', usb.USBManager())
     monkeypatch.setenv('GC_DEVICE_TRUST_DB', str(tmp_path / 'trust.db'))
+    monkeypatch.setenv('GC_CALIBRATION_DB', str(tmp_path / 'calibration.db'))
     monkeypatch.setattr(rooms, 'DATA_FILE', tmp_path/'rooms.json')
     rooms.save_state({**rooms.empty_state(), 'rooms':[{'id':'room-1','name':'Test room'}]})
     firmware = tmp_path/'firmware'
@@ -140,6 +142,8 @@ def test_complete_real_serial_workflow(setup):
     assert wait(client)['state'] == 'CALIBRATION'
     assert client.post('/api/devices/usb/port-1/calibrate/wet').status_code == 200
     assert wait(client)['state'] == 'NETWORK'
+    calibration = CalibrationStore().get('gc-soil-aabbcc')
+    assert calibration and calibration['valid'] and calibration['hardware_uid'] == sensor.hardware_uid
     response = client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'})
     assert response.status_code == 200
     state = wait(client)

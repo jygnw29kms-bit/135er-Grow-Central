@@ -24,10 +24,12 @@ from app import rooms
 from app.devices.gc_esp32 import GrowCentralEsp32Provider
 from app.devices import gc_pairing
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import CalibrationStore
 from app.devices.runtime import runtime
 from app.security import require_write_auth
 
 ID='gc-soil-tls-test'
+HARDWARE_UID='0011223344556677'
 BROKER=os.getenv('GC_TEST_MOSQUITTO') or shutil.which('mosquitto')
 PASSWORD_TOOL=os.getenv('GC_TEST_MOSQUITTO_PASSWD') or shutil.which('mosquitto_passwd')
 
@@ -39,7 +41,7 @@ def signed(key,kind,sequence,body,device_id=ID):
 
 
 def announce(device_id=ID):
-    return {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':device_id,'name':'TLS Software Sensor','device_class':'sensor','firmware':'0.3.0','model':'test-node','capabilities':['soil_moisture']}
+    return {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':device_id,'name':'TLS Software Sensor','device_class':'sensor','firmware':'0.3.0','model':'test-node','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
 
 
 @pytest.mark.skipif(not BROKER or not PASSWORD_TOOL,reason='native Mosquitto tools required for TLS integration')
@@ -71,6 +73,7 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
     conf=tmp_path/'mosquitto.conf';conf.write_text(f'listener {port} 127.0.0.1\nallow_anonymous false\npassword_file {passwords}\nacl_file {acl}\ncafile {tmp_path/"ca.crt"}\ncertfile {tmp_path/"server.crt"}\nkeyfile {tmp_path/"server.key"}\npersistence false\n')
     monkeypatch.setenv('GC_DEVICE_TRUST_DB',str(tmp_path/'trust.db'))
+    monkeypatch.setenv('GC_CALIBRATION_DB',str(tmp_path/'calibration.db'))
     monkeypatch.setenv('GC_MQTT_HOST','127.0.0.1');monkeypatch.setenv('GC_MQTT_PORT',str(port));monkeypatch.setenv('GC_MQTT_TLS','true');monkeypatch.setenv('GC_MQTT_CA_FILE',str(tmp_path/'ca.crt'));monkeypatch.setenv('GC_MQTT_USERNAME','growcentral');monkeypatch.setenv('GC_MQTT_PASSWORD',backend_password)
     monkeypatch.setattr(rooms,'DATA_FILE',tmp_path/'rooms.json');room_state=rooms.empty_state();room_state['rooms']=[{'id':'room1','name':'Test room'}];rooms.save_state(room_state)
     provider=GrowCentralEsp32Provider();original=runtime.get;monkeypatch.setattr(runtime,'get',lambda name:provider if name=='growcentral_esp32' else original(name))
@@ -100,6 +103,8 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
             discovered=await provider.discover(timeout=.15)
             assert [d.native_id for d in discovered]==[ID]
             assert discovered[0].metadata['trust_status']=='DISCOVERED'
+            trust_row=TrustStore().get(ID)
+            CalibrationStore().record(device_id=ID,fingerprint=trust_row['fingerprint'],public_key=trust_row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'EXCELLENT'})
             with pytest.raises(PermissionError):await provider.state(ID)
             sequence=1
             async def respond():
@@ -107,7 +112,7 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
                 async for request in node.messages:
                     sequence+=1
                     nonce=json.loads(request.payload)['nonce']
-                    await node.publish(f'growcentral/v1/devices/{ID}/proof',signed(key,'proof',sequence,{'nonce':nonce,'state':{'soil_moisture':42.5,'meta':{'raw':2710,'sensor_ok':True,'quality':'EXCELLENT'}}}),qos=1,retain=False)
+                    await node.publish(f'growcentral/v1/devices/{ID}/proof',signed(key,'proof',sequence,{'nonce':nonce,'hardware_uid':HARDWARE_UID,'calibration':announce()['calibration'],'state':{'soil_moisture':42.5,'meta':{'raw':2710,'sensor_ok':True,'quality':'EXCELLENT','firmware':'0.3.0'}}}),qos=1,retain=False)
             task=asyncio.create_task(respond())
             try:
                 app=FastAPI();app.include_router(gc_pairing.router);app.dependency_overrides[require_write_auth]=lambda:None

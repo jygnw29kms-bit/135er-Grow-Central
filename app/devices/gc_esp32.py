@@ -26,6 +26,7 @@ from .gc_esp32_protocol import (
 from .models import Capability
 from .gc_identity import verify_message
 from .gc_trust import TrustStore
+from .gc_calibration import CalibrationStore
 from .provider import DeviceHealth, DeviceProvider, DiscoveredDevice
 
 
@@ -153,6 +154,18 @@ class GrowCentralEsp32Provider(DeviceProvider):
         if isinstance(diagnostics, dict):
             fields = {"raw", "median", "filtered_raw", "min", "max", "sigma", "quality", "moisture_state", "sensor_ok", "air_raw", "water_raw", "rssi_dbm", "uptime_ms", "firmware"}
             state["meta"] = {k: v for k, v in diagnostics.items() if k in fields and isinstance(v, (str, int, float, bool)) and (not isinstance(v, float) or math.isfinite(v))}
+        firmware = state.get('meta', {}).get('firmware') if isinstance(state.get('meta'), dict) else None
+        try:
+            calibration = CalibrationStore().require_valid(native_id, fingerprint=trusted.get('fingerprint'), public_key=proof.public_key, hardware_uid=proof.body.get('hardware_uid'), firmware_version=firmware)
+            if not (proof.body.get('calibration') or {}).get('ready'):
+                CalibrationStore().invalidate(native_id, 'sensor reports calibration incomplete')
+                raise PermissionError('sensor calibration incomplete')
+            state.setdefault('meta', {})['calibration_status'] = 'valid'
+            state['meta']['calibrated_at'] = calibration['calibrated_at']
+        except PermissionError:
+            if 'soil_moisture' in state:
+                state['soil_moisture'] = None
+            state.setdefault('meta', {})['calibration_status'] = 'required'
         state["online"] = True
         return state
 

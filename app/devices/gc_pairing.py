@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, StrictBool, field_validator
 from app.security import require_write_auth
 from .gc_trust import TrustStore
+from .gc_calibration import CalibrationStore
 
 router = APIRouter(prefix='/api/devices/trust', tags=['sensor-pairing'])
 
@@ -25,7 +26,7 @@ class Acceptance(BaseModel):
 @router.get('', dependencies=[Depends(require_write_auth)])
 async def list_sensors():
     return {'devices': await asyncio.to_thread(TrustStore().list),
-            'provisioning': {'ble_available': True, 'credential_transfer': 'ble_or_usb', 'ble_setup': '/api/devices/ble', 'usb_setup': '/api/devices/usb'}}
+            'provisioning': {'primary': 'usb', 'ble_available': True, 'credential_transfer': 'usb_primary_ble_recovery', 'ble_setup': '/api/devices/ble', 'usb_setup': '/api/devices/usb'}}
 
 
 @router.post('/{device_id}/accept', dependencies=[Depends(require_write_auth)])
@@ -41,6 +42,16 @@ async def accept_sensor(device_id: str, body: Acceptance):
         room_state = rooms.load_state()
         rooms.room_or_404(room_state, body.room_id)
         proof = await runtime.get('growcentral_esp32').prove_identity(device_id)
+        metadata = (expected or {}).get('metadata') or {}
+        if 'soil_moisture' in metadata.get('capabilities', []):
+            state = proof.body.get('state') or {}
+            meta = state.get('meta') if isinstance(state, dict) else {}
+            firmware = meta.get('firmware') if isinstance(meta, dict) else metadata.get('firmware')
+            CalibrationStore().require_valid(device_id, fingerprint=(expected or {}).get('fingerprint'),
+                public_key=proof.public_key, hardware_uid=proof.body.get('hardware_uid'), firmware_version=firmware)
+            if not (proof.body.get('calibration') or {}).get('ready'):
+                CalibrationStore().invalidate(device_id, 'sensor reports calibration incomplete')
+                raise PermissionError('Bodenfeuchtesensor muss zuerst den USB-Kalibrierablauf vollständig abschließen.')
         def assign():
             with rooms.edit_state() as current:
                 rooms.room_or_404(current, body.room_id)
@@ -112,6 +123,10 @@ async def reset_sensor_identity(device_id: str, body: IdentityReset):
             if not body.identity_confirmed or not expected or confirmation != expected['fingerprint']:
                 raise PermissionError('Zurücksetzen der bisherigen Identität ausdrücklich bestätigen.')
         row = await asyncio.to_thread(TrustStore().reset_identity, device_id, confirmation[-16:])
+        try:
+            await asyncio.to_thread(CalibrationStore().invalidate, device_id, 'device identity reset')
+        except OSError:
+            pass
         return {'ok': True, 'device': row}
     except KeyError as exc:
         raise HTTPException(404, 'Sensor nicht gefunden') from exc

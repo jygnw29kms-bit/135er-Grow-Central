@@ -403,7 +403,7 @@ async def export_sensor_history(room_id: str, limit: int = Query(default=5000, g
     writer.writerow(columns)
     for row in rows:
         export = {**row, "soil_reference_percent": row.get("soil_moisture_percent"),
-                  "soil_calibration_status": "calibration_required" if row.get("soil_moisture_percent") is not None else ""}
+                  "soil_calibration_status": row.get("soil_calibration_status", "")}
         writer.writerow([_csv_cell(export.get(key)) for key in columns])
     return Response(output.getvalue(), media_type="text/csv", headers={
         "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
@@ -462,7 +462,12 @@ async def capture_room_sensors_once() -> int:
                 values = [value for row in states if (value := _measurement(row, *arguments)) is not None]
                 total = sum(values)
                 payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
-            if all(value is None for value in payload.values()):
+            calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
+            if any(value == 'valid' for value in calibration_states):
+                payload['soil_calibration_status'] = 'valid'
+            elif any(value == 'required' for value in calibration_states):
+                payload['soil_calibration_status'] = 'required'
+            if all(value is None for key, value in payload.items() if key != 'soil_calibration_status'):
                 continue
             append_sensor(state, room["id"], {**payload, "source": "assigned-devices"})
             count += 1

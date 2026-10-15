@@ -26,6 +26,7 @@ from app.audit import append_audit
 from app.devices.gc_identity import verify_message
 from app.devices.gc_esp32_protocol import parse_announcement
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import CalibrationStore
 from .broker import request_broker
 
 class USBRoute(APIRoute):
@@ -313,6 +314,7 @@ class USBManager:
             if session.air_raw is None or session.wet_raw is None or session.air_raw <= session.wet_raw + 100:
                 raise ValueError('Kalibrierwerte sind nicht plausibel; Kalibrierung wiederholen.')
             session.state, session.message = 'NETWORK', 'Kalibrierung vollständig und plausibel. Jetzt WLAN/TLS einrichten.'
+            CalibrationStore().record(device_id=session.device_id, fingerprint=session.fingerprint, public_key=session.public_key, hardware_uid=session.hardware_uid, firmware_version=session.firmware, air_raw=session.air_raw, wet_raw=session.wet_raw, quality={'source':'usb','status':'plausible','span_raw':session.air_raw-session.wet_raw})
             append_audit('usb.calibration.completed', device_id=session.device_id, air_raw=session.air_raw, wet_raw=session.wet_raw)
         else:
             session.state, session.message = 'CALIBRATION', 'Erster Kalibrierpunkt gespeichert. Zweiten Referenzpunkt durchführen.'
@@ -517,6 +519,13 @@ async def assign_device(port_id: str, body: Assignment):
             raise ValueError('Identität oder Hardware-ID passt nicht.')
         if not session.calibration_ready:
             raise ValueError('Kalibrierung nicht vollständig.')
+        live_state = network_proof.body.get('state') or {}
+        live_meta = live_state.get('meta') if isinstance(live_state, dict) else {}
+        if not isinstance(live_meta, dict) or live_meta.get('sensor_ok') is not True or live_meta.get('quality') not in {'EXCELLENT','GOOD','FAIR'}:
+            raise ValueError('Sensor-Selbsttest oder Signalqualität nicht ausreichend.')
+        CalibrationStore().record(device_id=proof.device_id, fingerprint=proof.fingerprint, public_key=proof.public_key, hardware_uid=session.hardware_uid, firmware_version=session.firmware,
+            air_raw=session.air_raw, wet_raw=session.wet_raw, quality={'source':'usb+live-proof','status':'verified','span_raw':session.air_raw-session.wet_raw,
+            'signal_quality':live_meta.get('quality'),'sigma':live_meta.get('sigma')})
         state = network_proof.body.get('state') or {}
         meta = state.get('meta') if isinstance(state, dict) else {}
         if not isinstance(meta, dict) or meta.get('sensor_ok') is not True or meta.get('quality') not in {'FAIR','GOOD','EXCELLENT'}:
