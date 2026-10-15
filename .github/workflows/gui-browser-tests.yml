@@ -19,14 +19,16 @@ jobs:
   chromium:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      NODE_PATH: ${{ runner.temp }}/gc-browser-tools/node_modules
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/gc-browser-cache
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - name: Configure browser runner paths
+        shell: bash
+        run: |
+          echo "NODE_PATH=$RUNNER_TEMP/gc-browser-tools/node_modules" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/gc-browser-cache" >> "$GITHUB_ENV"
       - name: Install pinned browser runner outside the checkout
         run: npm install --prefix "$RUNNER_TEMP/gc-browser-tools" --ignore-scripts --no-save --package-lock=false playwright@1.62.1
       - name: Install Chromium and native dependencies
