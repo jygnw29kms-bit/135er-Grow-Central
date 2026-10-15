@@ -13,10 +13,12 @@ import httpx
 
 try:
     from . import agent as legacy
+    from .device_identity import DEVICE_ID_FILE
     from .device_pairing import load_state as load_pairing_state, poll_pairing
     from .platform_report import send_platform_report
 except ImportError:
     import agent as legacy  # type: ignore[no-redef]
+    from device_identity import DEVICE_ID_FILE  # type: ignore[no-redef]
     from device_pairing import load_state as load_pairing_state, poll_pairing  # type: ignore[no-redef]
     from platform_report import send_platform_report  # type: ignore[no-redef]
 
@@ -29,6 +31,26 @@ MAX_RETRY = 600
 PLATFORM_REPORT_SECONDS = min(max(int(os.getenv("GC_PLATFORM_REPORT_SECONDS", "120")), 60), 3600)
 PAIRING_POLL_SECONDS = min(max(int(os.getenv("GC_PAIRING_POLL_SECONDS", "10")), 5), 60)
 EXPECTED_CLOUD_SERVICE = "135er-Grow Central Cloud"
+LEGACY_DEVICE_ID = legacy.device_id
+
+
+def effective_device_id() -> str:
+    """Prefer the cloud-approved UUID once paired, otherwise keep legacy continuity."""
+    configured = os.getenv("GC_DEVICE_ID", "").strip()
+    if configured:
+        return configured
+    try:
+        approved = DEVICE_ID_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        approved = ""
+    if len(approved) == 36:
+        return approved
+    return LEGACY_DEVICE_ID()
+
+
+# All telemetry, contact snapshots and mirrored bundles must identify the same
+# cloud device as the signed platform report once pairing has been approved.
+legacy.device_id = effective_device_id
 
 
 def _persist_state(**values) -> None:
@@ -36,7 +58,7 @@ def _persist_state(**values) -> None:
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "cloud_origin": legacy.CLOUD_URL,
         "site_id": legacy.SITE,
-        "device_id": legacy.device_id(),
+        "device_id": effective_device_id(),
         **values,
     }
     legacy._write_json(CLOUD_STATE, payload)
@@ -105,7 +127,7 @@ async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
     local = await local_status(client)
     return {
         "site_id": legacy.SITE,
-        "device_id": legacy.device_id(),
+        "device_id": effective_device_id(),
         "ts": datetime.now(timezone.utc).isoformat(),
         "temperature_c": None,
         "humidity_pct": None,
