@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import os
 from types import SimpleNamespace
 from pathlib import Path
 import pytest
@@ -47,7 +48,8 @@ def test_discovery_does_not_grant_access_and_survives_restart(discovered):
     assert row['status']=='DISCOVERED' and row['name'] is None and row['room_id'] is None
     with pytest.raises(PermissionError):store.require_trusted(ID)
     assert TrustStore(store.path).get(ID)['fingerprint']==row['fingerprint']
-    assert store.path.stat().st_mode & 0o777 == 0o600
+    if os.name != 'nt':
+        assert store.path.stat().st_mode & 0o777 == 0o600
 
 @pytest.mark.parametrize('state',['REJECTED','REVOKED'])
 def test_decisions_survive_rediscovery_and_need_manual_release(discovered,state):

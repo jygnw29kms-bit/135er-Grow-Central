@@ -158,9 +158,9 @@
     form.append(make('p', 'GC erstellt das lokale Zertifikat und einen individuellen Sensorzugang und überträgt sie direkt per USB.'));
     const submit = make('button', 'WLAN und Sensorzugang einrichten'); submit.type = 'submit'; submit.disabled = true; form.append(submit); content.append(form);
     if (selected.wifi_configured && selected.mqtt_configured && selected.ca_configured) {
-      content.append(button('Vorhandene WLAN/TLS-Verbindung pr?fen', () => action('/connection')));
+      content.append(button('Vorhandene WLAN/TLS-Verbindung pr\u00fcfen', () => action('/connection')));
     } else {
-      content.append(make('p', 'Der Sensor hat noch keine vollst?ndige WLAN/TLS-MQTT-Konfiguration. Trage unten das WLAN ein; erst danach kann die Live-Identit?t best?tigt werden.'));
+      content.append(make('p', 'Der Sensor hat noch keine vollst\u00e4ndige WLAN/TLS-MQTT-Konfiguration. Trage unten das WLAN ein; erst danach kann die Live-Identit\u00e4t best\u00e4tigt werden.'));
     }
     form.onsubmit = e => {
       e.preventDefault(); const body = {ssid:ssid.value, password:password.value, broker_host:host.value}; password.value = ''; action('/network', body);
@@ -220,7 +220,7 @@
           autoInspected.add(device.id);
           api('/' + encodeURIComponent(device.id) + '/inspect', {method:'POST'})
             .then(() => setTimeout(refresh, 250))
-            .catch(e => { status.textContent = 'USB-Identit?tspr?fung: ' + e.message; });
+            .catch(e => { status.textContent = 'USB-Identit\u00e4tspr\u00fcfung: ' + e.message; });
         }
       }
       list.replaceChildren();

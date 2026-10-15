@@ -39,9 +39,9 @@ def _load() -> list[dict]:
     except FileNotFoundError:
         return []
     except (OSError, json.JSONDecodeError) as exc:
-        raise HTTPException(500, "Rezeptdatei ist besch?digt oder nicht lesbar") from exc
+        raise HTTPException(500, "Rezeptdatei ist beschädigt oder nicht lesbar") from exc
     if not isinstance(data, list):
-        raise HTTPException(500, "Rezeptdatei ist ung?ltig")
+        raise HTTPException(500, "Rezeptdatei ist ungültig")
     return [row for row in data if isinstance(row, dict)]
 
 

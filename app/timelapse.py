@@ -161,7 +161,7 @@ async def frame(run_id: str, filename: str):
 @router.post("/start", dependencies=[Depends(require_write_auth)])
 async def start(body: StartBody):
     async with lock:
-        if job.task and not job.task.done(): raise HTTPException(409, "Zeitraffer l?uft bereits")
+        if job.task and not job.task.done(): raise HTTPException(409, "Zeitraffer läuft bereits")
         ROOT.mkdir(parents=True, exist_ok=True); _prune_runs()
         run_id = "run_" + uuid.uuid4().hex[:12]; path = ROOT / run_id; path.mkdir(mode=0o750)
         job.run_id = run_id; job.interval_seconds = body.interval_seconds; job.max_frames = body.max_frames; job.frames = 0; job.started_at = _now(); job.last_frame_at = None; job.camera_id = body.camera_id; job.error = None; job.stop_requested = False

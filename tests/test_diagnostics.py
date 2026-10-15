@@ -1,5 +1,7 @@
 from pathlib import Path
 import asyncio
+import os
+import pytest
 
 from app import diagnostics
 from app.diagnostics import COMPLETION_MARKERS, SUPPORT_LATEST, SUPPORT_REQUEST, redact, router
@@ -62,6 +64,7 @@ def test_support_bundle_request_and_status_use_state_files(tmp_path, monkeypatch
     assert ready["size"] == 7
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Windows symlink creation requires Developer Mode/admin rights')
 def test_download_pins_archive_before_latest_symlink_changes(monkeypatch, tmp_path):
     import gzip
     from fastapi import FastAPI

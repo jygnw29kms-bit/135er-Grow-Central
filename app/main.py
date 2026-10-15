@@ -109,6 +109,11 @@ async def legacy_index():
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(WEB_DIR / "brand-mark.png", media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/api/health")
 async def health():
     return {"ok": True, "service": "135er-Grow Central Local", "version": "0.7.5", "device_api": "gc-device-v1"}

@@ -1,3 +1,9 @@
+import os
+import pytest
+
+if os.name == 'nt':
+    pytest.skip('first-boot apply uses POSIX account/group APIs', allow_module_level=True)
+
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace

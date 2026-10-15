@@ -1,9 +1,12 @@
 """The Pi firmware staging update must restore code and files on a failed start."""
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import sys
 import pytest
+
+pytestmark = pytest.mark.skipif(os.name == 'nt', reason='sensor TLS installer requires POSIX root/systemd APIs')
 
 
 def load():

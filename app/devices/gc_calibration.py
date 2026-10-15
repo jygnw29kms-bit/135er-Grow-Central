@@ -10,6 +10,18 @@ import sqlite3
 
 SCHEMA_VERSION = 2
 CALIBRATION_KIND = "soil_air_water_fresh_substrate_reference"
+SUBSTRATE_REFERENCE_TOLERANCE_PP = 5.0
+
+
+def classify_soil_substrate_delta(delta_pp: float) -> str:
+    delta = float(delta_pp)
+    if not math.isfinite(delta):
+        raise ValueError("non-finite soil substrate delta")
+    if delta < -SUBSTRATE_REFERENCE_TOLERANCE_PP:
+        return "below_reference"
+    if delta > SUBSTRATE_REFERENCE_TOLERANCE_PP:
+        return "above_reference"
+    return "near_reference"
 
 
 def derive_soil_reference_metrics(raw: float, points: dict) -> dict[str, float | str]:
@@ -38,12 +50,7 @@ def derive_soil_reference_metrics(raw: float, points: dict) -> dict[str, float |
         raise ValueError("invalid fresh-substrate reference")
     reference_index = moisture * 100.0 / substrate_percent
     delta_pp = moisture - substrate_percent
-    if delta_pp < -5.0:
-        state = "below_reference"
-    elif delta_pp > 5.0:
-        state = "above_reference"
-    else:
-        state = "near_reference"
+    state = classify_soil_substrate_delta(delta_pp)
     return {
         "soil_moisture_percent": round(moisture, 3),
         "soil_substrate_reference_percent": round(substrate_percent, 3),

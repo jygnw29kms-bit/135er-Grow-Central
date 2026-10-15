@@ -72,9 +72,9 @@ def _validate_definition(definition: AutomationDefinition) -> None:
         try:
             value = float(definition.trigger_value)
         except ValueError as exc:
-            raise HTTPException(422, "Temperatur-Trigger ben?tigt einen Zahlenwert") from exc
+            raise HTTPException(422, "Temperatur-Trigger benötigt einen Zahlenwert") from exc
         if not -30 <= value <= 80:
-            raise HTTPException(422, "Temperatur-Trigger au?erhalb des erlaubten Bereichs")
+            raise HTTPException(422, "Temperatur-Trigger außerhalb des erlaubten Bereichs")
 
 
 def _runtime_load() -> dict:
@@ -121,11 +121,11 @@ async def _execute(row: dict, *, source: str) -> dict:
     append_audit("automation.execution.started", automation_id=row.get("id"), source=source, device_id=row.get("device_id"), on=requested)
     result = await client.command("setswitchon" if requested else "setswitchoff", ain)
     if result not in {"0", "1"}:
-        raise RuntimeError("FRITZ!Box meldet keinen g?ltigen Schaltzustand")
+        raise RuntimeError("FRITZ!Box meldet keinen gültigen Schaltzustand")
     observed = await client.command("getswitchstate", ain)
     expected = "1" if requested else "0"
     if observed != expected:
-        raise RuntimeError("FRITZ!-Schaltzustand wurde nicht best?tigt")
+        raise RuntimeError("FRITZ!-Schaltzustand wurde nicht bestätigt")
     append_audit("automation.execution.succeeded", automation_id=row.get("id"), source=source, device_id=row.get("device_id"), on=requested)
     return {"ok": True, "automation_id": row.get("id"), "on": requested, "confirmed": True}
 
@@ -208,7 +208,7 @@ async def automation_runtime():
 @router.post("/{automation_id}/run", dependencies=[Depends(require_write_auth)])
 async def run_automation(automation_id: str):
     if not re.fullmatch(r"gc-\d+", automation_id):
-        raise HTTPException(422, "Ung?ltige Automations-ID")
+        raise HTTPException(422, "Ungültige Automations-ID")
     row = next((item for item in _load() if item.get("id") == automation_id), None)
     if row is None:
         raise HTTPException(404, "Automation nicht gefunden")
@@ -218,7 +218,7 @@ async def run_automation(automation_id: str):
     except Exception as exc:
         _runtime_mark(automation_id, key=key, source="manual", ok=False, error=f"{type(exc).__name__}: {exc}")
         append_audit("automation.execution.failed", automation_id=automation_id, source="manual", error=type(exc).__name__)
-        raise HTTPException(502, f"Automation konnte nicht best?tigt ausgef?hrt werden ({type(exc).__name__})") from None
+        raise HTTPException(502, f"Automation konnte nicht bestätigt ausgeführt werden ({type(exc).__name__})") from None
     _runtime_mark(automation_id, key=key, source="manual", ok=True)
     return result
 

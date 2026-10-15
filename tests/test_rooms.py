@@ -1,5 +1,6 @@
 from pathlib import Path
 import asyncio
+import os
 
 import app.rooms as rooms
 
@@ -20,7 +21,8 @@ def test_rooms_state_roundtrip(tmp_path, monkeypatch):
     loaded = rooms.load_state()
     assert loaded["rooms"][0]["name"] == "Zelt 1"
     assert loaded["assignments"]["plug_1"] == "room_test"
-    assert target.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert target.stat().st_mode & 0o777 == 0o600
 
 
 def test_sensor_sample_gets_vpd_and_room_id(tmp_path, monkeypatch):
@@ -71,6 +73,7 @@ def test_room_capture_includes_assigned_soil_moisture(tmp_path, monkeypatch):
     assert saved["sensor_history"][-1]["soil_substrate_reference_percent"] == 67.3
     assert saved["sensor_history"][-1]["soil_substrate_index_percent"] == 63.15
     assert saved["sensor_history"][-1]["soil_substrate_delta_pp"] == -24.8
+    assert saved["sensor_history"][-1]["soil_substrate_state"] == "below_reference"
     assert saved["sensor_history"][-1]["source"] == "assigned-devices"
 
 
@@ -131,6 +134,7 @@ def test_sensor_csv_exports_distinct_soil_reference_fields(tmp_path, monkeypatch
         "soil_substrate_reference_percent":67.3,
         "soil_substrate_index_percent":63.15,
         "soil_substrate_delta_pp":-24.8,
+        "soil_substrate_state":"below_reference",
         "soil_calibration_status":"valid",
         "source":"test",
     })
@@ -141,4 +145,5 @@ def test_sensor_csv_exports_distinct_soil_reference_fields(tmp_path, monkeypatch
     assert "soil_substrate_reference_percent" in text
     assert "soil_substrate_index_percent" in text
     assert "soil_substrate_delta_pp" in text
-    assert "42.5" in text and "67.3" in text and "63.15" in text and "-24.8" in text
+    assert "soil_substrate_state" in text
+    assert "42.5" in text and "67.3" in text and "63.15" in text and "-24.8" in text and "below_reference" in text

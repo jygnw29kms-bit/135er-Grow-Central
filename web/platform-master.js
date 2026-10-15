@@ -1,7 +1,7 @@
 (()=>{
   const $=(id)=>document.getElementById(id);
   const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const titles={overview:'?bersicht',grow:'R?ume',devices:'Ger?te',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bew?sserung',lighting:'Beleuchtung',automation:'Zeitpl?ne',recipes:'Rezepte',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
+const titles={overview:'Übersicht',grow:'Räume',devices:'Geräte',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bewässerung',lighting:'Beleuchtung',automation:'Zeitpläne',recipes:'Rezepte',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
   async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return r.json()}
   function ensureVisualLayer(){if(document.querySelector('link[href*="platform-visual.css"]'))return;const link=document.createElement('link');link.rel='stylesheet';link.href='/static/platform-visual.css?v=20261014-mobile2';link.dataset.gcVisual='1';document.head.appendChild(link)}
   function tick(){const d=new Date();if($('masterDate'))$('masterDate').textContent=d.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});if($('masterTime'))$('masterTime').textContent=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}

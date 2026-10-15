@@ -33,8 +33,9 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    else if(pathname==='/api/v1/automations/runtime')data={scheduler:'running',last_runs:{}};
    else if(pathname==='/api/v1/automations/gc-1/run'&&route.request().method()==='POST'){automationRuns.push('gc-1');data={ok:true,automation_id:'gc-1',confirmed:true,on:true};}
    else if(pathname==='/api/v1/automations'&&route.request().method()==='GET')data={automations:[{id:'gc-1',name:'Test Zeitregel',trigger:'time',trigger_value:'08:00',device_id:'fritz-lampe',ain:'08761 0001',on:true,enabled:true}],execution_status:'time_and_manual'};
-   else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness'],model:'Synthetic'},{provider_id:'mqtt',native_id:'pump1',name:'Test Pumpe',device_class:'pump',capabilities:['power'],model:'Synthetic'}],errors:[]};
-   else if(pathname==='/api/devices/mqtt/lamp1/state')data={state:{online:true,power:false,brightness:50}};
+   else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness','ppfd'],model:'Synthetic'},{provider_id:'mqtt',native_id:'pump1',name:'Test Pumpe',device_class:'pump',capabilities:['power'],model:'Synthetic'},{provider_id:'zigbee',native_id:'nutrient1',name:'Tank Sensor',device_class:'sensor',capabilities:['ec','ph','soil_temperature'],model:'Synthetic Nutrient'}],errors:[]};
+   else if(pathname==='/api/devices/mqtt/lamp1/state')data={state:{online:true,power:false,brightness:50,ppfd:612}};
+   else if(pathname==='/api/devices/zigbee/nutrient1/state')data={state:{online:true,ec:1.8,ph:6.1,soil_temperature:22.4}};
    else if(pathname==='/api/devices/mqtt/lamp1/command'&&route.request().method()==='POST'){lightCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
    else if(pathname==='/api/devices/mqtt/pump1/state')data={state:{online:true,power:false}};
    else if(pathname==='/api/devices/mqtt/pump1/command'&&route.request().method()==='POST'){pumpCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
@@ -80,13 +81,13 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
   if(process.env.GC_SCREENSHOT_DIR){await fs.mkdir(process.env.GC_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.GC_SCREENSHOT_DIR,`console-${width}.png`),fullPage:true})}
  }
  await page.goto('http://gc.test/ui');
- assert.equal(await page.locator('.master-shell').count(),1,'productive UI keeps Final Master');await page.locator('#mainNav [data-view=irrigation]').click();await page.getByText(/Frischsubstrat-Index 63 %/).first().waitFor({state:'visible'});await page.locator('#mainNav [data-view=overview]').click();await page.locator('#growSelector option[value=room2]').waitFor({state:'attached'});
+ assert.equal(await page.locator('.master-shell').count(),1,'productive UI keeps Final Master');await page.locator('#lightValue').filter({hasText:'612'}).waitFor({state:'visible'});await page.locator('#overviewNutrients').getByText(/EC 1\.80 \(Providerwert\)/).waitFor({state:'visible'});await page.locator('#overviewNutrients').getByText(/pH 6\.10/).waitFor({state:'visible'});await page.locator('#mainNav [data-view=irrigation]').click();await page.getByText(/Frischsubstrat-Index 63 %/).first().waitFor({state:'visible'});await page.locator('#mainNav [data-view=overview]').click();await page.locator('#growSelector option[value=room2]').waitFor({state:'attached'});
  await page.locator('#quickLight button').first().waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.querySelector('#quickLight button')?.disabled);
  await page.locator('#quickLight button').first().click();
  await page.waitForTimeout(100);
  assert(lightCommands.some(c=>c.capability==='power'&&c.value===true),'quick light writes confirmed power command');
- await page.locator('#mainNav [data-view=lighting]').click();
+ await page.locator('#mainNav [data-view=lighting]').click();await page.getByText('PPFD Mittelwert').waitFor({state:'visible'});await page.getByText(/612 .*mol\/m/).first().waitFor({state:'visible'});
  await page.locator('.gc-light-brightness').waitFor({state:'visible'});
  await page.locator('.gc-light-brightness').evaluate(el=>{el.value='70';el.dispatchEvent(new Event('change',{bubbles:true}))});
  await page.waitForTimeout(100);

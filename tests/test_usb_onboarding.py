@@ -3,13 +3,17 @@ import base64
 import hashlib
 import json
 import os
+import pytest
 from pathlib import Path
+
+if os.name == 'nt':
+    pytest.skip('USB onboarding PTY tests require POSIX pty/termios', allow_module_level=True)
+
 import pty
 import threading
 import time
 from types import SimpleNamespace
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from cryptography.hazmat.primitives import hashes, serialization

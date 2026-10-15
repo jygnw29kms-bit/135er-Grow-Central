@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.devices.gc_calibration import CalibrationStore, derive_soil_reference_metrics, calibration_status
+from app.devices.gc_calibration import CalibrationStore, derive_soil_reference_metrics, calibration_status, classify_soil_substrate_delta
 from app.devices.gc_trust import TrustStore
 from app.devices import gc_calibration
 
@@ -59,3 +59,13 @@ def test_three_point_reference_metrics_use_substrate_without_redefining_moisture
 def test_three_point_reference_metrics_reject_invalid_geometry():
     with pytest.raises(ValueError):
         derive_soil_reference_metrics(2000,{"air_raw":2000,"wet_raw":1900,"substrate_raw":1950})
+
+
+def test_substrate_delta_classifier_has_stable_tolerance_boundaries():
+    assert classify_soil_substrate_delta(-5.001) == "below_reference"
+    assert classify_soil_substrate_delta(-5.0) == "near_reference"
+    assert classify_soil_substrate_delta(0.0) == "near_reference"
+    assert classify_soil_substrate_delta(5.0) == "near_reference"
+    assert classify_soil_substrate_delta(5.001) == "above_reference"
+    with pytest.raises(ValueError):
+        classify_soil_substrate_delta(float("nan"))

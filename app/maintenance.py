@@ -89,7 +89,7 @@ async def preflight(deep: bool = Query(default=False)):
             result["pip_check"] = {"ok": run.returncode == 0, "summary": (run.stdout or run.stderr).strip()[:500]}
             result["ready"] = result["ready"] and run.returncode == 0
         except (OSError, subprocess.TimeoutExpired):
-            result["pip_check"] = {"ok": False, "summary": "pip check nicht ausf?hrbar"}
+            result["pip_check"] = {"ok": False, "summary": "pip check nicht ausführbar"}
             result["ready"] = False
     return result
 

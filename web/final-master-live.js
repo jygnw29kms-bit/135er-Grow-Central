@@ -3,8 +3,20 @@
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const api=async(path,options={})=>{const r=await fetch(path,{cache:'no-store',credentials:'same-origin',...options});const type=r.headers.get('content-type')||'';const body=type.includes('json')?await r.json():await r.text();if(!r.ok)throw new Error(body?.detail||body||`${r.status} ${r.statusText}`);return body};
   const num=(v,d=0)=>v!=null&&Number.isFinite(Number(v))?Number(v).toFixed(d):'?';
-  const phaseLabels={germination:'Keimung',vegetative:'Vegetativ',flowering:'Bl?te',flush:'Sp?lung',harvest:'Ernte',other:'Sonstiges'};
-  const categoryLabels={note:'Notiz',watering:'Bew?sserung',feeding:'D?ngung',training:'Training',defoliation:'Entlaubung',pest:'Sch?dlinge',flowering:'Bl?te',harvest:'Ernte',other:'Ereignis'};
+  const phaseLabels={germination:'Keimung',vegetative:'Vegetativ',flowering:'Blüte',flush:'Spülung',harvest:'Ernte',other:'Sonstiges'};
+  const categoryLabels={note:'Notiz',watering:'Bewässerung',feeding:'Düngung',training:'Training',defoliation:'Entlaubung',pest:'Schädlinge',flowering:'Blüte',harvest:'Ernte',other:'Ereignis'};
+
+  let discoveryCache={at:0,devices:[]};
+  async function discoverDevices(force=false){
+    if(!force&&Date.now()-discoveryCache.at<15000)return discoveryCache.devices;
+    const data=await api('/api/devices/discover?timeout=2');
+    discoveryCache={at:Date.now(),devices:data.devices||[]};
+    return discoveryCache.devices;
+  }
+  async function readDeviceStates(devices){
+    const results=await Promise.allSettled(devices.map(d=>api(`/api/devices/${encodeURIComponent(d.provider_id)}/${encodeURIComponent(d.native_id)}/state`)));
+    return devices.map((device,index)=>({device,state:results[index].status==='fulfilled'?(results[index].value.state||{}):null}));
+  }
 
   function applyOptionalMetrics(){
     const show=localStorage.getItem('gc.optional.co2')==='1';
@@ -30,7 +42,7 @@
       if($('heroPhase'))$('heroPhase').textContent=phase?phaseLabels[phase]||phase:'Keine Pflanzen';
       if($('heroPhaseMeta'))$('heroPhaseMeta').textContent=plants.length?`${plants.length} Pflanze${plants.length===1?'':'n'} erfasst`:'Noch keine Pflanzendaten';
     }catch{
-      if($('heroPhase'))$('heroPhase').textContent='Nicht verf?gbar';
+      if($('heroPhase'))$('heroPhase').textContent='Nicht verfügbar';
       if($('heroPhaseMeta'))$('heroPhaseMeta').textContent='Raumdaten nicht erreichbar';
     }
   }
@@ -65,7 +77,7 @@
   function refreshSnapshot(){
     const img=$('overviewCameraSnapshot'),fallback=$('overviewCameraFallback'),state=$('overviewCameraState');if(!img)return;
     img.onload=()=>{img.hidden=false;if(fallback)fallback.hidden=true;if(state)state.textContent='? LIVE'};
-    img.onerror=()=>{img.hidden=true;if(fallback)fallback.hidden=false;if(state)state.textContent='NICHT VERF?GBAR'};
+    img.onerror=()=>{img.hidden=true;if(fallback)fallback.hidden=false;if(state)state.textContent='NICHT VERFÜGBAR'};
     img.src=`/api/v1/camera/snapshot?_=${Date.now()}`;
   }
 
@@ -110,9 +122,37 @@
     if(!device||!(device.capabilities||[]).includes('fan_speed')||!QUICK_SPEED_PROVIDERS.has(device.provider_id))return;
     values.forEach((value,index)=>{const button=buttons[index+1];if(!button)return;button.disabled=false;button.title=device.name||device.native_id;button.onclick=async()=>{try{buttons.forEach(b=>b.disabled=true);await deviceCommand(device,'fan_speed',value);window.dispatchEvent(new Event('gc:refresh'))}catch(e){buttons.forEach((b,i)=>b.disabled=i===0);console.warn('Quick fan control',e)}}});
   }
+  async function loadDeviceMeasurements(){
+    const light=$('lightValue'),nutrients=$('overviewNutrients');
+    try{
+      const devices=await discoverDevices();
+      const measurementDevices=devices.filter(d=>(d.capabilities||[]).some(c=>['ppfd','ec','ph','soil_temperature'].includes(c)));
+      const rows=await readDeviceStates(measurementDevices);
+      const ppfd=rows.map(r=>Number(r.state?.ppfd)).filter(v=>Number.isFinite(v)&&v>=0&&v<=5000);
+      if(light){
+        light.textContent=ppfd.length?String(Math.round(ppfd.reduce((a,b)=>a+b,0)/ppfd.length)):'\u2014';
+        const hint=light.closest('article')?.querySelector('small');
+        if(hint)hint.textContent=ppfd.length?`${ppfd.length} echte PPFD-Quelle${ppfd.length===1?'':'n'} \u00b7 Mittelwert`:'Nur bei Messquelle';
+      }
+      if(nutrients){
+        const sources=rows.filter(r=>Number.isFinite(Number(r.state?.ec))||Number.isFinite(Number(r.state?.ph)));
+        const list=sources.length?sources.map(({device,state})=>{
+          const parts=[];
+          if(Number.isFinite(Number(state.ec)))parts.push(`EC ${esc(Number(state.ec).toFixed(2))} (Providerwert)`);
+          if(Number.isFinite(Number(state.ph)))parts.push(`pH ${esc(Number(state.ph).toFixed(2))}`);
+          return `<div class="device-row"><div><strong>${esc(device.name||device.native_id)}</strong><small>${esc(device.provider_id)} \u00b7 ${parts.join(' \u00b7 ')}</small></div><span class="state-badge">LIVE</span></div>`;
+        }).join(''):'<div class="empty">Keine EC-/pH-Messquelle vorhanden.</div>';
+        nutrients.innerHTML=`<div class="master-panel-head"><h3>Nährstoffe</h3><span class="state-badge">${sources.length?'LIVE':'OPTIONAL'}</span></div><div class="health-list">${list}</div>`;
+      }
+    }catch(e){
+      if(light)light.textContent='?';
+      if(nutrients)nutrients.innerHTML='<div class="master-panel-head"><h3>Nährstoffe</h3><span class="state-badge offline">NICHT VERFÜGBAR</span></div><div class="empty">Messquellen nicht erreichbar.</div>';
+    }
+  }
+
   async function loadQuickControls(){
     try{
-      const d=await api('/api/devices/discover?timeout=2'),rows=d.devices||[];
+      const rows=await discoverDevices();
       const light=rows.find(x=>x.device_class==='light'&&(x.capabilities||[]).includes('power')&&QUICK_POWER_PROVIDERS.has(x.provider_id));
       const pump=rows.find(x=>x.device_class==='pump'&&(x.capabilities||[]).includes('power')&&QUICK_POWER_PROVIDERS.has(x.provider_id));
       const fans=rows.filter(x=>x.device_class==='fan'&&(x.capabilities||[]).includes('fan_speed')&&QUICK_SPEED_PROVIDERS.has(x.provider_id));
@@ -123,7 +163,7 @@
     }catch(e){console.warn('Quick controls unavailable',e)}
   }
 
-  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents(),loadQuickControls(),loadOverviewHistory()]);}
+  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents(),loadQuickControls(),loadDeviceMeasurements(),loadOverviewHistory()]);}
   $('overviewSnapshotBtn')?.addEventListener('click',refreshSnapshot);
   window.addEventListener('gc:refresh',refresh);
   window.addEventListener('gc:core-refreshed',refresh);

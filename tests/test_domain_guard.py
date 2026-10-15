@@ -1,8 +1,11 @@
+import os
+import pytest
 from pathlib import Path
 import subprocess
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/check-no-dezender-domain.sh'
 OLD_HOST = 'dezender' + '.de'
+pytestmark = pytest.mark.skipif(os.name == 'nt', reason='domain guard contract executes a POSIX shell script')
 
 
 def check(tmp_path, files):
