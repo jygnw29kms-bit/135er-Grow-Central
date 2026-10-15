@@ -42,3 +42,54 @@ def test_homekit_final_master_ui_and_image_contract():
     assert "HAP-python[QRCode]==5.0.0" in requirements
     assert "grow-central-homekit.service" in workflow
     assert "ufw allow 51827/tcp" in workflow
+
+def test_homekit_room_inventory_exports_only_real_measurements(monkeypatch):
+    import app.rooms as rooms
+    state={
+        "rooms":[{"id":"r1","name":"Zelt"},{"id":"r2","name":"Leer"},{"id":"r3","name":"Nur Energie"}],
+        "sensor_history":[
+            {"room_id":"r1","temperature_c":24.5,"humidity_percent":58.0,"soil_moisture_percent":42.0},
+            {"room_id":"r3","power_w":120.0},
+        ],
+    }
+    monkeypatch.setattr(rooms,"load_state",lambda:state)
+    rows=homekit._latest_room_values()
+    assert len(rows)==1
+    assert rows[0]["id"]=="r1"
+    assert rows[0]["services"]==("temperature","humidity","soil_moisture")
+    assert rows[0]["latest"]["temperature_c"]==24.5
+
+
+def test_homekit_topology_signature_tracks_rooms_services_names_and_switches():
+    from types import SimpleNamespace
+    rooms=[{"id":"r1","name":"Zelt","services":("temperature",)}]
+    switches=[SimpleNamespace(id="plug1",name="Lampe")]
+    first=homekit._topology_signature(rooms,switches)
+    assert first!=homekit._topology_signature([{"id":"r1","name":"Zelt","services":("temperature","humidity")}],switches)
+    assert first!=homekit._topology_signature([{"id":"r1","name":"Growraum","services":("temperature",)}],switches)
+    assert first!=homekit._topology_signature(rooms,[SimpleNamespace(id="plug2",name="Pumpe")])
+
+
+def test_homekit_bridge_starts_child_tasks_and_reloads_changed_topology():
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    assert "await super().run()" in source
+    assert "_topology_signature() != self.topology_signature" in source
+    assert "self.driver.stop()" in source
+    assert "Restart=always" in Path(".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    assert "value=20.0" not in source and "value=50.0" not in source
+
+
+def test_homekit_room_inventory_tolerates_short_metric_dropout(monkeypatch):
+    import app.rooms as rooms
+    state={
+        "rooms":[{"id":"r1","name":"Zelt"}],
+        "sensor_history":[
+            {"room_id":"r1","temperature_c":24.0,"humidity_percent":55.0},
+            {"room_id":"r1","temperature_c":24.3,"humidity_percent":None},
+        ],
+    }
+    monkeypatch.setattr(rooms,"load_state",lambda:state)
+    row=homekit._latest_room_values()[0]
+    assert row["services"]==("temperature","humidity")
+    assert row["latest"]["temperature_c"]==24.3
+    assert row["latest"]["humidity_percent"]==55.0

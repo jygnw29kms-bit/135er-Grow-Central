@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -41,17 +42,41 @@ async def homekit_pairing_qr():
     return FileResponse(QR_FILE, media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
 
 
+HOMEKIT_HISTORY_WINDOW = 12
+_HOMEKIT_METRICS = (("temperature_c", "temperature"), ("humidity_percent", "humidity"), ("soil_moisture_percent", "soil_moisture"))
+
+
+def _valid_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+
+
+def _room_services(snapshot: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(service for key, service in _HOMEKIT_METRICS if _valid_number(snapshot.get(key)))
+
+
 def _latest_room_values() -> list[dict[str, Any]]:
     from app.rooms import load_state
     try:
         state = load_state()
     except Exception:
         return []
+    history = state.get("sensor_history", [])
     result = []
     for room in state.get("rooms", []):
-        latest = next((x for x in reversed(state.get("sensor_history", [])) if x.get("room_id") == room.get("id")), None)
-        if latest:
-            result.append({"id": room.get("id"), "name": room.get("name") or room.get("id"), "latest": latest})
+        room_history = [row for row in history if row.get("room_id") == room.get("id")][-HOMEKIT_HISTORY_WINDOW:]
+        if not room_history:
+            continue
+        snapshot = dict(room_history[-1])
+        for key, _service in _HOMEKIT_METRICS:
+            value = next((row.get(key) for row in reversed(room_history) if _valid_number(row.get(key))), None)
+            if value is not None:
+                snapshot[key] = value
+            else:
+                snapshot.pop(key, None)
+        services = _room_services(snapshot)
+        if not services:
+            continue
+        result.append({"id": room.get("id"), "name": room.get("name") or room.get("id"), "latest": snapshot, "services": services})
     return result
 
 
@@ -65,6 +90,14 @@ def _selected_switches():
     ]
 
 
+def _topology_signature(room_rows=None, switches=None):
+    room_rows = _latest_room_values() if room_rows is None else room_rows
+    switches = _selected_switches() if switches is None else switches
+    rooms = tuple(sorted((str(row.get("id") or ""), str(row.get("name") or ""), tuple(row.get("services") or ())) for row in room_rows))
+    switch_rows = tuple(sorted((str(getattr(device, "id", "")), str(getattr(device, "name", ""))) for device in switches))
+    return rooms, switch_rows
+
+
 def run_bridge() -> None:
     from pyhap.accessory import Accessory, Bridge
     from pyhap.accessory_driver import AccessoryDriver
@@ -76,16 +109,22 @@ def run_bridge() -> None:
     class RoomAccessory(Accessory):
         category = 10
 
-        def __init__(self, *args, room_id: str, **kwargs):
+        def __init__(self, *args, room_id: str, initial_latest: dict[str, Any], services: tuple[str, ...], **kwargs):
             super().__init__(*args, **kwargs)
             self.room_id = room_id
-            temperature = self.add_preload_service("TemperatureSensor")
-            self.temperature_char = temperature.configure_char("CurrentTemperature", value=20.0)
-            humidity = self.add_preload_service("HumiditySensor")
-            self.humidity_char = humidity.configure_char("CurrentRelativeHumidity", value=50.0)
-            soil = self.add_preload_service("HumiditySensor", chars=["Name"])
-            soil.configure_char("Name", value=f"{self.display_name} Bodenfeuchte")
-            self.soil_char = soil.configure_char("CurrentRelativeHumidity", value=50.0)
+            self.temperature_char = None
+            self.humidity_char = None
+            self.soil_char = None
+            if "temperature" in services:
+                temperature = self.add_preload_service("TemperatureSensor")
+                self.temperature_char = temperature.configure_char("CurrentTemperature", value=max(-270, min(100, float(initial_latest["temperature_c"]))))
+            if "humidity" in services:
+                humidity = self.add_preload_service("HumiditySensor")
+                self.humidity_char = humidity.configure_char("CurrentRelativeHumidity", value=max(0, min(100, float(initial_latest["humidity_percent"]))))
+            if "soil_moisture" in services:
+                soil = self.add_preload_service("HumiditySensor", chars=["Name"])
+                soil.configure_char("Name", value=f"{self.display_name} Bodenfeuchte")
+                self.soil_char = soil.configure_char("CurrentRelativeHumidity", value=max(0, min(100, float(initial_latest["soil_moisture_percent"]))))
 
         def _update(self):
             row = {item["id"]: item for item in _latest_room_values()}.get(self.room_id)
@@ -95,11 +134,11 @@ def run_bridge() -> None:
             temperature = latest.get("temperature_c")
             humidity = latest.get("humidity_percent")
             soil = latest.get("soil_moisture_percent")
-            if isinstance(temperature, (int, float)):
+            if self.temperature_char is not None and isinstance(temperature, (int, float)):
                 self.temperature_char.set_value(max(-270, min(100, float(temperature))))
-            if isinstance(humidity, (int, float)):
+            if self.humidity_char is not None and isinstance(humidity, (int, float)):
                 self.humidity_char.set_value(max(0, min(100, float(humidity))))
-            if isinstance(soil, (int, float)):
+            if self.soil_char is not None and isinstance(soil, (int, float)):
                 self.soil_char.set_value(max(0, min(100, float(soil))))
 
         async def run(self):
@@ -143,9 +182,24 @@ def run_bridge() -> None:
                 await asyncio.sleep(10)
 
     class GrowCentralBridge(Bridge):
+        def __init__(self, *args, topology_signature, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.topology_signature = topology_signature
+
         async def run(self):
+            # Bridge.run schedules each child accessory's run() coroutine. Without
+            # this call room values and switch readback remain at their initial state.
+            await super().run()
             while True:
                 paired = bool(self.driver.state.paired_clients)
+                if _topology_signature() != self.topology_signature:
+                    STATUS_FILE.write_text(json.dumps({
+                        "running": True, "paired": paired, "restarting": True,
+                        "name": "Grow-Central", "message": "HomeKit-Konfiguration ge?ndert; Bridge wird neu geladen."
+                    }, ensure_ascii=False, indent=2), encoding="utf-8")
+                    os.chmod(STATUS_FILE, 0o600)
+                    self.driver.stop()
+                    return
                 payload = {
                     "running": True,
                     "paired": paired,
@@ -166,13 +220,15 @@ def run_bridge() -> None:
                 await asyncio.sleep(5)
 
     driver = AccessoryDriver(port=int(os.getenv("GC_HOMEKIT_PORT", "51827")), persist_file=str(PERSIST_FILE))
-    bridge = GrowCentralBridge(driver, "Grow-Central")
-    for row in _latest_room_values():
+    room_rows = _latest_room_values()
+    selected_switches = _selected_switches()
+    bridge = GrowCentralBridge(driver, "Grow-Central", topology_signature=_topology_signature(room_rows, selected_switches))
+    for row in room_rows:
         try:
-            bridge.add_accessory(RoomAccessory(driver, row["name"], room_id=row["id"]))
+            bridge.add_accessory(RoomAccessory(driver, row["name"], room_id=row["id"], initial_latest=row["latest"], services=tuple(row["services"])))
         except Exception:
             continue
-    for device in _selected_switches():
+    for device in selected_switches:
         try:
             bridge.add_accessory(SwitchAccessory(driver, device.name, device=device))
         except Exception:
