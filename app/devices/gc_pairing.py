@@ -25,7 +25,7 @@ class Acceptance(BaseModel):
 @router.get('', dependencies=[Depends(require_write_auth)])
 async def list_sensors():
     return {'devices': await asyncio.to_thread(TrustStore().list),
-            'provisioning': {'ble_available': False, 'credential_transfer': 'usb_only', 'usb_setup': '/api/devices/usb'}}
+            'provisioning': {'ble_available': True, 'credential_transfer': 'ble_or_usb', 'ble_setup': '/api/devices/ble', 'usb_setup': '/api/devices/usb'}}
 
 
 @router.post('/{device_id}/accept', dependencies=[Depends(require_write_auth)])

@@ -3,7 +3,7 @@
   const panel = document.getElementById('sensorPairing');
   if (!panel) return;
   const labels = {DISCOVERED:'Neu – Entscheidung offen', TRUSTED:'Angenommen', REJECTED:'Abgelehnt', REVOKED:'Zugriff widerrufen'};
-  let devices = [], busy = false, usbIds = new Set();
+  let devices = [], busy = false, usbIds = new Set(), bleIds = new Set();
   const make = (tag, text, cls) => { const n=document.createElement(tag); if(text!=null)n.textContent=text; if(cls)n.className=cls; return n; };
   const search=make('button','Native Sensoren suchen','pairing-search');search.type='button';search.onclick=async()=>{search.disabled=true;try{await api('/api/devices/discover?timeout=3');await refresh();}catch(e){message.textContent=e.message;}finally{search.disabled=false;}};panel.append(search);
   const message = make('p', '', 'pairing-feedback'); message.setAttribute('role','status'); panel.append(message);
@@ -22,7 +22,7 @@
   function render(){rows.replaceChildren();blockedRows.replaceChildren(); const visible=devices;const pending=visible.filter(x=>x.status==='DISCOVERED'); notification.hidden=!pending.length;notification.textContent=pending.length===1?'1 neuer Sensor – Entscheidung erforderlich':`${pending.length} neue Sensoren – Entscheidung erforderlich`;
     for(const d of visible){const row=make('article',null,'pairing-card'); const info=make('div');info.append(make('strong',d.name||d.metadata.reported_name||d.id),make('small',`${d.id} · ${d.metadata.model||'Sensor'} · ${d.metadata.firmware||'Firmware unbekannt'}`),make('span',labels[d.status]||d.status,'pairing-status'));row.append(info);const controls=make('div',null,'pairing-actions');row.append(controls);
       if(usbIds.has(d.id))info.append(make('span','USB am Pi verbunden','pairing-status'));
-      if(d.status==='DISCOVERED'){info.append(make('small',d.identity_verified?'Identität gespeichert – Erreichbarkeit wird bei Aufnahme geprüft':'Firmware ohne geprüfte Identität: vor Annahme aktualisieren'));if(usbIds.has(d.id))action(controls,'USB-Einrichtung fortsetzen',()=>window.dispatchEvent(new CustomEvent('gc:usb-open',{detail:{device_id:d.id}})));else action(controls,'Annehmen',()=>openAccept(d),!d.identity_verified);action(controls,'Ablehnen',()=>change(d.id,'reject'));}
+      if(d.status==='DISCOVERED'){info.append(make('small',d.identity_verified?'Identität gespeichert – Erreichbarkeit wird bei Aufnahme geprüft':'Firmware ohne geprüfte Identität: vor Annahme aktualisieren'));if(usbIds.has(d.id))action(controls,'USB-Einrichtung fortsetzen',()=>window.dispatchEvent(new CustomEvent('gc:usb-open',{detail:{device_id:d.id}})));else if(bleIds.has(d.id))action(controls,'Sicher per BLE aufnehmen',()=>window.dispatchEvent(new CustomEvent('gc:ble-open',{detail:{device_id:d.id}})),!d.identity_verified);else action(controls,'Annehmen',()=>openAccept(d),!d.identity_verified);action(controls,'Ablehnen',()=>change(d.id,'reject'));}
       if(d.status==='TRUSTED')action(controls,'Zugriff widerrufen',()=>change(d.id,'revoke'));
       if(['REJECTED','REVOKED'].includes(d.status)){action(controls,'Erneut zur Entscheidung freigeben',()=>change(d.id,'release'));if(d.fingerprint)action(controls,'Identität nach Factory-Reset zurücksetzen',()=>openIdentityReset(d));blockedRows.append(row);}else rows.append(row);
     }
@@ -38,5 +38,6 @@
   form.onsubmit=async e=>{e.preventDefault();if(!selected)return;const button=form.querySelector('[type="submit"]');button.disabled=true;formMessage.textContent='Identität wird live geprüft…';try{await api(`/api/devices/trust/${encodeURIComponent(selected.id)}/accept`,{method:'POST',body:JSON.stringify({name:form.elements.name.value,room_id:form.elements.room_id.value,fingerprint_confirmation:selected.fingerprint,identity_confirmed:form.elements.identity_confirmed.checked})});dialog.close();await refresh();message.textContent='Sensor angenommen und dem Raum zugewiesen.';window.dispatchEvent(new Event('gc:refresh'));}catch(e){formMessage.textContent=e.message;}finally{button.disabled=false;}};
   async function refresh(){try{const data=await api('/api/devices/trust');devices=data.devices||[];render();}catch(e){message.textContent=e.message;}}
   window.addEventListener('gc:usb-sessions',event=>{usbIds=new Set((event.detail||[]).filter(x=>x.device_id).map(x=>x.device_id));render();});
+  window.addEventListener('gc:ble-sessions',event=>{bleIds=new Set((event.detail||[]).filter(x=>x.device_id).map(x=>x.device_id));render();});
   document.addEventListener('gc:sensors-discovered',refresh);window.addEventListener('gc:refresh',refresh);refresh();setInterval(refresh,3000);
 })();

@@ -46,6 +46,7 @@ Historical build documents may contain older candidate numbers or Pi-3-focused t
 ## Native soil sensor
 
 - XIAO ESP32-C3 / HW-390 is the supported USB flashing target; additional temperature, pH and EC hardware is not implemented by this probe.
+- Firmware 0.5.0 adds the secure BLE onboarding source path and compiles for the XIAO ESP32-C3, but real BLE radio/pair-button/end-to-end hardware validation is still required before this path is treated as hardware-validated.
 - AIR/WATER references give a relative engineering percentage, not volumetric water content; substrate-specific thresholds and calibration hardware tests remain open.
 - firmware 0.4.1 diagnostics identified truncated USB CA transfer; paced transfer established MQTT connectivity. Current backend checks stored CA length.
 - original image 369 still contains firmware 0.4.0; in-place hotfixes and future image contents must be distinguished.

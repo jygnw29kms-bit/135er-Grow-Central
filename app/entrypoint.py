@@ -13,6 +13,7 @@ from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
 from app.devices.gc_pairing import install_observer
+from app.provisioning.ble import install_observer as install_ble_observer
 from app.runtime_health import router as runtime_health_router
 from app.setup_portal import SetupPortalMiddleware
 
@@ -39,3 +40,4 @@ install_mdns_alias(app)
 install_rooms(app)
 
 install_observer(app)
+install_ble_observer(app)

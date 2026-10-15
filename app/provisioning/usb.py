@@ -36,16 +36,16 @@ class USBRoute(APIRoute):
                 return await handler(request)
             except RequestValidationError as exc:
                 # Pydantic errors otherwise echo submitted password values.
-                raise HTTPException(422, 'Eingaben prüfen: Board, WLAN, Kennwort, Name und Raum.') from exc
+                raise HTTPException(422, 'Eingaben prÃ¼fen: Board, WLAN, Kennwort, Name und Raum.') from exc
         return sanitized
 
 
 router = APIRouter(prefix='/api/devices/usb', route_class=USBRoute, tags=['USB sensor setup'], dependencies=[Depends(require_write_auth)])
-VERSION = '0.4.1'
+VERSION = '0.5.0'
 MODEL = 'GC-SOIL-XIAO-C3-HW390'
 SUPPORTED = {(0x303a, 0x1001), (0x1a86, 0x7523), (0x1a86, 0x55d4), (0x10c4, 0xea60), (0x2886, 0x0044), (0x2886, 0x0056)}
 OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe000, 'firmware.bin': 0x10000}
-LIMITS = {'bootloader.bin': 0x8000, 'partitions.bin': 0x1000, 'boot_app0.bin': 0x2000, 'firmware.bin': 0x140000}
+LIMITS = {'bootloader.bin': 0x8000, 'partitions.bin': 0x1000, 'boot_app0.bin': 0x2000, 'firmware.bin': 0x1B0000}
 
 
 class DeviceBlocked(PermissionError):
@@ -68,25 +68,25 @@ def resolve(port_id):
     for port in ports():
         if port['id'] == port_id:
             if not stat.S_ISCHR(os.stat(port['port']).st_mode):
-                raise ValueError('Kein serielles USB-Gerät.')
+                raise ValueError('Kein serielles USB-GerÃ¤t.')
             return port['port']
-    raise ValueError('USB-Gerät getrennt. Wieder anschließen und erneut prüfen.')
+    raise ValueError('USB-GerÃ¤t getrennt. Wieder anschlieÃŸen und erneut prÃ¼fen.')
 
 
 def firmware_files():
     root = Path(os.getenv('GC_USB_FIRMWARE_DIR', str(Path(__file__).resolve().parents[2] / 'firmware/gc-soil-node/dist'))).resolve()
     manifest = json.loads((root / 'manifest.json').read_text())
     if not isinstance(manifest, dict) or manifest.get('version') != VERSION or manifest.get('chip') != 'esp32c3' or manifest.get('model') != MODEL:
-        raise ValueError('Firmware-Paket passt nicht zum unterstützten Sensor.')
+        raise ValueError('Firmware-Paket passt nicht zum unterstÃ¼tzten Sensor.')
     files = manifest.get('files', {})
     if not isinstance(files, dict) or set(files) != set(OFFSETS):
-        raise ValueError('Firmware-Paket unvollständig.')
+        raise ValueError('Firmware-Paket unvollstÃ¤ndig.')
     for name, offset in OFFSETS.items():
         path = root / name
         if path.is_symlink() or not path.is_file() or path.stat().st_size > LIMITS[name] or path.stat().st_size < 1:
-            raise ValueError('Ungültige Firmware-Datei.')
+            raise ValueError('UngÃ¼ltige Firmware-Datei.')
         if not isinstance(files[name], dict) or files[name].get('offset') != offset or hashlib.sha256(path.read_bytes()).hexdigest() != files[name].get('sha256'):
-            raise ValueError('Firmware-Prüfsumme oder Speicherbereich ungültig.')
+            raise ValueError('Firmware-PrÃ¼fsumme oder Speicherbereich ungÃ¼ltig.')
     return root
 
 
@@ -120,7 +120,7 @@ class USBSerial:
             line = self.connection.readline(8193)
             total += len(line)
             if total > 32768 or len(line) > 8192:
-                raise ValueError('USB-Antwort zu groß.')
+                raise ValueError('USB-Antwort zu groÃŸ.')
             text = line.decode('utf-8', errors='replace').strip()
             if text.startswith('ERR '):
                 raise ValueError('Sensor hat den Einrichtungsschritt abgelehnt.')
@@ -131,19 +131,19 @@ class USBSerial:
                     status = self.command('NET INFO', lambda line: bool(re.search(r'\bca_bytes=\d+', line)))
                     actual = int(re.search(r'\bca_bytes=(\d+)', status).group(1))
                     if actual != expected:
-                        raise ValueError('Sensor-CA unvollständig übertragen; USB-Einrichtung erneut versuchen.')
+                        raise ValueError('Sensor-CA unvollstÃ¤ndig Ã¼bertragen; USB-Einrichtung erneut versuchen.')
                 return text
-        raise TimeoutError('Sensor antwortet nicht. USB-Kabel und Boot-Taste prüfen.')
+        raise TimeoutError('Sensor antwortet nicht. USB-Kabel und Boot-Taste prÃ¼fen.')
 
     def proof(self):
         nonce = secrets.token_hex(32)
         raw = self.command('USB ID ' + nonce, lambda value: value.startswith('GC_USB_ID '), timeout=8)
         proof = verify_message(raw[10:], kind='proof')
         if proof.body.get('nonce') != nonce:
-            raise ValueError('USB-Identität bestätigt die Anfrage nicht.')
+            raise ValueError('USB-IdentitÃ¤t bestÃ¤tigt die Anfrage nicht.')
         announce = parse_announcement(json.dumps(proof.body.get('announcement')))
         if announce.id != proof.device_id or announce.model != MODEL or announce.firmware != VERSION:
-            raise ValueError('Sensor benötigt die aktuelle Grow-Central-Firmware.')
+            raise ValueError('Sensor benÃ¶tigt die aktuelle Grow-Central-Firmware.')
         return proof, announce
 
 
@@ -151,7 +151,7 @@ class USBSerial:
 class Session:
     id: str
     state: str = 'DETECTED'
-    message: str = 'USB-Gerät erkannt. Boardtyp prüfen und Einrichtung starten.'
+    message: str = 'USB-GerÃ¤t erkannt. Boardtyp prÃ¼fen und Einrichtung starten.'
     device_id: str | None = None
     fingerprint: str | None = None
     name: str | None = None
@@ -171,12 +171,12 @@ class USBManager:
 
     def session(self, port_id):
         if not any(port['id'] == port_id for port in ports()):
-            raise HTTPException(404, 'USB-Gerät nicht mehr angeschlossen.')
+            raise HTTPException(404, 'USB-GerÃ¤t nicht mehr angeschlossen.')
         return self.sessions.setdefault(port_id, Session(port_id))
 
     def start(self, session, operation):
         if session.busy:
-            raise HTTPException(409, 'Für dieses USB-Gerät läuft bereits ein Schritt.')
+            raise HTTPException(409, 'FÃ¼r dieses USB-GerÃ¤t lÃ¤uft bereits ein Schritt.')
         session.busy = True
 
         async def run():
@@ -184,13 +184,13 @@ class USBManager:
                 await operation()
             except DeviceBlocked:
                 session.state = 'BLOCKED'
-                session.message = 'Sperrstatus oder geänderte Identität: Entscheidung in der Sensorliste ausdrücklich prüfen und gegebenenfalls erneut freigeben.'
+                session.message = 'Sperrstatus oder geÃ¤nderte IdentitÃ¤t: Entscheidung in der Sensorliste ausdrÃ¼cklich prÃ¼fen und gegebenenfalls erneut freigeben.'
                 append_audit('usb.setup.blocked', port_id=session.id, device_id=session.device_id)
             except (ValueError, OSError, TimeoutError, RuntimeError, subprocess.SubprocessError, serial.SerialException):
                 # Never expose subprocess output or commands carrying credentials.
                 session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK'} else 'FIRMWARE'
                 session.state = 'ERROR'
-                session.message = ('WLAN-/MQTT-Verbindung nicht bestätigt. Als Broker die LAN-IP des Pi wählen und WLAN erneut einrichten. Die geprüfte Firmware bleibt erhalten.' if session.resume == 'NETWORK' else 'USB-/Firmwareprüfung fehlgeschlagen. Verbindung und Board prüfen; nicht automatisch erneut flashen.')
+                session.message = ('WLAN-/MQTT-Verbindung nicht bestÃ¤tigt. Als Broker die LAN-IP des Pi wÃ¤hlen und WLAN erneut einrichten. Die geprÃ¼fte Firmware bleibt erhalten.' if session.resume == 'NETWORK' else 'USB-/FirmwareprÃ¼fung fehlgeschlagen. Verbindung und Board prÃ¼fen; nicht automatisch erneut flashen.')
                 append_audit('usb.setup.failed', port_id=session.id, resume=session.resume)
             except Exception:
                 session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK', 'ASSIGN'} else 'FIRMWARE'
@@ -206,11 +206,11 @@ class USBManager:
                 return connection.proof()
         proof, announce = await asyncio.to_thread(probe)
         if session.public_key and session.public_key != proof.public_key:
-            raise DeviceBlocked('USB-Geräteidentität wurde ausgetauscht.')
+            raise DeviceBlocked('USB-GerÃ¤teidentitÃ¤t wurde ausgetauscht.')
         try:
             row = await asyncio.to_thread(TrustStore().discover, announce, proof)
         except PermissionError as exc:
-            raise DeviceBlocked('Gespeicherte Identität oder Sperrstatus verhindert Aufnahme.') from exc
+            raise DeviceBlocked('Gespeicherte IdentitÃ¤t oder Sperrstatus verhindert Aufnahme.') from exc
         if row['status'] in {'REJECTED', 'REVOKED'}:
             raise DeviceBlocked('Sensor ist gesperrt; zuerst explizit erneut freigeben.')
         session.device_id, session.public_key, session.fingerprint = proof.device_id, proof.public_key, proof.fingerprint
@@ -218,16 +218,16 @@ class USBManager:
         return proof
 
     async def inspect(self, session):
-        session.state, session.message = 'CHECKING', 'Firmware und USB-Identität werden geprüft…'
+        session.state, session.message = 'CHECKING', 'Firmware und USB-IdentitÃ¤t werden geprÃ¼ftâ€¦'
         try:
             await self.read_identity(session)
         except (TimeoutError, ValueError):
-            session.state, session.message = 'NEEDS_FIRMWARE', 'Aktuelle Sensor-Firmware nicht bestätigt. XIAO ESP32-C3 auswählen und Firmware installieren.'
+            session.state, session.message = 'NEEDS_FIRMWARE', 'Aktuelle Sensor-Firmware nicht bestÃ¤tigt. XIAO ESP32-C3 auswÃ¤hlen und Firmware installieren.'
             return
-        session.state, session.message = 'NETWORK', 'Firmware geprüft. Jetzt Sensor mit dem WLAN verbinden.'
+        session.state, session.message = 'NETWORK', 'Firmware geprÃ¼ft. Jetzt Sensor mit dem WLAN verbinden.'
 
     async def flash(self, session):
-        session.state, session.message = 'FLASHING', 'Firmware wird geprüft und installiert. USB nicht trennen.'
+        session.state, session.message = 'FLASHING', 'Firmware wird geprÃ¼ft und installiert. USB nicht trennen.'
         root = await asyncio.to_thread(firmware_files)
         path = await asyncio.to_thread(resolve, session.id)
         append_audit('usb.flash.started', port_id=session.id, firmware=VERSION)
@@ -239,7 +239,7 @@ class USBManager:
         result = await asyncio.to_thread(subprocess.run, args, capture_output=True, timeout=150, check=False)
         if result.returncode:
             raise ValueError('Firmwareinstallation fehlgeschlagen.')
-        session.state, session.message = 'CHECKING', 'Firmware installiert. Sensor startet; Identität wird geprüft…'
+        session.state, session.message = 'CHECKING', 'Firmware installiert. Sensor startet; IdentitÃ¤t wird geprÃ¼ftâ€¦'
         for attempt in range(8):
             try:
                 await self.read_identity(session)
@@ -248,11 +248,11 @@ class USBManager:
                 if attempt == 7:
                     raise
                 await asyncio.sleep(1)
-        session.state, session.message = 'NETWORK', 'Firmware und Identität geprüft. WLAN einrichten.'
+        session.state, session.message = 'NETWORK', 'Firmware und IdentitÃ¤t geprÃ¼ft. WLAN einrichten.'
         append_audit('usb.flash.completed', port_id=session.id, device_id=session.device_id, firmware=VERSION)
 
     async def provision(self, session, body):
-        session.state, session.message = 'PROVISIONING', 'Individueller Zugang und Zertifikat werden lokal eingerichtet…'
+        session.state, session.message = 'PROVISIONING', 'Individueller Zugang und Zertifikat werden lokal eingerichtetâ€¦'
         proof = await self.read_identity(session)
         append_audit('usb.network.started', device_id=proof.device_id)
         credentials = await asyncio.to_thread(request_broker, 'provision', device_id=proof.device_id, host=body.broker_host)
@@ -269,18 +269,18 @@ class USBManager:
                 for command, response in commands:
                     connection.command(command, lambda line, expected=response: line == expected, timeout=8)
         await asyncio.to_thread(transfer)
-        session.state, session.message = 'CONNECTING', 'WLAN und TLS-MQTT werden verbunden. Aktuelle Netzwerk-Identität prüfen…'
+        session.state, session.message = 'CONNECTING', 'WLAN und TLS-MQTT werden verbunden. Aktuelle Netzwerk-IdentitÃ¤t prÃ¼fenâ€¦'
         await self.wait_online(session)
 
     async def wait_online(self, session):
         from app.devices.runtime import runtime
         provider = runtime.get('growcentral_esp32')
         for attempt in range(12):
-            session.message = f'WLAN-/MQTT-Verbindung prüfen: Versuch {attempt + 1}/12. Sensor angeschlossen lassen.'
+            session.message = f'WLAN-/MQTT-Verbindung prÃ¼fen: Versuch {attempt + 1}/12. Sensor angeschlossen lassen.'
             try:
                 proof = await provider.prove_identity(session.device_id)
                 if proof.public_key != session.public_key:
-                    raise DeviceBlocked('Netzwerk-Identität passt nicht zum USB-Sensor.')
+                    raise DeviceBlocked('Netzwerk-IdentitÃ¤t passt nicht zum USB-Sensor.')
                 if (TrustStore().get(session.device_id) or {}).get('status') == 'TRUSTED':
                     session.state, session.message = 'READY', 'Bekannter Sensor ist verbunden und bereits einem Raum zugewiesen.'
                     return proof
@@ -288,7 +288,7 @@ class USBManager:
                 return proof
             except TimeoutError:
                 await asyncio.sleep(1)
-        raise TimeoutError('Sensorverbindung nicht bestätigt.')
+        raise TimeoutError('Sensorverbindung nicht bestÃ¤tigt.')
 
 
 manager = USBManager()
@@ -308,14 +308,14 @@ class NetworkRequest(BaseModel):
     @classmethod
     def safe_serial(cls, value):
         if any(ord(char) < 32 for char in value) or '|' in value:
-            raise ValueError('Ungültige Zeichen.')
+            raise ValueError('UngÃ¼ltige Zeichen.')
         return value
 
     @field_validator('broker_host')
     @classmethod
     def supported_broker_host(cls, value):
         if value.lower().endswith('.local'):
-            raise ValueError('Für diesen Sensor die LAN-IP des Pi als Broker wählen; .local wird nicht unterstützt.')
+            raise ValueError('FÃ¼r diesen Sensor die LAN-IP des Pi als Broker wÃ¤hlen; .local wird nicht unterstÃ¼tzt.')
         return value
 
     @field_validator('ssid')
@@ -330,7 +330,7 @@ class NetworkRequest(BaseModel):
     def safe_password(cls, value):
         text = value.get_secret_value()
         if len(text.encode()) > 63 or (text and len(text.encode()) < 8) or any(ord(char) < 32 for char in text) or text != text.rstrip():
-            raise ValueError('WLAN-Kennwort benötigt 8–63 Bytes; leer nur für offene WLANs.')
+            raise ValueError('WLAN-Kennwort benÃ¶tigt 8â€“63 Bytes; leer nur fÃ¼r offene WLANs.')
         return value
 
 
@@ -365,7 +365,7 @@ async def broker_options():
         result = await asyncio.to_thread(request_broker, 'info')
         return {'ready': True, 'hosts': result['hosts']}
     except (OSError, RuntimeError):
-        return {'ready': False, 'hosts': [], 'message': 'Lokaler Broker-Einrichtungsdienst nicht verfügbar.'}
+        return {'ready': False, 'hosts': [], 'message': 'Lokaler Broker-Einrichtungsdienst nicht verfÃ¼gbar.'}
 
 
 @router.post('/{port_id}/inspect')
@@ -378,11 +378,11 @@ async def inspect_device(port_id: str):
 @router.post('/{port_id}/flash')
 async def flash_device(port_id: str, body: FlashRequest):
     if not body.confirmed:
-        raise HTTPException(422, 'Board und Firmwareinstallation zuerst bestätigen.')
+        raise HTTPException(422, 'Board und Firmwareinstallation zuerst bestÃ¤tigen.')
     try:
         await asyncio.to_thread(firmware_files)
     except (OSError, ValueError, KeyError) as exc:
-        raise HTTPException(503, 'Geprüftes Firmware-Paket fehlt; aktuelles Test-Image installieren.') from exc
+        raise HTTPException(503, 'GeprÃ¼ftes Firmware-Paket fehlt; aktuelles Test-Image installieren.') from exc
     session = manager.session(port_id)
     manager.start(session, lambda: manager.flash(session))
     return session.public()
@@ -392,7 +392,7 @@ async def flash_device(port_id: str, body: FlashRequest):
 async def network_device(port_id: str, body: NetworkRequest):
     session = manager.session(port_id)
     if not session.public_key or session.state not in {'NETWORK', 'ERROR', 'ASSIGN'}:
-        raise HTTPException(409, 'Zuerst die aktuelle Firmware und USB-Identität prüfen.')
+        raise HTTPException(409, 'Zuerst die aktuelle Firmware und USB-IdentitÃ¤t prÃ¼fen.')
     manager.start(session, lambda: manager.provision(session, body))
     return session.public()
 
@@ -401,9 +401,9 @@ async def network_device(port_id: str, body: NetworkRequest):
 async def check_connection(port_id: str):
     session = manager.session(port_id)
     if not session.public_key:
-        raise HTTPException(409, 'USB-Identität zuerst prüfen.')
+        raise HTTPException(409, 'USB-IdentitÃ¤t zuerst prÃ¼fen.')
     async def operation():
-        session.state, session.message = 'CONNECTING', 'Vorhandene Sensorverbindung wird geprüft…'
+        session.state, session.message = 'CONNECTING', 'Vorhandene Sensorverbindung wird geprÃ¼ftâ€¦'
         await manager.read_identity(session)
         await manager.wait_online(session)
     manager.start(session, operation)
@@ -415,21 +415,21 @@ async def assign_device(port_id: str, body: Assignment):
     from app import rooms
     session = manager.session(port_id)
     if session.busy or session.state != 'ASSIGN':
-        raise HTTPException(409, 'Sensor muss zuerst verbunden und geprüft sein.')
+        raise HTTPException(409, 'Sensor muss zuerst verbunden und geprÃ¼ft sein.')
     session.busy = True
     try:
         rooms.room_or_404(rooms.load_state(), body.room_id)
         proof = await manager.read_identity(session)
         network_proof = await manager.wait_online(session)
         if network_proof.public_key != proof.public_key:
-            raise ValueError('Identität passt nicht.')
+            raise ValueError('IdentitÃ¤t passt nicht.')
         def assign():
             with rooms.edit_state() as current:
                 rooms.room_or_404(current, body.room_id)
                 current['assignments']['growcentral_esp32:' + proof.device_id] = body.room_id
         existing = TrustStore().get(proof.device_id)
         if existing and existing['status'] == 'TRUSTED':
-            raise ValueError('Sensor bereits aufgenommen; bestehende Raumzuweisung in der Raumverwaltung ändern.')
+            raise ValueError('Sensor bereits aufgenommen; bestehende Raumzuweisung in der Raumverwaltung Ã¤ndern.')
         row = await asyncio.to_thread(TrustStore().accept, proof.device_id, name=body.name, room_id=body.room_id,
             fingerprint=proof.fingerprint[-16:], proved_key=proof.public_key, assign=assign)
         session.name = row['name']
@@ -438,11 +438,11 @@ async def assign_device(port_id: str, body: Assignment):
         return {'ok': True, 'device': row, 'session': session.public()}
     except (ValueError, DeviceBlocked) as exc:
         if isinstance(exc, DeviceBlocked):
-            session.state, session.message = 'BLOCKED', 'Sperrstatus und Geräteidentität in der Sensorliste prüfen.'
-        raise HTTPException(409, 'Aufnahme nicht möglich; Identität, Sperrstatus und Raum prüfen.') from exc
+            session.state, session.message = 'BLOCKED', 'Sperrstatus und GerÃ¤teidentitÃ¤t in der Sensorliste prÃ¼fen.'
+        raise HTTPException(409, 'Aufnahme nicht mÃ¶glich; IdentitÃ¤t, Sperrstatus und Raum prÃ¼fen.') from exc
     except (TimeoutError, OSError) as exc:
         session.state, session.resume = 'ERROR', 'NETWORK'
-        session.message = 'Sensor ist aktuell nicht erreichbar; WLAN-Verbindung erneut prüfen.'
+        session.message = 'Sensor ist aktuell nicht erreichbar; WLAN-Verbindung erneut prÃ¼fen.'
         raise HTTPException(504, session.message) from exc
     finally:
         session.busy = False

@@ -54,7 +54,17 @@ CA und individuelle Zugangsdaten sind echte Inbetriebnahmevoraussetzungen. Gehei
 
 Das Backend kann lokal über Loopback 1883 lesen; für eine eigene TLS-Verbindung `GC_MQTT_TLS=true`, `GC_MQTT_PORT=8883`, `GC_MQTT_CA_FILE` sowie private Benutzer-/Passwortbindungen konfigurieren. Der produktive Dienst liest `/opt/135er-grow-central/.env` über seine systemd-EnvironmentFile. Broker-Passwörter dürfen nicht pauschal an alle Geräte verteilt werden.
 
-**BLE-Provisionierung bleibt nicht implementiert und ausdrücklich deaktiviert.** Ab Firmware 0.4.0 ist die geführte Einrichtung direkt über USB am Pi verfügbar, einschließlich Zertifikaten und individuellem MQTT-Zugang. Die API meldet `ble_available=false` und `credential_transfer=usb_only`. Anleitung: [USB-Sensor einrichten](USB_SENSOR_SETUP.md). Der bestehende Netzwerk-Aufnahme-Endpunkt überträgt selbst keine Zugangsdaten. Es gibt keinen simulierten sicheren BLE-Kanal und keine Klartext-MQTT-Provisionierung. Ein BLE-Transport mit geprüftem Schlüsselaustausch, physischer Freigabe, Ablaufzeit und Firmware-Gegenstück ist ein eigener erforderlicher Folgeschritt.
+Ab Firmware **0.5.0** ist zusätzlich eine sichere BLE-Erstprovisionierung implementiert. Ein unkonfigurierter Sensor wirbt ausschließlich den Grow-Central-Provisioning-Service aus; Grow-Central erkennt ihn automatisch, nimmt ihn aber niemals automatisch auf. Vor der Übertragung von WLAN- oder MQTT-Geheimnissen sind alle folgenden Bedingungen erforderlich:
+
+1. Der Nutzer startet die Aufnahme ausdrücklich in der Geräteansicht.
+2. Pi und Sensor erzeugen pro Sitzung neue P-256-ECDH-Schlüssel.
+3. Der Sensor signiert seinen ephemeren Sitzungsschlüssel, die frische 256-Bit-Nonce und seine Geräteankündigung mit seiner dauerhaften P-256-Geräteidentität.
+4. Beide Seiten leiten mit HKDF-SHA256 einen nur für diese Sitzung gültigen AES-256-GCM-Schlüssel ab.
+5. Der Nutzer muss den **BOOT-Taster direkt am verbundenen XIAO mindestens etwa 0,8 Sekunden drücken**. Ohne diese physische Bestätigung werden weder Broker-Zugang noch WLAN-Kennwort erzeugt bzw. übertragen. Das Pairing-Fenster läuft nach 60 Sekunden ab.
+6. Erst danach überträgt GC SSID, WLAN-Kennwort, Broker-CA und einen individuellen MQTT-Account AES-GCM-geschützt.
+7. Nach der BLE-Konfiguration muss derselbe Langzeitschlüssel zusätzlich über TLS-MQTT einen frischen Nonce-Proof liefern. Erst danach setzt GC den Sensor auf `TRUSTED` und speichert Name plus Raumzuordnung.
+
+Ein aktiver BLE-Man-in-the-Middle kann dadurch höchstens die Sitzung stören: Das Austauschen eines ephemeren Schlüssels führt zu unterschiedlichen Sitzungsschlüsseln und damit zu einem GCM-Fehler; Zugangsdaten werden nicht im Klartext gesendet. Abgelehnte/widerrufene Geräte erhalten auch über BLE keine Zugangsdaten. Bleibt die Netzwerkinbetriebnahme nach erfolgreicher BLE-Übertragung fehlerhaft, bleibt BLE als Recovery-Pfad aktiv; erst nach bestätigter TLS-MQTT-Verbindung wird die BLE-Provisionierung abgeschaltet. USB bleibt als lokaler Recovery-/Flash-Weg erhalten.
 
 ## Autonomie und Messwerte
 

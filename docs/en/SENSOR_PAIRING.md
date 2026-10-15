@@ -30,13 +30,16 @@ requires clock synchronization and does not disable certificate verification.
 Backend TLS is configurable through GC_MQTT_TLS/PORT/CA_FILE and private login
 bindings. Real certificates/accounts still need configuration on the target Pi.
 
-**BLE discovery/provisioning is not implemented.** Firmware 0.4.0 adds guided
-USB onboarding on the Pi, including local certificates and individual MQTT
-accounts. API reports `ble_available=false`, `credential_transfer=usb_only`.
-See [USB sensor setup](../de/USB_SENSOR_SETUP.md). The existing network acceptance
-endpoint itself does not transfer credentials.
-This is not yet the desired first-contact BLE path without Wi-Fi setup. No
-plaintext MQTT secret transfer is substituted for it.
+Firmware **0.5.0** adds secure BLE first-contact provisioning for unconfigured
+GC soil nodes. Discovery remains automatic but acceptance is always manual. Each
+session uses fresh P-256 ECDH, a signed sensor ephemeral key, HKDF-SHA256 and
+AES-256-GCM. The user must physically hold the XIAO BOOT button before GC creates
+or transfers Wi-Fi/MQTT credentials. The 60-second pairing window expires closed.
+After BLE transfer, the same long-term sensor key must prove itself again over
+TLS-MQTT before the device becomes TRUSTED and receives its room assignment.
+Rejected/revoked devices receive no credentials. USB remains the recovery/flash
+path. Real-radio end-to-end hardware validation is still pending for this new
+0.5.0 path.
 
 Sampling runs in a separate FreeRTOS task while network work retries with
 independent backoff. Proofs use a bounded queue and publish outside MQTT callbacks

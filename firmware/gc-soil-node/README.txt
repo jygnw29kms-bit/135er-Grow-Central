@@ -11,7 +11,7 @@ Measured engineering references on the first node
 - AIR_RAW: 3767
 - WATER_RAW: 1310
 
-Firmware 0.4.1 (build verified; USB/MQTT/soil display confirmed on one patched Pi 4; full hardware validation pending)
+Firmware 0.5.0 (BLE secure provisioning source/build verified; real BLE end-to-end hardware validation pending)
 - 12-bit ADC on A0/GPIO2
 - 64-sample acquisition windows
 - 12.5% trimmed mean for outlier suppression
@@ -27,6 +27,9 @@ Firmware 0.4.1 (build verified; USB/MQTT/soil display confirmed on one patched P
 - Diagnostics in the MQTT state meta object
 - State publication every 10 s or after >=0.5 percentage-point change
 - Automatic Wi-Fi and MQTT reconnect
+- Secure BLE bootstrap for unconfigured nodes using signed P-256 ECDH, HKDF-SHA256 and AES-256-GCM
+- Physical BOOT-button confirmation required before any WLAN/MQTT secret transfer
+- BLE provisioning stays recoverable until TLS-MQTT connectivity is proven, then shuts down
 - Serial machine-readable GC_SOIL telemetry at 115200 baud
 
 Grow-Central topics
@@ -98,14 +101,12 @@ Manual trust and identity (0.3.0)
 - Full NVS erase creates a new key. Revoke/reject and explicitly reset identity
   in GC; the previous key is permanently retired before accepting a replacement.
 
-TLS broker provisioning via local USB only
+Secure local provisioning
 - Device-to-broker connections require TLS/8883, a real CA and individual login.
-- Store the public CA certificate as base64 DER with NET CA <certificate>.
-- NET MQTT <host>|8883|<device-id>|<individual-password>
-- Configure certificates, password file and topic ACLs on the Pi first. Examples
-  are under deploy/mqtt; see docs/de/SENSOR_PAIRING.md for the migration steps.
+- Preferred first setup in 0.5.0 is Grow-Central BLE onboarding: manual user decision, signed ephemeral ECDH, physical BOOT confirmation and AES-256-GCM credential transfer.
+- USB remains the recovery/flash path and can still store the CA with NET CA and the individual account with NET MQTT.
+- Configure certificates, password file and topic ACLs on the Pi first. Examples are under deploy/mqtt; see docs/de/SENSOR_PAIRING.md.
 - Certificate validation remains enabled. Time sync is required for TLS.
-- BLE transfer of Wi-Fi/MQTT credentials is NOT implemented and remains disabled.
 - No network command accepts Wi-Fi passwords or actuator commands.
 
 Autonomy
@@ -113,8 +114,8 @@ Autonomy
 - Wi-Fi/MQTT retries back off independently up to 60 seconds.
 - Identity proofs use a bounded queue and publish outside the MQTT callback,
   as required by the 256dpi MQTT library to avoid callback deadlocks.
-- Flash/NVS encryption, secure boot, offline history backfill, BLE secure
-  provisioning and physical long-duration tests remain separate work.
+- Flash/NVS encryption, secure boot, offline history backfill and physical long-duration tests remain separate work.
+- BLE secure provisioning is implemented in 0.5.0 but still requires real-radio/hardware validation before release status is raised.
 - No real sensor was flashed during the cloud validation.
 
 Guided USB onboarding (0.4.1)
@@ -124,3 +125,5 @@ Guided USB onboarding (0.4.1)
   before the explicit name/room acceptance. See docs/de/USB_SENSOR_SETUP.md.
 
 0.4.1: TLS handshake/read deadlines 10 seconds; MQTT acknowledgement deadline 5 seconds. NET INFO reports UTC epoch/CA length; failures report the underlying Mbed TLS error. CA, credentials and identity validation remain required. Hardware validation pending.
+
+0.5.0: Adds secure BLE bootstrap for new autonomous nodes, physical BOOT confirmation, signed P-256 ECDH/HKDF/AES-GCM credential transport and an OTA-capable dual-app partition layout for the larger BLE+TLS firmware.

@@ -7,9 +7,10 @@
 #include <MQTT.h>
 #include <math.h>
 #include "identity.h"
+#include "ble_provisioning.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.4.1";
+static constexpr char FW_VERSION[] = "0.5.0";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -30,6 +31,7 @@ Preferences prefs;
 WiFiClientSecure net;
 MQTTClient mqtt(2048, 2048);
 DeviceIdentity identity;
+BleProvisioner bleProvisioner;
 
 uint16_t airRaw = DEFAULT_AIR_RAW;
 uint16_t waterRaw = DEFAULT_WATER_RAW;
@@ -51,6 +53,7 @@ String mqttPass;
 String mqttCa;
 String deviceName = "Grow-Central Soil Sensor";
 String deviceId;
+bool bleProvisionPending = false;
 
 struct SoilReading {
   uint16_t rawMean;
@@ -225,7 +228,15 @@ static void loadNetworkConfig() {
   mqttUser = prefs.getString("muser", "");
   mqttPass = prefs.getString("mpass", "");
   deviceName = prefs.getString("name", "Grow-Central Soil Sensor");
+  bleProvisionPending = prefs.getBool("blepend", false);
   prefs.end();
+}
+
+static String caDerBase64ToPem(const String& encoded) {
+  String pem = "-----BEGIN CERTIFICATE-----\n";
+  for (size_t i = 0; i < encoded.length(); i += 64) pem += encoded.substring(i, i + 64) + "\n";
+  pem += "-----END CERTIFICATE-----\n";
+  return pem;
 }
 
 static void saveNetworkConfig() {
@@ -241,6 +252,10 @@ static void saveNetworkConfig() {
   prefs.end();
 }
 
+static void saveBleProvisionPending(bool value) {
+  prefs.begin("gc-net", false); prefs.putBool("blepend", value); prefs.end(); bleProvisionPending = value;
+}
+
 static void clearNetworkConfig() {
   prefs.begin("gc-net", false);
   prefs.clear();
@@ -253,6 +268,7 @@ static void clearNetworkConfig() {
   mqttPass = "";
   mqttCa = "";
   deviceName = "Grow-Central Soil Sensor";
+  bleProvisionPending = false;
   mqtt.disconnect();
   WiFi.disconnect(true, true);
 }
@@ -422,6 +438,7 @@ static void connectMqttIfReady() {
   mqtt.subscribe(topic("challenge"), 1);
   mqtt.publish(topic("availability"), "online", true, 1);
   publishAnnouncement();
+  if (bleProvisionPending) { saveBleProvisionPending(false); bleProvisioner.stop(); }
   Serial.printf("GC_NET mqtt_online broker=%s:%u device=%s\n", mqttHost.c_str(), mqttPort, deviceId.c_str());
 }
 
@@ -623,6 +640,10 @@ void setup() {
   deriveDeviceId();
   loadCalibration();
   loadNetworkConfig();
+  if (bleProvisionPending || wifiSsid.isEmpty() || mqttHost.isEmpty() || mqttUser.isEmpty() || mqttPass.isEmpty() || mqttCa.isEmpty()) {
+    bleProvisioner.begin(deviceId, announcementPayload(), identity);
+    Serial.println("GC_BLE provisioning active; accept in Grow-Central and hold BOOT when prompted");
+  }
   mqtt.setOptions(30, true, 1500);
   mqtt.onMessage(onMqttMessage);
   printInfo();
@@ -635,6 +656,17 @@ void setup() {
 
 void loop() {
   handleSerialCommands();
+  bleProvisioner.loop();
+  BleNetworkConfig bleConfig;
+  if (bleProvisioner.take(bleConfig)) {
+    wifiSsid = bleConfig.ssid; wifiPass = bleConfig.wifiPass; mqttHost = bleConfig.host; mqttPort = bleConfig.port;
+    mqttUser = bleConfig.user; mqttPass = bleConfig.pass; mqttCa = caDerBase64ToPem(bleConfig.ca); deviceName = bleConfig.name;
+    saveNetworkConfig();
+    saveBleProvisionPending(true);
+    lastWifiAttempt = 0; lastMqttAttempt = 0;
+    Serial.println("GC_BLE secure provisioning committed");
+    startWifiIfConfigured();
+  }
   maintainWifi();
   connectMqttIfReady();
   if (mqtt.connected()) mqtt.loop();
