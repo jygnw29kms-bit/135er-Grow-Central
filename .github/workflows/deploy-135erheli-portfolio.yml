@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout 135erHeli website
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -19,29 +19,55 @@ jobs:
           ref: main
           path: site
 
-      - name: Deploy via existing authorized SFTP channel
+      - name: Deploy through existing dezender server access
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PORT: ${{ secrets.SFTP_PORT }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
         run: |
           set -euo pipefail
-          test -n "$SFTP_HOST"
-          test -n "$SFTP_USERNAME"
-          test -n "$SFTP_PORT"
-          test -n "$SSH_PRIVATE_KEY"
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/135erheli_deploy
-          chmod 600 ~/.ssh/135erheli_deploy
-          ssh-keyscan -p "$SFTP_PORT" "$SFTP_HOST" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-          cat > /tmp/sftp-batch <<'EOF'
-          cd /var/www/vhosts/135erheli.de/httpdocs
-          put site/index.html index.html
-          put site/styles.css styles.css
-          put site/app.js app.js
-          bye
-          EOF
-          sftp -i ~/.ssh/135erheli_deploy -P "$SFTP_PORT" -o BatchMode=yes -b /tmp/sftp-batch "$SFTP_USERNAME@$SFTP_HOST"
-          rm -f ~/.ssh/135erheli_deploy /tmp/sftp-batch
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          : "${SSH_PORT:=22}"
+          : "${SSH_HOST:?SSH_HOST/SFTP_HOST fehlt}"
+          : "${SSH_USERNAME:?SSH_USERNAME fehlt}"
+          : "${SSH_PASSWORD:?SSH_PASSWORD fehlt}"
+          export SSHPASS="$SSH_PASSWORD"
+
+          tar -C site -czf /tmp/135erheli-site.tar.gz index.html styles.css app.js
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/135erheli-site.tar.gz"
+
+          REMOTE='set -euo pipefail
+          TARGET="/var/www/vhosts/135erheli.de/httpdocs"
+          test -d "$TARGET"
+          rm -rf /tmp/135erheli-stage
+          mkdir -p /tmp/135erheli-stage
+          tar -xzf /tmp/135erheli-site.tar.gz -C /tmp/135erheli-stage
+          install -m 0644 /tmp/135erheli-stage/index.html "$TARGET/index.html"
+          install -m 0644 /tmp/135erheli-stage/styles.css "$TARGET/styles.css"
+          install -m 0644 /tmp/135erheli-stage/app.js "$TARGET/app.js"
+          chown --reference="$TARGET" "$TARGET/index.html" "$TARGET/styles.css" "$TARGET/app.js"
+          rm -rf /tmp/135erheli-stage /tmp/135erheli-site.tar.gz'
+
+          B64="$(printf '%s' "$REMOTE" | base64 -w0)"
+          if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+          else
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
+
+      - name: Verify live website
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..12}; do
+            if curl -LfsS https://135erheli.de/ -o /tmp/135erheli.html && grep -q 'JL1976' /tmp/135erheli.html; then
+              echo '135erHeli.de is live.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Live verification failed.' >&2
+          exit 1
