@@ -45,7 +45,7 @@ jobs:
 
           REMOTE='set -euo pipefail
           TARGET="/var/www/vhosts/135erheli.de/httpdocs"
-          test -d "$TARGET"
+          mkdir -p "$TARGET"
           rm -rf /tmp/135erheli-stage
           mkdir -p /tmp/135erheli-stage
           tar -xzf /tmp/135erheli-site.tar.gz -C /tmp/135erheli-stage
