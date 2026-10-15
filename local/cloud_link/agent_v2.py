@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timezone
 import json
 import logging
+import os
 from pathlib import Path
 import time
 
@@ -12,9 +13,11 @@ import httpx
 
 try:
     from . import agent as legacy
+    from .device_pairing import load_state as load_pairing_state, poll_pairing
     from .platform_report import send_platform_report
 except ImportError:
     import agent as legacy  # type: ignore[no-redef]
+    from device_pairing import load_state as load_pairing_state, poll_pairing  # type: ignore[no-redef]
     from platform_report import send_platform_report  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
@@ -23,7 +26,8 @@ CLOUD_STATE = legacy.CONTACT_ACK.with_name("cloud-link-status.json")
 LOCAL_TOKEN_FILE = Path("/var/lib/135er-grow-central/local-api-token")
 MIN_RETRY = 30
 MAX_RETRY = 600
-PLATFORM_REPORT_SECONDS = min(max(int(__import__("os").getenv("GC_PLATFORM_REPORT_SECONDS", "120")), 60), 3600)
+PLATFORM_REPORT_SECONDS = min(max(int(os.getenv("GC_PLATFORM_REPORT_SECONDS", "120")), 60), 3600)
+PAIRING_POLL_SECONDS = min(max(int(os.getenv("GC_PAIRING_POLL_SECONDS", "10")), 5), 60)
 EXPECTED_CLOUD_SERVICE = "135er-Grow Central Cloud"
 
 
@@ -112,6 +116,21 @@ async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
     }, local
 
 
+async def _poll_pending_pairing(client: httpx.AsyncClient) -> dict | None:
+    """Complete an already user-started device-code flow without blocking local control."""
+    state = load_pairing_state()
+    if not state or not state.get("device_code"):
+        return None
+    try:
+        result = await poll_pairing(client, cloud_url=legacy.CLOUD_URL)
+        if result.get("status") == "approved":
+            logger.info("Grow Central cloud device pairing approved")
+        return result
+    except Exception as exc:
+        logger.warning("Cloud pairing poll failed: %s", type(exc).__name__)
+        return {"status": "degraded", "reason": type(exc).__name__}
+
+
 async def main() -> None:
     if not legacy.CLOUD_ENABLED:
         _persist_state(state="disabled", detail="cloud link disabled", cloud_compatible=None, platform_report={"state": "disabled", "sent": False})
@@ -127,7 +146,9 @@ async def main() -> None:
     next_diag = 0.0
     next_bundle_refresh = 0.0
     next_platform_report = 0.0
+    next_pairing_poll = 0.0
     platform_state: dict = {"state": "pending", "sent": False}
+    pairing_state: dict | None = None
 
     async with httpx.AsyncClient() as client:
         while True:
@@ -141,6 +162,7 @@ async def main() -> None:
                     capabilities=capabilities,
                     retry_seconds=retry_seconds,
                     platform_report=platform_state,
+                    pairing=pairing_state,
                 )
                 logger.warning("Cloud unavailable/incompatible: %s; retry in %ss", json.dumps(capabilities), retry_seconds)
                 await asyncio.sleep(retry_seconds)
@@ -148,6 +170,15 @@ async def main() -> None:
                 continue
 
             now = time.monotonic()
+            if now >= next_pairing_poll:
+                pairing_state = await _poll_pending_pairing(client)
+                next_pairing_poll = now + PAIRING_POLL_SECONDS
+                if pairing_state and pairing_state.get("status") == "approved":
+                    # Pairing just produced the device_id required by the signed
+                    # platform report. Send immediately instead of waiting for
+                    # the normal reporting interval.
+                    next_platform_report = 0.0
+
             if now >= next_platform_report:
                 platform_state = await send_platform_report(
                     client,
@@ -178,6 +209,7 @@ async def main() -> None:
                         http_status=404,
                         retry_seconds=retry_seconds,
                         platform_report=platform_state,
+                        pairing=pairing_state,
                     )
                     await asyncio.sleep(retry_seconds)
                     retry_seconds = min(MAX_RETRY, retry_seconds * 2)
@@ -216,6 +248,7 @@ async def main() -> None:
                     capabilities=capabilities,
                     retry_seconds=legacy.SYNC,
                     platform_report=platform_state,
+                    pairing=pairing_state,
                 )
                 retry_seconds = MIN_RETRY
             except Exception as exc:
@@ -227,6 +260,7 @@ async def main() -> None:
                     capabilities=capabilities,
                     retry_seconds=retry_seconds,
                     platform_report=platform_state,
+                    pairing=pairing_state,
                 )
                 logger.warning("Cloud sync degraded: %s; retry in %ss", type(exc).__name__, retry_seconds)
                 await asyncio.sleep(retry_seconds)
