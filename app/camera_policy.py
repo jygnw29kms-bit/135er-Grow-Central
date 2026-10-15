@@ -34,15 +34,10 @@ def install(camera_module: Any) -> None:
         return profile, profile.camera_max_width, profile.camera_max_height
 
     def parse_modes_profiled(text: str):
-        profile, max_width, max_height = _limits()
-        del profile
-        modes = original_parse_modes(text)
-        return [
-            mode
-            for mode in modes
-            if int(mode.get("width") or 0) <= max_width
-            and int(mode.get("height") or 0) <= max_height
-        ]
+        # Discovery describes what the UVC device can actually do. Do not hide
+        # native modes here: the hardware profile is enforced when a capture is
+        # selected, and controls/status expose the supported maximum separately.
+        return original_parse_modes(text)
 
     def resolve_mode_profiled(camera_id, width, height):
         _profile, max_width, max_height = _limits()
