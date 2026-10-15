@@ -47,14 +47,14 @@ def evaluate_grow_alerts(state: dict[str, Any], *, now: datetime | None = None) 
         latest = next((row for row in reversed(history) if row.get("room_id") == room.get("id")), None)
         base = {"room_id": room.get("id"), "room_name": room.get("name") or room.get("id"), "source": "soil_reference"}
         if not latest:
-            alerts.append({**base, "kind": "soil_no_data", "severity": "warning", "message": "Keine Bodenfeuchte-Messung f?r konfigurierte Warnschwellen."})
+            alerts.append({**base, "kind": "soil_no_data", "severity": "warning", "message": "Keine Bodenfeuchte-Messung f\u00fcr konfigurierte Warnschwellen."})
             continue
         age = _age_seconds(latest.get("timestamp"), now)
         if age is None or age > FRESH_SECONDS:
-            alerts.append({**base, "kind": "soil_stale", "severity": "warning", "timestamp": latest.get("timestamp"), "age_seconds": age, "message": "Bodenfeuchte-Messung ist zu alt f?r eine sichere Schwellenbewertung."})
+            alerts.append({**base, "kind": "soil_stale", "severity": "warning", "timestamp": latest.get("timestamp"), "age_seconds": age, "message": "Bodenfeuchte-Messung ist zu alt f\u00fcr eine sichere Schwellenbewertung."})
             continue
         if latest.get("soil_calibration_status") != "valid":
-            alerts.append({**base, "kind": "soil_calibration_required", "severity": "warning", "timestamp": latest.get("timestamp"), "message": "Dreipunkt-Kalibrierung ist f?r die Soil-Warnschwellen nicht g?ltig."})
+            alerts.append({**base, "kind": "soil_calibration_required", "severity": "warning", "timestamp": latest.get("timestamp"), "message": "Dreipunkt-Kalibrierung ist f\u00fcr die Soil-Warnschwellen nicht g\u00fcltig."})
             continue
         index = _number(latest.get("soil_substrate_index_percent"))
         if index is None:
@@ -63,7 +63,7 @@ def evaluate_grow_alerts(state: dict[str, Any], *, now: datetime | None = None) 
         if low is not None and index < low:
             alerts.append({**base, "kind": "soil_below_reference_threshold", "severity": "warning", "timestamp": latest.get("timestamp"), "value": round(index, 2), "threshold": low, "message": f"Frischsubstrat-Index {index:.0f} % liegt unter der Warnschwelle {low:.0f} %."})
         if high is not None and index > high:
-            alerts.append({**base, "kind": "soil_above_reference_threshold", "severity": "warning", "timestamp": latest.get("timestamp"), "value": round(index, 2), "threshold": high, "message": f"Frischsubstrat-Index {index:.0f} % liegt ?ber der Warnschwelle {high:.0f} %."})
+            alerts.append({**base, "kind": "soil_above_reference_threshold", "severity": "warning", "timestamp": latest.get("timestamp"), "value": round(index, 2), "threshold": high, "message": f"Frischsubstrat-Index {index:.0f} % liegt \u00fcber der Warnschwelle {high:.0f} %."})
     return alerts
 
 
