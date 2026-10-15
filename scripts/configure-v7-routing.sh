@@ -92,6 +92,25 @@ p.write_text(s)
 PY
 }
 
+clean_legacy_plesk_limit(){
+  python3 - "$1" <<'PY'
+from pathlib import Path
+import re,sys
+p=Path(sys.argv[1])
+lines=p.read_text().splitlines() if p.exists() else []
+out=[]
+for line in lines:
+    # Older Grow-Central installers wrote an unmarked 40m directive directly
+    # into Plesk's custom vhost file. Plesk can already provide its own limit,
+    # and nginx rejects both at the same level. Remove only our known legacy
+    # value; preserve any operator-defined value that differs from 40m.
+    if re.fullmatch(r"\s*client_max_body_size\s+40m\s*;\s*", line):
+        continue
+    out.append(line)
+p.write_text(("\n".join(out).rstrip()+"\n") if out else "")
+PY
+}
+
 configure_standalone(){
   command -v nginx >/dev/null 2>&1 || { echo "nginx fehlt." >&2; exit 2; }
   local conf="/etc/nginx/sites-available/135er-growcentral-cloud.conf"
@@ -132,18 +151,17 @@ configure_plesk(){
   [[ -f "$file" ]] && cp -a "$file" "$backup"
   touch "$file"
   strip_managed_block "$file"
+  clean_legacy_plesk_limit "$file"
   tmp="$(mktemp)"
   {
-    # Plesk/custom vhosts may already define this directive. nginx rejects a
-    # duplicate at the same context, so only add our managed limit if absent.
-    if ! grep -Eq '^[[:space:]]*client_max_body_size[[:space:]]+' "$file"; then
-      printf '%s\n' '# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT' 'client_max_body_size 40m;' '# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT'
-    fi
+    # Plesk owns client_max_body_size in Plesk mode. Grow Central only owns
+    # the reverse-proxy locations below; this keeps the custom vhost idempotent.
     write_locations
     cat "$file"
   } > "$tmp"
   cat "$tmp" > "$file"
   rm -f "$tmp"
+  echo "Grow-Central Plesk Routing-Ziel: ${HOST}"
   if ! plesk sbin httpdmng --reconfigure-domain "$HOST" >/dev/null; then
     [[ -f "$backup" ]] && cp -a "$backup" "$file"
     plesk sbin httpdmng --reconfigure-domain "$HOST" >/dev/null 2>&1 || true
