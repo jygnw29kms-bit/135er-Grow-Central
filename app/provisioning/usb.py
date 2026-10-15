@@ -305,6 +305,22 @@ class USBManager:
         append_audit('usb.flash.completed', port_id=session.id, device_id=session.device_id, firmware=VERSION)
 
 
+    async def reset_calibration(self, session):
+        session.state, session.message = 'CALIBRATING', 'Vorhandene Kalibrierung wird verworfen; alle drei Referenzpunkte müssen neu gemessen werden.'
+        before_key = session.public_key
+        def run():
+            with USBSerial(resolve(session.id)) as connection:
+                fresh, _ = connection.proof()
+                if before_key and fresh.public_key != before_key:
+                    raise DeviceBlocked('Sensoridentität hat sich während der Neukalibrierung geändert.')
+                connection.command('RESET CAL', lambda line: line.startswith('CALIBRATION RESET'), timeout=10)
+        await asyncio.to_thread(run)
+        if session.device_id:
+            await asyncio.to_thread(CalibrationStore().invalidate, session.device_id, 'manual three-point recalibration started')
+        await self.read_identity(session)
+        session.state, session.message = 'CALIBRATION', 'Neukalibrierung gestartet. Jetzt AIR_DRY, WATER_SATURATED und FRESH_SUBSTRATE_CC vollständig neu messen.'
+        append_audit('usb.calibration.reset', device_id=session.device_id)
+
     async def calibrate(self, session, kind: str):
         labels = {'air':'Trockenreferenz wird gemessen…','wet':'Wasserreferenz wird gemessen…','substrate':'Frische-Substrat-Referenz wird gemessen…'}
         commands = {'air':('CAL AIR','CAL AIR SAVED:'),'wet':('CAL WATER','CAL WATER SAVED:'),'substrate':('CAL SUBSTRATE','CAL SUBSTRATE SAVED:')}
@@ -482,6 +498,14 @@ async def flash_device(port_id: str, body: FlashRequest):
 
 
 
+
+@router.post('/{port_id}/calibration/reset')
+async def reset_calibration_device(port_id: str):
+    session = manager.session(port_id)
+    if not session.public_key or session.state not in {'CALIBRATION', 'CALIBRATING', 'NETWORK', 'ASSIGN', 'READY', 'ERROR'}:
+        raise HTTPException(409, 'Zuerst Firmware und Hardware-Identität prüfen.')
+    manager.start(session, lambda: manager.reset_calibration(session))
+    return session.public()
 
 @router.post('/{port_id}/calibrate/{kind}')
 async def calibrate_device(port_id: str, kind: str):

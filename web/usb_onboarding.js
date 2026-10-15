@@ -105,6 +105,12 @@
     box.append(make('h3', 'Pflichtkalibrierung vor Freigabe'));
     const uid = selected.hardware_uid ? 'Hardware-ID: ' + selected.hardware_uid : 'Hardware-ID wird geprüft';
     box.append(make('p', uid), make('p', 'Die Kalibrierung gehört fest zu diesem kryptografisch geprüften Sensor. Ein Gerätewechsel während des Ablaufs wird blockiert.'));
+    box.append(make('p', 'Bei Substratwechsel oder Sensorabweichungen wird immer die komplette Dreipunkt-Kalibrierung neu durchgeführt. Einzelne alte Referenzpunkte werden nicht mit neuen Punkten gemischt.'));
+    if (selected.air_calibrated || selected.wet_calibrated || selected.substrate_calibrated) {
+      const reset = button('Alle 3 Referenzpunkte neu kalibrieren', () => action('/calibration/reset'));
+      reset.className = 'secondary';
+      box.append(reset);
+    }
 
     const airButton = button(selected.air_calibrated ? 'Trockenreferenz erneut messen' : 'Trockenreferenz messen', () => action('/calibrate/air'));
     const wetButton = button(selected.wet_calibrated ? 'Wasserreferenz erneut messen' : 'Wasserreferenz messen', () => action('/calibrate/wet'));

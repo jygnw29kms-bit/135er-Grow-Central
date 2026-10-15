@@ -72,6 +72,9 @@ class Sensor:
                     self.wet_done = True; self.wet_raw = 1310; response = 'CAL WATER SAVED: 1310'
                 elif command == 'CAL SUBSTRATE':
                     self.substrate_done = True; self.substrate_raw = 2500; response = 'CAL SUBSTRATE SAVED: 2500'
+                elif command == 'RESET CAL':
+                    self.air_done = self.wet_done = self.substrate_done = False
+                    response = 'CALIBRATION RESET TO PROVISIONAL REFERENCES'
                 elif command.startswith('NET CA '):
                     encoded = command[7:]
                     self.ca_bytes = 54 + len(encoded) + (len(encoded) + 63) // 64
