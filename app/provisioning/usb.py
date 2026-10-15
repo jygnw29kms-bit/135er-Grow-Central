@@ -191,13 +191,14 @@ class Session:
     substrate_raw: int | None = None
     wifi_configured: bool = False
     mqtt_configured: bool = False
+    mqtt_connected: bool = False
     ca_configured: bool = False
     busy: bool = False
     resume: str = 'FIRMWARE'
     task: asyncio.Task | None = field(default=None, repr=False)
 
     def public(self):
-        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'substrate_calibrated', 'air_raw', 'wet_raw', 'substrate_raw', 'wifi_configured', 'mqtt_configured', 'ca_configured', 'busy', 'resume']}
+        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'substrate_calibrated', 'air_raw', 'wet_raw', 'substrate_raw', 'wifi_configured', 'mqtt_configured', 'mqtt_connected', 'ca_configured', 'busy', 'resume']}
 
 
 class USBManager:
@@ -282,9 +283,10 @@ class USBManager:
         wifi, mqtt, ca = await asyncio.to_thread(probe)
         session.wifi_configured = 'wifi_configured=yes' in wifi
         session.mqtt_configured = 'mqtt_configured=yes' in mqtt
+        session.mqtt_connected = 'mqtt_connected=yes' in mqtt
         match = re.search(r'\bca_bytes=(\d+)', ca)
         session.ca_configured = bool(match and int(match.group(1)) > 0)
-        return session.wifi_configured and session.mqtt_configured and session.ca_configured
+        return session.wifi_configured and session.mqtt_configured and session.mqtt_connected and session.ca_configured
 
     async def inspect(self, session):
         session.state, session.message = 'CHECKING', 'Firmware und USB-Identität werden geprüft…'
@@ -293,7 +295,16 @@ class USBManager:
         except (TimeoutError, ValueError):
             session.state, session.message = 'NEEDS_FIRMWARE', 'Aktuelle Sensor-Firmware nicht bestätigt. XIAO ESP32-C3 auswählen und Firmware installieren.'
             return
-        session.state, session.message = ('NETWORK', 'Kalibrierung geprüft. Jetzt Sensor mit dem WLAN verbinden.') if session.calibration_ready else ('CALIBRATION', 'Identität und Hardware-ID geprüft. Jetzt Sensor vollständig kalibrieren.')
+        if session.calibration_ready:
+            try:
+                network_ready = await self.read_network_status(session)
+            except (OSError, TimeoutError, ValueError, serial.SerialException):
+                network_ready = False
+                session.wifi_configured = session.mqtt_configured = session.mqtt_connected = session.ca_configured = False
+            session.state = 'NETWORK'
+            session.message = ('WLAN/TLS-MQTT verbunden. Aktuelle Sensoridentität wird automatisch geprüft.' if network_ready else 'Kalibrierung geprüft. Jetzt WLAN/TLS-MQTT einrichten.')
+        else:
+            session.state, session.message = 'CALIBRATION', 'Identität und Hardware-ID geprüft. Jetzt Sensor vollständig kalibrieren.'
 
     async def flash(self, session):
         session.state, session.message = 'FLASHING', 'Firmware wird geprüft und installiert. USB nicht trennen.'
