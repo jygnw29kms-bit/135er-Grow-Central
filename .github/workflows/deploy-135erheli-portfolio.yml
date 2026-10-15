@@ -51,8 +51,8 @@ jobs:
           echo "== Plesk site before =="
           plesk bin site --info "$FQDN"
 
-          # Let Plesk own the hosting definition and document root.
-          plesk bin site --update "$FQDN" -hosting true -www-root httpdocs -seo-redirect non-www
+          # Keep hosting under Plesk control; only enforce the document root and canonical host.
+          plesk bin site --update "$FQDN" -www-root httpdocs -seo-redirect non-www
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
 
           test -d "$TARGET"
