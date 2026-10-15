@@ -170,6 +170,6 @@
   document.querySelectorAll('#mainNav [data-view],[data-open]').forEach((node)=>node.addEventListener('click',()=>openView(node.dataset.view||node.dataset.open)));
   document.querySelectorAll('.filterbar [data-filter]').forEach((node)=>node.addEventListener('click',()=>{document.querySelectorAll('.filterbar [data-filter]').forEach((x)=>x.classList.remove('active'));node.classList.add('active');state.filter=node.dataset.filter;renderDeviceTable();}));
   $('simpleMode').addEventListener('click',()=>setMode('simple')); $('advancedMode').addEventListener('click',()=>setMode('advanced'));
-  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('discoverBtn').addEventListener('click',universalDiscover);
+  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('cameraRefreshMaster')?.addEventListener('click',loadCamera); $('discoverBtn').addEventListener('click',universalDiscover);
   setMode(state.mode); refreshAll(false); setInterval(()=>refreshAll(false),60000);
 })();
