@@ -26,7 +26,7 @@ from .gc_esp32_protocol import (
 from .models import Capability
 from .gc_identity import verify_message
 from .gc_trust import TrustStore
-from .gc_calibration import CalibrationStore
+from .gc_calibration import CalibrationStore, derive_soil_reference_metrics
 from .provider import DeviceHealth, DeviceProvider, DiscoveredDevice
 
 
@@ -152,7 +152,7 @@ class GrowCentralEsp32Provider(DeviceProvider):
             raise ValueError("invalid soil moisture engineering percentage")
         diagnostics = proof.body.get("state", {}).get("meta", {})
         if isinstance(diagnostics, dict):
-            fields = {"raw", "median", "filtered_raw", "min", "max", "sigma", "quality", "moisture_state", "sensor_ok", "air_raw", "water_raw", "rssi_dbm", "uptime_ms", "firmware"}
+            fields = {"raw", "median", "filtered_raw", "min", "max", "sigma", "quality", "moisture_state", "sensor_ok", "air_raw", "water_raw", "substrate_raw", "rssi_dbm", "uptime_ms", "firmware"}
             state["meta"] = {k: v for k, v in diagnostics.items() if k in fields and isinstance(v, (str, int, float, bool)) and (not isinstance(v, float) or math.isfinite(v))}
         firmware = state.get('meta', {}).get('firmware') if isinstance(state.get('meta'), dict) else None
         try:
@@ -160,8 +160,23 @@ class GrowCentralEsp32Provider(DeviceProvider):
             if not (proof.body.get('calibration') or {}).get('ready'):
                 CalibrationStore().invalidate(native_id, 'sensor reports calibration incomplete')
                 raise PermissionError('sensor calibration incomplete')
-            state.setdefault('meta', {})['calibration_status'] = 'valid'
-            state['meta']['calibrated_at'] = calibration['calibrated_at']
+            meta = state.setdefault('meta', {})
+            meta['calibration_status'] = 'valid'
+            meta['calibrated_at'] = calibration['calibrated_at']
+            filtered_raw = meta.get('filtered_raw')
+            if type(filtered_raw) in (int, float) and math.isfinite(float(filtered_raw)):
+                reported = state.get('soil_moisture')
+                metrics = derive_soil_reference_metrics(float(filtered_raw), calibration['points'])
+                state.update(metrics)
+                meta['calculation_source'] = 'server_three_point_reference'
+                if type(reported) in (int, float) and math.isfinite(float(reported)):
+                    meta['sensor_reported_soil_moisture'] = round(float(reported), 3)
+                    meta['calibration_consistency_pp'] = round(abs(float(reported) - metrics['soil_moisture_percent']), 3)
+            else:
+                # Backward compatibility for older native firmware: keep a valid
+                # signed percentage, but mark that the central reference index
+                # could not be derived without a filtered ADC value.
+                meta['calculation_source'] = 'sensor_reported'
         except PermissionError:
             if 'soil_moisture' in state:
                 state['soil_moisture'] = None

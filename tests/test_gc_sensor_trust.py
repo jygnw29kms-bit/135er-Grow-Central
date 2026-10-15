@@ -263,3 +263,29 @@ def test_room_counter_ignores_stale_untrusted_native_assignment(discovered, monk
     accept(store, row)
     result = asyncio.run(rooms.list_rooms())
     assert result['rooms'][0]['device_count'] == 1
+
+
+def test_provider_derives_three_point_reference_from_signed_filtered_raw(discovered,monkeypatch):
+    store,key,row=discovered;accept(store,row)
+    CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3770,wet_raw=1180,substrate_raw=2027,quality={'status':'verified'})
+    provider=GrowCentralEsp32Provider()
+    class FakeClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self,*args): pass
+        async def subscribe(self,topic): pass
+        async def publish(self,topic,payload,**kwargs): self.nonce=json.loads(payload)['nonce']
+        @property
+        def messages(self):
+            async def stream():
+                body={'nonce':self.nonce,'hardware_uid':HARDWARE_UID,'calibration':ANNOUNCE['calibration'],'state':{'soil_moisture':12.3,'meta':{'filtered_raw':2027.0,'firmware':'0.3.0','sensor_ok':True,'quality':'GOOD'}}}
+                yield SimpleNamespace(topic=device_topic(provider.root,ID,'proof'),payload=packet(key,'proof',seq=3,body=body))
+            return stream()
+    monkeypatch.setattr(provider,'_client',FakeClient)
+    result=asyncio.run(provider.state(ID))
+    assert result['soil_moisture'] == pytest.approx(67.297, abs=0.002)
+    assert result['soil_substrate_reference_percent'] == pytest.approx(67.297, abs=0.002)
+    assert result['soil_substrate_index_percent'] == pytest.approx(100.0)
+    assert result['soil_substrate_delta_pp'] == pytest.approx(0.0)
+    assert result['meta']['calculation_source'] == 'server_three_point_reference'
+    assert result['meta']['sensor_reported_soil_moisture'] == 12.3
+    assert result['meta']['calibration_consistency_pp'] > 50

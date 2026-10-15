@@ -3,12 +3,54 @@ from __future__ import annotations
 from contextlib import contextmanager, closing
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import sqlite3
 
 SCHEMA_VERSION = 2
 CALIBRATION_KIND = "soil_air_water_fresh_substrate_reference"
+
+
+def derive_soil_reference_metrics(raw: float, points: dict) -> dict[str, float | str]:
+    """Derive engineering moisture plus a fresh-substrate reference index.
+
+    AIR/WATER remain the electrical 0..100 % engineering range. The fresh
+    substrate point is an agronomic reference only: index 100 means the current
+    electrical reading matches that reference. No field-capacity percentage is
+    invented from the third point.
+    """
+    try:
+        raw_value = float(raw)
+        air = float(points["air_raw"])
+        wet = float(points["wet_raw"])
+        substrate = float(points["substrate_raw"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid soil calibration points") from exc
+    if not all(math.isfinite(value) for value in (raw_value, air, wet, substrate)):
+        raise ValueError("non-finite soil calibration input")
+    if not (air > substrate + 50 and substrate > wet + 50):
+        raise ValueError("invalid three-point soil calibration")
+    span = air - wet
+    moisture = min(100.0, max(0.0, (air - raw_value) * 100.0 / span))
+    substrate_percent = (air - substrate) * 100.0 / span
+    if substrate_percent <= 0:
+        raise ValueError("invalid fresh-substrate reference")
+    reference_index = moisture * 100.0 / substrate_percent
+    delta_pp = moisture - substrate_percent
+    if delta_pp < -5.0:
+        state = "below_reference"
+    elif delta_pp > 5.0:
+        state = "above_reference"
+    else:
+        state = "near_reference"
+    return {
+        "soil_moisture_percent": round(moisture, 3),
+        "soil_substrate_reference_percent": round(substrate_percent, 3),
+        "soil_substrate_index_percent": round(reference_index, 3),
+        "soil_substrate_delta_pp": round(delta_pp, 3),
+        "soil_substrate_state": state,
+    }
 
 
 def now_iso() -> str:

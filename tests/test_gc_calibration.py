@@ -1,9 +1,10 @@
+import os
 import asyncio
 from types import SimpleNamespace
 
 import pytest
 
-from app.devices.gc_calibration import CalibrationStore, calibration_status
+from app.devices.gc_calibration import CalibrationStore, derive_soil_reference_metrics, calibration_status
 from app.devices.gc_trust import TrustStore
 from app.devices import gc_calibration
 
@@ -17,7 +18,8 @@ def test_calibration_record_binds_identity_hardware_firmware(tmp_path):
         store.require_valid('gc-soil-aabbcc',hardware_uid='8899aabbccddeeff')
     invalid=store.get('gc-soil-aabbcc')
     assert invalid['valid'] is False and 'hardware' in invalid['invalidation_reason']
-    assert (tmp_path/'calibration.db').stat().st_mode & 0o777 == 0o600
+    if os.name != 'nt':
+        assert (tmp_path/'calibration.db').stat().st_mode & 0o777 == 0o600
 
 
 def test_calibration_rejects_implausible_span(tmp_path):
@@ -38,3 +40,22 @@ def test_status_api_marks_missing_record_required(tmp_path,monkeypatch):
     assert result['devices'][0]['calibration_status']=='required'
     assert result['devices'][0]['reason']=='Kalibrierung erforderlich'
     assert result['devices'][0]['online'] is True
+
+
+def test_three_point_reference_metrics_use_substrate_without_redefining_moisture():
+    points={"air_raw":3770,"wet_raw":1180,"substrate_raw":2027}
+    at_reference=derive_soil_reference_metrics(2027,points)
+    assert at_reference["soil_moisture_percent"] == pytest.approx(67.297, abs=0.002)
+    assert at_reference["soil_substrate_reference_percent"] == pytest.approx(67.297, abs=0.002)
+    assert at_reference["soil_substrate_index_percent"] == pytest.approx(100.0)
+    assert at_reference["soil_substrate_delta_pp"] == pytest.approx(0.0)
+    assert at_reference["soil_substrate_state"] == "near_reference"
+    dry=derive_soil_reference_metrics(3770,points)
+    wet=derive_soil_reference_metrics(1180,points)
+    assert dry["soil_moisture_percent"] == 0.0 and dry["soil_substrate_index_percent"] == 0.0
+    assert wet["soil_moisture_percent"] == 100.0 and wet["soil_substrate_index_percent"] > 100.0
+
+
+def test_three_point_reference_metrics_reject_invalid_geometry():
+    with pytest.raises(ValueError):
+        derive_soil_reference_metrics(2000,{"air_raw":2000,"wet_raw":1900,"substrate_raw":1950})

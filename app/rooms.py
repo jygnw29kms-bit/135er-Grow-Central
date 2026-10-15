@@ -205,6 +205,9 @@ class SensorSample(BaseModel):
     humidity_percent: float | None = Field(default=None, ge=0, le=100)
     co2_ppm: float | None = Field(default=None, ge=0, le=100000)
     soil_moisture_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_substrate_reference_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_substrate_index_percent: float | None = Field(default=None, ge=0)
+    soil_substrate_delta_pp: float | None = Field(default=None, ge=-100, le=100)
     power_w: float | None = Field(default=None, ge=0)
     energy_wh: float | None = Field(default=None, ge=0)
     source: str = Field(default="manual", max_length=100)
@@ -397,13 +400,15 @@ async def export_sensor_history(room_id: str, limit: int = Query(default=5000, g
     room_or_404(state, room_id)
     rows = [row for row in state["sensor_history"] if row["room_id"] == room_id][-limit:]
     columns = ["timestamp", "temperature_c", "humidity_percent", "vpd_kpa", "co2_ppm",
-               "soil_reference_percent", "soil_calibration_status", "power_w", "energy_wh", "source"]
+               "soil_moisture_percent", "soil_substrate_reference_percent",
+               "soil_substrate_index_percent", "soil_substrate_delta_pp",
+               "soil_calibration_status", "power_w", "energy_wh", "source"]
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(columns)
     for row in rows:
-        export = {**row, "soil_reference_percent": row.get("soil_moisture_percent"),
-                  "soil_calibration_status": row.get("soil_calibration_status") or ("calibration_required" if row.get("soil_moisture_percent") is not None else "")}
+        export = {**row,
+                  "soil_calibration_status": row.get("soil_calibration_status") or ("valid" if row.get("soil_moisture_percent") is not None else "")}
         writer.writerow([_csv_cell(export.get(key)) for key in columns])
     return Response(output.getvalue(), media_type="text/csv", headers={
         "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
@@ -454,6 +459,9 @@ async def capture_room_sensors_once() -> int:
                 "humidity_percent": ("humidity_percent", 0, 100, "humidity"),
                 "co2_ppm": ("co2_ppm", 0, 100000, None),
                 "soil_moisture_percent": ("soil_moisture", 0, 100, None),
+                "soil_substrate_reference_percent": ("soil_substrate_reference_percent", 0, 100, None),
+                "soil_substrate_index_percent": ("soil_substrate_index_percent", 0, None, None),
+                "soil_substrate_delta_pp": ("soil_substrate_delta_pp", -100, 100, None),
                 "power_w": ("power_w", 0, None, None),
                 "energy_wh": ("energy_wh", 0, None, None),
             }

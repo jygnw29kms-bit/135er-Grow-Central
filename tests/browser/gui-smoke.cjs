@@ -6,7 +6,7 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const root=path.resolve(__dirname,'../..');
 const stamp=new Date().toISOString();
-const sample=(temperature=24)=>({temperature_c:temperature,humidity_percent:null,vpd_kpa:null,soil_moisture_percent:42.5,timestamp:stamp,source:'assigned-devices'});
+const sample=(temperature=24)=>({temperature_c:temperature,humidity_percent:null,vpd_kpa:null,soil_moisture_percent:42.5,soil_substrate_reference_percent:67.3,soil_substrate_index_percent:63.2,soil_substrate_delta_pp:-24.8,timestamp:stamp,source:'assigned-devices'});
 const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_count:0,latest_sensor:sample()},{id:'room2',name:'Zelt B',kind:'grow_room',device_count:1,latest_sensor:sample(19)}];
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.GC_CHROMIUM||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -29,6 +29,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    else if(pathname.match(/rooms\/[^/]+\/devices$/))data={devices:[{id:'growcentral_esp32:soil1',name:'Substratsonde',provider_id:'growcentral_esp32',assigned:true,online:true,state:{soil_moisture:42.5,meta:{raw:2710,filtered_raw:2709.5,quality:'EXCELLENT',moisture_state:'AIR_DRY',air_raw:3000,water_raw:1200,rssi_dbm:-60,uptime_ms:3600000,firmware:'<img src=x onerror=alert(1)>',sensor_ok:true,min:0}}}]};
    else if(pathname.endsWith('/journal'))data={entries:[]};
    else if(pathname.endsWith('/plants'))data={plants:[]};
+   else if(pathname==='/api/v1/sensor-calibration')data={devices:[{device_id:'soil1',name:'Substratsonde',room_id:'room1',status:'TRUSTED',calibration_status:'valid',online:true,calibration:{valid:true,points:{air_raw:3770,wet_raw:1180,substrate_raw:2027}}}]};
    else if(pathname==='/api/v1/automations/runtime')data={scheduler:'running',last_runs:{}};
    else if(pathname==='/api/v1/automations/gc-1/run'&&route.request().method()==='POST'){automationRuns.push('gc-1');data={ok:true,automation_id:'gc-1',confirmed:true,on:true};}
    else if(pathname==='/api/v1/automations'&&route.request().method()==='GET')data={automations:[{id:'gc-1',name:'Test Zeitregel',trigger:'time',trigger_value:'08:00',device_id:'fritz-lampe',ain:'08761 0001',on:true,enabled:true}],execution_status:'time_and_manual'};
@@ -79,7 +80,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
   if(process.env.GC_SCREENSHOT_DIR){await fs.mkdir(process.env.GC_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.GC_SCREENSHOT_DIR,`console-${width}.png`),fullPage:true})}
  }
  await page.goto('http://gc.test/ui');
- assert.equal(await page.locator('.master-shell').count(),1,'productive UI keeps Final Master');await page.locator('#growSelector option[value=room2]').waitFor({state:'attached'});
+ assert.equal(await page.locator('.master-shell').count(),1,'productive UI keeps Final Master');await page.locator('#mainNav [data-view=irrigation]').click();await page.getByText(/Frischsubstrat-Index 63 %/).first().waitFor({state:'visible'});await page.locator('#mainNav [data-view=overview]').click();await page.locator('#growSelector option[value=room2]').waitFor({state:'attached'});
  await page.locator('#quickLight button').first().waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.querySelector('#quickLight button')?.disabled);
  await page.locator('#quickLight button').first().click();
