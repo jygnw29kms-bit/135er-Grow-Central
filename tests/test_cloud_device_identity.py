@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import httpx
 
-from local.cloud_link import device_identity, device_pairing, platform_report
+from local.cloud_link import agent_v2, device_identity, device_pairing, platform_report
 
 
 def _b64decode(value: str) -> bytes:
@@ -142,3 +142,18 @@ def test_platform_report_signature_matches_cloud_contract(monkeypatch):
 
     asyncio.run(scenario())
     assert accepted["report"] is not None
+
+
+def test_cloud_link_prefers_approved_device_uuid_but_keeps_legacy_fallback(monkeypatch, tmp_path):
+    approved_file = tmp_path / "device-id"
+    monkeypatch.setattr(agent_v2, "DEVICE_ID_FILE", approved_file)
+    monkeypatch.delenv("GC_DEVICE_ID", raising=False)
+    monkeypatch.setattr(agent_v2, "LEGACY_DEVICE_ID", lambda: "raspberry-pi-a1b2c3d4e5f6")
+
+    assert agent_v2.effective_device_id() == "raspberry-pi-a1b2c3d4e5f6"
+
+    approved_file.write_text("11111111-2222-3333-4444-555555555555\n", encoding="utf-8")
+    assert agent_v2.effective_device_id() == "11111111-2222-3333-4444-555555555555"
+
+    monkeypatch.setenv("GC_DEVICE_ID", "operator-override")
+    assert agent_v2.effective_device_id() == "operator-override"
