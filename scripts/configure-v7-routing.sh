@@ -5,6 +5,7 @@ SERVICE="${SERVICE:-135er-growcentral-cloud}"
 CONF_DIR="${CONF_DIR:-/etc/${SERVICE}}"
 ENV_FILE="${ENV_FILE:-${CONF_DIR}/cloud.env}"
 MODE_FILE="${MODE_FILE:-${CONF_DIR}/admin-mode}"
+CANONICAL_HOST="${GC_CANONICAL_CLOUD_HOST:-135ercloud.grow-central.de}"
 [[ $EUID -eq 0 ]] || { echo "Bitte als root ausführen." >&2; exit 1; }
 [[ -r "$ENV_FILE" ]] || { echo "$ENV_FILE fehlt." >&2; exit 1; }
 
@@ -17,6 +18,13 @@ CORE_PORT="${APP_PORT:-18765}"
 ADMIN_PORT="${V7_ADMIN_PORT:?V7_ADMIN_PORT fehlt}"
 PLATFORM_PORT="${V7_PLATFORM_PORT:-18767}"
 HOST="${PUBLIC_URL#https://}"; HOST="${HOST#http://}"; HOST="${HOST%%/*}"
+
+# grow-central.de is the canonical project domain. During the migration from
+# dezender.de, prefer the canonical Plesk vhost whenever it already exists,
+# while retaining the configured legacy host as a safe fallback.
+if command -v plesk >/dev/null 2>&1 && [[ -d "/var/www/vhosts/system/${CANONICAL_HOST}/conf" ]]; then
+  HOST="$CANONICAL_HOST"
+fi
 
 write_locations(){
   cat <<EOF
@@ -126,7 +134,11 @@ configure_plesk(){
   strip_managed_block "$file"
   tmp="$(mktemp)"
   {
-    printf '%s\n' '# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT' 'client_max_body_size 40m;' '# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT'
+    # Plesk/custom vhosts may already define this directive. nginx rejects a
+    # duplicate at the same context, so only add our managed limit if absent.
+    if ! grep -Eq '^[[:space:]]*client_max_body_size[[:space:]]+' "$file"; then
+      printf '%s\n' '# BEGIN 135ER-GROWCENTRAL-V7-PROXY-LIMIT' 'client_max_body_size 40m;' '# END 135ER-GROWCENTRAL-V7-PROXY-LIMIT'
+    fi
     write_locations
     cat "$file"
   } > "$tmp"
@@ -140,7 +152,7 @@ configure_plesk(){
   fi
   nginx -t
   systemctl reload nginx
-  echo "Plesk V7 routing aktiv."
+  echo "Plesk V7 routing aktiv für ${HOST}."
 }
 
 case "$MODE" in
