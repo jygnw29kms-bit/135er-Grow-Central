@@ -19,9 +19,9 @@ ADMIN_PORT="${V7_ADMIN_PORT:?V7_ADMIN_PORT fehlt}"
 PLATFORM_PORT="${V7_PLATFORM_PORT:-18767}"
 HOST="${PUBLIC_URL#https://}"; HOST="${HOST#http://}"; HOST="${HOST%%/*}"
 
-# grow-central.de is the canonical project domain. During the migration from
-# dezender.de, prefer the canonical Plesk vhost whenever it already exists,
-# while retaining the configured legacy host as a safe fallback.
+# grow-central.de is the canonical project domain. Prefer the canonical Plesk
+# vhost whenever it exists while retaining a configured transitional host as
+# a safe deployment fallback.
 if command -v plesk >/dev/null 2>&1 && [[ -d "/var/www/vhosts/system/${CANONICAL_HOST}/conf" ]]; then
   HOST="$CANONICAL_HOST"
 fi
