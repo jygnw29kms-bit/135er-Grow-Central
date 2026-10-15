@@ -63,6 +63,14 @@ Das ist noch kein Schutz gegen einen Angreifer mit vollständiger physischer Kon
 
 Die AIR-/Nassreferenz ist eine technische relative Feuchteskala und keine bestätigte volumetrische Wassergehaltsmessung. Sie macht den Sensor für Grow-Central reproduzierbar einsatzfähig. Substratabhängige Feinprofile können später ergänzend eingeführt werden, ohne die sichere Erstaufnahme zu ersetzen.
 
+## Serverseitiger Kalibrierungsnachweis
+
+Zusätzlich zu den im Sensor gespeicherten Referenzpunkten führt Grow-Central einen eigenen Calibration Record unter /var/lib/135er-grow-central/sensor-calibration.db. Der Record bindet die Kalibrierung an Geräte-ID, Public Key/Fingerprint, eFuse-Hardware-UID, Firmwareversion und Capability. Er enthält AIR-/Nassreferenz, RAW-Span, Qualitätsdaten, Kalibrierzeitpunkt, Schema sowie Gültigkeits- und Invalidierungsgrund.
+
+Bodenfeuchte-Prozentwerte werden produktiv nur verwendet, wenn dieser Record gültig ist **und** der aktuelle signierte Live-Proof dieselbe Identität, Hardware-UID, Firmware und eine weiterhin aktive Sensor-Kalibrierung bestätigt. Bei Key-, Hardware- oder Firmwarewechsel wird der Record ungültig; die UI zeigt dann Kalibrierung erforderlich statt einen vermeintlich gültigen Prozentwert.
+
+Die Final-Master-Navigation enthält dafür den eigenen Punkt **Sensor-Kalibrierung**. Dort werden reale Sensoren, Raum, Onlinezustand, Firmware, gekürzter Fingerprint, Kalibrierzeitpunkt, Qualitätsdaten und Grund für eine erforderliche Kalibrierung angezeigt. Schreibende Kalibrieraktionen bleiben auf den begrenzten USB-Onboarding-Pfad beschränkt.
+
 ## BLE
 
 BLE bleibt in Firmware 0.5.x als verschlüsselter Recovery-/Servicepfad erhalten. Es ist **nicht mehr der primäre Produktionsweg für die Erstaufnahme eines neuen Sensors**. Ein neuer Sensor wird zuerst vollständig über USB identifiziert, kalibriert, provisioniert und einem Raum zugeordnet.
