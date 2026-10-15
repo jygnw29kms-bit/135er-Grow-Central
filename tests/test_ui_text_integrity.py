@@ -2,7 +2,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 FILES=[
-    ROOT/"app"/"automation.py", ROOT/"app"/"grow_alerts.py", ROOT/"app"/"maintenance.py", ROOT/"app"/"recipes.py", ROOT/"app"/"timelapse.py",
+    ROOT/"app"/"automation.py", ROOT/"app"/"grow_alerts.py", ROOT/"app"/"homekit_bridge.py", ROOT/"app"/"maintenance.py", ROOT/"app"/"recipes.py", ROOT/"app"/"timelapse.py",
     ROOT/"web"/"platform.js", ROOT/"web"/"platform-master.js", ROOT/"web"/"final-master-live.js",
     ROOT/"web"/"menu-live.js", ROOT/"web"/"usb_onboarding.js",
 ]

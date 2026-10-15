@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import math
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +45,7 @@ async def homekit_pairing_qr():
 
 
 HOMEKIT_HISTORY_WINDOW = 12
+HOMEKIT_FRESH_SECONDS = 15 * 60
 _HOMEKIT_METRICS = (("temperature_c", "temperature"), ("humidity_percent", "humidity"), ("soil_moisture_percent", "soil_moisture"))
 
 
@@ -50,25 +53,79 @@ def _valid_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
 
 
+def _timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _fresh(row: dict[str, Any], now: datetime) -> bool:
+    timestamp = _timestamp(row.get("timestamp"))
+    if timestamp is None:
+        return False
+    age = (now - timestamp).total_seconds()
+    return 0 <= age <= HOMEKIT_FRESH_SECONDS
+
+
+def _metric_allowed(key: str, row: dict[str, Any]) -> bool:
+    if key == "soil_moisture_percent":
+        return row.get("soil_calibration_status") == "valid"
+    return True
+
+
+def _stable_aid(kind: str, identifier: str, used: set[int]) -> int:
+    salt = 0
+    while True:
+        material = f"{kind}:{identifier}:{salt}".encode("utf-8")
+        aid = 2 + (int.from_bytes(hashlib.sha256(material).digest()[:8], "big") % 2_000_000_000)
+        if aid != 7 and aid not in used:
+            used.add(aid)
+            return aid
+        salt += 1
+
+
+def _accessory_aids(room_rows, switches) -> dict[tuple[str, str], int]:
+    used: set[int] = {1, 7}
+    result: dict[tuple[str, str], int] = {}
+    keys = [("room", str(row.get("id") or "")) for row in room_rows]
+    keys += [("switch", str(getattr(device, "id", ""))) for device in switches]
+    for key in sorted(keys):
+        result[key] = _stable_aid(key[0], key[1], used)
+    return result
+
+
 def _room_services(snapshot: dict[str, Any]) -> tuple[str, ...]:
     return tuple(service for key, service in _HOMEKIT_METRICS if _valid_number(snapshot.get(key)))
 
 
-def _latest_room_values() -> list[dict[str, Any]]:
+def _latest_room_values(*, now: datetime | None = None) -> list[dict[str, Any]]:
     from app.rooms import load_state
     try:
         state = load_state()
     except Exception:
         return []
+    now = now or datetime.now(timezone.utc)
     history = state.get("sensor_history", [])
     result = []
     for room in state.get("rooms", []):
-        room_history = [row for row in history if row.get("room_id") == room.get("id")][-HOMEKIT_HISTORY_WINDOW:]
+        room_history = [
+            row for row in history
+            if row.get("room_id") == room.get("id") and _fresh(row, now)
+        ][-HOMEKIT_HISTORY_WINDOW:]
         if not room_history:
             continue
         snapshot = dict(room_history[-1])
         for key, _service in _HOMEKIT_METRICS:
-            value = next((row.get(key) for row in reversed(room_history) if _valid_number(row.get(key))), None)
+            value = next((
+                row.get(key) for row in reversed(room_history)
+                if _metric_allowed(key, row) and _valid_number(row.get(key))
+            ), None)
             if value is not None:
                 snapshot[key] = value
             else:
@@ -77,17 +134,20 @@ def _latest_room_values() -> list[dict[str, Any]]:
         if not services:
             continue
         result.append({"id": room.get("id"), "name": room.get("name") or room.get("id"), "latest": snapshot, "services": services})
-    return result
+    return sorted(result, key=lambda row: str(row.get("id") or ""))
 
 
 def _selected_switches():
     from app.smarthome.ha_bridge import _allowed, _writable
     from app.smarthome.registry import DeviceRegistry
     selected = _allowed("GC_HA_EXPORT_DEVICE_IDS")
-    return [
-        device for device in DeviceRegistry.from_env().list()
-        if device.approved and device.id in selected and device.adapter != "home_assistant" and _writable(device)
-    ]
+    return sorted(
+        [
+            device for device in DeviceRegistry.from_env().list()
+            if device.approved and device.id in selected and device.adapter != "home_assistant" and _writable(device)
+        ],
+        key=lambda device: str(device.id),
+    )
 
 
 def _topology_signature(room_rows=None, switches=None):
@@ -134,11 +194,11 @@ def run_bridge() -> None:
             temperature = latest.get("temperature_c")
             humidity = latest.get("humidity_percent")
             soil = latest.get("soil_moisture_percent")
-            if self.temperature_char is not None and isinstance(temperature, (int, float)):
+            if self.temperature_char is not None and _valid_number(temperature):
                 self.temperature_char.set_value(max(-270, min(100, float(temperature))))
-            if self.humidity_char is not None and isinstance(humidity, (int, float)):
+            if self.humidity_char is not None and _valid_number(humidity):
                 self.humidity_char.set_value(max(0, min(100, float(humidity))))
-            if self.soil_char is not None and isinstance(soil, (int, float)):
+            if self.soil_char is not None and _valid_number(soil):
                 self.soil_char.set_value(max(0, min(100, float(soil))))
 
         async def run(self):
@@ -195,7 +255,7 @@ def run_bridge() -> None:
                 if _topology_signature() != self.topology_signature:
                     STATUS_FILE.write_text(json.dumps({
                         "running": True, "paired": paired, "restarting": True,
-                        "name": "Grow-Central", "message": "HomeKit-Konfiguration ge?ndert; Bridge wird neu geladen."
+                        "name": "Grow-Central", "message": "HomeKit-Konfiguration ge\u00e4ndert; Bridge wird neu geladen."
                     }, ensure_ascii=False, indent=2), encoding="utf-8")
                     os.chmod(STATUS_FILE, 0o600)
                     self.driver.stop()
@@ -223,14 +283,15 @@ def run_bridge() -> None:
     room_rows = _latest_room_values()
     selected_switches = _selected_switches()
     bridge = GrowCentralBridge(driver, "Grow-Central", topology_signature=_topology_signature(room_rows, selected_switches))
+    aids = _accessory_aids(room_rows, selected_switches)
     for row in room_rows:
         try:
-            bridge.add_accessory(RoomAccessory(driver, row["name"], room_id=row["id"], initial_latest=row["latest"], services=tuple(row["services"])))
+            bridge.add_accessory(RoomAccessory(driver, row["name"], aid=aids[("room", str(row["id"]))], room_id=row["id"], initial_latest=row["latest"], services=tuple(row["services"])))
         except Exception:
             continue
     for device in selected_switches:
         try:
-            bridge.add_accessory(SwitchAccessory(driver, device.name, device=device))
+            bridge.add_accessory(SwitchAccessory(driver, device.name, aid=aids[("switch", str(device.id))], device=device))
         except Exception:
             continue
     driver.add_accessory(accessory=bridge)

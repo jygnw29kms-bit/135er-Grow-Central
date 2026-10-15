@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.responses import FileResponse
 
 import app.homekit_bridge as homekit
+
+NOW = datetime(2026, 10, 15, 18, 0, tzinfo=timezone.utc)
+
+def ts(minutes=0):
+    return (NOW - timedelta(minutes=minutes)).isoformat()
 
 
 def test_homekit_status_and_qr(tmp_path: Path, monkeypatch):
@@ -48,12 +54,12 @@ def test_homekit_room_inventory_exports_only_real_measurements(monkeypatch):
     state={
         "rooms":[{"id":"r1","name":"Zelt"},{"id":"r2","name":"Leer"},{"id":"r3","name":"Nur Energie"}],
         "sensor_history":[
-            {"room_id":"r1","temperature_c":24.5,"humidity_percent":58.0,"soil_moisture_percent":42.0},
-            {"room_id":"r3","power_w":120.0},
+            {"room_id":"r1","timestamp":ts(),"temperature_c":24.5,"humidity_percent":58.0,"soil_moisture_percent":42.0,"soil_calibration_status":"valid"},
+            {"room_id":"r3","timestamp":ts(),"power_w":120.0},
         ],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
-    rows=homekit._latest_room_values()
+    rows=homekit._latest_room_values(now=NOW)
     assert len(rows)==1
     assert rows[0]["id"]=="r1"
     assert rows[0]["services"]==("temperature","humidity","soil_moisture")
@@ -84,12 +90,62 @@ def test_homekit_room_inventory_tolerates_short_metric_dropout(monkeypatch):
     state={
         "rooms":[{"id":"r1","name":"Zelt"}],
         "sensor_history":[
-            {"room_id":"r1","temperature_c":24.0,"humidity_percent":55.0},
-            {"room_id":"r1","temperature_c":24.3,"humidity_percent":None},
+            {"room_id":"r1","timestamp":ts(2),"temperature_c":24.0,"humidity_percent":55.0},
+            {"room_id":"r1","timestamp":ts(),"temperature_c":24.3,"humidity_percent":None},
         ],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
-    row=homekit._latest_room_values()[0]
+    row=homekit._latest_room_values(now=NOW)[0]
     assert row["services"]==("temperature","humidity")
     assert row["latest"]["temperature_c"]==24.3
     assert row["latest"]["humidity_percent"]==55.0
+
+
+def test_homekit_never_exports_stale_or_uncalibrated_soil(monkeypatch):
+    import app.rooms as rooms
+    state={
+        "rooms":[{"id":"r1","name":"Zelt"},{"id":"r2","name":"Alt"}],
+        "sensor_history":[
+            {"room_id":"r1","timestamp":ts(),"temperature_c":24.0,"soil_moisture_percent":42.0,"soil_calibration_status":"required"},
+            {"room_id":"r2","timestamp":ts(20),"temperature_c":25.0,"humidity_percent":60.0,"soil_moisture_percent":50.0,"soil_calibration_status":"valid"},
+        ],
+    }
+    monkeypatch.setattr(rooms,"load_state",lambda:state)
+    rows=homekit._latest_room_values(now=NOW)
+    assert len(rows)==1
+    assert rows[0]["id"]=="r1"
+    assert rows[0]["services"]==("temperature",)
+    assert "soil_moisture_percent" not in rows[0]["latest"]
+
+
+def test_homekit_rejects_nonfinite_metrics(monkeypatch):
+    import app.rooms as rooms
+    state={
+        "rooms":[{"id":"r1","name":"Zelt"}],
+        "sensor_history":[{"room_id":"r1","timestamp":ts(),"temperature_c":float("nan"),"humidity_percent":58.0}],
+    }
+    monkeypatch.setattr(rooms,"load_state",lambda:state)
+    row=homekit._latest_room_values(now=NOW)[0]
+    assert row["services"]==("humidity",)
+    assert "temperature_c" not in row["latest"]
+
+
+def test_homekit_accessory_aids_are_stable_across_inventory_order():
+    from types import SimpleNamespace
+    room_a={"id":"room-a","name":"A","services":("temperature",)}
+    room_b={"id":"room-b","name":"B","services":("humidity",)}
+    switch_a=SimpleNamespace(id="plug-a",name="Lampe")
+    switch_b=SimpleNamespace(id="plug-b",name="Pumpe")
+    first=homekit._accessory_aids([room_a,room_b],[switch_a,switch_b])
+    second=homekit._accessory_aids([room_b,room_a],[switch_b,switch_a])
+    assert first==second
+    assert len(set(first.values()))==4
+    assert 1 not in first.values() and 7 not in first.values()
+
+
+def test_homekit_text_and_stability_contract():
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    assert "HOMEKIT_FRESH_SECONDS = 15 * 60" in source
+    assert 'soil_calibration_status") == "valid"' in source
+    assert "_accessory_aids" in source
+    assert "ge?ndert" not in source
