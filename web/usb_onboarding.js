@@ -5,14 +5,14 @@
   const make = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
   const section = make('section', null, 'usb-onboarding');
   section.append(make('h4', 'USB-Sensor am Raspberry Pi einrichten'));
-  const intro = make('p', 'Sensor per Daten-USB-Kabel direkt an den Pi anschließen. GC führt dich durch Firmware, WLAN und Raumzuweisung.');
+  const intro = make('p', 'Neuen Sensor per Daten-USB-Kabel direkt an den Pi anschließen. GC prüft Board, Firmware, kryptografische Identität und Hardware-ID, erzwingt die Kalibrierung und gibt ihn erst nach TLS-, Namens- und Raumprüfung als einsatzbereit frei.');
   section.append(intro);
   const list = make('div', null, 'usb-device-list'); section.append(list); panel.prepend(section);
   const status = make('p', '', 'pairing-feedback'); status.setAttribute('role', 'status'); section.append(status);
-  const labels = {DETECTED:'USB erkannt', CHECKING:'Firmware prüfen', NEEDS_FIRMWARE:'Firmware benötigt', FLASHING:'Firmware installieren', NETWORK:'WLAN einrichten', PROVISIONING:'Zugang einrichten', CONNECTING:'Verbindung prüfen', ASSIGN:'Name und Raum', READY:'Bereit', BLOCKED:'Entscheidung prüfen', ERROR:'Einrichtung prüfen'};
-  const stage = (state, resume) => state === 'ERROR' ? (resume === 'NETWORK' ? 2 : 1) : ({DETECTED:0, CHECKING:1, NEEDS_FIRMWARE:1, FLASHING:1, NETWORK:2, PROVISIONING:2, CONNECTING:2, ASSIGN:3, READY:4, ERROR:0}[state] ?? 0);
+  const labels = {DETECTED:'USB erkannt', CHECKING:'Identität prüfen', NEEDS_FIRMWARE:'Firmware benötigt', FLASHING:'Firmware installieren', CALIBRATION:'Kalibrieren', CALIBRATING:'Kalibrierung läuft', NETWORK:'WLAN/TLS', PROVISIONING:'Zugang einrichten', CONNECTING:'Verbindung prüfen', ASSIGN:'Name und Raum', READY:'Einsatzbereit', BLOCKED:'Sicherheitsprüfung', ERROR:'Einrichtung prüfen'};
+  const stage = (state, resume) => state === 'ERROR' ? (resume === 'NETWORK' ? 3 : resume === 'CALIBRATION' ? 2 : 1) : ({DETECTED:0, CHECKING:1, NEEDS_FIRMWARE:1, FLASHING:1, CALIBRATION:2, CALIBRATING:2, NETWORK:3, PROVISIONING:3, CONNECTING:3, ASSIGN:4, READY:5, ERROR:0}[state] ?? 0);
   const dialog = document.createElement('dialog'); dialog.className = 'pairing-dialog usb-dialog';
-  dialog.innerHTML = '<h2>USB-Sensor einrichten</h2><ol class="usb-steps"><li>USB</li><li>Firmware</li><li>WLAN</li><li>Raum</li><li>Bereit</li></ol><p class="usb-current" role="status"></p><div class="usb-content"></div><p class="usb-error" role="alert"></p><button type="button" class="usb-close">Schließen</button>';
+  dialog.innerHTML = '<h2>USB-Sensor einrichten</h2><ol class="usb-steps"><li>USB</li><li>Identität</li><li>Kalibrierung</li><li>WLAN/TLS</li><li>Name & Raum</li><li>Einsatzbereit</li></ol><p class="usb-current" role="status"></p><div class="usb-content"></div><p class="usb-error" role="alert"></p><button type="button" class="usb-close">Schließen</button>';
   document.body.append(dialog);
   dialog.querySelector('.usb-close').onclick = () => dialog.close();
   let devices = [], selected = null, renderedState = '', firmwareReady = false, activeRequest = false, polling = false;
@@ -68,19 +68,35 @@
       content.append(form);
       if (selected.device_id) content.append(button('Vorhandene Verbindung erneut prüfen', () => action('/connection')));
     }
+    if (selected.state === 'CALIBRATION' || selected.state === 'CALIBRATING' || (selected.state === 'ERROR' && selected.resume === 'CALIBRATION')) renderCalibration();
     if (selected.state === 'NETWORK' || (selected.state === 'ERROR' && selected.resume === 'NETWORK')) renderNetwork();
     if (selected.state === 'BLOCKED') content.append(make('p', 'Die frühere Sperre bleibt bestehen. Prüfe die Sensorliste unterhalb des USB-Bereichs; anschließend kannst du hier erneut prüfen.'), button('USB-Identität erneut prüfen', () => action('/inspect')));
     if (selected.state === 'ASSIGN') renderAssignment();
     if (selected.state === 'READY') {
-      content.append(make('h3', selected.name || 'Sensor bereit'), make('p', 'Aufnahme und Raumzuweisung sind gespeichert. Messwerte im zugewiesenen Raum prüfen.'), button('Zu den Räumen', () => {
+      content.append(make('h3', selected.name || 'Sensor einsatzbereit'), make('p', 'Identität, Hardware-ID, Kalibrierung, TLS-Verbindung und Raumzuweisung sind geprüft. Du kannst den Sensor jetzt vom USB trennen, in den zugewiesenen Raum bringen und die Sensorfläche in das Substrat einsetzen.'), button('Zu den Räumen', () => {
         dialog.close(); (document.querySelector('#mainNav [data-view="rooms"]') || document.querySelector('.bottom-nav [data-tab="rooms"]') || document.querySelector('[data-view="rooms"]'))?.click();
         window.dispatchEvent(new Event('gc:refresh'));
       }));
     }
     if (selected.fingerprint) {
-      const details = document.createElement('details'); details.append(make('summary', 'Geprüfte USB-Identität'), make('code', selected.device_id + '\n' + selected.fingerprint)); content.append(details);
+      const details = document.createElement('details'); details.append(make('summary', 'Geprüfte Sensoridentität'), make('code', selected.device_id + '\nFingerprint: ' + selected.fingerprint + '\nHardware-ID: ' + (selected.hardware_uid || '–'))); content.append(details);
     }
   }
+  function renderCalibration() {
+    const box = make('div', null, 'usb-calibration');
+    box.append(make('h3', 'Pflichtkalibrierung vor Freigabe'));
+    const uid = selected.hardware_uid ? 'Hardware-ID: ' + selected.hardware_uid : 'Hardware-ID wird geprüft';
+    box.append(make('p', uid), make('p', 'Die Kalibrierung gehört fest zu diesem kryptografisch geprüften Sensor. Ein Gerätewechsel während des Ablaufs wird blockiert.'));
+    const air = make('p', '1. Trockenreferenz: Sensorfläche sauber und vollständig trocken in Luft halten.');
+    const airButton = button(selected.air_calibrated ? 'Trockenreferenz erneut messen' : 'Trockenreferenz messen', () => action('/calibrate/air'));
+    const wet = make('p', '2. Nassreferenz: Nur die Sensorfläche/Probe eintauchen, Elektronik und XIAO unbedingt trocken halten.');
+    const wetButton = button(selected.wet_calibrated ? 'Nassreferenz erneut messen' : 'Nassreferenz messen', () => action('/calibrate/wet'));
+    box.append(air, airButton, wet, wetButton);
+    if (selected.air_raw != null || selected.wet_raw != null) box.append(make('p', `Messpunkte: trocken ${selected.air_raw ?? '–'} · nass ${selected.wet_raw ?? '–'}`));
+    if (selected.calibration_ready) box.append(make('p', 'Kalibrierung vollständig und plausibel. Der nächste Schritt wird freigegeben.'));
+    content.append(box);
+  }
+
   async function renderNetwork() {
     const identity = selected.id; const form = document.createElement('form');
     const ssid = field(form, 'WLAN des Sensors', 'ssid'); ssid.maxLength = 32; ssid.autocomplete = 'off';
@@ -119,10 +135,12 @@
         const room = await response.json(); const option = make('option', room.name); option.value = room.id; rooms.append(option); rooms.value = room.id; submit.disabled = false; details.open = false;
       } catch (e) { error.textContent = e.message; } finally { create.disabled = false; }
     }); details.append(create); form.append(details);
-    form.append(make('p', 'GC gleicht die USB-Identität mit der aktuellen Netzwerk-Identität ab. Erst deine Aufnahme erlaubt produktive Raumdaten.'));
+    form.append(make('p', 'GC gleicht USB-Schlüssel, Hardware-ID, Kalibrierstatus und den aktuellen MQTT-Identitätsnachweis ab.'));
+    const confirmation = make('label', null, 'usb-confirmation'); const check = document.createElement('input'); check.type = 'checkbox'; check.required = true;
+    confirmation.append(check, make('span', 'Ich bestätige: Dieser physische Sensor gehört zum ausgewählten Raum. Name und Raumzuweisung sind korrekt.')); form.append(confirmation);
     const submit = make('button', 'Sensor aufnehmen und zuweisen'); submit.type = 'submit'; submit.disabled = true; form.append(submit); content.append(form);
     form.onsubmit = async e => {
-      e.preventDefault(); await action('/assign', {name:name.value, room_id:rooms.value}); window.dispatchEvent(new Event('gc:refresh'));
+      e.preventDefault(); await action('/assign', {name:name.value, room_id:rooms.value, confirmed:check.checked}); window.dispatchEvent(new Event('gc:refresh'));
     };
     try {
       const response = await fetch('/api/v1/rooms', {credentials:'same-origin', cache:'no-store'});

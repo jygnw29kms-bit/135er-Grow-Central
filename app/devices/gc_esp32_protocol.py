@@ -21,6 +21,8 @@ class Esp32Announcement:
     capabilities: tuple[Capability, ...]
     model: str | None = None
     firmware: str | None = None
+    hardware_uid: str | None = None
+    calibration: dict[str, Any] | None = None
 
 
 def device_topic(root: str, device_id: str, leaf: str) -> str:
@@ -77,6 +79,8 @@ def parse_announcement(payload: bytes | bytearray | str) -> Esp32Announcement:
         capabilities=capabilities,
         model=str(data.get("model") or "") or None,
         firmware=str(data.get("firmware") or "") or None,
+        hardware_uid=str(data.get("hardware_uid") or "") or None,
+        calibration=data.get("calibration") if isinstance(data.get("calibration"), dict) else None,
     )
 
 

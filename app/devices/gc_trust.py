@@ -55,7 +55,7 @@ class TrustStore:
 
     def discover(self, announce, message: SignedMessage | None):
         now = datetime.now(timezone.utc).isoformat()
-        metadata = {'model': announce.model, 'firmware': announce.firmware, 'device_class': announce.device_class.value, 'capabilities': [c.value for c in announce.capabilities], 'reported_name': announce.name}
+        metadata = {'model': announce.model, 'firmware': announce.firmware, 'device_class': announce.device_class.value, 'capabilities': [c.value for c in announce.capabilities], 'reported_name': announce.name, 'hardware_uid': announce.hardware_uid, 'calibration': announce.calibration}
         with self.db() as db:
             if message and db.execute('SELECT 1 FROM retired_keys WHERE fingerprint=?', (message.fingerprint,)).fetchone():
                 raise PermissionError('retired sensor identity rejected')

@@ -26,6 +26,11 @@ class Sensor:
         self.key = ec.generate_private_key(ec.SECP256R1())
         self.counter = 0
         self.version = usb.VERSION
+        self.hardware_uid = '0011223344556677'
+        self.air_done = False
+        self.wet_done = False
+        self.air_raw = 3767
+        self.wet_raw = 1310
         self.commands = []
         self.master, self.slave = pty.openpty()
         self.path = os.ttyname(self.slave)
@@ -36,9 +41,10 @@ class Sensor:
     def signed(self, nonce):
         self.counter += 1
         announcement = {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':'gc-soil-aabbcc',
-            'name':'Soil','device_class':'sensor','model':usb.MODEL,'firmware':self.version,'capabilities':['soil_moisture']}
+            'name':'Soil','device_class':'sensor','model':usb.MODEL,'firmware':self.version,'hardware_uid':self.hardware_uid,
+            'calibration':{'ready':self.air_done and self.wet_done and self.air_raw > self.wet_raw + 100,'air_done':self.air_done,'wet_done':self.wet_done,'air_raw':self.air_raw,'wet_raw':self.wet_raw},'capabilities':['soil_moisture']}
         message = json.dumps({'device_id':'gc-soil-aabbcc','kind':'proof','seq':self.counter,
-            'body':{'nonce':nonce,'announcement':announcement, 'state': {'soil_moisture':42}}})
+            'body':{'nonce':nonce,'hardware_uid':self.hardware_uid,'calibration':announcement['calibration'],'announcement':announcement, 'state': {'soil_moisture':42,'meta':{'sensor_ok':True,'quality':'GOOD'}}}})
         key = self.key.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
         return json.dumps({'schema':'gc-signed-v1','algorithm':'ecdsa-p256-sha256',
             'public_key':base64.b64encode(key).decode(),'message':message,
@@ -57,6 +63,10 @@ class Sensor:
                 self.commands.append(command)
                 if command.startswith('USB ID '):
                     response = 'GC_USB_ID ' + self.signed(command[7:])
+                elif command == 'CAL AIR':
+                    self.air_done = True; self.air_raw = 3767; response = 'CAL AIR SAVED: 3767'
+                elif command == 'CAL WATER':
+                    self.wet_done = True; self.wet_raw = 1310; response = 'CAL WATER SAVED: 1310'
                 elif command.startswith('NET CA '):
                     encoded = command[7:]
                     self.ca_bytes = 54 + len(encoded) + (len(encoded) + 63) // 64
@@ -123,15 +133,20 @@ def test_complete_real_serial_workflow(setup):
     client, sensor, _, broker_calls = setup
     assert client.get('/api/devices/usb').json()['devices'][0]['state'] == 'DETECTED'
     assert client.post('/api/devices/usb/port-1/inspect').status_code == 200
-    assert wait(client)['state'] == 'NETWORK'
+    assert wait(client)['state'] == 'CALIBRATION'
     assert TrustStore().get('gc-soil-aabbcc')['status'] == 'DISCOVERED'
+    assert client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'}).status_code == 409
+    assert client.post('/api/devices/usb/port-1/calibrate/air').status_code == 200
+    assert wait(client)['state'] == 'CALIBRATION'
+    assert client.post('/api/devices/usb/port-1/calibrate/wet').status_code == 200
+    assert wait(client)['state'] == 'NETWORK'
     response = client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'})
     assert response.status_code == 200
     state = wait(client)
     assert state['state'] == 'ASSIGN'
     assert 'individual-test-password' not in json.dumps(state)
     assert TrustStore().get('gc-soil-aabbcc')['status'] == 'DISCOVERED'
-    assert client.post('/api/devices/usb/port-1/assign',json={'name':'  Soil A  ','room_id':'room-1'}).status_code == 200
+    assert client.post('/api/devices/usb/port-1/assign',json={'name':'  Soil A  ','room_id':'room-1','confirmed':True}).status_code == 200
     assert wait(client)['state'] == 'READY'
     assert TrustStore().get('gc-soil-aabbcc')['name'] == 'Soil A'
     assert rooms.load_state()['assignments']['growcentral_esp32:gc-soil-aabbcc'] == 'room-1'
@@ -150,7 +165,7 @@ def test_flash_uses_fixed_safe_ranges_and_preserves_nvs(setup, monkeypatch):
     assert client.post('/api/devices/usb/port-1/flash',json={'board':'seeed_xiao_esp32c3','confirmed':False}).status_code == 422
     assert not commands
     assert client.post('/api/devices/usb/port-1/flash',json={'board':'seeed_xiao_esp32c3','confirmed':True}).status_code == 200
-    assert wait(client)['state'] == 'NETWORK'
+    assert wait(client)['state'] == 'CALIBRATION'
     args = commands[0]
     assert '--chip' in args and args[args.index('--chip')+1] == 'esp32c3'
     assert 'erase_flash' not in args and '0x9000' not in args
@@ -177,13 +192,15 @@ def test_old_firmware_is_not_assumed_ready(setup):
     client.post('/api/devices/usb/port-1/inspect')
     assert wait(client)['state']=='NEEDS_FIRMWARE'
     assert TrustStore().get('gc-soil-aabbcc') is None
-    assert client.post('/api/devices/usb/port-1/assign',json={'name':'Soil','room_id':'room-1'}).status_code==409
+    assert client.post('/api/devices/usb/port-1/assign',json={'name':'Soil','room_id':'room-1','confirmed':True}).status_code==409
 
 
 def test_key_swap_prevents_credentials_and_acceptance(setup):
     client,sensor,_,calls=setup
     client.post('/api/devices/usb/port-1/inspect');wait(client)
     sensor.key=ec.generate_private_key(ec.SECP256R1())
+    client.post('/api/devices/usb/port-1/calibrate/air');wait(client)
+    client.post('/api/devices/usb/port-1/calibrate/wet');wait(client)
     client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'})
     assert wait(client)['state']=='BLOCKED'
     assert not calls
@@ -246,6 +263,8 @@ def test_disconnected_job_status_remains_queryable(setup, monkeypatch):
 def test_network_key_mismatch_never_advances_to_assignment(setup, monkeypatch):
     client,sensor,_,_=setup
     client.post('/api/devices/usb/port-1/inspect');wait(client)
+    client.post('/api/devices/usb/port-1/calibrate/air');wait(client)
+    client.post('/api/devices/usb/port-1/calibrate/wet');wait(client)
     other=Sensor()
     class WrongNetwork:
         async def prove_identity(self,id):return verify_message(other.signed('b'*64),kind='proof',device_id=id)
@@ -304,3 +323,26 @@ def test_flash_refuses_firmware_downgrade(setup, monkeypatch):
     assert response.status_code == 409
     assert 'Downgrade blockiert' in response.json()['detail']
     assert calls == []
+
+
+def test_hardware_uid_swap_is_blocked_during_setup(setup):
+    client,sensor,_,_=setup
+    client.post('/api/devices/usb/port-1/inspect'); assert wait(client)['state']=='CALIBRATION'
+    original=wait(client)['hardware_uid']
+    sensor.hardware_uid='8899aabbccddeeff'
+    client.post('/api/devices/usb/port-1/calibrate/air')
+    state=wait(client)
+    assert state['state']=='BLOCKED'
+    assert state['hardware_uid']==original
+
+
+def test_calibration_is_mandatory_and_persistent_in_session(setup):
+    client,sensor,_,_=setup
+    client.post('/api/devices/usb/port-1/inspect'); state=wait(client)
+    assert state['state']=='CALIBRATION' and not state['calibration_ready']
+    assert client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'}).status_code==409
+    client.post('/api/devices/usb/port-1/calibrate/air'); state=wait(client)
+    assert state['air_calibrated'] and not state['wet_calibrated'] and state['state']=='CALIBRATION'
+    client.post('/api/devices/usb/port-1/calibrate/wet'); state=wait(client)
+    assert state['calibration_ready'] and state['state']=='NETWORK'
+    assert state['air_raw'] > state['wet_raw'] + 100

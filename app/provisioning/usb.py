@@ -41,7 +41,7 @@ class USBRoute(APIRoute):
 
 
 router = APIRouter(prefix='/api/devices/usb', route_class=USBRoute, tags=['USB sensor setup'], dependencies=[Depends(require_write_auth)])
-VERSION = '0.5.0'
+VERSION = '0.5.1'
 MODEL = 'GC-SOIL-XIAO-C3-HW390'
 SUPPORTED = {(0x303a, 0x1001), (0x1a86, 0x7523), (0x1a86, 0x55d4), (0x10c4, 0xea60), (0x2886, 0x0044), (0x2886, 0x0056)}
 OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe000, 'firmware.bin': 0x10000}
@@ -180,12 +180,18 @@ class Session:
     name: str | None = None
     firmware: str | None = None
     public_key: str | None = None
+    hardware_uid: str | None = None
+    calibration_ready: bool = False
+    air_calibrated: bool = False
+    wet_calibrated: bool = False
+    air_raw: int | None = None
+    wet_raw: int | None = None
     busy: bool = False
     resume: str = 'FIRMWARE'
     task: asyncio.Task | None = field(default=None, repr=False)
 
     def public(self):
-        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'busy', 'resume']}
+        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'air_raw', 'wet_raw', 'busy', 'resume']}
 
 
 class USBManager:
@@ -211,12 +217,12 @@ class USBManager:
                 append_audit('usb.setup.blocked', port_id=session.id, device_id=session.device_id)
             except (ValueError, OSError, TimeoutError, RuntimeError, subprocess.SubprocessError, serial.SerialException):
                 # Never expose subprocess output or commands carrying credentials.
-                session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK'} else 'FIRMWARE'
+                session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK'} else ('CALIBRATION' if session.state in {'CALIBRATION','CALIBRATING'} else 'FIRMWARE')
                 session.state = 'ERROR'
                 session.message = ('WLAN-/MQTT-Verbindung nicht bestätigt. Als Broker die LAN-IP des Pi wählen und WLAN erneut einrichten. Die geprüfte Firmware bleibt erhalten.' if session.resume == 'NETWORK' else 'USB-/Firmwareprüfung fehlgeschlagen. Verbindung und Board prüfen; nicht automatisch erneut flashen.')
                 append_audit('usb.setup.failed', port_id=session.id, resume=session.resume)
             except Exception:
-                session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK', 'ASSIGN'} else 'FIRMWARE'
+                session.resume = 'NETWORK' if session.state in {'PROVISIONING', 'CONNECTING', 'NETWORK', 'ASSIGN'} else ('CALIBRATION' if session.state in {'CALIBRATION','CALIBRATING'} else 'FIRMWARE')
                 session.state = 'ERROR'
                 session.message = 'Einrichtung fehlgeschlagen. Am aktuellen Schritt erneut versuchen; keine automatische Firmwareinstallation.'
             finally:
@@ -236,7 +242,21 @@ class USBManager:
             raise DeviceBlocked('Gespeicherte Identität oder Sperrstatus verhindert Aufnahme.') from exc
         if row['status'] in {'REJECTED', 'REVOKED'}:
             raise DeviceBlocked('Sensor ist gesperrt; zuerst explizit erneut freigeben.')
+        if not announce.hardware_uid or not re.fullmatch(r'[0-9a-f]{16}', announce.hardware_uid):
+            raise DeviceBlocked('Hardware-ID fehlt oder ist ungültig.')
+        if session.hardware_uid and session.hardware_uid != announce.hardware_uid:
+            raise DeviceBlocked('Hardware-ID hat sich während der USB-Einrichtung geändert; möglicher Klon oder vertauschtes Gerät.')
+        stored_uid = (row.get('metadata') or {}).get('hardware_uid') if isinstance(row, dict) else None
+        if stored_uid and stored_uid != announce.hardware_uid:
+            raise DeviceBlocked('Hardware-ID passt nicht zur gespeicherten Sensoridentität.')
+        calibration = announce.calibration or {}
         session.device_id, session.public_key, session.fingerprint = proof.device_id, proof.public_key, proof.fingerprint
+        session.hardware_uid = announce.hardware_uid
+        session.calibration_ready = bool(calibration.get('ready'))
+        session.air_calibrated = bool(calibration.get('air_done'))
+        session.wet_calibrated = bool(calibration.get('wet_done'))
+        session.air_raw = calibration.get('air_raw') if isinstance(calibration.get('air_raw'), int) else None
+        session.wet_raw = calibration.get('wet_raw') if isinstance(calibration.get('wet_raw'), int) else None
         session.name, session.firmware = row['name'] or announce.name, announce.firmware
         return proof
 
@@ -247,7 +267,7 @@ class USBManager:
         except (TimeoutError, ValueError):
             session.state, session.message = 'NEEDS_FIRMWARE', 'Aktuelle Sensor-Firmware nicht bestätigt. XIAO ESP32-C3 auswählen und Firmware installieren.'
             return
-        session.state, session.message = 'NETWORK', 'Firmware geprüft. Jetzt Sensor mit dem WLAN verbinden.'
+        session.state, session.message = ('NETWORK', 'Kalibrierung geprüft. Jetzt Sensor mit dem WLAN verbinden.') if session.calibration_ready else ('CALIBRATION', 'Identität und Hardware-ID geprüft. Jetzt Sensor vollständig kalibrieren.')
 
     async def flash(self, session):
         session.state, session.message = 'FLASHING', 'Firmware wird geprüft und installiert. USB nicht trennen.'
@@ -272,8 +292,30 @@ class USBManager:
                 if attempt == 7:
                     raise
                 await asyncio.sleep(1)
-        session.state, session.message = 'NETWORK', 'Firmware und Identität geprüft. WLAN einrichten.'
+        session.state, session.message = ('NETWORK', 'Firmware, Identität und Kalibrierung geprüft. WLAN einrichten.') if session.calibration_ready else ('CALIBRATION', 'Firmware und Hardware-Identität geprüft. Vor WLAN zuerst kalibrieren.')
         append_audit('usb.flash.completed', port_id=session.id, device_id=session.device_id, firmware=VERSION)
+
+
+    async def calibrate(self, session, kind: str):
+        session.state, session.message = 'CALIBRATING', ('Trockenreferenz wird gemessen…' if kind == 'air' else 'Nassreferenz wird gemessen…')
+        before_key = session.public_key
+        command = 'CAL AIR' if kind == 'air' else 'CAL WATER'
+        expected = 'CAL AIR SAVED:' if kind == 'air' else 'CAL WATER SAVED:'
+        def run():
+            with USBSerial(resolve(session.id)) as connection:
+                fresh, _ = connection.proof()
+                if before_key and fresh.public_key != before_key:
+                    raise DeviceBlocked('Sensoridentität hat sich während der Kalibrierung geändert.')
+                connection.command(command, lambda line: line.startswith(expected), timeout=15)
+        await asyncio.to_thread(run)
+        await self.read_identity(session)
+        if session.air_calibrated and session.wet_calibrated:
+            if session.air_raw is None or session.wet_raw is None or session.air_raw <= session.wet_raw + 100:
+                raise ValueError('Kalibrierwerte sind nicht plausibel; Kalibrierung wiederholen.')
+            session.state, session.message = 'NETWORK', 'Kalibrierung vollständig und plausibel. Jetzt WLAN/TLS einrichten.'
+            append_audit('usb.calibration.completed', device_id=session.device_id, air_raw=session.air_raw, wet_raw=session.wet_raw)
+        else:
+            session.state, session.message = 'CALIBRATION', 'Erster Kalibrierpunkt gespeichert. Zweiten Referenzpunkt durchführen.'
 
     async def provision(self, session, body):
         session.state, session.message = 'PROVISIONING', 'Individueller Zugang und Zertifikat werden lokal eingerichtet…'
@@ -305,6 +347,11 @@ class USBManager:
                 proof = await provider.prove_identity(session.device_id)
                 if proof.public_key != session.public_key:
                     raise DeviceBlocked('Netzwerk-Identität passt nicht zum USB-Sensor.')
+                if proof.body.get('hardware_uid') != session.hardware_uid:
+                    raise DeviceBlocked('Netzwerk-Hardware-ID passt nicht zum USB-Sensor.')
+                cal = proof.body.get('calibration') or {}
+                if not cal.get('ready'):
+                    raise DeviceBlocked('Sensor meldet keine abgeschlossene Kalibrierung.')
                 if (TrustStore().get(session.device_id) or {}).get('status') == 'TRUSTED':
                     session.state, session.message = 'READY', 'Bekannter Sensor ist verbunden und bereits einem Raum zugewiesen.'
                     return proof
@@ -361,6 +408,7 @@ class NetworkRequest(BaseModel):
 class Assignment(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     room_id: str = Field(min_length=1, max_length=80)
+    confirmed: bool = Field(strict=True)
 
     @field_validator('name')
     @classmethod
@@ -418,11 +466,23 @@ async def flash_device(port_id: str, body: FlashRequest):
     return session.public()
 
 
+
+
+@router.post('/{port_id}/calibrate/{kind}')
+async def calibrate_device(port_id: str, kind: str):
+    if kind not in {'air', 'wet'}:
+        raise HTTPException(404, 'Unbekannter Kalibrierpunkt.')
+    session = manager.session(port_id)
+    if not session.public_key or session.state not in {'CALIBRATION', 'CALIBRATING'}:
+        raise HTTPException(409, 'Zuerst Firmware und Hardware-Identität prüfen.')
+    manager.start(session, lambda: manager.calibrate(session, kind))
+    return session.public()
+
 @router.post('/{port_id}/network')
 async def network_device(port_id: str, body: NetworkRequest):
     session = manager.session(port_id)
-    if not session.public_key or session.state not in {'NETWORK', 'ERROR', 'ASSIGN'}:
-        raise HTTPException(409, 'Zuerst die aktuelle Firmware und USB-Identität prüfen.')
+    if not session.public_key or not session.calibration_ready or session.state not in {'NETWORK', 'ERROR', 'ASSIGN'}:
+        raise HTTPException(409, 'Zuerst Firmware, Hardware-Identität und Kalibrierung vollständig prüfen.')
     manager.start(session, lambda: manager.provision(session, body))
     return session.public()
 
@@ -446,13 +506,21 @@ async def assign_device(port_id: str, body: Assignment):
     session = manager.session(port_id)
     if session.busy or session.state != 'ASSIGN':
         raise HTTPException(409, 'Sensor muss zuerst verbunden und geprüft sein.')
+    if not body.confirmed:
+        raise HTTPException(422, 'Name, Raum und physische Sensorzuordnung ausdrücklich bestätigen.')
     session.busy = True
     try:
         rooms.room_or_404(rooms.load_state(), body.room_id)
         proof = await manager.read_identity(session)
         network_proof = await manager.wait_online(session)
-        if network_proof.public_key != proof.public_key:
-            raise ValueError('Identität passt nicht.')
+        if network_proof.public_key != proof.public_key or network_proof.body.get('hardware_uid') != session.hardware_uid:
+            raise ValueError('Identität oder Hardware-ID passt nicht.')
+        if not session.calibration_ready:
+            raise ValueError('Kalibrierung nicht vollständig.')
+        state = network_proof.body.get('state') or {}
+        meta = state.get('meta') if isinstance(state, dict) else {}
+        if not isinstance(meta, dict) or meta.get('sensor_ok') is not True or meta.get('quality') not in {'FAIR','GOOD','EXCELLENT'}:
+            raise ValueError('Sensor-Selbsttest oder Signalqualität nicht ausreichend.')
         def assign():
             with rooms.edit_state() as current:
                 rooms.room_or_404(current, body.room_id)
@@ -463,7 +531,7 @@ async def assign_device(port_id: str, body: Assignment):
         row = await asyncio.to_thread(TrustStore().accept, proof.device_id, name=body.name, room_id=body.room_id,
             fingerprint=proof.fingerprint[-16:], proved_key=proof.public_key, assign=assign)
         session.name = row['name']
-        session.state, session.message = 'READY', 'Sensor aufgenommen und dem Raum zugewiesen. Messwerte sind bereit.'
+        session.state, session.message = 'READY', 'Alle Prüfungen bestanden: Identität, Hardware-ID, Kalibrierung, TLS-Verbindung und Raumzuweisung. Sensor kann jetzt abgezogen und eingesetzt werden.'
         append_audit('usb.sensor.accepted', device_id=proof.device_id, room_id=body.room_id)
         return {'ok': True, 'device': row, 'session': session.public()}
     except (ValueError, DeviceBlocked) as exc:

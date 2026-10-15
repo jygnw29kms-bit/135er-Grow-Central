@@ -10,7 +10,7 @@
 #include "ble_provisioning.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.5.0";
+static constexpr char FW_VERSION[] = "0.5.1";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -35,6 +35,9 @@ BleProvisioner bleProvisioner;
 
 uint16_t airRaw = DEFAULT_AIR_RAW;
 uint16_t waterRaw = DEFAULT_WATER_RAW;
+bool airCalibrated = false;
+bool waterCalibrated = false;
+String hardwareUid;
 float emaRaw = NAN;
 float lastPublishedPct = NAN;
 uint32_t lastReport = 0;
@@ -204,6 +207,8 @@ static void saveCalibration() {
   prefs.begin("gc-soil", false);
   prefs.putUShort("air", airRaw);
   prefs.putUShort("water", waterRaw);
+  prefs.putBool("air_ok", airCalibrated);
+  prefs.putBool("water_ok", waterCalibrated);
   prefs.end();
 }
 
@@ -211,10 +216,14 @@ static void loadCalibration() {
   prefs.begin("gc-soil", true);
   airRaw = prefs.getUShort("air", DEFAULT_AIR_RAW);
   waterRaw = prefs.getUShort("water", DEFAULT_WATER_RAW);
+  airCalibrated = prefs.getBool("air_ok", false);
+  waterCalibrated = prefs.getBool("water_ok", false);
   prefs.end();
   if (airRaw <= waterRaw + 100 || airRaw > ADC_MAX || waterRaw < 50) {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
+    airCalibrated = false;
+    waterCalibrated = false;
   }
 }
 
@@ -277,11 +286,20 @@ static String topic(const char* leaf) {
   return String(MQTT_ROOT) + "/devices/" + deviceId + "/" + leaf;
 }
 
+static bool calibrationReady() { return airCalibrated && waterCalibrated && airRaw > waterRaw + 100; }
+
+static String calibrationJson() {
+  return String("{\"ready\":") + (calibrationReady() ? "true" : "false") +
+    ",\"air_done\":" + (airCalibrated ? "true" : "false") +
+    ",\"wet_done\":" + (waterCalibrated ? "true" : "false") +
+    ",\"air_raw\":" + String(airRaw) + ",\"wet_raw\":" + String(waterRaw) + "}";
+}
+
 static String announcementPayload() {
   String payload = "{\"schema\":\"" + String(SCHEMA) + "\",\"protocol\":\"" + String(PROTOCOL) +
                    "\",\"id\":\"" + jsonEscape(deviceId) + "\",\"name\":\"" + jsonEscape(deviceName) +
                    "\",\"device_class\":\"sensor\",\"model\":\"GC-SOIL-XIAO-C3-HW390\",\"firmware\":\"" +
-                   String(FW_VERSION) + "\",\"capabilities\":[\"soil_moisture\"]}";
+                   String(FW_VERSION) + "\",\"hardware_uid\":\"" + hardwareUid + "\",\"calibration\":" + calibrationJson() + ",\"capabilities\":[\"soil_moisture\"]}";
   return payload;
 }
 
@@ -360,13 +378,16 @@ static void handleIdentityProof() {
   proofHead = (proofHead + 1) % 4;
   --proofCount;
   const String state = statePayload(reading);
-  const String body = "{\"nonce\":\"" + nonce + "\",\"state\":" + state + "}";
+  const String body = "{\"nonce\":\"" + nonce + "\",\"hardware_uid\":\"" + hardwareUid + "\",\"calibration\":" + calibrationJson() + ",\"state\":" + state + "}";
   const String proof = identity.sign(deviceId, "proof", body, jsonEscape);
   if (!proof.isEmpty()) mqtt.publish(topic("proof"), proof, false, 1);
 }
 
 static void deriveDeviceId() {
   const uint64_t mac = ESP.getEfuseMac();
+  char uid[17];
+  snprintf(uid, sizeof(uid), "%016llx", static_cast<unsigned long long>(mac));
+  hardwareUid = String(uid);
   char suffix[7];
   snprintf(suffix, sizeof(suffix), "%06lx", static_cast<unsigned long>(mac & 0xFFFFFFUL));
   deviceId = String("gc-soil-") + suffix;
@@ -457,8 +478,8 @@ static void printNetworkInfo() {
 
 static void printInfo() {
   Serial.printf("Grow-Central Soil Node %s firmware=%s\n", deviceId.c_str(), FW_VERSION);
-  Serial.printf("GC_ID fingerprint=%s\n", identity.getFingerprint().c_str());
-  Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u\n", airRaw, waterRaw);
+  Serial.printf("GC_ID fingerprint=%s hardware_uid=%s\n", identity.getFingerprint().c_str(), hardwareUid.c_str());
+  Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u calibrated=%s air_calibrated=%s wet_calibrated=%s\n", airRaw, waterRaw, calibrationReady() ? "yes" : "no", airCalibrated ? "yes" : "no", waterCalibrated ? "yes" : "no");
   Serial.println("commands:");
   Serial.println("  INFO | CAL AIR | CAL WATER | RESET CAL");
   Serial.println("  USB ID <64-character nonce> (signed identity, no private key)");
@@ -537,18 +558,22 @@ static void handleSerialCommands() {
   } else if (upper == "CAL AIR") {
     Serial.println("CAL AIR: keep sensor dry/in air...");
     airRaw = calibrationSnapshot();
+    airCalibrated = true;
     saveCalibration();
     emaRaw = NAN;
     Serial.printf("CAL AIR SAVED: %u\n", airRaw);
   } else if (upper == "CAL WATER") {
     Serial.println("CAL WATER: immerse probe area only, keep electronics dry...");
     waterRaw = calibrationSnapshot();
+    waterCalibrated = true;
     saveCalibration();
     emaRaw = NAN;
     Serial.printf("CAL WATER SAVED: %u\n", waterRaw);
   } else if (upper == "RESET CAL") {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
+    airCalibrated = false;
+    waterCalibrated = false;
     saveCalibration();
     emaRaw = NAN;
     Serial.println("CALIBRATION RESET TO PROVISIONAL REFERENCES");
