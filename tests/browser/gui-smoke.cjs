@@ -25,7 +25,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    if(pathname==='/api/v1/rooms'){
     if(route.request().method()==='POST'){if(failSave)return route.fulfill({status:503,json:{detail:'Test: Dienst nicht verfügbar'}});savedRoom=route.request().postDataJSON();data={...savedRoom,id:'room3'};rooms.push(data)}else data={rooms};
    }else if(pathname==='/api/v1/rooms/capture')data={ok:true,rooms_captured:captures};
-   else if(pathname.endsWith('/sensors')){if(delayFirst&&pathname.includes('room1'))await new Promise(r=>setTimeout(r,300));data={samples:[sample(pathname.includes('room2')?19:24)]}}
+   else if(pathname.endsWith('/sensors')){if(delayFirst&&pathname.includes('room1'))await new Promise(r=>setTimeout(r,300));const base=pathname.includes('room2')?19:24;data={samples:[{...sample(base-1),humidity_percent:52,power_w:80},{...sample(base),humidity_percent:55,power_w:95},{...sample(base+1),humidity_percent:58,power_w:110}]}}
    else if(pathname.match(/rooms\/[^/]+\/devices$/))data={devices:[{id:'growcentral_esp32:soil1',name:'Substratsonde',provider_id:'growcentral_esp32',assigned:true,online:true,state:{soil_moisture:42.5,meta:{raw:2710,filtered_raw:2709.5,quality:'EXCELLENT',moisture_state:'AIR_DRY',air_raw:3000,water_raw:1200,rssi_dbm:-60,uptime_ms:3600000,firmware:'<img src=x onerror=alert(1)>',sensor_ok:true,min:0}}}]};
    else if(pathname.endsWith('/journal'))data={entries:[]};
    else if(pathname.endsWith('/plants'))data={plants:[]};
@@ -85,6 +85,10 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  await page.locator('.gc-light-brightness').evaluate(el=>{el.value='70';el.dispatchEvent(new Event('change',{bubbles:true}))});
  await page.waitForTimeout(100);
  assert(lightCommands.some(c=>c.capability==='brightness'&&c.value===70),'lighting page writes confirmed brightness command');
+ await page.locator('#overviewClimateHistory svg').waitFor({state:'attached'});
+ assert.equal(await page.locator('#overviewClimateHistory polyline').count(),2,'overview climate history renders temperature and humidity');
+ await page.locator('#overviewEnergyHistory svg').waitFor({state:'attached'});
+ assert.equal(await page.locator('#overviewEnergyHistory polyline').count(),1,'overview energy history renders real power samples');
  await page.locator('#growSelector').selectOption('room2',{force:true});assert.equal(await page.locator('#temp').innerText(),'19.0');
  assert.equal(await page.locator('#rh').innerText(),'—');assert.equal(await page.locator('#power').innerText(),'—');
  await page.locator('#refreshBtn').evaluate(node=>node.click());await page.waitForTimeout(100);assert.equal(await page.locator('#temp').innerText(),'19.0');

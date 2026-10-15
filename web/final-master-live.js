@@ -70,6 +70,31 @@
   }
 
 
+
+  function normalizedPoints(values){
+    const nums=values.map(Number).filter(Number.isFinite);if(nums.length<2)return '';
+    const lo=Math.min(...nums),hi=Math.max(...nums),span=Math.max(.001,hi-lo);
+    return nums.map((v,i)=>`${(i/(nums.length-1)*100).toFixed(2)},${(100-(v-lo)/span*100).toFixed(2)}`).join(' ');
+  }
+  async function loadOverviewHistory(){
+    const climate=$('overviewClimateHistory'),energy=$('overviewEnergyHistory');if(!climate&&!energy)return;
+    try{
+      const roomData=await api('/api/v1/rooms'),rooms=(roomData.rooms||[]).filter(r=>r.latest_sensor);
+      rooms.sort((a,b)=>Date.parse(b.latest_sensor?.timestamp||0)-Date.parse(a.latest_sensor?.timestamp||0));
+      const room=rooms[0];
+      if(!room){if(climate)climate.innerHTML='<div class="fm-chart-empty">Noch keine Raumhistorie.</div>';if(energy)energy.innerHTML='<div class="fm-chart-empty">Noch keine Leistungshistorie.</div>';return}
+      const history=(await api(`/api/v1/rooms/${encodeURIComponent(room.id)}/sensors?limit=288`)).samples||[];
+      if(climate){
+        const t=normalizedPoints(history.map(x=>x.temperature_c)),h=normalizedPoints(history.map(x=>x.humidity_percent));
+        climate.innerHTML=(t||h)?`<div class="chart-grid"></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Klima-Verlauf ${esc(room.name)}">${t?`<polyline class="line-a" points="${t}"/>`:''}${h?`<polyline class="line-b" points="${h}"/>`:''}</svg><div class="chart-legend"><span><i class="a"></i>Temperatur</span><span><i class="b"></i>Luftfeuchte</span><span>${esc(room.name)}</span></div>`:'<div class="fm-chart-empty">Noch nicht genug Klimahistorie.</div>';
+      }
+      if(energy){
+        const p=history.map(x=>x.power_w).filter(v=>v!=null&&Number.isFinite(Number(v))).map(Number),pts=normalizedPoints(p);
+        energy.innerHTML=pts?`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Leistungs-Verlauf ${esc(room.name)}"><polyline points="${pts}"/></svg><span class="gc-history-label">${esc(room.name)} ? ${p.length} Messpunkte</span>`:'<div class="fm-chart-empty">Keine Leistungshistorie in den Raumdaten.</div>';
+      }
+    }catch(e){if(climate)climate.innerHTML='<div class="fm-chart-empty">Historie nicht erreichbar.</div>';if(energy)energy.innerHTML='<div class="fm-chart-empty">Leistungshistorie nicht erreichbar.</div>'}
+  }
+
   const QUICK_POWER_PROVIDERS=new Set(['shelly','tapo','fritz','home_assistant','tuya','zigbee','mqtt']);
   const QUICK_SPEED_PROVIDERS=new Set(['tuya','mqtt']);
   async function deviceCommand(device,capability,value){
@@ -98,7 +123,7 @@
     }catch(e){console.warn('Quick controls unavailable',e)}
   }
 
-  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents(),loadQuickControls()]);}
+  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents(),loadQuickControls(),loadOverviewHistory()]);}
   $('overviewSnapshotBtn')?.addEventListener('click',refreshSnapshot);
   window.addEventListener('gc:refresh',refresh);
   window.addEventListener('gc:core-refreshed',refresh);
