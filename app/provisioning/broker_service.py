@@ -83,6 +83,8 @@ def certificates(hosts):
               .serial_number(x509.random_serial_number()).not_valid_before(now - timedelta(days=1))
               .not_valid_after(now + timedelta(days=3650)).add_extension(x509.BasicConstraints(ca=True, path_length=0), True)
               .add_extension(x509.KeyUsage(False, False, False, False, False, True, True, False, False), True)
+              .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), False)
+              .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(key.public_key()), False)
               .sign(key, hashes.SHA256()))
         write_file(ca_key_path, key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
         write_file(ca_path, ca.public_bytes(serialization.Encoding.PEM), 0o644)
@@ -94,7 +96,12 @@ def certificates(hosts):
         # ESP32 Arduino's Mbed TLS 2.28 checks dNSName, not iPAddress SANs.
         # Keep real IP SANs for modern clients and exact textual aliases for this client.
         dns_names = set(san.get_values_for_type(x509.DNSName))
-        if set(hosts).issubset(names) and set(hosts).issubset(dns_names) and current.not_valid_after_utc > now + timedelta(days=30):
+        try:
+            current.extensions.get_extension_for_class(x509.AuthorityKeyIdentifier)
+            has_aki = True
+        except x509.ExtensionNotFound:
+            has_aki = False
+        if has_aki and set(hosts).issubset(names) and set(hosts).issubset(dns_names) and current.not_valid_after_utc > now + timedelta(days=30):
             return ca
     server_key = ec.generate_private_key(ec.SECP256R1())
     sans = []
@@ -109,6 +116,8 @@ def certificates(hosts):
         .not_valid_before(now - timedelta(days=1)).not_valid_after(now + timedelta(days=365))
         .add_extension(x509.SubjectAlternativeName(sans), False)
         .add_extension(x509.ExtendedKeyUsage([x509.oid.ExtendedKeyUsageOID.SERVER_AUTH]), False)
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(server_key.public_key()), False)
+        .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(key.public_key()), False)
         .sign(key, hashes.SHA256()))
     write_file(BASE / 'server.key', server_key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()), 0o640, broker_gid)
     write_file(cert_path, certificate.public_bytes(serialization.Encoding.PEM), 0o644)

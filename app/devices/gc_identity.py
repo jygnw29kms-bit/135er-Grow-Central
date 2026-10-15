@@ -4,6 +4,7 @@ import base64
 import hashlib
 from dataclasses import dataclass
 import json
+import re
 from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -47,7 +48,11 @@ def verify_message(payload: bytes | str, *, kind: str, device_id: str | None = N
             raise ValueError('sensor identity does not match topic')
         from .gc_esp32_protocol import device_topic
         identity = data['device_id']
-        device_topic('growcentral/v1', identity, kind)
+        if kind == 'ble_proof':
+            if not isinstance(identity, str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]{1,63}', identity):
+                raise ValueError('invalid Grow Central BLE identity')
+        else:
+            device_topic('growcentral/v1', identity, kind)
         sequence = data['seq']
         if type(sequence) is not int or not 0 < sequence <= 2**53 - 1:
             raise ValueError('invalid sensor sequence')
