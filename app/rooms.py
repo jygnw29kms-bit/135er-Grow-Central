@@ -512,16 +512,20 @@ async def _capture_loop() -> None:
 
 
 def install(app) -> None:
-    @app.on_event("startup")
     async def start_room_capture() -> None:
         global _capture_task
-        if _capture_task is None or _capture_task.done(): _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
+        if _capture_task is None or _capture_task.done():
+            _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
 
-    @app.on_event("shutdown")
     async def stop_room_capture() -> None:
         global _capture_task
         if _capture_task:
             _capture_task.cancel()
-            try: await _capture_task
-            except asyncio.CancelledError: pass
+            try:
+                await _capture_task
+            except asyncio.CancelledError:
+                pass
             _capture_task = None
+
+    app.router.add_event_handler("startup", start_room_capture)
+    app.router.add_event_handler("shutdown", stop_room_capture)

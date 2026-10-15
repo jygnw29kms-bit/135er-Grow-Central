@@ -2,7 +2,7 @@
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const api=async(path,options={})=>{const r=await fetch(path,{cache:'no-store',credentials:'same-origin',...options});const type=r.headers.get('content-type')||'';const body=type.includes('json')?await r.json():await r.text();if(!r.ok)throw new Error(body?.detail||body||`${r.status} ${r.statusText}`);return body};
-  const num=(v,d=0)=>v!=null&&Number.isFinite(Number(v))?Number(v).toFixed(d):'?';
+  const num=(v,d=0)=>v!=null&&Number.isFinite(Number(v))?Number(v).toFixed(d):'\u2014';
   const phaseLabels={germination:'Keimung',vegetative:'Vegetativ',flowering:'Blüte',flush:'Spülung',harvest:'Ernte',other:'Sonstiges'};
   const categoryLabels={note:'Notiz',watering:'Bewässerung',feeding:'Düngung',training:'Training',defoliation:'Entlaubung',pest:'Schädlinge',flowering:'Blüte',harvest:'Ernte',other:'Ereignis'};
 
@@ -51,10 +51,10 @@
     try{
       const data=await api('/api/v1/automations'),rows=(data.automations||[]).filter(r=>r.enabled!==false);
       const timed=rows.find(r=>r.trigger==='time'&&String(r.trigger_value||'').trim());
-      if($('heroNextAction'))$('heroNextAction').textContent=timed?String(timed.trigger_value):'?';
+      if($('heroNextAction'))$('heroNextAction').textContent=timed?String(timed.trigger_value):'\u2014';
       if($('heroNextActionMeta'))$('heroNextActionMeta').textContent=timed?(timed.name||'Zeitregel'):'Keine Zeitregel aktiv';
     }catch{
-      if($('heroNextAction'))$('heroNextAction').textContent='?';
+      if($('heroNextAction'))$('heroNextAction').textContent='\u2014';
       if($('heroNextActionMeta'))$('heroNextActionMeta').textContent='Automationen nicht erreichbar';
     }
   }
@@ -68,15 +68,15 @@
       results.forEach((result,index)=>{if(result.status!=='fulfilled')return;(result.value.entries||[]).forEach(e=>events.push({...e,room_name:rooms[index]?.name||''}))});
       events.sort((a,b)=>Date.parse(b.created_at||0)-Date.parse(a.created_at||0));
       root.innerHTML=events.length?events.slice(0,4).map(e=>{
-        const when=Date.parse(e.created_at||0),time=Number.isFinite(when)?new Date(when).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'?';
-        return `<div><i class="${e.category==='pest'?'warn':e.category==='note'?'info':'good'}"></i><time>${esc(time)}</time><span>${esc(e.title||categoryLabels[e.category]||'Ereignis')}${e.room_name?` ? ${esc(e.room_name)}`:''}</span></div>`;
+        const when=Date.parse(e.created_at||0),time=Number.isFinite(when)?new Date(when).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'\u2014';
+        return `<div><i class="${e.category==='pest'?'warn':e.category==='note'?'info':'good'}"></i><time>${esc(time)}</time><span>${esc(e.title||categoryLabels[e.category]||'Ereignis')}${e.room_name?` \u00b7 ${esc(e.room_name)}`:''}</span></div>`;
       }).join(''):'<div><i class="info"></i><time>?</time><span>Noch keine erfassten Ereignisse.</span></div>';
     }catch{root.innerHTML='<div><i class="warn"></i><time>?</time><span>Ereignisse nicht erreichbar.</span></div>'}
   }
 
   function refreshSnapshot(){
     const img=$('overviewCameraSnapshot'),fallback=$('overviewCameraFallback'),state=$('overviewCameraState');if(!img)return;
-    img.onload=()=>{img.hidden=false;if(fallback)fallback.hidden=true;if(state)state.textContent='? LIVE'};
+    img.onload=()=>{img.hidden=false;if(fallback)fallback.hidden=true;if(state)state.textContent='\u25cf LIVE'};
     img.onerror=()=>{img.hidden=true;if(fallback)fallback.hidden=false;if(state)state.textContent='NICHT VERFÜGBAR'};
     img.src=`/api/v1/camera/snapshot?_=${Date.now()}`;
   }
@@ -102,7 +102,7 @@
       }
       if(energy){
         const p=history.map(x=>x.power_w).filter(v=>v!=null&&Number.isFinite(Number(v))).map(Number),pts=normalizedPoints(p);
-        energy.innerHTML=pts?`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Leistungs-Verlauf ${esc(room.name)}"><polyline points="${pts}"/></svg><span class="gc-history-label">${esc(room.name)} ? ${p.length} Messpunkte</span>`:'<div class="fm-chart-empty">Keine Leistungshistorie in den Raumdaten.</div>';
+        energy.innerHTML=pts?`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Leistungs-Verlauf ${esc(room.name)}"><polyline points="${pts}"/></svg><span class="gc-history-label">${esc(room.name)} \u00b7 ${p.length} Messpunkte</span>`:'<div class="fm-chart-empty">Keine Leistungshistorie in den Raumdaten.</div>';
       }
     }catch(e){if(climate)climate.innerHTML='<div class="fm-chart-empty">Historie nicht erreichbar.</div>';if(energy)energy.innerHTML='<div class="fm-chart-empty">Leistungshistorie nicht erreichbar.</div>'}
   }
@@ -145,7 +145,7 @@
         nutrients.innerHTML=`<div class="master-panel-head"><h3>Nährstoffe</h3><span class="state-badge">${sources.length?'LIVE':'OPTIONAL'}</span></div><div class="health-list">${list}</div>`;
       }
     }catch(e){
-      if(light)light.textContent='?';
+      if(light)light.textContent='\u2014';
       if(nutrients)nutrients.innerHTML='<div class="master-panel-head"><h3>Nährstoffe</h3><span class="state-badge offline">NICHT VERFÜGBAR</span></div><div class="empty">Messquellen nicht erreichbar.</div>';
     }
   }

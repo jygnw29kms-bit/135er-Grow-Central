@@ -79,13 +79,11 @@ async def _publisher() -> None:
 
 
 def install(app) -> None:
-    @app.on_event("startup")
     async def start_mdns_alias() -> None:
         global _task
         if _task is None or _task.done():
             _task = asyncio.create_task(_publisher(), name="grow-central-mdns-alias")
 
-    @app.on_event("shutdown")
     async def stop_mdns_alias() -> None:
         global _task
         if _task:
@@ -94,3 +92,6 @@ def install(app) -> None:
                 await _task
             _task = None
         await _stop_process()
+
+    app.router.add_event_handler("startup", start_mdns_alias)
+    app.router.add_event_handler("shutdown", stop_mdns_alias)

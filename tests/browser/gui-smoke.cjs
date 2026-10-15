@@ -52,8 +52,9 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
   try{return route.fulfill({contentType:type,body:await fs.readFile(path.join(root,'web',file))})}catch{return route.fulfill({status:404,body:'Not found'})}
  });
  await page.goto('http://gc.test/rooms?room=room1&tab=sensors');
- await page.locator('#sensorSummary').getByText('Kalibrierung erforderlich',{exact:true}).waitFor();
- assert(!/42[.,]5\s*%/.test(await page.locator('#sensorSummary').innerText()),'provisional soil percentage stays hidden');
+ await page.locator('#sensorSummary').getByText(/42[.,]5 %/).waitFor();
+ await page.locator('#sensorSummary').getByText(/Frischsubstrat-Index 63 %/).waitFor();
+ assert.match(await page.locator('#sensorSummary').innerText(),/42[.,]5 %/,'validated soil percentage is visible');
  await page.locator('#sensorDiagnostics > summary').click();
  await page.getByText('EXCELLENT',{exact:true}).waitFor();
  assert.equal(await page.locator('#sensorDiagnosticsRows img').count(),0,'metadata must be escaped');

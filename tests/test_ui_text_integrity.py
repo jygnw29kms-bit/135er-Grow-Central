@@ -21,3 +21,24 @@ def test_productive_ui_and_errors_have_no_known_broken_german_tokens():
             if token in text:
                 failures.append(f"{path.relative_to(ROOT)}: {token}")
     assert not failures, "broken visible German tokens: " + ", ".join(failures)
+
+
+
+def test_productive_ui_has_no_unicode_replacement_character():
+    failures=[]
+    for path in FILES:
+        text=path.read_text(encoding="utf-8")
+        if "\ufffd" in text:
+            failures.append(str(path.relative_to(ROOT)))
+    assert not failures, "Unicode replacement character in: " + ", ".join(failures)
+
+
+def test_productive_ui_has_no_known_visible_question_mark_artifacts():
+    bad=("? LIVE", " ?C", "NICHT VERF?GBAR", " ? Frischsubstrat ", "Vorhanden ? ")
+    failures=[]
+    for path in FILES:
+        text=path.read_text(encoding="utf-8")
+        for token in bad:
+            if token in text:
+                failures.append(f"{path.relative_to(ROOT)}: {token}")
+    assert not failures, "visible question-mark artifacts: " + ", ".join(failures)

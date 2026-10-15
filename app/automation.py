@@ -164,13 +164,11 @@ async def _scheduler_loop() -> None:
 
 
 def install(app) -> None:
-    @app.on_event("startup")
     async def _automation_startup() -> None:
         global _scheduler_task
         if _scheduler_task is None or _scheduler_task.done():
             _scheduler_task = asyncio.create_task(_scheduler_loop(), name="growcentral-automation-scheduler")
 
-    @app.on_event("shutdown")
     async def _automation_shutdown() -> None:
         global _scheduler_task
         task = _scheduler_task; _scheduler_task = None
@@ -180,6 +178,9 @@ def install(app) -> None:
                 await task
             except asyncio.CancelledError:
                 pass
+
+    app.router.add_event_handler("startup", _automation_startup)
+    app.router.add_event_handler("shutdown", _automation_shutdown)
 
 
 @router.get("")
