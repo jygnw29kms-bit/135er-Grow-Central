@@ -1,6 +1,10 @@
 name: Deploy 135erHeli.de portfolio
 
 on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/deploy-135erheli-portfolio.yml'
   workflow_dispatch:
   repository_dispatch:
     types: [deploy-135erheli]
@@ -36,7 +40,7 @@ jobs:
           : "${SSH_PASSWORD:?SSH_PASSWORD fehlt}"
           export SSHPASS="$SSH_PASSWORD"
 
-          tar -C site -czf /tmp/135erheli-site.tar.gz index.html styles.css app.js
+          tar -C site -czf /tmp/135erheli-site.tar.gz index.html styles.css app.js assets
           sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/135erheli-site.tar.gz"
 
           REMOTE='set -euo pipefail
@@ -45,10 +49,13 @@ jobs:
           rm -rf /tmp/135erheli-stage
           mkdir -p /tmp/135erheli-stage
           tar -xzf /tmp/135erheli-site.tar.gz -C /tmp/135erheli-stage
+          install -m 0755 -d "$TARGET/assets"
           install -m 0644 /tmp/135erheli-stage/index.html "$TARGET/index.html"
           install -m 0644 /tmp/135erheli-stage/styles.css "$TARGET/styles.css"
           install -m 0644 /tmp/135erheli-stage/app.js "$TARGET/app.js"
-          chown --reference="$TARGET" "$TARGET/index.html" "$TARGET/styles.css" "$TARGET/app.js"
+          cp -f /tmp/135erheli-stage/assets/* "$TARGET/assets/"
+          chmod 0644 "$TARGET"/assets/*
+          chown --reference="$TARGET" "$TARGET/index.html" "$TARGET/styles.css" "$TARGET/app.js" "$TARGET/assets" "$TARGET"/assets/*
           rm -rf /tmp/135erheli-stage /tmp/135erheli-site.tar.gz'
 
           B64="$(printf '%s' "$REMOTE" | base64 -w0)"
@@ -63,8 +70,11 @@ jobs:
         run: |
           set -euo pipefail
           for i in {1..12}; do
-            if curl -LfsS https://135erheli.de/ -o /tmp/135erheli.html && grep -q 'JL1976' /tmp/135erheli.html; then
-              echo '135erHeli.de is live.'
+            if curl -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
+              && grep -q 'JL1976 HOME LAB' /tmp/135erheli.html \
+              && curl -LfsS https://135erheli.de/assets/hero-homebrew.svg -o /tmp/hero.svg \
+              && grep -q 'JL1976' /tmp/hero.svg; then
+              echo '135erHeli.de homebrew build is live.'
               exit 0
             fi
             sleep 5
