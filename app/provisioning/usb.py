@@ -419,6 +419,7 @@ class USBManager:
                     session.state, session.message = 'READY', 'Bekannter Sensor ist verbunden und bereits einem Raum zugewiesen.'
                     return proof
                 session.state, session.message = 'ASSIGN', 'Sensor ist verbunden. Jetzt Name und Raum zuweisen.'
+                append_audit('usb.identity.live_verified', device_id=session.device_id, port_id=session.id)
                 return proof
             except TimeoutError:
                 await asyncio.sleep(1)
@@ -484,6 +485,11 @@ class Assignment(BaseModel):
 @router.get('')
 async def usb_devices():
     found = await asyncio.to_thread(ports)
+    for port in found:
+        session = manager.sessions.setdefault(port['id'], Session(port['id']))
+        if session.state == 'DETECTED' and not session.busy:
+            append_audit('usb.inspect.auto_started', port_id=session.id)
+            manager.start(session, lambda session=session: manager.inspect(session))
     try:
         await asyncio.to_thread(firmware_files)
         firmware_ready = True
