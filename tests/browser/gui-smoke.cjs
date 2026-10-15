@@ -13,7 +13,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false;
+ let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false,lightCommands=[];
  let runtimeHealth={ok:true,state:'ok',provisioned:true,warnings:[],blockers:[],cloud:{enabled:false},device_runtime:{provider_count:10}};
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url()),pathname=url.pathname;
@@ -29,6 +29,9 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    else if(pathname.match(/rooms\/[^/]+\/devices$/))data={devices:[{id:'growcentral_esp32:soil1',name:'Substratsonde',provider_id:'growcentral_esp32',assigned:true,online:true,state:{soil_moisture:42.5,meta:{raw:2710,filtered_raw:2709.5,quality:'EXCELLENT',moisture_state:'AIR_DRY',air_raw:3000,water_raw:1200,rssi_dbm:-60,uptime_ms:3600000,firmware:'<img src=x onerror=alert(1)>',sensor_ok:true,min:0}}}]};
    else if(pathname.endsWith('/journal'))data={entries:[]};
    else if(pathname.endsWith('/plants'))data={plants:[]};
+   else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness'],model:'Synthetic'}],errors:[]};
+   else if(pathname==='/api/devices/mqtt/lamp1/state')data={state:{online:true,power:false,brightness:50}};
+   else if(pathname==='/api/devices/mqtt/lamp1/command'&&route.request().method()==='POST'){lightCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
    else if(pathname==='/api/health')data={ok:true};
    else if(pathname.includes('smarthome/overview'))data={summary:{power_w:null,energy_wh:null},devices:[]};
    else if(pathname.includes('/runtime')||pathname.includes('/platform'))data={providers:[]};
@@ -72,6 +75,16 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  }
  await page.goto('http://gc.test/ui');
  assert.equal(await page.locator('.master-shell').count(),1,'productive UI keeps Final Master');await page.locator('#growSelector option[value=room2]').waitFor({state:'attached'});
+ await page.locator('#quickLight button').first().waitFor({state:'visible'});
+ await page.waitForFunction(()=>!document.querySelector('#quickLight button')?.disabled);
+ await page.locator('#quickLight button').first().click();
+ await page.waitForTimeout(100);
+ assert(lightCommands.some(c=>c.capability==='power'&&c.value===true),'quick light writes confirmed power command');
+ await page.locator('#mainNav [data-view=lighting]').click();
+ await page.locator('.gc-light-brightness').waitFor({state:'visible'});
+ await page.locator('.gc-light-brightness').evaluate(el=>{el.value='70';el.dispatchEvent(new Event('change',{bubbles:true}))});
+ await page.waitForTimeout(100);
+ assert(lightCommands.some(c=>c.capability==='brightness'&&c.value===70),'lighting page writes confirmed brightness command');
  await page.locator('#growSelector').selectOption('room2',{force:true});assert.equal(await page.locator('#temp').innerText(),'19.0');
  assert.equal(await page.locator('#rh').innerText(),'—');assert.equal(await page.locator('#power').innerText(),'—');
  await page.locator('#refreshBtn').evaluate(node=>node.click());await page.waitForTimeout(100);assert.equal(await page.locator('#temp').innerText(),'19.0');

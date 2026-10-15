@@ -1,7 +1,7 @@
 (()=>{
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const api=async path=>{const r=await fetch(path,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return r.json()};
+  const api=async(path,options={})=>{const r=await fetch(path,{cache:'no-store',credentials:'same-origin',...options});const type=r.headers.get('content-type')||'';const body=type.includes('json')?await r.json():await r.text();if(!r.ok)throw new Error(body?.detail||body||`${r.status} ${r.statusText}`);return body};
   const num=(v,d=0)=>v!=null&&Number.isFinite(Number(v))?Number(v).toFixed(d):'?';
   const phaseLabels={germination:'Keimung',vegetative:'Vegetativ',flowering:'Bl?te',flush:'Sp?lung',harvest:'Ernte',other:'Sonstiges'};
   const categoryLabels={note:'Notiz',watering:'Bew?sserung',feeding:'D?ngung',training:'Training',defoliation:'Entlaubung',pest:'Sch?dlinge',flowering:'Bl?te',harvest:'Ernte',other:'Ereignis'};
@@ -69,7 +69,36 @@
     img.src=`/api/v1/camera/snapshot?_=${Date.now()}`;
   }
 
-  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents()]);}
+
+  const QUICK_POWER_PROVIDERS=new Set(['shelly','tapo','fritz','home_assistant','tuya','zigbee','mqtt']);
+  const QUICK_SPEED_PROVIDERS=new Set(['tuya','mqtt']);
+  async function deviceCommand(device,capability,value){
+    return api(`/api/devices/${encodeURIComponent(device.provider_id)}/${encodeURIComponent(device.native_id)}/command`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({capability,value})});
+  }
+  function bindQuickPower(rootId,device,onLabel='Ein',offLabel='Aus'){
+    const root=$(rootId);if(!root)return;const buttons=[...root.querySelectorAll('button')];
+    if(!device||!(device.capabilities||[]).includes('power')||!QUICK_POWER_PROVIDERS.has(device.provider_id)){buttons.forEach(b=>b.disabled=true);return}
+    const values=[true,false];buttons.slice(0,2).forEach((button,index)=>{button.disabled=false;button.title=device.name||device.native_id;button.onclick=async()=>{try{buttons.forEach(b=>b.disabled=true);await deviceCommand(device,'power',values[index]);button.textContent=index===0?onLabel:offLabel;window.dispatchEvent(new Event('gc:refresh'))}catch(e){buttons.forEach(b=>b.disabled=false);console.warn('Quick control',e)}}});
+  }
+  function bindQuickSpeed(rootId,device,values){
+    const root=$(rootId);if(!root)return;const buttons=[...root.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
+    if(!device||!(device.capabilities||[]).includes('fan_speed')||!QUICK_SPEED_PROVIDERS.has(device.provider_id))return;
+    values.forEach((value,index)=>{const button=buttons[index+1];if(!button)return;button.disabled=false;button.title=device.name||device.native_id;button.onclick=async()=>{try{buttons.forEach(b=>b.disabled=true);await deviceCommand(device,'fan_speed',value);window.dispatchEvent(new Event('gc:refresh'))}catch(e){buttons.forEach((b,i)=>b.disabled=i===0);console.warn('Quick fan control',e)}}});
+  }
+  async function loadQuickControls(){
+    try{
+      const d=await api('/api/devices/discover?timeout=2'),rows=d.devices||[];
+      const light=rows.find(x=>x.device_class==='light'&&(x.capabilities||[]).includes('power')&&QUICK_POWER_PROVIDERS.has(x.provider_id));
+      const pump=rows.find(x=>x.device_class==='pump'&&(x.capabilities||[]).includes('power')&&QUICK_POWER_PROVIDERS.has(x.provider_id));
+      const fans=rows.filter(x=>x.device_class==='fan'&&(x.capabilities||[]).includes('fan_speed')&&QUICK_SPEED_PROVIDERS.has(x.provider_id));
+      bindQuickPower('quickLight',light,'Ein','Aus');
+      bindQuickPower('quickIrrigation',pump,'Start','Stopp');
+      bindQuickSpeed('quickCirculation',fans[0], [33,66,100]);
+      bindQuickSpeed('quickExhaust',fans[1]||fans[0], [25,50,75,100]);
+    }catch(e){console.warn('Quick controls unavailable',e)}
+  }
+
+  async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents(),loadQuickControls()]);}
   $('overviewSnapshotBtn')?.addEventListener('click',refreshSnapshot);
   window.addEventListener('gc:refresh',refresh);
   window.addEventListener('gc:core-refreshed',refresh);

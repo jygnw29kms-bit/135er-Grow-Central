@@ -19,6 +19,7 @@ from app.devices.gc_pairing import install_observer
 from app.devices.gc_calibration import router as calibration_router
 from app.provisioning.ble import install_observer as install_ble_observer
 from app.runtime_health import router as runtime_health_router
+from app.maintenance import router as maintenance_router
 from app.setup_portal import SetupPortalMiddleware
 
 _install_camera_policy(_camera)
@@ -43,6 +44,7 @@ app.include_router(firstboot_router)
 app.include_router(rooms_router)
 app.include_router(cloud_status_router)
 app.include_router(runtime_health_router)
+app.include_router(maintenance_router)
 app.include_router(calibration_router)
 install_mdns_alias(app)
 install_rooms(app)
