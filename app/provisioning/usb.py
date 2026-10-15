@@ -48,6 +48,29 @@ OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe00
 LIMITS = {'bootloader.bin': 0x8000, 'partitions.bin': 0x1000, 'boot_app0.bin': 0x2000, 'firmware.bin': 0x1B0000}
 
 
+def version_tuple(value: str) -> tuple[int, ...]:
+    if not re.fullmatch(r'\d+(?:\.\d+){1,3}', value or ''):
+        raise ValueError('Ungültige Sensor-Firmwareversion.')
+    return tuple(int(part) for part in value.split('.'))
+
+
+def installed_firmware(path: str) -> str | None:
+    try:
+        with USBSerial(path) as connection:
+            line = connection.command('NET INFO', lambda value: bool(re.search(r'\bfw=\d+(?:\.\d+){1,3}\b', value)), timeout=3)
+        match = re.search(r'\bfw=(\d+(?:\.\d+){1,3})\b', line)
+        return match.group(1) if match else None
+    except (OSError, TimeoutError, ValueError, serial.SerialException):
+        return None
+
+
+def ensure_not_downgrade(path: str) -> str | None:
+    installed = installed_firmware(path)
+    if installed and version_tuple(installed) > version_tuple(VERSION):
+        raise DeviceBlocked(f'Sensor-Firmware {installed} ist neuer als das gebündelte Paket {VERSION}; Downgrade blockiert.')
+    return installed
+
+
 class DeviceBlocked(PermissionError):
     """Persistent trust/key denial, distinct from OS USB access permissions."""
 
@@ -230,7 +253,8 @@ class USBManager:
         session.state, session.message = 'FLASHING', 'Firmware wird geprüft und installiert. USB nicht trennen.'
         root = await asyncio.to_thread(firmware_files)
         path = await asyncio.to_thread(resolve, session.id)
-        append_audit('usb.flash.started', port_id=session.id, firmware=VERSION)
+        installed = await asyncio.to_thread(ensure_not_downgrade, path)
+        append_audit('usb.flash.started', port_id=session.id, firmware=VERSION, installed_firmware=installed)
         args = [sys.executable, '-m', 'esptool', '--chip', 'esp32c3', '--port', path, '--baud', '460800',
                 '--before', 'default-reset', '--after', 'hard-reset', 'write-flash', '-z']
         for name, offset in OFFSETS.items():
@@ -384,6 +408,12 @@ async def flash_device(port_id: str, body: FlashRequest):
     except (OSError, ValueError, KeyError) as exc:
         raise HTTPException(503, 'Geprüftes Firmware-Paket fehlt; aktuelles Test-Image installieren.') from exc
     session = manager.session(port_id)
+    try:
+        path = await asyncio.to_thread(resolve, port_id)
+        await asyncio.to_thread(ensure_not_downgrade, path)
+    except DeviceBlocked as exc:
+        append_audit('usb.flash.downgrade_blocked', port_id=port_id, bundled_firmware=VERSION)
+        raise HTTPException(409, str(exc)) from exc
     manager.start(session, lambda: manager.flash(session))
     return session.public()
 
