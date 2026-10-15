@@ -77,3 +77,4 @@
 *.service text eol=lf
 Dockerfile text eol=lf
 Makefile text eol=lf
+.gitattributes text eol=lf
