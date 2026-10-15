@@ -112,12 +112,19 @@ class CalibrationStore:
 from fastapi import APIRouter
 import asyncio
 from .gc_trust import TrustStore
-from .runtime import runtime
+
+class _LazyRuntimeProxy:
+    def get(self, key):
+        from .runtime import runtime as device_runtime
+        return device_runtime.get(key)
+
+runtime = _LazyRuntimeProxy()
 
 router = APIRouter(prefix='/api/v1/sensor-calibration', tags=['sensor calibration'])
 
 @router.get('')
 async def calibration_status():
+    # Runtime provider lookup stays lazy to keep clean application startup cycle-free.
     records = {row['device_id']: row for row in CalibrationStore().list()}
     devices = []
     for trust in TrustStore().list():
