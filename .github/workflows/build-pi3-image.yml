@@ -304,6 +304,29 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
+          cat >/etc/systemd/system/grow-central-homekit.service <<'EOF'
+          [Unit]
+          Description=Grow Central native Apple Home / HomeKit bridge
+          After=network-online.target 135er-grow-central.service
+          Wants=network-online.target
+          [Service]
+          Type=simple
+          User=growcentral
+          Group=growcentral
+          WorkingDirectory=/opt/135er-grow-central
+          EnvironmentFile=/opt/135er-grow-central/.env
+          ExecStart=/opt/135er-grow-central/.venv/bin/python -m app.homekit_bridge
+          Restart=always
+          RestartSec=5
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
+          ReadWritePaths=/var/lib/135er-grow-central
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
           install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-http.socket /etc/systemd/system/grow-central-http.socket
           install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-http.service /etc/systemd/system/grow-central-http.service
 
@@ -403,6 +426,7 @@ jobs:
           ufw allow 80/tcp
           ufw allow 8080/tcp
           ufw allow 5353/udp
+          ufw allow 51827/tcp
           # Native Grow-Central ESP32 MQTT: private LAN only.
           ufw allow from 10.0.0.0/8 to any port 8883 proto tcp
           ufw allow from 172.16.0.0/12 to any port 8883 proto tcp
@@ -568,7 +592,7 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
-          systemctl enable NetworkManager.service avahi-daemon.service mosquitto.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
+          systemctl enable NetworkManager.service avahi-daemon.service mosquitto.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-homekit.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
           systemctl disable ssh.service ssh.socket 2>/dev/null || true
           systemctl enable unattended-upgrades.service || true
 
@@ -585,6 +609,7 @@ jobs:
           test "$(systemctl is-enabled ssh.service 2>/dev/null || true)" != enabled
           test "$(systemctl is-enabled avahi-daemon.service)" = enabled
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
+          test "$(systemctl is-enabled grow-central-homekit.service)" = enabled
           test "$(systemctl is-enabled 135er-grow-central-cloud-link.service)" = enabled
           test "$(systemctl is-enabled grow-central-http.socket)" = enabled
           grep -q '^ExecStart=.*/uvicorn app.entrypoint:app ' /etc/systemd/system/135er-grow-central.service
@@ -622,8 +647,9 @@ jobs:
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
           ! grep -Fq 'maintenance_activation_code' /opt/135er-grow-central/app/firstboot.py
           ! grep -Fq 'grow-central-remote-maintenance' /opt/135er-grow-central/image-builder/firstboot/apply_setup.py
-          systemd-analyze verify /etc/systemd/system/grow-central-provisioning.service /etc/systemd/system/135er-grow-central.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
+          systemd-analyze verify /etc/systemd/system/grow-central-provisioning.service /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-homekit.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q 'ufw allow 51827/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q 'ufw allow 22/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh

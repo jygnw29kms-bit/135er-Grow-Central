@@ -38,7 +38,7 @@
       <button data-view="recordings"><i>▣</i><span>Aufnahmen</span></button>
       <button data-view="timelapse"><i>◷</i><span>Zeitraffer</span></button>
       <small class="nav-group-title">SYSTEM</small>
-      <button data-view="settings"><i>⚙</i><span>Einstellungen</span></button>
+      <button data-view="settings"><i>⚙</i><span>Einstellungen</span></button><button data-view="applehome"><i>⌂</i><span>Apple Home</span></button>
       <button data-view="users"><i>♟</i><span>Benutzer</span></button>
       <button data-view="backups"><i>◈</i><span>Backups</span></button>
       <button data-view="updates"><i>↻</i><span>Update</span></button>
@@ -137,6 +137,13 @@
 
     <section id="settings" class="view master-view"><div class="master-section-head"><div><small>SYSTEM / EINSTELLUNGEN</small><h2>Einstellungen</h2><p>Raspberry Pi, Netzwerk, Plattformzustand und lokale Runtime.</p></div><button class="secondary" id="systemRefresh">Aktualisieren</button></div><div class="system-grid" id="systemGrid"><div class="empty">Systemdaten werden geladen…</div></div><article class="master-panel"><div class="master-panel-head"><h3>Provider Runtime</h3></div><div id="runtimeFull" class="health-list"></div></article></section>
 
+    <section id="applehome" class="view master-view">
+      <div class="master-section-head"><div><small>SYSTEM / APPLE HOME</small><h2>Apple Home</h2><p>Grow-Central direkt mit Apple Home koppeln. Home Assistant ist dafür nicht erforderlich.</p></div><button class="secondary" id="homekitRefreshBtn">Status aktualisieren</button></div>
+      <div class="master-two-col homekit-layout">
+        <article class="master-panel homekit-main-card"><div class="master-panel-head"><h3>Grow-Central HomeKit Bridge</h3><span class="state-badge" id="homekitState">PRÜFE…</span></div><div id="homekitMessage" class="homekit-message">HomeKit-Bridge wird geprüft…</div><div id="homekitQrCard" class="homekit-qr-card" hidden><img id="homekitQr" alt="Apple Home Pairing QR-Code" hidden><div><small>PAIRING-CODE</small><strong id="homekitCode"></strong><p>Auf dem iPhone: Home → + → Gerät hinzufügen → QR-Code scannen. Alternativ den Pairing-Code manuell eingeben.</p></div></div></article>
+        <article class="master-panel"><div class="master-panel-head"><h3>Export nach Apple Home</h3></div><div class="health-list"><div><span>Temperatur</span><b>Raum-Sensoren</b></div><div><span>Luftfeuchte</span><b>Raum-Sensoren</b></div><div><span>Bodenfeuchte</span><b>Raum-Sensoren</b></div><div><span>Steckdosen/Aktoren</span><b>nach Freigabe</b></div></div><p class="homekit-note">Nur in Grow-Central freigegebene und vertrauenswürdige Geräte werden exportiert. Der Pairing-Schlüssel bleibt lokal auf diesem Pi.</p></article>
+      </div>
+    </section>
     <section id="users" class="view master-view"><div class="master-section-head"><div><small>SYSTEM / BENUTZER</small><h2>Benutzer</h2><p>Lokale Benutzer, Rollen und Zugriffsrechte.</p></div></div><article class="master-panel progress-page"><span>♟</span><h3>Benutzerverwaltung</h3><p>Die Oberfläche ist im Final-Master vorgesehen; erweiterte Rollenverwaltung wird erst nach vollständiger Rechteprüfung freigeschaltet.</p><span class="progress-badge">In Arbeit</span></article></section>
     <section id="backups" class="view master-view"><div class="master-section-head"><div><small>SYSTEM / BACKUPS</small><h2>Backups</h2><p>Lokale Sicherungen von Konfiguration und relevanten Grow-Central-Daten.</p></div></div><article class="master-panel progress-page"><span>◈</span><h3>Backup-Zentrale</h3><p>Bestehende Support-/Sicherungsmechanismen werden hier in einer gemeinsamen Oberfläche zusammengeführt.</p><span class="progress-badge">In Arbeit</span></article></section>
     <section id="updates" class="view master-view"><div class="master-section-head"><div><small>SYSTEM / UPDATE</small><h2>Update</h2><p>Versionsstand, Release-Informationen und kontrollierte Aktualisierung.</p></div></div><article class="master-panel progress-page"><span>↻</span><h3>Update Center</h3><p>Updates werden erst nach Signatur-, Rollback- und Image-Prüfung als schreibende Aktion freigeschaltet.</p><span class="progress-badge">In Arbeit</span></article></section>

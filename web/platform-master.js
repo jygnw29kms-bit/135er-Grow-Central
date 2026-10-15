@@ -31,3 +31,18 @@
   function initStyles(){const style=document.createElement('style');style.textContent='.camera-master-frame>img{width:100%;height:100%;object-fit:cover;display:block}.camera-master-frame>img[hidden]{display:none}.control-note{margin:8px 0 0;color:#6f858d;font-size:7px;line-height:1.45}.search-hit{outline:1px solid #2dddb5!important;box-shadow:0 0 0 2px rgba(45,221,181,.08)}';document.head.appendChild(style)}
   ensureVisualLayer();scaleFinalMaster();window.addEventListener('resize',scaleFinalMaster);tick();setInterval(tick,30000);wireNav();wireSearch();wireMobileNav();observeProviders();initStyles();loadRooms();loadHealth();loadOverviewAutomations();loadOverviewCamera();loadWeather();setInterval(loadRooms,60000);setInterval(loadHealth,30000);setInterval(loadOverviewAutomations,60000);setInterval(loadWeather,600000);window.addEventListener('gc:refresh',()=>{loadRooms();loadHealth();loadOverviewAutomations();loadWeather()});
 })();
+async function loadHomeKitStatus(){
+  const badge=document.getElementById("homekitState"), message=document.getElementById("homekitMessage"), qr=document.getElementById("homekitQr"), code=document.getElementById("homekitCode"), card=document.getElementById("homekitQrCard");
+  if(!badge)return;
+  try{
+    const response=await fetch("/api/v1/homekit/status",{cache:"no-store",credentials:"same-origin"});
+    const state=await response.json(); if(!response.ok)throw new Error(state.detail||`HTTP ${response.status}`);
+    badge.textContent=state.paired?"VERBUNDEN":state.running?"PAIRING":"OFFLINE";
+    message.textContent=state.message||"HomeKit-Status geladen.";
+    card.hidden=false;
+    if(state.running&&!state.paired){ qr.src=`/api/v1/homekit/pairing.svg?ts=${Date.now()}`; qr.hidden=false; code.textContent=state.setup_code||""; }
+    else { qr.hidden=true; qr.removeAttribute("src"); code.textContent=state.paired?"Bereits gekoppelt":""; }
+  }catch(error){ badge.textContent="FEHLER"; message.textContent=error.message; if(qr)qr.hidden=true; }
+}
+document.getElementById("homekitRefreshBtn")?.addEventListener("click",loadHomeKitStatus);
+window.addEventListener("gc:view",event=>{if(event.detail?.id==="applehome")loadHomeKitStatus()});
