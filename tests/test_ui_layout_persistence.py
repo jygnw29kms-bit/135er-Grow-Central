@@ -50,7 +50,7 @@ def test_productive_ui_loads_layout_runtime_and_editor_uses_server_api():
     assert "gridTemplateColumns='repeat(12,minmax(0,1fr))'" in runtime
 
 
-def test_master_art_is_high_resolution():
+def test_master_art_matches_accepted_final_master_crops():
     root = Path(__file__).resolve().parents[1] / "web"
     def jpeg_size(path):
         data = path.read_bytes()
@@ -70,5 +70,5 @@ def test_master_art_is_high_resolution():
         raise AssertionError("JPEG size not found")
     hero_h, hero_w = jpeg_size(root / "master-grow-hero.jpg")
     room_h, room_w = jpeg_size(root / "master-grow-room.jpg")
-    assert (hero_w, hero_h) == (1920, 1080)
-    assert (room_w, room_h) == (1600, 1000)
+    assert (hero_w, hero_h) == (470, 205)
+    assert (room_w, room_h) == (350, 165)

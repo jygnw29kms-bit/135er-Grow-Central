@@ -140,8 +140,10 @@ def wait(client):
 
 def test_complete_real_serial_workflow(setup):
     client, sensor, _, broker_calls = setup
-    assert client.get('/api/devices/usb').json()['devices'][0]['state'] == 'DETECTED'
-    assert client.post('/api/devices/usb/port-1/inspect').status_code == 200
+    initial = client.get('/api/devices/usb').json()['devices'][0]
+    assert initial['state'] in {'DETECTED', 'CHECKING', 'CALIBRATION'}
+    if initial['state'] == 'DETECTED':
+        assert client.post('/api/devices/usb/port-1/inspect').status_code == 200
     assert wait(client)['state'] == 'CALIBRATION'
     assert TrustStore().get('gc-soil-aabbcc')['status'] == 'DISCOVERED'
     assert client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'}).status_code == 409

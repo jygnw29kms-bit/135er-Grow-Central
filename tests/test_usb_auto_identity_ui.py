@@ -13,4 +13,4 @@ def test_usb_ui_reestablishes_signed_identity_after_restart_without_writes():
     assert "/flash" not in auto
     assert "/network" not in auto
     assert "/assign" not in auto
-    assert "usb_onboarding.js?v=20261015-usbid1" in html
+    assert "usb_onboarding.js?v=20261015-usbauto3" in html
