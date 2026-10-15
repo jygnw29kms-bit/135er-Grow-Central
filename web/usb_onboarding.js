@@ -82,21 +82,63 @@
       const details = document.createElement('details'); details.append(make('summary', 'Geprüfte Sensoridentität'), make('code', selected.device_id + '\nFingerprint: ' + selected.fingerprint + '\nHardware-ID: ' + (selected.hardware_uid || '–'))); content.append(details);
     }
   }
+  function calibrationCard(title, description, image, alt, reference, done, actionButton) {
+    const card = make('article', null, 'usb-calibration-card');
+    const visual = document.createElement('img');
+    visual.className = 'usb-calibration-visual';
+    visual.src = image;
+    visual.alt = alt;
+    visual.loading = 'eager';
+    visual.decoding = 'async';
+    const copy = make('div', null, 'usb-calibration-copy');
+    copy.append(make('h4', title), make('p', description));
+    const ref = make('code', reference, 'usb-calibration-reference');
+    copy.append(ref);
+    if (done) copy.append(make('span', 'Referenz gespeichert', 'usb-calibration-done'));
+    copy.append(actionButton);
+    card.append(visual, copy);
+    return card;
+  }
+
   function renderCalibration() {
     const box = make('div', null, 'usb-calibration');
     box.append(make('h3', 'Pflichtkalibrierung vor Freigabe'));
     const uid = selected.hardware_uid ? 'Hardware-ID: ' + selected.hardware_uid : 'Hardware-ID wird geprüft';
     box.append(make('p', uid), make('p', 'Die Kalibrierung gehört fest zu diesem kryptografisch geprüften Sensor. Ein Gerätewechsel während des Ablaufs wird blockiert.'));
-    const air = make('p', '1. Trockenreferenz: Sensorfläche sauber und vollständig trocken in Luft halten.');
+
     const airButton = button(selected.air_calibrated ? 'Trockenreferenz erneut messen' : 'Trockenreferenz messen', () => action('/calibrate/air'));
-    const wet = make('p', '2. Nassreferenz: Nur die Sensorfläche/Probe eintauchen, Elektronik und XIAO unbedingt trocken halten.');
     const wetButton = button(selected.wet_calibrated ? 'Wasserreferenz erneut messen' : 'Wasserreferenz messen', () => action('/calibrate/wet'));
-    const substrate = make('p', '3. Frische Blumenerde: Fühler in repräsentative, frisch geöffnete Blumenerde stecken. Diese Referenz ist nicht gleichbedeutend mit Field Capacity.');
     const substrateButton = button(selected.substrate_calibrated ? 'Substratreferenz erneut messen' : 'Substratreferenz messen', () => action('/calibrate/substrate'));
+    wetButton.disabled = !selected.air_calibrated;
     substrateButton.disabled = !selected.air_calibrated || !selected.wet_calibrated;
-    box.append(air, airButton, wet, wetButton);
-    if (selected.air_raw != null || selected.wet_raw != null) box.append(make('p', `Messpunkte: trocken ${selected.air_raw ?? '–'} · nass ${selected.wet_raw ?? '–'}`));
-    if (selected.calibration_ready) box.append(make('p', 'Kalibrierung vollständig und plausibel. Der nächste Schritt wird freigegeben.'));
+
+    box.append(
+      calibrationCard(
+        '1. Sensor trocken in Luft',
+        'Sensorfläche sauber und vollständig trocken frei in der Luft halten. Keine Erde, kein Wasser.',
+        '/static/assets/sensor-calibration/01-air-dry.png',
+        'Kalibrierpunkt 1: Grow-Central Bodenfeuchtesensor trocken in Luft',
+        'AIR_DRY', selected.air_calibrated, airButton
+      ),
+      calibrationCard(
+        '2. Sensor im Wasser',
+        'Nur die Sensorfläche in sauberes Wasser eintauchen. Elektronik, XIAO und Antenne bleiben vollständig trocken.',
+        '/static/assets/sensor-calibration/02-water-saturated.png',
+        'Kalibrierpunkt 2: Sensorfläche im Wasser, Elektronik bleibt trocken',
+        'WATER_SATURATED', selected.wet_calibrated, wetButton
+      ),
+      calibrationCard(
+        '3. Frisches torfhaltiges Substrat nach Sättigung',
+        'Frische torfhaltige Blumenerde vollständig sättigen und frei abtropfen lassen. Nicht ausdrücken. Erst messen, wenn kein freies Wasser mehr abläuft; Sensor auf die spätere Einbautiefe stecken.',
+        '/static/assets/sensor-calibration/03-fresh-substrate-cc.png',
+        'Kalibrierpunkt 3: Sensor in vollständig gesättigtem und frei abgetropftem frischem Substrat',
+        'FRESH_SUBSTRATE_CC', selected.substrate_calibrated, substrateButton
+      )
+    );
+    if (selected.air_raw != null || selected.wet_raw != null || selected.substrate_raw != null) {
+      box.append(make('p', `Messpunkte: Luft ${selected.air_raw ?? '-'} · Wasser ${selected.wet_raw ?? '-'} · Substrat ${selected.substrate_raw ?? '-'}`));
+    }
+    if (selected.calibration_ready) box.append(make('p', 'Alle drei Referenzen sind vollständig und plausibel. Der nächste Schritt wird freigegeben.'));
     content.append(box);
   }
 
