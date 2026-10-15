@@ -1,5 +1,6 @@
 """Manual acceptance endpoints. Discovery never implies authorization."""
 import asyncio
+from types import SimpleNamespace
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, StrictBool, field_validator
 from app.security import require_write_auth
@@ -29,6 +30,33 @@ async def list_sensors():
             'provisioning': {'primary': 'usb', 'ble_available': True, 'credential_transfer': 'usb_primary_ble_recovery', 'ble_setup': '/api/devices/ble', 'usb_setup': '/api/devices/usb'}}
 
 
+async def _fresh_identity_proof(provider, device_id: str, expected: dict | None):
+    """Prefer network proof, but allow an equally fresh physical USB proof during onboarding."""
+    try:
+        return await provider.prove_identity(device_id), 'mqtt'
+    except TimeoutError as mqtt_timeout:
+        # A newly flashed/provisioned sensor can be physically attached while its
+        # TLS/MQTT session is not ready yet. The USB path issues its own random
+        # 256-bit challenge and verifies the signed P-256 response, so this is a
+        # transport fallback, not an identity bypass.
+        from app.provisioning.usb_identity import prove_connected_device
+        try:
+            usb = await asyncio.to_thread(prove_connected_device, device_id)
+        except TimeoutError:
+            raise mqtt_timeout
+        if not expected or usb.public_key != expected.get('public_key') or usb.fingerprint != expected.get('fingerprint'):
+            raise PermissionError('USB-Sensoridentität passt nicht zur zuvor entdeckten Identität.')
+        proof = SimpleNamespace(
+            public_key=usb.public_key,
+            body={
+                'hardware_uid': usb.hardware_uid,
+                'calibration': usb.calibration,
+                'state': {'meta': {'firmware': usb.firmware}},
+            },
+        )
+        return proof, 'usb'
+
+
 @router.post('/{device_id}/accept', dependencies=[Depends(require_write_auth)])
 async def accept_sensor(device_id: str, body: Acceptance):
     from app import rooms
@@ -41,7 +69,7 @@ async def accept_sensor(device_id: str, body: Acceptance):
                 raise PermissionError('Sensoridentität zuerst ausdrücklich bestätigen; bei geänderter Identität neu prüfen.')
         room_state = rooms.load_state()
         rooms.room_or_404(room_state, body.room_id)
-        proof = await runtime.get('growcentral_esp32').prove_identity(device_id)
+        proof, identity_transport = await _fresh_identity_proof(runtime.get('growcentral_esp32'), device_id, expected)
         metadata = (expected or {}).get('metadata') or {}
         if 'soil_moisture' in metadata.get('capabilities', []):
             state = proof.body.get('state') or {}
@@ -58,7 +86,7 @@ async def accept_sensor(device_id: str, body: Acceptance):
                 current['assignments'][f'growcentral_esp32:{device_id}'] = body.room_id
         row = await asyncio.to_thread(TrustStore().accept, device_id, name=body.name, room_id=body.room_id,
                                       fingerprint=confirmation[-16:], proved_key=proof.public_key, assign=assign)
-        return {'ok': True, 'device': row, 'credential_transfer': 'disabled'}
+        return {'ok': True, 'device': row, 'credential_transfer': 'disabled', 'identity_transport': identity_transport}
     except KeyError as exc:
         raise HTTPException(404, 'Sensor nicht gefunden') from exc
     except PermissionError as exc:
@@ -66,7 +94,7 @@ async def accept_sensor(device_id: str, body: Acceptance):
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     except TimeoutError as exc:
-        raise HTTPException(504, 'Sensor bestätigt seine Identität nicht; Firmware und Verbindung prüfen') from exc
+        raise HTTPException(504, 'Sensor bestätigt seine Identität weder über MQTT noch über eine direkte USB-Verbindung; Firmware, TLS/MQTT und Verbindung prüfen') from exc
 
 
 def _remove_room_assignment(device_id: str) -> None:
