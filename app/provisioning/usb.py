@@ -286,7 +286,7 @@ class USBManager:
         session.mqtt_connected = 'mqtt_connected=yes' in mqtt
         match = re.search(r'\bca_bytes=(\d+)', ca)
         session.ca_configured = bool(match and int(match.group(1)) > 0)
-        return session.wifi_configured and session.mqtt_configured and session.mqtt_connected and session.ca_configured
+        return session.wifi_configured and session.mqtt_configured and session.ca_configured
 
     async def inspect(self, session):
         session.state, session.message = 'CHECKING', 'Firmware und USB-Identität werden geprüft…'
