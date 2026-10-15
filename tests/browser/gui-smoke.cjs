@@ -13,7 +13,7 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false,lightCommands=[],automationRuns=[];
+ let savedRoom=null,failSave=false,captures=1,delayFirst=false,failRuntime=false,lightCommands=[],pumpCommands=[],automationRuns=[];
  let runtimeHealth={ok:true,state:'ok',provisioned:true,warnings:[],blockers:[],cloud:{enabled:false},device_runtime:{provider_count:10}};
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url()),pathname=url.pathname;
@@ -32,9 +32,11 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
    else if(pathname==='/api/v1/automations/runtime')data={scheduler:'running',last_runs:{}};
    else if(pathname==='/api/v1/automations/gc-1/run'&&route.request().method()==='POST'){automationRuns.push('gc-1');data={ok:true,automation_id:'gc-1',confirmed:true,on:true};}
    else if(pathname==='/api/v1/automations'&&route.request().method()==='GET')data={automations:[{id:'gc-1',name:'Test Zeitregel',trigger:'time',trigger_value:'08:00',device_id:'fritz-lampe',ain:'08761 0001',on:true,enabled:true}],execution_status:'time_and_manual'};
-   else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness'],model:'Synthetic'}],errors:[]};
+   else if(pathname==='/api/devices/discover')data={devices:[{provider_id:'mqtt',native_id:'lamp1',name:'Test Licht',device_class:'light',capabilities:['power','brightness'],model:'Synthetic'},{provider_id:'mqtt',native_id:'pump1',name:'Test Pumpe',device_class:'pump',capabilities:['power'],model:'Synthetic'}],errors:[]};
    else if(pathname==='/api/devices/mqtt/lamp1/state')data={state:{online:true,power:false,brightness:50}};
    else if(pathname==='/api/devices/mqtt/lamp1/command'&&route.request().method()==='POST'){lightCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
+   else if(pathname==='/api/devices/mqtt/pump1/state')data={state:{online:true,power:false}};
+   else if(pathname==='/api/devices/mqtt/pump1/command'&&route.request().method()==='POST'){pumpCommands.push(route.request().postDataJSON());data={ok:true,state:{online:true,...route.request().postDataJSON()}};}
    else if(pathname==='/api/health')data={ok:true};
    else if(pathname.includes('smarthome/overview'))data={summary:{power_w:null,energy_wh:null},devices:[]};
    else if(pathname.includes('/runtime')||pathname.includes('/platform'))data={providers:[]};
@@ -88,6 +90,11 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
  await page.locator('.gc-light-brightness').evaluate(el=>{el.value='70';el.dispatchEvent(new Event('change',{bubbles:true}))});
  await page.waitForTimeout(100);
  assert(lightCommands.some(c=>c.capability==='brightness'&&c.value===70),'lighting page writes confirmed brightness command');
+ await page.locator('#mainNav [data-view=irrigation]').click();
+ await page.locator('.gc-pump-command[data-value="1"]').waitFor({state:'visible'});
+ await page.locator('.gc-pump-command[data-value="1"]').click();
+ await page.waitForTimeout(100);
+ assert(pumpCommands.some(c=>c.capability==='power'&&c.value===true),'irrigation start reaches confirmed pump power command');
  await page.locator('#mainNav [data-view=automation]').click();
  await page.locator('.gc-auto-run').first().waitFor({state:'visible'});
  await page.locator('.gc-auto-run').first().click();
