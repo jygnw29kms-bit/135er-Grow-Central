@@ -4,13 +4,13 @@ Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO 
 
 ## Verbindlicher Ablauf
 
-1. **USB-Erkennung und Boardprüfung**  
+1. **USB-Erkennung und Boardprüfung**
    Grow-Central erkennt nur unterstützte serielle USB-Kandidaten. Der Bediener bestätigt ausdrücklich den XIAO ESP32-C3. `esptool` prüft den tatsächlichen ESP32-C3 zusätzlich vor jedem Schreibvorgang.
 
-2. **Firmware installieren oder prüfen**  
+2. **Firmware installieren oder prüfen**
    Grow-Central verwendet ausschließlich das zum Image gehörende, per Manifest und SHA-256 geprüfte Firmwarepaket. Ein neuerer Sensor wird niemals automatisch auf eine ältere gebündelte Firmware zurückgesetzt. Updates schreiben nur Bootloader, Partitionstabelle, OTA-Metadaten und Applikation; NVS wird nicht mit `erase_flash` gelöscht.
 
-3. **Kryptografische Geräteidentität und Hardwarebindung**  
+3. **Kryptografische Geräteidentität und Hardwarebindung**
    Nach dem Start fordert Grow-Central über USB einen frischen 256-Bit-Nonce-Proof an. Der Sensor signiert ihn mit seinem individuellen P-256-Langzeitschlüssel. Zusätzlich gehört die aus dem ESP32-C3-eFuse abgeleitete Hardware-UID zum signierten Datensatz. Grow-Central bindet zusammen:
    - Geräte-ID `gc-soil-xxxxxx`
    - P-256 Public Key / SHA-256-Fingerprint
@@ -19,7 +19,7 @@ Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO 
 
    Ändert sich während der Einrichtung Schlüssel oder Hardware-UID, wird der Ablauf sofort gesperrt. Ein bereits gespeicherter, abgelehnter oder widerrufener Sensor wird nicht stillschweigend wieder freigegeben.
 
-4. **Pflichtkalibrierung am angeschlossenen Sensor**  
+4. **Pflichtkalibrierung am angeschlossenen Sensor**
    Ein Sensor wird ohne abgeschlossene Kalibrierung niemals als einsatzbereit markiert.
    - **Trockenreferenz:** Sensorfläche sauber und trocken in Luft halten, dann `CAL AIR` ausführen.
    - **Nassreferenz:** nur die Sensorfläche/Probe in die Referenz eintauchen; XIAO und Elektronik trocken halten, dann `CAL WATER` ausführen.
@@ -27,16 +27,16 @@ Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO 
 
    `RESET CAL` setzt die Pflichtfreigabe wieder zurück. Danach muss die Kalibrierung vollständig wiederholt werden.
 
-5. **WLAN und TLS-MQTT per USB einrichten**  
+5. **WLAN und TLS-MQTT per USB einrichten**
    Erst nach erfolgreicher Kalibrierung erzeugt Grow-Central einen individuellen Brokerzugang. CA, MQTT-Zugang und WLAN-Daten werden direkt an genau den zuvor verifizierten USB-Sensor übertragen. Geheimnisse werden nicht an den Browser zurückgegeben und nicht in Audit-Logs geschrieben.
 
-6. **Netzwerkidentität erneut beweisen**  
+6. **Netzwerkidentität erneut beweisen**
    Der Sensor verbindet sich selbstständig mit WLAN und TLS-MQTT. Grow-Central fordert anschließend einen neuen Nonce-Proof über MQTT an. Der Proof muss denselben Langzeitschlüssel und dieselbe Hardware-UID wie die USB-Prüfung tragen. Außerdem muss die Firmware weiterhin eine abgeschlossene Kalibrierung melden.
 
-7. **Name und Raum bewusst festlegen**  
+7. **Name und Raum bewusst festlegen**
    Erst jetzt werden Sensorname und Raum/Growbox ausgewählt. Die Oberfläche verlangt eine zusätzliche ausdrückliche Bestätigung, dass **dieser physische Sensor** zum ausgewählten Raum gehört. Ohne diese Bestätigung gibt es keine produktive Raumzuweisung.
 
-8. **Finaler Einsatzbereit-Check**  
+8. **Finaler Einsatzbereit-Check**
    Vor `READY` prüft Grow-Central noch einmal:
    - identischer Public Key/Fingerprint
    - identische eFuse-Hardware-UID
