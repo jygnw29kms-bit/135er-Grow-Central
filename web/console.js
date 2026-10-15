@@ -48,7 +48,7 @@ async function loadSensorDiagnostics(roomId){
   try{
     const result=await api(`/api/v1/rooms/${roomId}/devices`);if(activeRoom?.id!==roomId)return;
     const devices=(result.devices||[]).filter(d=>d.assigned&&(d.provider_id==='growcentral_esp32'||d.adapter==='growcentral_esp32'));
-    const fields=[['raw','ADC-Rohwert'],['median','Median'],['filtered_raw','Gefilterter ADC'],['min','Minimum'],['max','Maximum'],['sigma','Schwankung (σ)'],['quality','Signalqualität'],['moisture_state','Messzustand'],['air_raw','Trockenreferenz (ADC)'],['water_raw','Nassreferenz (ADC)'],['rssi_dbm','WLAN (dBm)'],['firmware','Firmware']];
+    const fields=[['raw','ADC-Rohwert'],['median','Median'],['filtered_raw','Gefilterter ADC'],['min','Minimum'],['max','Maximum'],['sigma','Schwankung (σ)'],['quality','Signalqualität'],['moisture_state','Messzustand'],['air_raw','Trockenreferenz (ADC)'],['water_raw','Wasserreferenz (ADC)'],['substrate_raw','Frische-Substrat-Referenz (ADC)'],['rssi_dbm','WLAN (dBm)'],['firmware','Firmware']];
     root.innerHTML=devices.length?devices.map(d=>{
       const m=d.state?.meta||{},pairs=fields.map(([key,label])=>[label,m[key]??'—']);
       pairs.unshift(['Sensorprüfung',m.sensor_ok===true?'OK':m.sensor_ok===false?'Fehler':'Unbekannt']);

@@ -30,8 +30,10 @@ class Sensor:
         self.hardware_uid = '0011223344556677'
         self.air_done = False
         self.wet_done = False
+        self.substrate_done = False
         self.air_raw = 3767
         self.wet_raw = 1310
+        self.substrate_raw = 2500
         self.commands = []
         self.master, self.slave = pty.openpty()
         self.path = os.ttyname(self.slave)
@@ -43,7 +45,7 @@ class Sensor:
         self.counter += 1
         announcement = {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':'gc-soil-aabbcc',
             'name':'Soil','device_class':'sensor','model':usb.MODEL,'firmware':self.version,'hardware_uid':self.hardware_uid,
-            'calibration':{'ready':self.air_done and self.wet_done and self.air_raw > self.wet_raw + 100,'air_done':self.air_done,'wet_done':self.wet_done,'air_raw':self.air_raw,'wet_raw':self.wet_raw},'capabilities':['soil_moisture']}
+            'calibration':{'ready':self.air_done and self.wet_done and self.substrate_done and self.air_raw > self.substrate_raw + 50 and self.substrate_raw > self.wet_raw + 50,'air_done':self.air_done,'wet_done':self.wet_done,'substrate_done':self.substrate_done,'air_raw':self.air_raw,'wet_raw':self.wet_raw,'substrate_raw':self.substrate_raw},'capabilities':['soil_moisture']}
         message = json.dumps({'device_id':'gc-soil-aabbcc','kind':'proof','seq':self.counter,
             'body':{'nonce':nonce,'hardware_uid':self.hardware_uid,'calibration':announcement['calibration'],'announcement':announcement, 'state': {'soil_moisture':42,'meta':{'sensor_ok':True,'quality':'GOOD'}}}})
         key = self.key.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
@@ -68,6 +70,8 @@ class Sensor:
                     self.air_done = True; self.air_raw = 3767; response = 'CAL AIR SAVED: 3767'
                 elif command == 'CAL WATER':
                     self.wet_done = True; self.wet_raw = 1310; response = 'CAL WATER SAVED: 1310'
+                elif command == 'CAL SUBSTRATE':
+                    self.substrate_done = True; self.substrate_raw = 2500; response = 'CAL SUBSTRATE SAVED: 2500'
                 elif command.startswith('NET CA '):
                     encoded = command[7:]
                     self.ca_bytes = 54 + len(encoded) + (len(encoded) + 63) // 64
@@ -141,6 +145,8 @@ def test_complete_real_serial_workflow(setup):
     assert client.post('/api/devices/usb/port-1/calibrate/air').status_code == 200
     assert wait(client)['state'] == 'CALIBRATION'
     assert client.post('/api/devices/usb/port-1/calibrate/wet').status_code == 200
+    assert wait(client)['state'] == 'CALIBRATION'
+    assert client.post('/api/devices/usb/port-1/calibrate/substrate').status_code == 200
     assert wait(client)['state'] == 'NETWORK'
     calibration = CalibrationStore().get('gc-soil-aabbcc')
     assert calibration and calibration['valid'] and calibration['hardware_uid'] == sensor.hardware_uid
@@ -205,6 +211,7 @@ def test_key_swap_prevents_credentials_and_acceptance(setup):
     sensor.key=ec.generate_private_key(ec.SECP256R1())
     client.post('/api/devices/usb/port-1/calibrate/air');wait(client)
     client.post('/api/devices/usb/port-1/calibrate/wet');wait(client)
+    client.post('/api/devices/usb/port-1/calibrate/substrate');wait(client)
     client.post('/api/devices/usb/port-1/network',json={'ssid':'home','password':'wifi-test-password','broker_host':'192.168.1.20'})
     assert wait(client)['state']=='BLOCKED'
     assert not calls
@@ -269,6 +276,7 @@ def test_network_key_mismatch_never_advances_to_assignment(setup, monkeypatch):
     client.post('/api/devices/usb/port-1/inspect');wait(client)
     client.post('/api/devices/usb/port-1/calibrate/air');wait(client)
     client.post('/api/devices/usb/port-1/calibrate/wet');wait(client)
+    client.post('/api/devices/usb/port-1/calibrate/substrate');wait(client)
     other=Sensor()
     class WrongNetwork:
         async def prove_identity(self,id):return verify_message(other.signed('b'*64),kind='proof',device_id=id)
@@ -348,5 +356,7 @@ def test_calibration_is_mandatory_and_persistent_in_session(setup):
     client.post('/api/devices/usb/port-1/calibrate/air'); state=wait(client)
     assert state['air_calibrated'] and not state['wet_calibrated'] and state['state']=='CALIBRATION'
     client.post('/api/devices/usb/port-1/calibrate/wet'); state=wait(client)
-    assert state['calibration_ready'] and state['state']=='NETWORK'
+    assert not state['calibration_ready'] and state['state']=='CALIBRATION' and not state['substrate_calibrated']
+    client.post('/api/devices/usb/port-1/calibrate/substrate'); state=wait(client)
+    assert state['calibration_ready'] and state['substrate_calibrated'] and state['state']=='NETWORK'
     assert state['air_raw'] > state['wet_raw'] + 100

@@ -19,7 +19,7 @@ from app import rooms
 
 ID='gc-soil-test'
 HARDWARE_UID='0011223344556677'
-ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
+ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'substrate_done':True,'air_raw':3767,'wet_raw':1310,'substrate_raw':2500},'capabilities':['soil_moisture']}
 
 def packet(key, kind='announce', seq=1, body=None, device_id=ID):
     raw=json.dumps({'device_id':device_id,'kind':kind,'seq':seq,'body':ANNOUNCE if body is None else body},separators=(',',':'))
@@ -36,7 +36,7 @@ def discovered(tmp_path,monkeypatch):
 
 
 def add_calibration(row):
-    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
+    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,substrate_raw=2500,quality={'status':'verified','signal_quality':'GOOD'})
 
 def accept(store,row,assign=lambda:None):
     return store.accept(ID,name='Topf links',room_id='room1',fingerprint=row['fingerprint'][-16:],proved_key=row['public_key'],assign=assign)

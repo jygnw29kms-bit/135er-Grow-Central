@@ -90,7 +90,10 @@
     const air = make('p', '1. Trockenreferenz: Sensorfläche sauber und vollständig trocken in Luft halten.');
     const airButton = button(selected.air_calibrated ? 'Trockenreferenz erneut messen' : 'Trockenreferenz messen', () => action('/calibrate/air'));
     const wet = make('p', '2. Nassreferenz: Nur die Sensorfläche/Probe eintauchen, Elektronik und XIAO unbedingt trocken halten.');
-    const wetButton = button(selected.wet_calibrated ? 'Nassreferenz erneut messen' : 'Nassreferenz messen', () => action('/calibrate/wet'));
+    const wetButton = button(selected.wet_calibrated ? 'Wasserreferenz erneut messen' : 'Wasserreferenz messen', () => action('/calibrate/wet'));
+    const substrate = make('p', '3. Frische Blumenerde: Fühler in repräsentative, frisch geöffnete Blumenerde stecken. Diese Referenz ist nicht gleichbedeutend mit Field Capacity.');
+    const substrateButton = button(selected.substrate_calibrated ? 'Substratreferenz erneut messen' : 'Substratreferenz messen', () => action('/calibrate/substrate'));
+    substrateButton.disabled = !selected.air_calibrated || !selected.wet_calibrated;
     box.append(air, airButton, wet, wetButton);
     if (selected.air_raw != null || selected.wet_raw != null) box.append(make('p', `Messpunkte: trocken ${selected.air_raw ?? '–'} · nass ${selected.wet_raw ?? '–'}`));
     if (selected.calibration_ready) box.append(make('p', 'Kalibrierung vollständig und plausibel. Der nächste Schritt wird freigegeben.'));

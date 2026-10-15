@@ -2,6 +2,19 @@
 
 Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO ESP32-C3 mit GC Soil / HW-390**. Der Sensor wird für die komplette Erstinbetriebnahme per Daten-USB direkt am Grow-Central-Raspberry-Pi angeschlossen. Erst nach allen Prüfungen darf er abgezogen, in den vorgesehenen Raum gebracht und in das Substrat eingesetzt werden.
 
+## Verbindliche optische Kalibrieranleitung
+
+Für das Sensor-Anlernen werden ausschließlich die folgenden drei freigegebenen Master-Bilder verwendet. Keine alternativen Renderings oder Ersatzbilder verwenden.
+
+1. **AIR_DRY – Sensor trocken in Luft**
+   ![Kalibrierpunkt 1 – Sensor trocken in Luft](../assets/sensor-calibration/01-air-dry.png)
+2. **WATER_SATURATED – Sensor im Wasser**
+   ![Kalibrierpunkt 2 – Sensor im Wasser](../assets/sensor-calibration/02-water-saturated.png)
+3. **FRESH_SUBSTRATE_CC – Frisches Substrat nach Sättigung**
+   ![Kalibrierpunkt 3 – Frisches Substrat nach Sättigung](../assets/sensor-calibration/03-fresh-substrate-cc.png)
+
+Die Bilddateien sind Teil der verbindlichen Onboarding-Dokumentation; ihre Inhalte dürfen nicht automatisch durch andere KI-Bilder ersetzt werden.
+
 ## Verbindlicher Ablauf
 
 1. **USB-Erkennung und Boardprüfung**
@@ -21,9 +34,10 @@ Dieser Ablauf ist der verbindliche Produktionsweg für einen neuen **Seeed XIAO 
 
 4. **Pflichtkalibrierung am angeschlossenen Sensor**
    Ein Sensor wird ohne abgeschlossene Kalibrierung niemals als einsatzbereit markiert.
-   - **Trockenreferenz:** Sensorfläche sauber und trocken in Luft halten, dann `CAL AIR` ausführen.
-   - **Nassreferenz:** nur die Sensorfläche/Probe in die Referenz eintauchen; XIAO und Elektronik trocken halten, dann `CAL WATER` ausführen.
-   - Grow-Central akzeptiert die Kalibrierung nur, wenn beide Punkte persistent im Sensor gespeichert sind und die Messspanne plausibel ist (`air_raw > wet_raw + 100`).
+   - **AIR_DRY:** Sensorfläche sauber und trocken in Luft halten, dann `CAL AIR` ausführen.
+   - **WATER_SATURATED:** nur die Sensorfläche/Probe in sauberes Wasser eintauchen; XIAO und Elektronik trocken halten, dann `CAL WATER` ausführen.
+   - **FRESH_SUBSTRATE_CC:** frische torfhaltige Blumenerde vollständig durchfeuchten, frei abtropfen lassen, den Sensor auf spätere Einbautiefe setzen und `CAL SUBSTRATE` ausführen. Dieser Referenzpunkt beschreibt frisches Substrat nach Sättigung und freiem Ablauf (Container Capacity), nicht eine universelle Field-Capacity-Messung.
+   - Grow-Central akzeptiert die Kalibrierung nur, wenn alle drei Punkte persistent gespeichert sind, `air_raw > wet_raw + 100` gilt und der Substratwert plausibel zwischen Wasser- und Luftreferenz liegt.
 
    `RESET CAL` setzt die Pflichtfreigabe wieder zurück. Danach muss die Kalibrierung vollständig wiederholt werden.
 
@@ -61,11 +75,11 @@ Das ist noch kein Schutz gegen einen Angreifer mit vollständiger physischer Kon
 
 ## Kalibrierungsbedeutung
 
-Die AIR-/Nassreferenz ist eine technische relative Feuchteskala und keine bestätigte volumetrische Wassergehaltsmessung. Sie macht den Sensor für Grow-Central reproduzierbar einsatzfähig. Substratabhängige Feinprofile können später ergänzend eingeführt werden, ohne die sichere Erstaufnahme zu ersetzen.
+Die AIR-/WATER-Referenz ist eine technische relative Feuchteskala und keine bestätigte volumetrische Wassergehaltsmessung. Sie macht den Sensor für Grow-Central reproduzierbar einsatzfähig. Substratabhängige Feinprofile können später ergänzend eingeführt werden, ohne die sichere Erstaufnahme zu ersetzen.
 
 ## Serverseitiger Kalibrierungsnachweis
 
-Zusätzlich zu den im Sensor gespeicherten Referenzpunkten führt Grow-Central einen eigenen Calibration Record unter /var/lib/135er-grow-central/sensor-calibration.db. Der Record bindet die Kalibrierung an Geräte-ID, Public Key/Fingerprint, eFuse-Hardware-UID, Firmwareversion und Capability. Er enthält AIR-/Nassreferenz, RAW-Span, Qualitätsdaten, Kalibrierzeitpunkt, Schema sowie Gültigkeits- und Invalidierungsgrund.
+Zusätzlich zu den im Sensor gespeicherten Referenzpunkten führt Grow-Central einen eigenen Calibration Record unter /var/lib/135er-grow-central/sensor-calibration.db. Der Record bindet die Kalibrierung an Geräte-ID, Public Key/Fingerprint, eFuse-Hardware-UID, Firmwareversion und Capability. Er enthält AIR_DRY, WATER_SATURATED und FRESH_SUBSTRATE_CC samt RAW-Spannen, Qualitätsdaten, Kalibrierzeitpunkt, Schema sowie Gültigkeits- und Invalidierungsgrund.
 
 Bodenfeuchte-Prozentwerte werden produktiv nur verwendet, wenn dieser Record gültig ist **und** der aktuelle signierte Live-Proof dieselbe Identität, Hardware-UID, Firmware und eine weiterhin aktive Sensor-Kalibrierung bestätigt. Bei Key-, Hardware- oder Firmwarewechsel wird der Record ungültig; die UI zeigt dann Kalibrierung erforderlich statt einen vermeintlich gültigen Prozentwert.
 

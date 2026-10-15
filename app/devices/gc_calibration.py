@@ -7,8 +7,8 @@ import os
 from pathlib import Path
 import sqlite3
 
-SCHEMA_VERSION = 1
-CALIBRATION_KIND = "soil_air_water_engineering_reference"
+SCHEMA_VERSION = 2
+CALIBRATION_KIND = "soil_air_water_fresh_substrate_reference"
 
 
 def now_iso() -> str:
@@ -67,10 +67,12 @@ class CalibrationStore:
             return [self.public(row) for row in db.execute('SELECT * FROM calibrations ORDER BY calibrated_at DESC,device_id')]
 
     def record(self, *, device_id: str, fingerprint: str, public_key: str, hardware_uid: str, firmware_version: str,
-               air_raw: int, wet_raw: int, quality: dict, capability: str = 'soil_moisture'):
+               air_raw: int, wet_raw: int, substrate_raw: int, quality: dict, capability: str = 'soil_moisture'):
         if air_raw <= wet_raw + 100:
             raise ValueError('calibration span too small')
-        points = {"air_raw": int(air_raw), "wet_raw": int(wet_raw), "span_raw": int(air_raw - wet_raw)}
+        if not (air_raw > substrate_raw + 50 and substrate_raw > wet_raw + 50):
+            raise ValueError('fresh substrate reference must lie between air and water references')
+        points = {"air_raw": int(air_raw), "wet_raw": int(wet_raw), "substrate_raw": int(substrate_raw), "span_raw": int(air_raw - wet_raw)}
         row = (device_id, fingerprint, public_key, hardware_uid, capability, SCHEMA_VERSION, CALIBRATION_KIND,
                json.dumps(points, separators=(',', ':')), json.dumps(quality, separators=(',', ':')),
                now_iso(), firmware_version, 1, None)
@@ -88,6 +90,9 @@ class CalibrationStore:
         row = self.get(device_id)
         if not row or not row['valid']:
             raise PermissionError('sensor calibration required')
+        if row.get('schema_version') != SCHEMA_VERSION or 'substrate_raw' not in row.get('points', {}):
+            self.invalidate(device_id, 'calibration schema outdated; fresh substrate reference required')
+            raise PermissionError('sensor fresh-substrate calibration required')
         if fingerprint and row['fingerprint'] != fingerprint:
             self.invalidate(device_id, 'identity fingerprint changed')
             raise PermissionError('sensor calibration identity mismatch')

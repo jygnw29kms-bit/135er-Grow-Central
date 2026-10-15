@@ -42,7 +42,7 @@ class USBRoute(APIRoute):
 
 
 router = APIRouter(prefix='/api/devices/usb', route_class=USBRoute, tags=['USB sensor setup'], dependencies=[Depends(require_write_auth)])
-VERSION = '0.5.1'
+VERSION = '0.5.2'
 MODEL = 'GC-SOIL-XIAO-C3-HW390'
 SUPPORTED = {(0x303a, 0x1001), (0x1a86, 0x7523), (0x1a86, 0x55d4), (0x10c4, 0xea60), (0x2886, 0x0044), (0x2886, 0x0056)}
 OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000, 'boot_app0.bin': 0xe000, 'firmware.bin': 0x10000}
@@ -185,14 +185,16 @@ class Session:
     calibration_ready: bool = False
     air_calibrated: bool = False
     wet_calibrated: bool = False
+    substrate_calibrated: bool = False
     air_raw: int | None = None
     wet_raw: int | None = None
+    substrate_raw: int | None = None
     busy: bool = False
     resume: str = 'FIRMWARE'
     task: asyncio.Task | None = field(default=None, repr=False)
 
     def public(self):
-        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'air_raw', 'wet_raw', 'busy', 'resume']}
+        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'substrate_calibrated', 'air_raw', 'wet_raw', 'substrate_raw', 'busy', 'resume']}
 
 
 class USBManager:
@@ -253,11 +255,17 @@ class USBManager:
         calibration = announce.calibration or {}
         session.device_id, session.public_key, session.fingerprint = proof.device_id, proof.public_key, proof.fingerprint
         session.hardware_uid = announce.hardware_uid
-        session.calibration_ready = bool(calibration.get('ready'))
         session.air_calibrated = bool(calibration.get('air_done'))
         session.wet_calibrated = bool(calibration.get('wet_done'))
+        session.substrate_calibrated = bool(calibration.get('substrate_done'))
         session.air_raw = calibration.get('air_raw') if isinstance(calibration.get('air_raw'), int) else None
         session.wet_raw = calibration.get('wet_raw') if isinstance(calibration.get('wet_raw'), int) else None
+        session.substrate_raw = calibration.get('substrate_raw') if isinstance(calibration.get('substrate_raw'), int) else None
+        session.calibration_ready = bool(
+            calibration.get('ready') and session.air_calibrated and session.wet_calibrated and session.substrate_calibrated
+            and session.air_raw is not None and session.wet_raw is not None and session.substrate_raw is not None
+            and session.air_raw > session.substrate_raw + 50 and session.substrate_raw > session.wet_raw + 50
+        )
         session.name, session.firmware = row['name'] or announce.name, announce.firmware
         return proof
 
@@ -298,10 +306,11 @@ class USBManager:
 
 
     async def calibrate(self, session, kind: str):
-        session.state, session.message = 'CALIBRATING', ('Trockenreferenz wird gemessen…' if kind == 'air' else 'Nassreferenz wird gemessen…')
+        labels = {'air':'Trockenreferenz wird gemessen…','wet':'Wasserreferenz wird gemessen…','substrate':'Frische-Substrat-Referenz wird gemessen…'}
+        commands = {'air':('CAL AIR','CAL AIR SAVED:'),'wet':('CAL WATER','CAL WATER SAVED:'),'substrate':('CAL SUBSTRATE','CAL SUBSTRATE SAVED:')}
+        session.state, session.message = 'CALIBRATING', labels[kind]
         before_key = session.public_key
-        command = 'CAL AIR' if kind == 'air' else 'CAL WATER'
-        expected = 'CAL AIR SAVED:' if kind == 'air' else 'CAL WATER SAVED:'
+        command, expected = commands[kind]
         def run():
             with USBSerial(resolve(session.id)) as connection:
                 fresh, _ = connection.proof()
@@ -310,14 +319,18 @@ class USBManager:
                 connection.command(command, lambda line: line.startswith(expected), timeout=15)
         await asyncio.to_thread(run)
         await self.read_identity(session)
-        if session.air_calibrated and session.wet_calibrated:
-            if session.air_raw is None or session.wet_raw is None or session.air_raw <= session.wet_raw + 100:
+        if session.air_calibrated and session.wet_calibrated and session.substrate_calibrated:
+            if session.air_raw is None or session.wet_raw is None or session.substrate_raw is None or not (session.air_raw > session.substrate_raw + 50 and session.substrate_raw > session.wet_raw + 50):
                 raise ValueError('Kalibrierwerte sind nicht plausibel; Kalibrierung wiederholen.')
-            session.state, session.message = 'NETWORK', 'Kalibrierung vollständig und plausibel. Jetzt WLAN/TLS einrichten.'
-            CalibrationStore().record(device_id=session.device_id, fingerprint=session.fingerprint, public_key=session.public_key, hardware_uid=session.hardware_uid, firmware_version=session.firmware, air_raw=session.air_raw, wet_raw=session.wet_raw, quality={'source':'usb','status':'plausible','span_raw':session.air_raw-session.wet_raw})
-            append_audit('usb.calibration.completed', device_id=session.device_id, air_raw=session.air_raw, wet_raw=session.wet_raw)
+            session.state, session.message = 'NETWORK', 'Dreipunkt-Kalibrierung vollständig und plausibel. Jetzt WLAN/TLS einrichten.'
+            CalibrationStore().record(device_id=session.device_id, fingerprint=session.fingerprint, public_key=session.public_key, hardware_uid=session.hardware_uid, firmware_version=session.firmware, air_raw=session.air_raw, wet_raw=session.wet_raw, substrate_raw=session.substrate_raw, quality={'source':'usb','status':'plausible','span_raw':session.air_raw-session.wet_raw})
+            append_audit('usb.calibration.completed', device_id=session.device_id, air_raw=session.air_raw, wet_raw=session.wet_raw, substrate_raw=session.substrate_raw)
         else:
-            session.state, session.message = 'CALIBRATION', 'Erster Kalibrierpunkt gespeichert. Zweiten Referenzpunkt durchführen.'
+            missing = []
+            if not session.air_calibrated: missing.append('AIR')
+            if not session.wet_calibrated: missing.append('WATER')
+            if not session.substrate_calibrated: missing.append('FRESH_SUBSTRATE')
+            session.state, session.message = 'CALIBRATION', 'Kalibrierpunkt gespeichert. Noch erforderlich: ' + ', '.join(missing) + '.'
 
     async def provision(self, session, body):
         session.state, session.message = 'PROVISIONING', 'Individueller Zugang und Zertifikat werden lokal eingerichtet…'
@@ -472,7 +485,7 @@ async def flash_device(port_id: str, body: FlashRequest):
 
 @router.post('/{port_id}/calibrate/{kind}')
 async def calibrate_device(port_id: str, kind: str):
-    if kind not in {'air', 'wet'}:
+    if kind not in {'air', 'wet', 'substrate'}:
         raise HTTPException(404, 'Unbekannter Kalibrierpunkt.')
     session = manager.session(port_id)
     if not session.public_key or session.state not in {'CALIBRATION', 'CALIBRATING'}:
@@ -524,7 +537,7 @@ async def assign_device(port_id: str, body: Assignment):
         if not isinstance(live_meta, dict) or live_meta.get('sensor_ok') is not True or live_meta.get('quality') not in {'EXCELLENT','GOOD','FAIR'}:
             raise ValueError('Sensor-Selbsttest oder Signalqualität nicht ausreichend.')
         CalibrationStore().record(device_id=proof.device_id, fingerprint=proof.fingerprint, public_key=proof.public_key, hardware_uid=session.hardware_uid, firmware_version=session.firmware,
-            air_raw=session.air_raw, wet_raw=session.wet_raw, quality={'source':'usb+live-proof','status':'verified','span_raw':session.air_raw-session.wet_raw,
+            air_raw=session.air_raw, wet_raw=session.wet_raw, substrate_raw=session.substrate_raw, quality={'source':'usb+live-proof','status':'verified','span_raw':session.air_raw-session.wet_raw,
             'signal_quality':live_meta.get('quality'),'sigma':live_meta.get('sigma')})
         state = network_proof.body.get('state') or {}
         meta = state.get('meta') if isinstance(state, dict) else {}

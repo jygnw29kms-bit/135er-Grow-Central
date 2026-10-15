@@ -10,9 +10,9 @@ from app.devices import gc_calibration
 
 def test_calibration_record_binds_identity_hardware_firmware(tmp_path):
     store=CalibrationStore(tmp_path/'calibration.db')
-    row=store.record(device_id='gc-soil-aabbcc',fingerprint='a'*64,public_key='public-key',hardware_uid='0011223344556677',firmware_version='0.5.1',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
+    row=store.record(device_id='gc-soil-aabbcc',fingerprint='a'*64,public_key='public-key',hardware_uid='0011223344556677',firmware_version='0.5.2',air_raw=3767,wet_raw=1310,substrate_raw=2500,quality={'status':'verified','signal_quality':'GOOD'})
     assert row['valid'] is True and row['points']['span_raw']==2457
-    assert store.require_valid('gc-soil-aabbcc',fingerprint='a'*64,public_key='public-key',hardware_uid='0011223344556677',firmware_version='0.5.1')['valid']
+    assert store.require_valid('gc-soil-aabbcc',fingerprint='a'*64,public_key='public-key',hardware_uid='0011223344556677',firmware_version='0.5.2')['valid']
     with pytest.raises(PermissionError):
         store.require_valid('gc-soil-aabbcc',hardware_uid='8899aabbccddeeff')
     invalid=store.get('gc-soil-aabbcc')
@@ -22,7 +22,7 @@ def test_calibration_record_binds_identity_hardware_firmware(tmp_path):
 
 def test_calibration_rejects_implausible_span(tmp_path):
     with pytest.raises(ValueError):
-        CalibrationStore(tmp_path/'cal.db').record(device_id='gc-soil-aabbcc',fingerprint='a'*64,public_key='k',hardware_uid='0011223344556677',firmware_version='0.5.1',air_raw=2000,wet_raw=1950,quality={})
+        CalibrationStore(tmp_path/'cal.db').record(device_id='gc-soil-aabbcc',fingerprint='a'*64,public_key='k',hardware_uid='0011223344556677',firmware_version='0.5.2',air_raw=2000,wet_raw=1950,substrate_raw=1975,quality={})
 
 
 def test_status_api_marks_missing_record_required(tmp_path,monkeypatch):

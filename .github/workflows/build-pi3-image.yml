@@ -124,6 +124,14 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-pip python3-venv python3-pam bluetooth bluez sqlite3 jq rsync logrotate openssh-server sudo unattended-upgrades apt-listchanges ufw openssl network-manager polkitd dnsmasq-base iw wireless-regdb rfkill avahi-daemon avahi-utils libnss-mdns ffmpeg v4l-utils wtmpdb psmisc plymouth plymouth-themes locales keyboard-configuration console-setup tzdata mosquitto mosquitto-clients
 
+          # Normalize and verify privilege-tool ownership explicitly. A broken sudo
+          # owner/setuid bit makes first-boot recovery impossible even when the app is healthy.
+          chown root:root /usr/bin/sudo /etc/sudo.conf /etc/sudoers
+          chmod 4755 /usr/bin/sudo
+          chmod 0644 /etc/sudo.conf
+          chmod 0440 /etc/sudoers
+          visudo -c
+
           cat >/etc/mosquitto/conf.d/grow-central.conf <<'EOF'
           per_listener_settings true
           listener 1883 127.0.0.1
@@ -635,6 +643,10 @@ jobs:
           test "$(stat -c '%U:%G:%a' /var/lib/135er-grow-central)" = growcentral:growcentral:750
           test "$(stat -c '%U:%G:%a' /var/lib/135er-grow-central/support)" = root:growcentral:750
           test "$(stat -c '%U:%G:%a' /etc/polkit-1/rules.d/60-grow-central-network.rules)" = root:root:644
+          test "$(stat -c '%U:%G:%a' /usr/bin/sudo)" = root:root:4755
+          test "$(stat -c '%U:%G:%a' /etc/sudo.conf)" = root:root:644
+          test "$(stat -c '%U:%G:%a' /etc/sudoers)" = root:root:440
+          visudo -c
           runuser -u growcentral -- test -r /opt/135er-grow-central/.env
           if runuser -u growcentral -- test -w /opt/135er-grow-central/.env; then exit 1; fi
           runuser -u growcentral -- test -w /opt/135er-grow-central/data
@@ -774,6 +786,10 @@ jobs:
           test ! -e "$ROOT/etc/mosquitto/grow-central-sensor-broker/accounts.json"
           test -z "$(sudo find "$ROOT/etc/ssh" -maxdepth 1 -type f -name 'ssh_host_*' -print -quit)"
           test "$(sudo chroot "$ROOT" passwd --status GrowCentral | awk '{print $2}')" = L
+          test "$(sudo stat -c '%U:%G:%a' "$ROOT/usr/bin/sudo")" = root:root:4755
+          test "$(sudo stat -c '%U:%G:%a' "$ROOT/etc/sudo.conf")" = root:root:644
+          test "$(sudo stat -c '%U:%G:%a' "$ROOT/etc/sudoers")" = root:root:440
+          sudo chroot "$ROOT" visudo -c
           ! grep -q '^GC_GUI_USERNAME=' "$ROOT/opt/135er-grow-central/.env"
           ! grep -q '^GC_GUI_PASSWORD_HASH=' "$ROOT/opt/135er-grow-central/.env"
           cleanup_pristine
@@ -826,4 +842,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="pi-universal-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-SOURCE.txt grow-central-homeassistant-*.zip gc-soil-node-*-test.zip COMPANIONS.sha256 --target "$GITHUB_SHA" --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Test image from commit ${GITHUB_SHA}. Raspberry Pi OS Lite 64-bit for Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Includes manual sensor trust/identity, scoped Home Assistant export and the installable HA component (Apple Home/Siri, Alexa and Google bridge setup documented). Home Assistant runs separately; export is opt-in. Includes guided USB discovery, verified bundled firmware 0.4.1 flashing, local certificate/account provisioning and room assignment. Only XIAO ESP32-C3 / HW-390 is supported for flashing. BLE credential provisioning is not implemented. Real hardware validation remains pending. First boot ships without factory passwords; local SSH is opt-in." --prerelease
+          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-SOURCE.txt grow-central-homeassistant-*.zip gc-soil-node-*-test.zip COMPANIONS.sha256 --target "$GITHUB_SHA" --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Test image from commit ${GITHUB_SHA}. Raspberry Pi OS Lite 64-bit for Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Includes USB-first XIAO ESP32-C3 / HW-390 commissioning with hardware-bound P-256 identity, server-side Calibration Record, mandatory AIR_DRY / WATER_SATURATED / FRESH_SUBSTRATE_CC three-point calibration, TLS-MQTT provisioning, explicit room assignment and bundled firmware 0.5.2. BLE remains a secure Recovery/Service path, not the primary first-onboarding path. Home Assistant export remains opt-in. First boot ships without factory passwords; local SSH is opt-in. The image build verifies root ownership and setuid integrity of sudo plus visudo syntax before publication." --prerelease
