@@ -17,10 +17,12 @@ from .policy import PolicyDenied, assert_switch_write_allowed, smart_home_enable
 from .registry import DeviceRegistry
 from .onboarding import router as onboarding_router
 from .fritz_onboarding import router as fritz_onboarding_router
+from .homekit_status import router as homekit_status_router
 
 router = APIRouter(prefix="/api/v1/smarthome", tags=["smart-home"])
 router.include_router(onboarding_router)
 router.include_router(fritz_onboarding_router)
+router.include_router(homekit_status_router)
 OVERVIEW_CACHE_SECONDS = 10.0
 _overview_cache: tuple[float, dict] | None = None
 _overview_lock = asyncio.Lock()

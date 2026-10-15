@@ -15,11 +15,33 @@ set +a
 MODE="$(cat "$MODE_FILE" 2>/dev/null || printf '%s' "${CLOUD_ADMIN_MODE:-standalone}")"
 CORE_PORT="${APP_PORT:-18765}"
 ADMIN_PORT="${V7_ADMIN_PORT:?V7_ADMIN_PORT fehlt}"
+PLATFORM_PORT="${V7_PLATFORM_PORT:-18767}"
 HOST="${PUBLIC_URL#https://}"; HOST="${HOST#http://}"; HOST="${HOST%%/*}"
 
 write_locations(){
   cat <<EOF
 # BEGIN 135ER-GROWCENTRAL-V7
+location ^~ /api/v7/platform/ {
+    proxy_pass http://127.0.0.1:${PLATFORM_PORT};
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_buffering off;
+}
+location = /api/admin/platform {
+    proxy_pass http://127.0.0.1:${PLATFORM_PORT}/api/admin/platform;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_buffering off;
+}
+location = /platform/health {
+    proxy_pass http://127.0.0.1:${PLATFORM_PORT}/health;
+}
 location ^~ /api/v7/device/ {
     proxy_pass http://127.0.0.1:${ADMIN_PORT};
     proxy_http_version 1.1;
