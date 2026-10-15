@@ -156,7 +156,11 @@
     const label = make('label', 'Dieser Pi als MQTT-Broker'); const host = document.createElement('select'); host.required = true; label.append(host); form.append(label);
     form.append(make('p', 'GC erstellt das lokale Zertifikat und einen individuellen Sensorzugang und überträgt sie direkt per USB.'));
     const submit = make('button', 'WLAN und Sensorzugang einrichten'); submit.type = 'submit'; submit.disabled = true; form.append(submit); content.append(form);
-    content.append(button('Sensor hat bereits eine Verbindung – prüfen', () => action('/connection')));
+    if (selected.wifi_configured && selected.mqtt_configured && selected.ca_configured) {
+      content.append(button('Vorhandene WLAN/TLS-Verbindung pr?fen', () => action('/connection')));
+    } else {
+      content.append(make('p', 'Der Sensor hat noch keine vollst?ndige WLAN/TLS-MQTT-Konfiguration. Trage unten das WLAN ein; erst danach kann die Live-Identit?t best?tigt werden.'));
+    }
     form.onsubmit = e => {
       e.preventDefault(); const body = {ssid:ssid.value, password:password.value, broker_host:host.value}; password.value = ''; action('/network', body);
     };

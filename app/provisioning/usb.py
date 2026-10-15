@@ -189,12 +189,15 @@ class Session:
     air_raw: int | None = None
     wet_raw: int | None = None
     substrate_raw: int | None = None
+    wifi_configured: bool = False
+    mqtt_configured: bool = False
+    ca_configured: bool = False
     busy: bool = False
     resume: str = 'FIRMWARE'
     task: asyncio.Task | None = field(default=None, repr=False)
 
     def public(self):
-        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'substrate_calibrated', 'air_raw', 'wet_raw', 'substrate_raw', 'busy', 'resume']}
+        return {key: getattr(self, key) for key in ['id', 'state', 'message', 'device_id', 'fingerprint', 'name', 'firmware', 'hardware_uid', 'calibration_ready', 'air_calibrated', 'wet_calibrated', 'substrate_calibrated', 'air_raw', 'wet_raw', 'substrate_raw', 'wifi_configured', 'mqtt_configured', 'ca_configured', 'busy', 'resume']}
 
 
 class USBManager:
@@ -268,6 +271,20 @@ class USBManager:
         )
         session.name, session.firmware = row['name'] or announce.name, announce.firmware
         return proof
+
+    async def read_network_status(self, session):
+        def probe():
+            with USBSerial(resolve(session.id)) as connection:
+                wifi = connection.command('NET INFO', lambda line: 'wifi_configured=' in line)
+                mqtt = connection.command('NET INFO', lambda line: 'mqtt_configured=' in line)
+                ca = connection.command('NET INFO', lambda line: 'ca_bytes=' in line)
+                return wifi, mqtt, ca
+        wifi, mqtt, ca = await asyncio.to_thread(probe)
+        session.wifi_configured = 'wifi_configured=yes' in wifi
+        session.mqtt_configured = 'mqtt_configured=yes' in mqtt
+        match = re.search(r'\bca_bytes=(\d+)', ca)
+        session.ca_configured = bool(match and int(match.group(1)) > 0)
+        return session.wifi_configured and session.mqtt_configured and session.ca_configured
 
     async def inspect(self, session):
         session.state, session.message = 'CHECKING', 'Firmware und USB-Identität werden geprüft…'
