@@ -22,7 +22,7 @@ from typing import Any, Iterator, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.security import require_write_auth
 from app.devices.runtime import runtime
@@ -186,6 +186,16 @@ class RoomCreate(BaseModel):
     target_temperature_c: float | None = Field(default=None, ge=0, le=60)
     target_humidity_percent: float | None = Field(default=None, ge=0, le=100)
     light_cycle: str = Field(default="", max_length=32)
+    soil_reference_low_index_percent: float | None = Field(default=None, ge=0, le=300)
+    soil_reference_high_index_percent: float | None = Field(default=None, ge=0, le=300)
+
+    @model_validator(mode="after")
+    def validate_soil_reference_thresholds(self):
+        low = self.soil_reference_low_index_percent
+        high = self.soil_reference_high_index_percent
+        if low is not None and high is not None and low >= high:
+            raise ValueError("untere Soil-Referenzschwelle muss kleiner als die obere sein")
+        return self
 
 
 class RoomUpdate(RoomCreate):

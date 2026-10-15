@@ -62,16 +62,19 @@
   async function loadEvents(){
     const root=$('overviewEvents');if(!root)return;
     try{
-      const data=await api('/api/v1/rooms'),rooms=data.rooms||[];
+      const [data,alertData]=await Promise.all([api('/api/v1/rooms'),api('/api/v1/grow-alerts')]),rooms=data.rooms||[],alerts=alertData.alerts||[];
       const results=await Promise.allSettled(rooms.map(r=>api(`/api/v1/rooms/${encodeURIComponent(r.id)}/journal`)));
       const events=[];
       results.forEach((result,index)=>{if(result.status!=='fulfilled')return;(result.value.entries||[]).forEach(e=>events.push({...e,room_name:rooms[index]?.name||''}))});
       events.sort((a,b)=>Date.parse(b.created_at||0)-Date.parse(a.created_at||0));
-      root.innerHTML=events.length?events.slice(0,4).map(e=>{
+      const alertRows=alerts.slice(0,4).map(a=>`<div><i class="warn"></i><time>WARN</time><span>${esc(a.room_name||a.room_id||'Raum')} \u00b7 ${esc(a.message||'Sensorwarnung')}</span></div>`);
+      const remaining=Math.max(0,4-alertRows.length);
+      const eventRows=events.slice(0,remaining).map(e=>{
         const when=Date.parse(e.created_at||0),time=Number.isFinite(when)?new Date(when).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'\u2014';
         return `<div><i class="${e.category==='pest'?'warn':e.category==='note'?'info':'good'}"></i><time>${esc(time)}</time><span>${esc(e.title||categoryLabels[e.category]||'Ereignis')}${e.room_name?` \u00b7 ${esc(e.room_name)}`:''}</span></div>`;
-      }).join(''):'<div><i class="info"></i><time>?</time><span>Noch keine erfassten Ereignisse.</span></div>';
-    }catch{root.innerHTML='<div><i class="warn"></i><time>?</time><span>Ereignisse nicht erreichbar.</span></div>'}
+      });
+      root.innerHTML=[...alertRows,...eventRows].join('')||'<div><i class="info"></i><time>\u2014</time><span>Noch keine erfassten Ereignisse.</span></div>';
+    }catch{root.innerHTML='<div><i class="warn"></i><time>\u2014</time><span>Ereignisse nicht erreichbar.</span></div>'}
   }
 
   function refreshSnapshot(){

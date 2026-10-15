@@ -70,13 +70,15 @@
     <label>Solltemperatur (°C)<input name="temperature" type="number" min="0" max="60" step="0.1" placeholder="Optional"></label>
     <label>Soll-Luftfeuchte (%)<input name="humidity" type="number" min="0" max="100" step="0.1" placeholder="Optional"></label>
     <label>Lichtzyklus<input name="light" maxlength="32" placeholder="z. B. 18/6"></label>
+    <label>Soil-Index Warnung niedrig (%)<input name="soil_low" type="number" min="0" max="300" step="1" placeholder="Optional"><small>100 % = Frischsubstrat-Referenz</small></label>
+    <label>Soil-Index Warnung hoch (%)<input name="soil_high" type="number" min="0" max="300" step="1" placeholder="Optional"><small>leer = keine Warnung</small></label>
     <label class="full-width">Beschreibung<textarea name="description" maxlength="1000" rows="3"></textarea></label>
   </div>
   <p id="roomFormError" role="alert" hidden></p>
   <div class="dialog-actions"><button type="button" id="cancelRoomBtn">Abbrechen</button><button type="submit" id="saveRoomBtn">Raum speichern</button></div>
 </form>
 </dialog>
-<script src="/static/console.js?v=20261015-soil3"></script>
+<script src="/static/console.js?v=20261015-soil4"></script>
 <script src="/static/session_write.js?v=0.13.0"></script>
 </body>
 </html>
