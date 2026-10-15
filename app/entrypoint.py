@@ -9,6 +9,7 @@ from app.auth_middleware import GuiAuthMiddleware
 from app.gui_auth import router as gui_auth_router
 from app.firstboot import router as firstboot_router
 from app.gui_shell import router as gui_shell_router
+from app.ui_layout import router as ui_layout_router
 from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
 from app.cloud_status import router as cloud_status_router
@@ -31,6 +32,7 @@ app.add_middleware(SetupPortalMiddleware)
 # provide their native input methods and receive responses byte-for-byte.
 app.include_router(gui_auth_router)
 app.include_router(gui_shell_router)
+app.include_router(ui_layout_router)
 app.include_router(camera_router)
 app.include_router(automation_router)
 app.include_router(firstboot_router)

@@ -350,6 +350,18 @@ def verify_runtime(address: str) -> None:
     avahi = run("systemctl", "is-active", "avahi-daemon.service", check=False)
     if avahi.returncode != 0:
         raise RuntimeError("Die Erreichbarkeit über den lokalen Hostnamen konnte nicht aktiviert werden.")
+    mdns_name = f"{FIXED_HOSTNAME}.local"
+    resolved_ok = False
+    for _ in range(15):
+        resolved = run("avahi-resolve-host-name", "-4", mdns_name, check=False)
+        if resolved.returncode == 0:
+            addresses = {row.split()[-1] for row in resolved.stdout.splitlines() if row.split()}
+            if address in addresses:
+                resolved_ok = True
+                break
+        time.sleep(1)
+    if not resolved_ok:
+        raise RuntimeError(f"Der lokale Hostname {mdns_name} zeigt nicht auf die aktuelle Pi-Adresse {address}.")
 
 
 def main() -> int:
@@ -375,7 +387,6 @@ def main() -> int:
         network_address = verify_network(network_device)
         run("hostnamectl", "set-hostname", config["hostname"])
         update_hosts(config["hostname"])
-        run("systemctl", "restart", "avahi-daemon.service", check=False)
         run("timedatectl", "set-timezone", config["timezone"])
         persist_runtime_settings(config)
         runtime_settings_changed = True
@@ -390,6 +401,10 @@ def main() -> int:
         if wlan and network_mode == "wifi":
             run("nmcli", "connection", "down", AP_CONNECTION, check=False)
 
+        # Publish mDNS only after the setup AP has left the path. This prevents
+        # stale .local address sets surviving the AP -> home-LAN transition.
+        run("systemctl", "restart", "avahi-daemon.service")
+        time.sleep(1)
         run("systemctl", "reset-failed", "135er-grow-central.service", check=False)
         run("systemctl", "restart", "135er-grow-central.service")
         verify_runtime(network_address)
