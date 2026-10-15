@@ -19,6 +19,7 @@ static constexpr uint8_t GC_PAIR_BUTTON=9; // XIAO ESP32-C3 BOOT
 struct BleNetworkConfig { String ssid,wifiPass,host,user,pass,ca,name; uint16_t port=8883; };
 
 class BleProvisioner {
+  class ServerCallbacks: public BLEServerCallbacks { BleProvisioner* owner; public: explicit ServerCallbacks(BleProvisioner* o):owner(o){} void onDisconnect(BLEServer*) override { if(owner->active) BLEDevice::startAdvertising(); } };
   class ControlCallbacks: public BLECharacteristicCallbacks { BleProvisioner* owner; public: explicit ControlCallbacks(BleProvisioner* o):owner(o){} void onWrite(BLECharacteristic* c) override { owner->queueCommand(c->getValue()); } };
   BLEServer* server=nullptr; BLECharacteristic* control=nullptr; BLECharacteristic* status=nullptr;
   DeviceIdentity* identity=nullptr; String deviceId, announcement, sessionNonce, chunks; uint8_t expectedChunks=0,nextChunk=0;
@@ -95,7 +96,7 @@ class BleProvisioner {
   }
   BleNetworkConfig config;
 public:
-  void begin(const String& id,const String& announce,DeviceIdentity& ident){deviceId=id;announcement=announce;identity=&ident;pinMode(GC_PAIR_BUTTON,INPUT_PULLUP);BLEDevice::init(deviceId.c_str());server=BLEDevice::createServer();BLEService* svc=server->createService(GC_BLE_SERVICE_UUID);control=svc->createCharacteristic(GC_BLE_CONTROL_UUID,BLECharacteristic::PROPERTY_WRITE);status=svc->createCharacteristic(GC_BLE_STATUS_UUID,BLECharacteristic::PROPERTY_READ|BLECharacteristic::PROPERTY_NOTIFY);control->setCallbacks(new ControlCallbacks(this));status->setValue("GC-BLE-READY");svc->start();BLEAdvertising* adv=BLEDevice::getAdvertising();adv->addServiceUUID(GC_BLE_SERVICE_UUID);adv->setScanResponse(true);BLEDevice::startAdvertising();active=true;}
+  void begin(const String& id,const String& announce,DeviceIdentity& ident){deviceId=id;announcement=announce;identity=&ident;pinMode(GC_PAIR_BUTTON,INPUT_PULLUP);BLEDevice::init(deviceId.c_str());server=BLEDevice::createServer();server->setCallbacks(new ServerCallbacks(this));BLEService* svc=server->createService(GC_BLE_SERVICE_UUID);control=svc->createCharacteristic(GC_BLE_CONTROL_UUID,BLECharacteristic::PROPERTY_WRITE);status=svc->createCharacteristic(GC_BLE_STATUS_UUID,BLECharacteristic::PROPERTY_READ|BLECharacteristic::PROPERTY_NOTIFY);control->setCallbacks(new ControlCallbacks(this));status->setValue("GC-BLE-READY");svc->start();BLEAdvertising* adv=BLEDevice::getAdvertising();adv->addServiceUUID(GC_BLE_SERVICE_UUID);adv->setScanResponse(true);BLEDevice::startAdvertising();active=true;}
   void loop(){if(!active)return;String command;if(takeCommand(command))handle(command);if(deadline&&(int32_t)(millis()-deadline)>=0){resetSession();send("E|timeout");}if(awaitingButton){if(digitalRead(GC_PAIR_BUTTON)==LOW){if(!buttonDown)buttonDown=millis();else if(millis()-buttonDown>=800){awaitingButton=false;physicallyConfirmed=true;deadline=millis()+60000;send("R|"+sessionNonce);}}else buttonDown=0;}}
   bool take(BleNetworkConfig& out){if(!pending)return false;out=config;pending=false;return true;}
   void stop(){if(!active)return;BLEDevice::stopAdvertising();BLEDevice::deinit(true);active=false;resetSession();}
