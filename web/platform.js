@@ -1,7 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-  const titles = {overview:'Übersicht',grow:'Growboxen',devices:'Geräte',automation:'Automationen',camera:'Kamera',energy:'Energie',system:'System'};
+  const titles = {overview:'?bersicht',grow:'R?ume',devices:'Ger?te',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bew?sserung',lighting:'Beleuchtung',automation:'Zeitpl?ne',recipes:'Rezepte',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
   const state = {platform:null,runtime:null,smart:null,discovered:[],filter:'all',mode:localStorage.getItem('gc.mode') === 'advanced' ? 'advanced' : 'simple'};
 
   async function api(path, options={}) {
@@ -39,6 +39,7 @@
     if (id === 'camera') loadCamera();
     if (id === 'energy') loadEnergy(true);
     if (id === 'system') loadSystem();
+    window.dispatchEvent(new CustomEvent('gc:view',{detail:{id}}));
   }
 
   function providerCard(provider) {

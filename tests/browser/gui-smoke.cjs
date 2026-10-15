@@ -85,6 +85,14 @@ const rooms=[{id:'room1',name:'Zelt A',kind:'grow_tent',device_count:1,plant_cou
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`master overflow at ${width}`);
   if(width===390)assert.equal(await page.locator('#mobileMenuToggle').getAttribute('aria-expanded'),'false');
  }
+ // Every Final-Master menu page must initialize without uncaught errors.
+ for(const id of ['devices','calibration','climate','irrigation','lighting','automation','recipes','growlog','camera','recordings','timelapse','settings','applehome','users','backups','updates','extensions']){
+  await page.locator(`#mainNav [data-view=${id}]`).click();
+  await page.waitForTimeout(40);
+  assert.equal(await page.locator(`#${id}`).getAttribute('class').then(v=>v.includes('active')),true,`${id} view activates`);
+  if(['climate','irrigation','lighting','automation','recipes','growlog','recordings','timelapse','settings','users','backups','updates','extensions'].includes(id))assert.equal(await page.locator(`#${id} > .gc-live-body`).count(),1,`${id} live body mounted`);
+ }
+ await page.locator('#mainNav [data-view=overview]').click();
  // Runtime status comes from the full health contract and clears on recovery.
  await page.getByText('0 Hinweise',{exact:true}).waitFor();
  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('gc:provider-health',{detail:{errors:2}})));await page.getByText('2 Hinweise',{exact:true}).waitFor();

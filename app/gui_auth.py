@@ -211,4 +211,4 @@ async def logout(request: Request, response: Response):
 
 @router.get("/api/auth/status")
 async def auth_status(request: Request):
-    return {"configured": configured(), "authenticated": authenticated(request)}
+    return {"configured": configured(), "authenticated": authenticated(request), "username": os.getenv("GC_GUI_USERNAME", "").strip() or None}

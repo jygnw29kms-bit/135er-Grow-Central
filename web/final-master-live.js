@@ -66,7 +66,7 @@
     const img=$('overviewCameraSnapshot'),fallback=$('overviewCameraFallback'),state=$('overviewCameraState');if(!img)return;
     img.onload=()=>{img.hidden=false;if(fallback)fallback.hidden=true;if(state)state.textContent='? LIVE'};
     img.onerror=()=>{img.hidden=true;if(fallback)fallback.hidden=false;if(state)state.textContent='NICHT VERF?GBAR'};
-    img.src=`/api/v1/camera/snapshot?width=960&height=540&_=${Date.now()}`;
+    img.src=`/api/v1/camera/snapshot?_=${Date.now()}`;
   }
 
   async function refresh(){await Promise.allSettled([loadRoomsAndPlants(),loadNextAction(),loadEvents()]);}

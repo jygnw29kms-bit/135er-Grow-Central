@@ -149,6 +149,7 @@ def system_identity() -> dict[str, Any]:
     hardware = hardware_identity()
     version = _text(ROOT / "VERSION", "unknown")
     build = _text(ROOT / "BUILD", "development")
+    live_git_sha = _text(ROOT / ".live-git-sha", "")
     return {
         "hostname": socket.gethostname(),
         "model": hardware["model"] if hardware.get("model") != "unknown" else platform.machine(),
@@ -156,12 +157,13 @@ def system_identity() -> dict[str, Any]:
         "version": version,
         "api_version": version,
         "build": build,
+        "live_git_sha": live_git_sha or None,
         "release_channel": "alpha" if "alpha" in version.lower() else "local",
         "build_status": f"Installierter Softwarestand: {version} · Build {build}",
         "kernel": platform.release(),
         "architecture": platform.machine(),
         "operating_system": _operating_system(),
-        "domain": "135er-GrowCentral.local",
+        "domain": "135er-grow-central.local",
         "primary_ipv4": primary_ipv4,
         "interfaces": interfaces,
         "addresses": usable,
