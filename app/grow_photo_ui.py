@@ -1,7 +1,7 @@
-"""Inject the grow photo journal enhancement into approved Grow-Central HTML shells.
+"""Inject approved Grow-Central grow enhancements into product HTML shells.
 
-The master HTML files remain untouched; only responses that are positively
-identified as the Grow-Central UI receive the small enhancement script.
+The Final Master HTML files remain untouched. Only positively identified product
+shells receive the local photo-journal and Plant-Doctor enhancement scripts.
 """
 from __future__ import annotations
 
@@ -9,7 +9,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-_SCRIPT = '<script src="/static/grow-photos.js?v=20261016-photo1"></script>'
+_SCRIPTS = (
+    '<script src="/static/grow-photos.js?v=20261016-photo1"></script>',
+    '<script src="/static/plant-doctor.js?v=20261016-doctor1"></script>',
+)
 _TARGET_PATHS = {"/", "/ui", "/mobile"}
 
 
@@ -46,8 +49,9 @@ class GrowPhotoUiMiddleware(BaseHTTPMiddleware):
                 media_type=response.media_type,
                 background=response.background,
             )
-        if "/static/grow-photos.js" not in html:
-            html = html.replace("</body>", f"{_SCRIPT}\n</body>", 1)
+        additions = [script for script in _SCRIPTS if script.split('src="', 1)[1].split('"', 1)[0].split('?', 1)[0] not in html]
+        if additions:
+            html = html.replace("</body>", "\n".join(additions) + "\n</body>", 1)
 
         headers = dict(response.headers)
         headers.pop("content-length", None)
