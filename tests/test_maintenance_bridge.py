@@ -30,6 +30,9 @@ def test_image_installs_only_explicit_nopasswd_actions():
     assert "NOPASSWD: ALL" not in workflow
     assert "growcentral-maint *" not in workflow
     assert "visudo -cf /etc/sudoers.d/growcentral-maint" in workflow
+    assert "ssh-keygen -A >/dev/null" in workflow
+    assert "rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub" in workflow
+    assert "! find /etc/ssh -maxdepth 1 -type f -name 'ssh_host_*_key*'" in workflow
 
 
 def test_test_maintenance_access_is_build_scoped_and_key_only():
