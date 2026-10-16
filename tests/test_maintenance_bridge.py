@@ -52,3 +52,9 @@ def test_test_maintenance_access_is_build_scoped_and_key_only():
     assert 'test -s "$ROOT/home/gcmaint/.ssh/authorized_keys"' in workflow
     assert 'sudo chroot "$ROOT" visudo -cf /etc/sudoers.d/growcentral-maint' in workflow
     assert 'sudo chroot "$ROOT" id gcmaint >/dev/null' in workflow
+
+
+def test_image_uses_cloud_link_v2_runtime():
+    workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    assert "local/cloud_link/agent_v2.py" in workflow
+    assert "local/cloud_link/agent.py" not in workflow

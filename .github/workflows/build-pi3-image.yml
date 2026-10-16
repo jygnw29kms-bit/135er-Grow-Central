@@ -748,7 +748,7 @@ jobs:
           test ! -e /opt/135er-grow-central/image-builder/firstboot/display-setup.sh
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/entrypoint.py
           /usr/bin/python3 -m py_compile /opt/135er-grow-central/app/diagnostics.py
-          /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent.py
+          /usr/bin/python3 -m py_compile /opt/135er-grow-central/local/cloud_link/agent_v2.py
           ! grep -Fq 'maintenance_activation_code' /opt/135er-grow-central/app/firstboot.py
           ! grep -Fq 'grow-central-remote-maintenance' /opt/135er-grow-central/image-builder/firstboot/apply_setup.py
           systemd-analyze verify /etc/systemd/system/grow-central-provisioning.service /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-homekit.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
