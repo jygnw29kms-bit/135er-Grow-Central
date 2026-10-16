@@ -1,10 +1,6 @@
-﻿name: Deploy 135erHeli.de portfolio
+name: Deploy 135erHeli.de portfolio
 
 on:
-  push:
-    branches: [ master ]
-    paths:
-      - '.github/workflows/deploy-135erheli-portfolio.yml'
   workflow_dispatch:
   repository_dispatch:
     types: [deploy-135erheli]
@@ -41,28 +37,33 @@ jobs:
           export SSHPASS="$SSH_PASSWORD"
 
           tar -C site -czf /tmp/135erheli-site.tar.gz index.html styles.css app.js assets
-          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:/tmp/135erheli-site.tar.gz"
+          REMOTE_HOME="$(sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" 'printf "%s" "$HOME"')"
+          REMOTE_ARCHIVE="$REMOTE_HOME/135erheli-site.tar.gz"
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:$REMOTE_ARCHIVE"
 
           REMOTE='set -euo pipefail
           FQDN="135erheli.de"
           TARGET="/var/www/vhosts/$FQDN/httpdocs"
+          ARCHIVE="$1"
 
           command -v plesk >/dev/null
-          echo "== Plesk site before =="
-          plesk bin site --info "$FQDN"
-
-          # Keep hosting under Plesk control; only enforce the document root and canonical host.
           plesk bin site --update "$FQDN" -www-root httpdocs -seo-redirect non-www
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
 
           test -d "$TARGET"
+          test -f "$ARCHIVE"
           OWNER="$(stat -c %U "$TARGET")"
           GROUP="$(stat -c %G "$TARGET")"
-          echo "Plesk webroot: $TARGET ($OWNER:$GROUP)"
 
           rm -rf /tmp/135erheli-stage
           mkdir -p /tmp/135erheli-stage
-          tar -xzf /tmp/135erheli-site.tar.gz -C /tmp/135erheli-stage
+          tar -xzf "$ARCHIVE" -C /tmp/135erheli-stage
+          test -s /tmp/135erheli-stage/index.html
+          grep -q "RAW CITY HARDWARE" /tmp/135erheli-stage/index.html
+
+          BACKUP="/tmp/135erheli-backup-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$BACKUP"
+          cp -a "$TARGET"/. "$BACKUP"/ 2>/dev/null || true
 
           find "$TARGET" -mindepth 1 -maxdepth 1 \
             ! -name .well-known \
@@ -82,19 +83,15 @@ jobs:
           nginx -t
           systemctl reload nginx
 
-          echo "== Plesk site after =="
-          plesk bin site --info "$FQDN"
-          ls -la "$TARGET"
           test -s "$TARGET/index.html"
           grep -q "RAW CITY HARDWARE" "$TARGET/index.html"
-
-          rm -rf /tmp/135erheli-stage /tmp/135erheli-site.tar.gz'
+          rm -rf /tmp/135erheli-stage "$ARCHIVE"'
 
           B64="$(printf '%s' "$REMOTE" | base64 -w0)"
           if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
-            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash"
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash -s -- '$REMOTE_ARCHIVE'"
           else
-            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash -s -- '$REMOTE_ARCHIVE'\""
           fi
 
       - name: Verify live website
@@ -104,13 +101,13 @@ jobs:
           for i in {1..12}; do
             if curl --http1.1 -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
               && grep -q 'RAW CITY HARDWARE' /tmp/135erheli.html \
+              && grep -q 'AKTUELLE PROJEKTE' /tmp/135erheli.html \
               && curl --http1.1 -LfsS https://135erheli.de/assets/hero-homebrew.svg -o /tmp/hero.svg \
               && grep -q 'JL1976' /tmp/hero.svg; then
-              echo '135erHeli.de Plesk site is live.'
+              echo '135erHeli.de is live with current hero.'
               exit 0
             fi
             sleep 5
           done
           echo 'Live verification failed.' >&2
           exit 1
-
