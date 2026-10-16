@@ -236,7 +236,7 @@ jobs:
           Match all
           EOF
             chmod 0644 /etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf
-            touch /etc/135er-grow-central/test-maintenance-enabled
+            printf 'enabled\n' > /etc/135er-grow-central/test-maintenance-enabled
             chmod 0644 /etc/135er-grow-central/test-maintenance-enabled
             install -d -o root -g growcentral-maint -m 2770 /var/lib/135er-grow-central/maintenance/staged
             install -d -o root -g root -m 0700 /var/lib/135er-grow-central/maintenance/backups
