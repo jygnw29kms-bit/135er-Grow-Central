@@ -311,6 +311,14 @@ class GrowEventCreate(BaseModel):
     source: str = Field(default="user", max_length=80)
 
 
+class PlantDiagnosisRequest(BaseModel):
+    symptoms: list[str] = Field(default_factory=list, max_length=30)
+    affected_zone: Literal["lower", "middle", "upper", "whole", "unknown"] = "unknown"
+    medium: str = Field(default="", max_length=80)
+    note: str = Field(default="", max_length=1000)
+    save_event: bool = True
+
+
 def _latest_sensor_snapshot(state: dict[str, Any], room_id: str) -> dict[str, Any]:
     latest = next((row for row in reversed(state["sensor_history"]) if row.get("room_id") == room_id), None)
     if not latest:
@@ -754,6 +762,143 @@ async def plant_grow_status(room_id: str, plant_id: str):
         "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
         "harvest_window": _cycle_forecast(plant, profile),
     }
+
+
+def diagnose_plant_health(
+    *,
+    symptoms: list[str],
+    affected_zone: str,
+    medium: str,
+    snapshot: dict[str, Any],
+    targets: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return conservative horticultural hypotheses; never a certain diagnosis."""
+    findings: list[dict[str, Any]] = []
+    normalized = {str(item).strip().lower() for item in symptoms if str(item).strip()}
+
+    def add(code: str, title: str, reason: str, checks: list[str], actions: list[str], confidence: str = "possible"):
+        findings.append({
+            "code": code,
+            "title": title,
+            "confidence": confidence,
+            "reason": reason,
+            "checks": checks,
+            "actions": actions,
+        })
+
+    vpd = snapshot.get("vpd_kpa")
+    vpd_eval = evaluate_vpd(vpd, targets)
+    if vpd_eval["status"] == "high":
+        add(
+            "environment_vpd_high",
+            "Zu trockene Luft / hoher Verdunstungsdruck möglich",
+            f"VPD liegt mit {vpd} kPa über dem hinterlegten Phasenziel.",
+            ["Luftfeuchte- und Temperaturtrend prüfen", "Sensorposition und Kalibrierung prüfen"],
+            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
+            "supported_by_sensor",
+        )
+    elif vpd_eval["status"] == "low":
+        add(
+            "environment_vpd_low",
+            "Zu feuchte Luft / niedriger Verdunstungsdruck möglich",
+            f"VPD liegt mit {vpd} kPa unter dem hinterlegten Phasenziel.",
+            ["Luftfeuchte- und Temperaturtrend prüfen", "Luftbewegung und Sensorposition prüfen"],
+            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
+            "supported_by_sensor",
+        )
+
+    soil = snapshot.get("soil_moisture_percent")
+    if isinstance(soil, (int, float)):
+        if soil < 20:
+            add(
+                "soil_moisture_low",
+                "Trockener Wurzelbereich möglich",
+                f"Die gemessene Bodenfeuchte ist mit {soil}% niedrig.",
+                ["Kalibrierstatus des Bodensensors prüfen", "Feuchte an mehreren Stellen gegenprüfen"],
+                ["Bewässerungsbedarf anhand Medium und Pflanzenzustand prüfen"],
+                "supported_by_sensor",
+            )
+        elif soil > 85:
+            add(
+                "soil_moisture_high",
+                "Sehr feuchter Wurzelbereich möglich",
+                f"Die gemessene Bodenfeuchte ist mit {soil}% hoch.",
+                ["Kalibrierstatus prüfen", "Drainage und längerfristigen Feuchteverlauf prüfen"],
+                ["Weitere Bewässerung erst nach Plausibilitätsprüfung des Feuchteverlaufs planen"],
+                "supported_by_sensor",
+            )
+
+    if normalized & {"yellow", "yellowing", "gelb", "vergilbung", "chlorosis"}:
+        zone_reason = f"Betroffene Zone: {affected_zone}." if affected_zone != "unknown" else "Betroffene Pflanzenzone wurde nicht eingegrenzt."
+        add(
+            "symptom_chlorosis",
+            "Chlorose / Vergilbung – mehrere Ursachen möglich",
+            zone_reason,
+            ["Muster an alten vs. jungen Blättern vergleichen", "Wurzelraum, pH/EC und Umweltverlauf gegenprüfen, sofern Messwerte vorhanden"],
+            ["Keine Einzelursache annehmen; zuerst Messwerte und Verlauf bestätigen"],
+        )
+    if normalized & {"droop", "drooping", "hanging", "hängend", "haengend", "welk", "wilting"}:
+        add(
+            "symptom_droop",
+            "Hängende oder welke Blätter – Wasserhaushalt oder Umweltstress möglich",
+            f"Medium: {medium or 'nicht angegeben'}; Zone: {affected_zone}.",
+            ["Bodenfeuchteverlauf und Wurzelraum prüfen", "Temperatur/VPD-Verlauf prüfen"],
+            ["Ursache anhand Verlauf eingrenzen, bevor Stellgrößen verändert werden"],
+        )
+
+    if not findings:
+        add(
+            "insufficient_evidence",
+            "Noch keine belastbare Ursache ableitbar",
+            "Die vorhandenen Symptome und Messwerte reichen für eine sinnvolle Eingrenzung noch nicht aus.",
+            ["Symptome genauer beschreiben", "Aktuelle Sensorwerte und Verlauf prüfen", "Foto und betroffene Pflanzenzone dokumentieren"],
+            ["Weitere Beobachtung als Timeline-Ereignis festhalten"],
+            "insufficient",
+        )
+    return findings
+
+
+@router.post("/{room_id}/plants/{plant_id}/diagnosis", dependencies=[Depends(require_write_auth)])
+async def diagnose_plant(room_id: str, plant_id: str, body: PlantDiagnosisRequest):
+    with edit_state() as state:
+        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+        if plant["room_id"] != room_id:
+            raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        profile = next((row for row in state["grow_profiles"] if row["id"] == plant.get("profile_id")), None)
+        phase_profile = _phase_profile(profile, plant.get("phase"))
+        targets = (phase_profile or {}).get("targets", {})
+        snapshot = _latest_sensor_snapshot(state, room_id)
+        findings = diagnose_plant_health(
+            symptoms=body.symptoms,
+            affected_zone=body.affected_zone,
+            medium=body.medium,
+            snapshot=snapshot,
+            targets=targets,
+        )
+        result = {
+            "plant_id": plant_id,
+            "generated_at": now_iso(),
+            "disclaimer": "Mögliche Ursachen, keine sichere Diagnose. Verlauf und Messwerte gegenprüfen.",
+            "sensor_snapshot": snapshot,
+            "findings": findings,
+        }
+        if body.save_event:
+            event = _append_grow_event(
+                state,
+                room_id,
+                plant_id=plant_id,
+                event_type="diagnosis",
+                note=body.note or "Plant-Doctor-Auswertung",
+                payload={
+                    "symptoms": body.symptoms,
+                    "affected_zone": body.affected_zone,
+                    "medium": body.medium,
+                    "findings": findings,
+                },
+                source="plant-doctor",
+            )
+            result["event_id"] = event["id"]
+        return result
 
 
 @router.get("/{room_id}/plants/{plant_id}/journal")
