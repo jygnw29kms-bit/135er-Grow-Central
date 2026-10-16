@@ -1,6 +1,6 @@
 # NEXT LIVE RUN — CANONICAL HANDOFF
 
-Stand: 2026-10-15
+Stand: 2026-10-16
 Status: **VERBINDLICH FÜR DEN NÄCHSTEN GROW-CENTRAL LIVE-RUN**
 
 ## Primärer Auftrag
@@ -15,19 +15,40 @@ Diese Datei dokumentiert die Prüfung der Referenzprojekte:
 - `jnrabit/chlorophyll-chronik` — GPL-3.0, nur Architektur/Verhalten als Basis für eigenständige Neuimplementierung
 - `xn4k/GrowApp` — Konzepte nutzen, keinen Code ohne zweifelsfrei kompatible Lizenz übernehmen
 
-## Reihenfolge — nicht überspringen
+## Reihenfolge — aktueller Erfüllungsstand
 
-1. aktuellen `master` und aktuellen Hardware-/Sensorstand prüfen
-2. bestehende Räume/Pflanzen migrationssicher halten
-3. gemeinsames `GrowEvent`-Modell + echter Sensor-Snapshot
-4. PlantCycle / Pflanzenphasen
-5. GrowProfile / Zielbereiche
-6. Daily Check-in innerhalb des verbindlichen Grow-Central Final-Masters
-7. Foto-Tagebuch mit Event-/Sensor-Snapshot
-8. VPD-Zielbewertung + DLI aus realen PPFD-Historienwerten
-9. eigener regelbasierter Plant Doctor
-10. Regressionstest für GC-ESP32, Pairing, Kalibrierung, MQTT-TLS, History, Mobile/iPhone/Desktop
-11. erst nach bestandenen Gates neuen Live-/Image-Candidate erzeugen
+1. [ ] aktuellen `master` mit dem **real laufenden Pi**, Hardware-/Sensorstand und installiertem Live-SHA vergleichen
+2. [x] bestehende Räume/Pflanzen migrationssicher halten
+3. [x] gemeinsames `GrowEvent`-Modell + echter Sensor-Snapshot
+4. [x] PlantCycle / Pflanzenphasen
+5. [x] GrowProfile / Zielbereiche
+6. [x] Daily Check-in innerhalb des verbindlichen Grow-Central Final-Masters
+7. [x] Foto-Tagebuch mit realem Bild, Pflanzenzuordnung, Phase/Zyklustag und Event-/Sensor-Snapshot
+8. [x] VPD-Zielbewertung + DLI aus realen PPFD-Historienwerten; Schätz-/Teilwerte werden gekennzeichnet
+9. [x] eigener regelbasierter Plant Doctor inkl. Final-Master-UI und Timeline-Event
+10. [ ] Regression auf **realem Pi**: GC-ESP32, Pairing, Kalibrierung, MQTT-TLS, History, Foto, Plant Doctor, HomeKit, Cloud-Link, Mobile/iPhone/Desktop
+11. [ ] erst nach bestandenen realen Pi-Gates neuen Live-/Image-Candidate erzeugen
+
+## Am 2026-10-16 zusätzlich erledigt
+
+- local-first Foto-Tagebuch in `master` gemergt (`c058ed8`)
+- Plant-Doctor-UI in `master` gemergt (`94602a9`)
+- Live-Run-Migrations-/History-Gates in `master` gemergt (`288e6a7`)
+- `cryptography` Runtime + Cloud-Link auf `>=50,<51` angehoben; Security-Audit wieder grün
+- Regression-Gates prüfen explizit:
+  - Legacy-`rooms.json` wird erweitert statt ersetzt
+  - Räume, Zuordnungen, Journale, Pflanzen und Sensorhistorie bleiben erhalten
+  - kaputte Zustandsdatei wird nicht still durch leere Daten ersetzt
+  - historische GrowEvent-Sensor-Snapshots bleiben unveränderlich
+  - CO2 bleibt im Final Master standardmäßig verborgen
+
+## Noch offen vor produktivem Live-Candidate
+
+- BnD/Grow-Central-Arbeitsrechner wieder online bringen und `master` gegen den tatsächlich installierten Pi-Stand vergleichen
+- Pi vor dem Update sichern: Datenzustand + aktuelle Runtime/Version/Live-SHA
+- notwendige Python-Abhängigkeiten kontrolliert auflösen; **kein Downgrade auf anfällige cryptography-46.x-Linie**
+- Cloud-Core-Plesk-Installer ebenfalls von `cryptography>=45,<47` auf die freigegebene 50.x-Linie umstellen und testen (GitHub Issue #76)
+- vollständiger realer Pi-Regressionslauf und erst danach Markierung als Live-/Image-Candidate
 
 ## Verbindliche Schutzregeln
 
@@ -40,11 +61,12 @@ Diese Datei dokumentiert die Prüfung der Referenzprojekte:
 - bestehende Bodenfeuchte-Kalibrierung und sichere GC-ESP32-Aufnahme nicht umgehen
 - Kernfunktionen local-first; Cloud nur optional
 - keine GPL-Codeübernahme in den MIT-Kern
+- vor jedem produktiven Pi-Update erst Backup, Preflight, kontrollierter Restart und Health-/Regression-Check
 
 ## Definition of Done für diesen Handoff
 
 Dieser Handoff ist abgearbeitet, wenn die Akzeptanzkriterien in
 `docs/de/NEXT_LIVE_RUN_EXTERNAL_GROW_FEATURES_2026-10-15.md`
-erfüllt und getestet sind.
+erfüllt und auf dem realen Pi getestet sind.
 
 Bis dahin darf diese Datei nicht als „erledigt“ entfernt oder in historischen Status verschoben werden.
