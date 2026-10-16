@@ -74,6 +74,7 @@ def test_responsive_layers_use_dynamic_viewport_and_safe_areas():
 def test_cloud_status_checks_real_health_endpoint_and_service():
     source = CLOUD_STATUS.read_text(encoding="utf-8")
     assert "135er-grow-central-cloud-link.service" in source
+    assert 'f"{origin}/v7/health"' in source
     assert 'f"{origin}/api/health"' in source
     assert '"connected": connected' in source
     assert '"host": host' in source

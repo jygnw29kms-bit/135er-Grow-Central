@@ -30,7 +30,7 @@ MIN_RETRY = 30
 MAX_RETRY = 600
 PLATFORM_REPORT_SECONDS = min(max(int(os.getenv("GC_PLATFORM_REPORT_SECONDS", "120")), 60), 3600)
 PAIRING_POLL_SECONDS = min(max(int(os.getenv("GC_PAIRING_POLL_SECONDS", "10")), 5), 60)
-EXPECTED_CLOUD_SERVICE = "135er-Grow Central Cloud"
+EXPECTED_LEGACY_CLOUD_SERVICE = "135er-Grow Central Cloud"
 LEGACY_DEVICE_ID = legacy.device_id
 
 
@@ -98,29 +98,73 @@ async def local_status(client: httpx.AsyncClient) -> dict:
 
 
 async def cloud_capabilities(client: httpx.AsyncClient) -> dict:
-    """Probe and verify the Grow Central cloud endpoint before syncing."""
+    """Probe the current V7 control plane, with a pre-V7 fallback."""
+    origin = legacy.CLOUD_URL.rstrip("/")
+    v7_error: str | None = None
     try:
-        response = await client.get(f"{legacy.CLOUD_URL}/api/health", timeout=10)
+        response = await client.get(f"{origin}/v7/health", timeout=10)
+        if response.is_success:
+            data = response.json()
+            version = data.get("version") if isinstance(data, dict) else None
+            compatible = (
+                isinstance(data, dict)
+                and data.get("ok") is True
+                and isinstance(version, int)
+                and version >= 7
+            )
+            result = {
+                "reachable": True,
+                "compatible": compatible,
+                "architecture": "v7-control-v2-device",
+                "version": version,
+                "service": "grow-central-cloud-v7",
+                "admin_mode": data.get("admin_mode") if isinstance(data, dict) else None,
+                "legacy_telemetry": False,
+                "platform_reports": True,
+                "device_pairing": True,
+            }
+            if not compatible:
+                result["reason"] = "unexpected_v7_health"
+            return result
+        v7_error = f"http_{response.status_code}"
+    except Exception as exc:
+        v7_error = type(exc).__name__
+
+    # Compatibility fallback for older closed-test clouds.  New V7/V4-V6
+    # deployments expose /v7/health, so legacy V1 telemetry is never assumed
+    # merely because /api/health exists as a compatibility alias.
+    try:
+        response = await client.get(f"{origin}/api/health", timeout=10)
         if not response.is_success:
-            return {"reachable": True, "compatible": False, "http_status": response.status_code}
+            return {
+                "reachable": True,
+                "compatible": False,
+                "http_status": response.status_code,
+                "v7_error": v7_error,
+            }
         data = response.json()
         if not isinstance(data, dict):
-            return {"reachable": True, "compatible": False, "reason": "invalid_health_payload"}
+            return {"reachable": True, "compatible": False, "reason": "invalid_health_payload", "v7_error": v7_error}
         service = data.get("service")
         version = data.get("version")
-        compatible = bool(data.get("ok")) and service == EXPECTED_CLOUD_SERVICE and isinstance(version, str) and bool(version.strip())
+        compatible = bool(data.get("ok")) and service == EXPECTED_LEGACY_CLOUD_SERVICE and isinstance(version, str) and bool(version.strip())
         result = {
             "reachable": True,
             "compatible": compatible,
+            "architecture": "legacy-v1",
             "version": version,
             "service": service,
             "closed_test_mode": data.get("closed_test_mode"),
+            "legacy_telemetry": True,
+            "platform_reports": False,
+            "device_pairing": False,
+            "v7_error": v7_error,
         }
         if not compatible:
             result["reason"] = "unexpected_cloud_identity"
         return result
     except Exception as exc:
-        return {"reachable": False, "compatible": False, "error": type(exc).__name__}
+        return {"reachable": False, "compatible": False, "error": type(exc).__name__, "v7_error": v7_error}
 
 
 async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
@@ -209,8 +253,9 @@ async def main() -> None:
                     local_headers=local_headers(),
                     capabilities={
                         "cloud_health_version": capabilities.get("version"),
-                        "diagnostics": True,
-                        "support_bundle": True,
+                        "diagnostics": bool(capabilities.get("legacy_telemetry", False)),
+                        "support_bundle": bool(capabilities.get("legacy_telemetry", False)),
+                        "cloud_architecture": capabilities.get("architecture"),
                     },
                 )
                 next_platform_report = now + PLATFORM_REPORT_SECONDS
@@ -218,6 +263,24 @@ async def main() -> None:
                     logger.info("Signed platform report accepted by Grow Central cloud")
                 elif platform_state.get("state") not in {"unpaired", "pending"}:
                     logger.warning("Platform report degraded: %s", platform_state.get("reason", "unknown"))
+
+            if not capabilities.get("legacy_telemetry", True):
+                local = await local_status(client)
+                connected = True
+                ever_connected = True
+                retry_seconds = MIN_RETRY
+                _persist_state(
+                    state="connected",
+                    detail="v7 control plane active",
+                    cloud_compatible=True,
+                    capabilities=capabilities,
+                    local_online=bool(local),
+                    retry_seconds=legacy.SYNC,
+                    platform_report=platform_state,
+                    pairing=pairing_state,
+                )
+                await asyncio.sleep(legacy.SYNC)
+                continue
 
             try:
                 telemetry, local = await telemetry_payload(client)

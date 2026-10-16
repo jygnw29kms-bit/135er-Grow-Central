@@ -29,6 +29,8 @@ class FakeClient:
 
     async def get(self, url, **kwargs):
         self.calls.append((url, kwargs))
+        if isinstance(self.response, list):
+            return self.response.pop(0)
         return self.response
 
 
@@ -55,36 +57,62 @@ def test_cloud_link_rejects_public_image_placeholder_token(monkeypatch, tmp_path
 
 def test_cloud_capabilities_reports_incompatible_http_response(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
-    client = FakeClient(FakeResponse(404, {}))
+    client = FakeClient([FakeResponse(404, {}), FakeResponse(404, {})])
 
     result = asyncio.run(agent_v2.cloud_capabilities(client))
 
-    assert result == {"reachable": True, "compatible": False, "http_status": 404}
+    assert result["reachable"] is True
+    assert result["compatible"] is False
+    assert result["http_status"] == 404
+    assert result["v7_error"] == "http_404"
+    assert client.calls[0][0].endswith("/v7/health")
+    assert client.calls[1][0].endswith("/api/health")
 
 
-def test_cloud_capabilities_accepts_health_contract(monkeypatch):
+def test_cloud_capabilities_prefers_v7_control_plane(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
     client = FakeClient(FakeResponse(200, {
+        "ok": True,
+        "version": 7,
+        "admin_mode": "plesk",
+    }))
+
+    result = asyncio.run(agent_v2.cloud_capabilities(client))
+
+    assert result["compatible"] is True
+    assert result["version"] == 7
+    assert result["architecture"] == "v7-control-v2-device"
+    assert result["legacy_telemetry"] is False
+    assert result["device_pairing"] is True
+    assert client.calls[0][0].endswith("/v7/health")
+    assert len(client.calls) == 1
+
+
+def test_cloud_capabilities_accepts_legacy_health_fallback(monkeypatch):
+    monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
+    client = FakeClient([FakeResponse(404, {}), FakeResponse(200, {
         "ok": True,
         "service": "135er-Grow Central Cloud",
         "version": "0.8.0",
         "closed_test_mode": True,
-    }))
+    })])
 
     result = asyncio.run(agent_v2.cloud_capabilities(client))
 
     assert result["compatible"] is True
     assert result["version"] == "0.8.0"
     assert result["closed_test_mode"] is True
+    assert result["architecture"] == "legacy-v1"
+    assert result["legacy_telemetry"] is True
 
 
-def test_cloud_capabilities_rejects_unrelated_health_endpoint(monkeypatch):
+def test_cloud_capabilities_rejects_unrelated_legacy_health_endpoint(monkeypatch):
     monkeypatch.setattr(agent_v2.legacy, "CLOUD_URL", "https://example.invalid")
-    client = FakeClient(FakeResponse(200, {
+    client = FakeClient([FakeResponse(404, {}), FakeResponse(200, {
         "ok": True,
         "service": "Some Other Service",
         "version": "1.0.0",
-    }))
+    })])
 
     result = asyncio.run(agent_v2.cloud_capabilities(client))
 
@@ -184,3 +212,56 @@ def test_recovery_repeats_contact_handshake(monkeypatch, failure):
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(agent_v2.main())
     assert reasons == ["startup", "reconnect"]
+
+
+def test_v7_control_plane_skips_legacy_v1_telemetry(monkeypatch):
+    monkeypatch.setattr(agent_v2.legacy, "CLOUD_ENABLED", True)
+    monkeypatch.setattr(agent_v2.legacy, "validate_configuration", lambda: None)
+    monkeypatch.setattr(agent_v2.time, "monotonic", lambda: 0)
+    states = []
+    monkeypatch.setattr(agent_v2, "_persist_state", lambda **kw: states.append(kw))
+
+    async def capabilities(client):
+        return {
+            "compatible": True,
+            "version": 7,
+            "architecture": "v7-control-v2-device",
+            "legacy_telemetry": False,
+        }
+
+    async def no_pairing(client):
+        return None
+
+    async def report(*args, **kwargs):
+        return {"state": "unpaired", "sent": False}
+
+    async def local(client):
+        return {"ok": True}
+
+    async def legacy_telemetry_must_not_run(client):
+        pytest.fail("V7 control plane must not call legacy /api/v1 telemetry")
+
+    async def sleep(delay):
+        raise asyncio.CancelledError
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+    monkeypatch.setattr(agent_v2, "cloud_capabilities", capabilities)
+    monkeypatch.setattr(agent_v2, "_poll_pending_pairing", no_pairing)
+    monkeypatch.setattr(agent_v2, "send_platform_report", report)
+    monkeypatch.setattr(agent_v2, "local_status", local)
+    monkeypatch.setattr(agent_v2, "telemetry_payload", legacy_telemetry_must_not_run)
+    monkeypatch.setattr(agent_v2.asyncio, "sleep", sleep)
+    monkeypatch.setattr(agent_v2.httpx, "AsyncClient", Client)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(agent_v2.main())
+
+    assert states[-1]["state"] == "connected"
+    assert states[-1]["detail"] == "v7 control plane active"
+    assert states[-1]["cloud_compatible"] is True
