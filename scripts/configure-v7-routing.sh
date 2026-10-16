@@ -14,7 +14,33 @@ set -a
 . "$ENV_FILE"
 set +a
 MODE="$(cat "$MODE_FILE" 2>/dev/null || printf '%s' "${CLOUD_ADMIN_MODE:-standalone}")"
-CORE_PORT="${APP_PORT:-18765}"
+
+detect_core_port(){
+  local candidate exec_line port
+  candidate="${APP_PORT:-}"
+  if [[ "$candidate" =~ ^[0-9]{2,5}$ ]] && curl -fsS --connect-timeout 2 "http://127.0.0.1:${candidate}/health" >/dev/null 2>&1; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+  exec_line="$(systemctl show "$SERVICE" -p ExecStart --value 2>/dev/null || true)"
+  port="$(printf '%s\n' "$exec_line" | sed -nE 's/.*--port[ =]+([0-9]{2,5}).*/\1/p' | head -n1)"
+  if [[ "$port" =~ ^[0-9]{2,5}$ ]] && curl -fsS --connect-timeout 2 "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
+    printf '%s' "$port"
+    return 0
+  fi
+  for candidate in 18765 18766 18767 18768 18769 18770 18771 18772; do
+    [[ "$candidate" == "${V7_ADMIN_PORT:-}" || "$candidate" == "${V7_PLATFORM_PORT:-}" ]] && continue
+    if curl -fsS --connect-timeout 1 "http://127.0.0.1:${candidate}/health" 2>/dev/null \
+      | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and d.get("service") == "135er-growcentral-cloud"' 2>/dev/null; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  echo "Core-Port von ${SERVICE} konnte nicht ermittelt werden." >&2
+  return 1
+}
+
+CORE_PORT="$(detect_core_port)"
 ADMIN_PORT="${V7_ADMIN_PORT:?V7_ADMIN_PORT fehlt}"
 PLATFORM_PORT="${V7_PLATFORM_PORT:-18767}"
 HOST="${PUBLIC_URL#https://}"; HOST="${HOST#http://}"; HOST="${HOST%%/*}"

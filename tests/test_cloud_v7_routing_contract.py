@@ -9,7 +9,9 @@ def read(path: str) -> str:
 
 def test_plesk_v7_router_keeps_v6_core_contract_public():
     routing = read("scripts/configure-v7-routing.sh")
-    assert 'CORE_PORT="${APP_PORT:-18765}"' in routing
+    assert "detect_core_port" in routing
+    assert 'systemctl show "$SERVICE" -p ExecStart --value' in routing
+    assert 'CORE_PORT="$(detect_core_port)"' in routing
     assert "location = /health {" in routing
     assert "proxy_pass http://127.0.0.1:${CORE_PORT}/health;" in routing
     assert "location = /.well-known/growcentral-cloud {" in routing
