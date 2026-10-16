@@ -8,6 +8,7 @@ from app.automation import router as automation_router, install as install_autom
 from app.recipes import router as recipes_router
 from app.timelapse import router as timelapse_router
 from app.recordings import router as recordings_router
+from app.grow_photos import router as grow_photos_router
 from app.auth_middleware import GuiAuthMiddleware
 from app.gui_auth import router as gui_auth_router
 from app.firstboot import router as firstboot_router
@@ -43,6 +44,7 @@ app.include_router(automation_router)
 app.include_router(recipes_router)
 app.include_router(timelapse_router)
 app.include_router(recordings_router)
+app.include_router(grow_photos_router)
 app.include_router(firstboot_router)
 app.include_router(rooms_router)
 app.include_router(cloud_status_router)
