@@ -17,32 +17,30 @@ LED_CONTROL_CANDIDATES = (
 )
 
 
-def install(camera_module: Any, profile=None) -> None:
+def install(camera_module: Any) -> None:
     if getattr(camera_module, "_GC_POLICY_INSTALLED", False):
         return
-
-    profile = current_profile() if profile is None else profile
-    max_width = profile.camera_max_width
-    max_height = profile.camera_max_height
 
     original_parse_modes = camera_module._parse_mjpeg_modes
     original_resolve_mode = camera_module._resolve_capture_mode
     original_controls = camera_module._controls_sync
     original_set_control = camera_module._set_control_sync
 
-    camera_module._GC_BASE_PARSE_MJPEG_MODES = original_parse_modes
-    camera_module._GC_BASE_RESOLVE_CAPTURE_MODE = original_resolve_mode
+    def _limits():
+        # Resolve the canonical hardware profile at use time. This keeps the
+        # policy deterministic in diagnostics/tests and allows a future runtime
+        # profile refresh without stacking wrappers around the camera backend.
+        profile = current_profile()
+        return profile, profile.camera_max_width, profile.camera_max_height
 
     def parse_modes_profiled(text: str):
-        modes = original_parse_modes(text)
-        return [
-            mode
-            for mode in modes
-            if int(mode.get("width") or 0) <= max_width
-            and int(mode.get("height") or 0) <= max_height
-        ]
+        # Discovery describes what the UVC device can actually do. Do not hide
+        # native modes here: the hardware profile is enforced when a capture is
+        # selected, and controls/status expose the supported maximum separately.
+        return original_parse_modes(text)
 
     def resolve_mode_profiled(camera_id, width, height):
+        _profile, max_width, max_height = _limits()
         limit = f"{max_width}x{max_height}"
         if width is not None and width > max_width:
             raise ValueError(f"Grow Central hardware profile limits camera resolution to {limit}")
@@ -51,6 +49,7 @@ def install(camera_module: Any, profile=None) -> None:
         return original_resolve_mode(camera_id, width, height)
 
     def controls_with_led(camera_id):
+        profile, max_width, max_height = _limits()
         payload = original_controls(camera_id)
         controls = payload.get("controls") or []
         led = next((row for row in controls if row.get("name") in LED_CONTROL_CANDIDATES), None)

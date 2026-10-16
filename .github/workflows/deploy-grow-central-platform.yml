@@ -1,0 +1,114 @@
+name: Deploy Grow Central Platform to grow-central.de
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'cloud/v7/platform_status_app.py'
+      - 'scripts/install-platform-status-v1.sh'
+      - 'scripts/configure-v7-routing.sh'
+      - 'deploy/plesk-extension/**'
+      - '.github/workflows/deploy-grow-central-platform.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Cloud Platform Status and Plesk Extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate deployment payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/install-platform-status-v1.sh
+          bash -n scripts/configure-v7-routing.sh
+          python3 -m py_compile cloud/v7/platform_status_app.py
+          test -f deploy/plesk-extension/meta.xml
+          grep -q '<version>1.2.0</version>' deploy/plesk-extension/meta.xml
+          (cd deploy/plesk-extension && zip -qr /tmp/grow-central-plesk-extension.zip .)
+
+      - name: Deploy with existing Plesk SSH credentials
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SSH_PORT:=22}"
+          test -n "$SSH_HOST"
+          test -n "$SSH_USERNAME"
+          test -n "$SSH_PASSWORD"
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          install -d -m 700 ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          export SSHPASS="$SSH_PASSWORD"
+
+          remote_exec() {
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=yes -o BatchMode=no "$SSH_USERNAME@$SSH_HOST" "$@"
+          }
+          remote_copy() {
+            sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=yes "$1" "$SSH_USERNAME@$SSH_HOST:$2"
+          }
+
+          remote_exec 'id -u' >/tmp/remote-uid
+          remote_copy /tmp/grow-central-plesk-extension.zip /tmp/grow-central-plesk-extension.zip
+
+          cat > /tmp/growcentral-remote-deploy.sh <<'REMOTE'
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+
+          curl -fsSL https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-platform-status-v1.sh -o /tmp/install-platform-status-v1.sh
+          chmod 0755 /tmp/install-platform-status-v1.sh
+          /tmp/install-platform-status-v1.sh
+
+          if command -v plesk >/dev/null 2>&1; then
+            if plesk bin extension --list 2>/dev/null | grep -qi 'grow-central'; then
+              plesk bin extension --upgrade /tmp/grow-central-plesk-extension.zip
+            else
+              plesk bin extension --install /tmp/grow-central-plesk-extension.zip
+            fi
+          else
+            echo 'Plesk CLI fehlt auf Zielhost' >&2
+            exit 20
+          fi
+
+          systemctl is-active --quiet 135er-growcentral-cloud-platform
+          curl -fsS --connect-timeout 5 http://127.0.0.1:18767/health >/dev/null
+          plesk bin extension --list | grep -qi 'grow-central'
+          rm -f /tmp/install-platform-status-v1.sh /tmp/grow-central-plesk-extension.zip
+          REMOTE
+          B64="$(base64 -w0 /tmp/growcentral-remote-deploy.sh)"
+
+          if grep -qx 0 /tmp/remote-uid; then
+            remote_exec "echo '$B64' | base64 -d | bash"
+          elif remote_exec 'sudo -n true' >/dev/null 2>&1; then
+            remote_exec "echo '$B64' | base64 -d | sudo -n bash"
+          else
+            PASS_B64="$(printf '%s' "$SSH_PASSWORD" | base64 -w0)"
+            remote_exec "PASS=\$(echo '$PASS_B64' | base64 -d); echo \"\$PASS\" | sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash\""
+          fi
+
+          rm -f /tmp/growcentral-remote-deploy.sh /tmp/remote-uid
+
+      - name: Verify public platform endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/platform/health
+          code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/v7/platform/challenge \
+            -H 'Content-Type: application/json' \
+            -d '{"device_id":"00000000-0000-0000-0000-000000000000"}' \
+            -o /tmp/challenge-response.json -w '%{http_code}')"
+          printf '%s\n' "$code" | grep -Eq '^(404|422)$'
