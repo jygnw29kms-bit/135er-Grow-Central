@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-RAW="${RAW_V6_PAYLOAD:-https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-135ercloud-v6.payload.sh}"
+RAW="${RAW_CLOUD_CORE_PAYLOAD:-https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-cloud-core.payload.sh}"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP" "$TMP.patched"' EXIT
 [[ $EUID -eq 0 ]] || { echo "Bitte als root ausführen." >&2; exit 1; }
 
 curl -fsSL "$RAW" -o "$TMP"
 
-# The V6 application/core itself is Plesk-independent. Only its platform/vhost
+# The Cloud Core itself is Plesk-independent. Only its platform/vhost
 # functions were hard-wired to Plesk. Insert standalone overrides immediately
 # before main executes, leaving account/device/Ed25519/database logic unchanged.
 python3 - "$TMP" "$TMP.patched" <<'PY'
@@ -17,10 +17,10 @@ import sys
 src=Path(sys.argv[1]).read_text()
 needle='\nmain "$@"'
 if needle not in src:
-    raise SystemExit('V6 payload structure not recognized')
+    raise SystemExit('Cloud Core payload structure not recognized')
 override=r'''
 
-# ---- V7 standalone compatibility overrides ---------------------------------
+# ---- Standalone Cloud Core platform overrides ---------------------------------
 detect_platform() {
   [[ -r /etc/os-release ]] || die "/etc/os-release fehlt."
   . /etc/os-release

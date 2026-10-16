@@ -6,11 +6,11 @@ on:
     branches: [ master ]
     paths:
       - 'cloud/**'
-      - 'scripts/install-135ercloud-v6.sh'
-      - 'scripts/install-135ercloud-v6.payload.sh'
       - 'scripts/install-135ercloud-v7.sh'
+      - 'scripts/install-cloud-core.sh'
+      - 'scripts/install-cloud-core.payload.sh'
+      - 'scripts/generate-cloud-installer.sh'
       - 'scripts/bootstrap-standalone-cloud-core.sh'
-      - 'scripts/setup-135ercloud-apt-repo-v1.sh'
       - 'scripts/setup-135ercloud-apt-repo-v2.sh'
       - 'scripts/add-135ercloud-apt-repo.sh'
       - 'scripts/configure-cloud-admin-mode.sh'
@@ -37,10 +37,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n scripts/install-135ercloud-v6.sh
+          bash -n scripts/install-cloud-core.sh
           bash -n scripts/install-135ercloud-v7.sh
           bash -n scripts/bootstrap-standalone-cloud-core.sh
-          bash -n scripts/setup-135ercloud-apt-repo-v1.sh
           bash -n scripts/setup-135ercloud-apt-repo-v2.sh
           bash -n scripts/add-135ercloud-apt-repo.sh
           bash -n scripts/configure-cloud-admin-mode.sh
@@ -84,7 +83,7 @@ jobs:
           cloud=V7
           cloud_package=135er-growcentral-cloud
           cloud_package_version=7.0.0
-          upgrade_from=V6
+          core=cloud-core-v7
           admin_modes=standalone,plesk,both
           device_entitlements=BASIC,PLUS,PRO,INTERNAL
           entitlement_identity=Ed25519-GCLOUD2

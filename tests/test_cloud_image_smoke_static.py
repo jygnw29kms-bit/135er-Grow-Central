@@ -74,7 +74,7 @@ def test_remote_maintenance_assets_remain_dormant_if_retained_for_future_work():
 
 
 def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
-    installer = (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_text(encoding="utf-8")
+    installer = (ROOT / "scripts/install-cloud-core.payload.sh").read_text(encoding="utf-8")
     assert "growcentral-maintenance-code" in installer
     assert "growcentral-maintenance-worker" in installer
     assert 'permitlisten="127.0.0.1:{port}"' in installer
@@ -85,8 +85,8 @@ def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
 
 
 def test_packaged_cloud_installer_matches_current_payload():
-    wrapper = (ROOT / "scripts/install-135ercloud-v6.sh").read_text(encoding="utf-8")
+    wrapper = (ROOT / "scripts/install-cloud-core.sh").read_text(encoding="utf-8")
     encoded = wrapper.split("base64 -d <<'__GCLOUD_PAYLOAD__' | gzip -dc > \"$TMP\"\n", 1)[1].split("\n__GCLOUD_PAYLOAD__", 1)[0]
     decoded = gzip.decompress(base64.b64decode(encoded))
-    payload = (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_bytes().replace(b"\r\n", b"\n")
+    payload = (ROOT / "scripts/install-cloud-core.payload.sh").read_bytes().replace(b"\r\n", b"\n")
     assert decoded == payload

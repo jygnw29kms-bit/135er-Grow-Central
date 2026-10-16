@@ -7,7 +7,7 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_v7_installer_preserves_legacy_data_and_modes():
+def test_v7_installer_preserves_existing_data_and_modes():
     text = read("scripts/install-135ercloud-v7.sh")
     assert "backup_current" in text
     assert "sqlite3" in text and ".backup" in text
@@ -20,10 +20,10 @@ def test_v7_installer_preserves_legacy_data_and_modes():
     assert "rm -rf \"$CONF_DIR\"" not in text
 
 
-def test_standalone_bootstrap_keeps_v6_identity_core():
+def test_standalone_bootstrap_keeps_identity_core():
     text = read("scripts/bootstrap-standalone-cloud-core.sh")
-    assert "install-135ercloud-v6.payload.sh" in text
-    assert "V7 standalone compatibility overrides" in text
+    assert "install-cloud-core.payload.sh" in text
+    assert "Standalone Cloud Core platform overrides" in text
     assert "configure_plesk()" in text
     assert "proxy_pass http://127.0.0.1:$APP_PORT" in text
 

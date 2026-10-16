@@ -13,7 +13,7 @@ BACKUP_DIR="${BACKUP_DIR:-/root/${SERVICE}-backups}"
 SYSTEMD_ADMIN="/etc/systemd/system/${ADMIN_SERVICE}.service"
 V7_SOURCE="${V7_SOURCE:-/usr/lib/${SERVICE}/v7/admin_app.py}"
 MODE_HELPER="${MODE_HELPER:-/usr/lib/${SERVICE}/configure-cloud-admin-mode.sh}"
-V6_INSTALLER="${V6_INSTALLER:-/usr/lib/${SERVICE}/install-135ercloud-v6.sh}"
+CORE_INSTALLER="${CORE_INSTALLER:-/usr/lib/${SERVICE}/install-cloud-core.sh}"
 STANDALONE_BOOTSTRAP="${STANDALONE_BOOTSTRAP:-/usr/lib/${SERVICE}/bootstrap-standalone-cloud-core.sh}"
 GITHUB_RAW="https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master"
 PACKAGE_MODE=0
@@ -35,7 +35,7 @@ while [[ $# -gt 0 ]]; do
   --package-mode                     non-interactive APT postinst mode
   --admin-mode standalone|plesk|both explicit admin mode
 
-Existing V6 data and secrets are preserved. A backup is created before changes.
+Existing Cloud Core data and secrets are preserved. A backup is created before changes.
 Fresh Debian/Ubuntu installations work with or without Plesk.
 EOF
       exit 0;;
@@ -65,7 +65,7 @@ backup_current(){
   install -d -m 0700 "$dir"
   if [[ -f "$ENV_FILE" ]]; then cp -a "$ENV_FILE" "$dir/cloud.env"; fi
   if [[ -f "$MODE_FILE" ]]; then cp -a "$MODE_FILE" "$dir/admin-mode"; fi
-  if [[ -f "$APP_DIR/app.py" ]]; then cp -a "$APP_DIR/app.py" "$dir/app-v6.py"; fi
+  if [[ -f "$APP_DIR/app.py" ]]; then cp -a "$APP_DIR/app.py" "$dir/app-core.py"; fi
   if source_env; then
     if [[ "${DATABASE_URL:-}" == sqlite:////* ]]; then
       db_path="/${DATABASE_URL#sqlite:////}"
@@ -87,16 +87,16 @@ fetch_exec(){
   chmod 0755 "$target"
 }
 
-ensure_v6(){
+ensure_core(){
   if systemctl cat "$SERVICE" >/dev/null 2>&1 && [[ -f "$ENV_FILE" && -f "$APP_DIR/app.py" ]]; then
-    ok "Bestehende V6/Cloud-Instanz erkannt"
+    ok "Bestehende Cloud-Core-Instanz erkannt"
     return 0
   fi
 
   if command -v plesk >/dev/null 2>&1 || [[ -x /usr/local/psa/bin/plesk ]]; then
-    log "Frischinstallation: Plesk erkannt; installiere kompatiblen V6-Core über Plesk-Bootstrap."
-    [[ -x "$V6_INSTALLER" ]] || fetch_exec "$GITHUB_RAW/scripts/install-135ercloud-v6.sh" "$V6_INSTALLER"
-    if [[ "$PACKAGE_MODE" -eq 1 ]]; then "$V6_INSTALLER" --package-mode; else "$V6_INSTALLER"; fi
+    log "Frischinstallation: Plesk erkannt; installiere aktuellen Cloud Core über Plesk-Bootstrap."
+    [[ -x "$CORE_INSTALLER" ]] || fetch_exec "$GITHUB_RAW/scripts/install-cloud-core.sh" "$CORE_INSTALLER"
+    if [[ "$PACKAGE_MODE" -eq 1 ]]; then "$CORE_INSTALLER" --package-mode; else "$CORE_INSTALLER"; fi
   else
     log "Frischinstallation: kein Plesk erkannt; installiere kompatiblen Core im Standalone-Modus."
     [[ -x "$STANDALONE_BOOTSTRAP" ]] || fetch_exec "$GITHUB_RAW/scripts/bootstrap-standalone-cloud-core.sh" "$STANDALONE_BOOTSTRAP"
@@ -238,7 +238,7 @@ main(){
   export DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
   install -d -m 0750 "$CONF_DIR"
   install -d -m 0700 "$BACKUP_DIR"
-  ensure_v6
+  ensure_core
   backup_current
   install_mode_helper
   local admin_port
@@ -254,7 +254,7 @@ main(){
   echo "  135er Grow Central Cloud V7"
   echo "=============================================================================="
   echo "  Upgrade       : erfolgreich"
-  echo "  Cloud-Core    : V6-kompatibel / Daten erhalten"
+  echo "  Cloud-Core    : aktuell / Daten erhalten"
   echo "  Admin-Modus   : $(cat "$MODE_FILE" 2>/dev/null || echo standalone)"
   echo "  Admin-Service : $ADMIN_SERVICE"
   echo "  APT-fähig     : ja"

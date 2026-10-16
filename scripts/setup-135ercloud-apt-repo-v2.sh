@@ -50,7 +50,7 @@ install -d "$PKG/DEBIAN" "$PKG/usr/lib/$PKG_NAME/v7" "$PKG/usr/sbin"
 
 fetch(){ curl -fsSL "$1" -o "$2"; }
 fetch "$RAW/scripts/install-135ercloud-v7.sh" "$PKG/usr/lib/$PKG_NAME/install-135ercloud-v7.sh"
-fetch "$RAW/scripts/install-135ercloud-v6.sh" "$PKG/usr/lib/$PKG_NAME/install-135ercloud-v6.sh"
+fetch "$RAW/scripts/install-cloud-core.sh" "$PKG/usr/lib/$PKG_NAME/install-cloud-core.sh"
 fetch "$RAW/scripts/bootstrap-standalone-cloud-core.sh" "$PKG/usr/lib/$PKG_NAME/bootstrap-standalone-cloud-core.sh"
 fetch "$RAW/scripts/configure-cloud-admin-mode.sh" "$PKG/usr/lib/$PKG_NAME/configure-cloud-admin-mode.sh"
 fetch "$RAW/scripts/configure-v7-routing.sh" "$PKG/usr/lib/$PKG_NAME/configure-v7-routing.sh"
@@ -127,6 +127,7 @@ EOF
 chmod 0755 "$PKG/usr/sbin/135ercloud-setup" "$PKG/usr/sbin/135ercloud-admin-mode" "$PKG/usr/sbin/135ercloud-route-refresh"
 
 # Static validation before publishing.
+bash -n "$PKG/usr/lib/$PKG_NAME/install-cloud-core.sh"
 bash -n "$PKG/usr/lib/$PKG_NAME/install-135ercloud-v7.sh"
 bash -n "$PKG/usr/lib/$PKG_NAME/bootstrap-standalone-cloud-core.sh"
 bash -n "$PKG/usr/lib/$PKG_NAME/configure-cloud-admin-mode.sh"

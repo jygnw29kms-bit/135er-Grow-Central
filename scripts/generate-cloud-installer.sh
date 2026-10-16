@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 root="$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)"
-payload="$root/scripts/install-135ercloud-v6.payload.sh"
-output="$root/scripts/install-135ercloud-v6.sh"
+payload="$root/scripts/install-cloud-core.payload.sh"
+output="$root/scripts/install-cloud-core.sh"
 temporary="${output}.generated"
 {
   cat <<'HEADER'

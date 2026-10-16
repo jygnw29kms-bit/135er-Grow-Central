@@ -24,10 +24,10 @@ FRITZ! / Tapo / C920 / Mars Hydro / Räume
 
 ## Kanonische Installation
 
-- Server-Installer: `scripts/install-135ercloud-v6.sh`
-- APT-Bootstrap: `scripts/setup-135ercloud-apt-repo-v1.sh`
+- Cloud-Core-Installer: `scripts/install-cloud-core.sh`
+- APT-Bootstrap: `scripts/setup-135ercloud-apt-repo-v2.sh`
 - signiertes Repository: `https://repo.grow-central.de/apt`
-- öffentlicher Server-Installer: [`scripts/install-135ercloud-v6.sh`](../scripts/install-135ercloud-v6.sh)
+- öffentlicher Cloud-Core-Installer: [`scripts/install-cloud-core.sh`](../scripts/install-cloud-core.sh)
 - öffentliche APT-Einrichtung: [`scripts/add-135ercloud-apt-repo.sh`](../scripts/add-135ercloud-apt-repo.sh)
 
 Release- und Buildstände werden im öffentlichen Repository über [`RELEASE_STATE.md`](../RELEASE_STATE.md) und die veröffentlichten Release-Artefakte einschließlich ihrer Prüfsummen dokumentiert.
@@ -59,7 +59,7 @@ Bei Server-/Internetausfall:
 
 ## Release-Abgleich Build 118
 
-Cloud V6 und APT werden zusammen mit der Nexus-Website erneut veröffentlicht, ohne Build 118 künstlich zu Build 119 zu machen: diese Publishing-/Dokumentationsänderungen verändern nicht den vorgesehenen Pi-Laufzeitkandidaten. Ein neuer Pi-Build ist erst bei einem Runtime-Fix erforderlich.
+Cloud V7, Cloud Core und das signierte APT-Repository werden gemeinsam gepflegt. Cloud-Releases und Pi-Image-Releases bleiben technisch getrennte Artefakte.
 
 ## Validierung
 

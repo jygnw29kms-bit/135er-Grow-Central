@@ -42,7 +42,7 @@ Android / iOS / Desktop / Kiosk
 - Elecrow 7-Zoll Touch-Kiosk;
 - Räume, Pflanzen, Growtagebuch und Automationen;
 - Mobile Nexus Clients;
-- Cloud V6 und signiertes APT-Repository.
+- Cloud V7 mit versionsneutralem Cloud Core und signiertem APT-Repository.
 
 ## Distribution
 

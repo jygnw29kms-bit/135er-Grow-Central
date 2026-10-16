@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # ==============================================================================
-# 135er GrowCentral Cloud V6
+# 135er GrowCentral Cloud Core
 # Official cloud: https://135ercloud.grow-central.de
 #
 # Goals:
@@ -64,7 +64,7 @@ step_fail(){ SETUP_FAILED=1; printf '       \033[1;31m✗ FAILED\033[0m  %s\n' "
 final_status(){
   echo
   echo "=============================================================================="
-  echo "  135er GrowCentral Cloud V6 - SETUP STATUS"
+  echo "  135er GrowCentral Cloud Core - SETUP STATUS"
   echo "=============================================================================="
   printf "  Cloud               : https://%s\n" "$CLOUD_HOST"
   printf "  APT-Repository      : %s\n" "$APT_REPO_URL"
@@ -294,7 +294,7 @@ ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
 
 app = FastAPI(
     title="135er GrowCentral Cloud",
-    version="6.1",
+    version="7.0-core",
     docs_url=None,
     redoc_url=None,
 )
@@ -507,7 +507,7 @@ def health():
     return {
         "ok": True,
         "service": "135er-growcentral-cloud",
-        "version": 6,
+        "version": 7,
         "time": now(),
         "online_devices": len(device_sockets),
     }
@@ -518,7 +518,7 @@ def discovery():
     return {
         "product": "135er-GrowCentral",
         "protocol_version": 2,
-        "cloud_version": 6,
+        "cloud_version": 7,
         "official": PUBLIC_URL == "https://135ercloud.grow-central.de",
         "public_url": PUBLIC_URL,
         "requires_https": True,
@@ -1180,7 +1180,7 @@ EOF
 write_systemd() {
   cat > "$SYSTEMD_FILE" <<EOF
 [Unit]
-Description=135er GrowCentral Cloud V6
+Description=135er GrowCentral Cloud Core
 After=network-online.target
 Wants=network-online.target
 
@@ -1304,7 +1304,7 @@ configure_plesk() {
   fi
 
   cat > "$vhost" <<EOF
-# 135er GrowCentral Cloud V6 - Plesk-isolated reverse proxy
+# 135er GrowCentral Cloud Core - Plesk-isolated reverse proxy
 location ~ ^/.* {
     proxy_pass http://127.0.0.1:$APP_PORT;
     proxy_http_version 1.1;
@@ -1385,7 +1385,7 @@ print_summary() {
   cat <<EOF
 
 ==============================================================================
-  135er GrowCentral Cloud V6 installiert
+  135er GrowCentral Cloud Core installiert
 ==============================================================================
   Bestehende Website : https://$ROOT_DOMAIN       (nicht ersetzt)
   Offizielle Cloud   : https://$CLOUD_HOST
@@ -1437,7 +1437,7 @@ main() {
 
   echo
   echo "=============================================================================="
-  echo "  135er GrowCentral Cloud V6 - VISUELLER SETUP-ASSISTENT"
+  echo "  135er GrowCentral Cloud Core - VISUELLER SETUP-ASSISTENT"
   echo "=============================================================================="
   echo "  Cloud        : https://$CLOUD_HOST"
   echo "  APT-Repo     : $APT_REPO_URL"
