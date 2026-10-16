@@ -182,12 +182,52 @@ EOF
   echo "Standalone V7 routing aktiv."
 }
 
+normalize_core_public_url(){
+  local expected="https://${CANONICAL_HOST}" current backup
+  current="${PUBLIC_URL:-}"
+  [[ "$HOST" == "$CANONICAL_HOST" ]] || return 0
+  [[ "$current" == "$expected" ]] && return 0
+  install -d -m 0700 "/root/${SERVICE}-backups"
+  backup="/root/${SERVICE}-backups/cloud.env.pre-canonical.$(date +%Y%m%d-%H%M%S)"
+  cp -a "$ENV_FILE" "$backup"
+  EXPECTED_PUBLIC_URL="$expected" python3 - "$ENV_FILE" <<'PY'
+from pathlib import Path
+import os,sys
+p=Path(sys.argv[1])
+lines=p.read_text().splitlines()
+value=os.environ["EXPECTED_PUBLIC_URL"]
+out=[]
+seen=False
+for line in lines:
+    if line.startswith("PUBLIC_URL="):
+        if not seen:
+            out.append("PUBLIC_URL="+value)
+            seen=True
+        continue
+    out.append(line)
+if not seen:
+    out.append("PUBLIC_URL="+value)
+p.write_text("\n".join(out).rstrip()+"\n")
+PY
+  PUBLIC_URL="$expected"
+  export PUBLIC_URL
+  if systemctl restart "$SERVICE" && sleep 1 && curl -fsS --connect-timeout 5 "http://127.0.0.1:${CORE_PORT}/health" >/dev/null; then
+    echo "Grow-Central Core PUBLIC_URL auf ${expected} vereinheitlicht."
+    return 0
+  fi
+  cp -a "$backup" "$ENV_FILE"
+  systemctl restart "$SERVICE" >/dev/null 2>&1 || true
+  echo "Canonical-PUBLIC_URL fehlgeschlagen; cloud.env wurde zurueckgerollt." >&2
+  return 1
+}
+
 configure_plesk(){
   command -v plesk >/dev/null 2>&1 || { echo "Plesk-Modus gewählt, Plesk fehlt." >&2; exit 3; }
   local dir="/var/www/vhosts/system/${HOST}/conf" file backup tmp
   file="$dir/vhost_nginx.conf"
   [[ -d "$dir" ]] || { echo "Plesk-vHost fehlt: $dir" >&2; exit 4; }
   install -d -m 0700 "/root/${SERVICE}-backups"
+  normalize_core_public_url
   backup="/root/${SERVICE}-backups/vhost_nginx.pre-v7.$(date +%Y%m%d-%H%M%S).conf"
   [[ -f "$file" ]] && cp -a "$file" "$backup"
   touch "$file"

@@ -18,6 +18,10 @@ def test_plesk_v7_router_keeps_v6_core_contract_public():
     assert r'proxy_set_header Upgrade \$http_upgrade;' in routing
     assert "location = /api/health {" in routing
     assert "proxy_pass http://127.0.0.1:${PLATFORM_PORT}/api/health;" in routing
+    assert "normalize_core_public_url" in routing
+    assert 'expected="https://${CANONICAL_HOST}"' in routing
+    assert "cloud.env.pre-canonical." in routing
+    assert 'cp -a "$backup" "$ENV_FILE"' in routing
 
 
 def test_platform_sidecar_exposes_pre_v7_pi_health_contract():
@@ -45,3 +49,4 @@ def test_platform_deploy_uses_checked_out_sources_and_verifies_core_routes():
         "https://135ercloud.grow-central.de/api/v2/device/authorize",
     ):
         assert endpoint in workflow
+    assert 'd.get("public_url") == "https://135ercloud.grow-central.de"' in workflow

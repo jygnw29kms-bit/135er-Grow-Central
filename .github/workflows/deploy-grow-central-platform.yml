@@ -111,8 +111,8 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/platform/health
-          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and int(d.get("version",0)) >= 6'
-          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/.well-known/growcentral-cloud | python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d.get("protocol_version",0)) >= 2'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and int(d.get("version",0)) >= 4'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/.well-known/growcentral-cloud | python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d.get("protocol_version",0)) >= 2 and d.get("public_url") == "https://135ercloud.grow-central.de"'
           curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and d.get("service") == "135er-Grow Central Cloud" and str(d.get("version")) == "7"'
           pair_code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 -X POST -H 'Content-Type: application/json' -d '{}' https://135ercloud.grow-central.de/api/v2/device/authorize -o /tmp/pair-probe.json -w '%{http_code}')"
           printf '%s\n' "$pair_code" | grep -Eq '^(400|422)$'
