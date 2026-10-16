@@ -35,8 +35,18 @@ if ($disk.IsReadOnly) {
 Write-Host "Ziel: Disk $DiskNumber / $($disk.FriendlyName) / $([math]::Round($disk.Size / 1GB, 2)) GiB" -ForegroundColor Cyan
 Write-Host 'Alle vorhandenen Partitionen auf genau diesem Datentraeger werden geloescht.' -ForegroundColor Yellow
 
-Clear-Disk -Number $DiskNumber -RemoveData -RemoveOEM -Confirm:$false
-Initialize-Disk -Number $DiskNumber -PartitionStyle MBR | Out-Null
+$existingPartitions = @(Get-Partition -DiskNumber $DiskNumber -ErrorAction SilentlyContinue)
+if ($existingPartitions.Count -gt 0) {
+    Clear-Disk -Number $DiskNumber -RemoveData -RemoveOEM -Confirm:$false
+}
+
+$disk = Get-Disk -Number $DiskNumber
+if ($disk.PartitionStyle -eq 'RAW') {
+    Initialize-Disk -Number $DiskNumber -PartitionStyle MBR | Out-Null
+} elseif ($disk.PartitionStyle -ne 'MBR') {
+    Set-Disk -Number $DiskNumber -PartitionStyle MBR
+}
+
 $partition = New-Partition -DiskNumber $DiskNumber -UseMaximumSize -AssignDriveLetter
 $volume = Format-Volume -Partition $partition -FileSystem FAT32 -NewFileSystemLabel $Label -Confirm:$false -Force
 $root = "$($volume.DriveLetter):\"
