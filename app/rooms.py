@@ -435,6 +435,81 @@ def _is_today(timestamp: str | None) -> bool:
         return False
 
 
+def _parse_light_hours(value: str | None, default: float = 18.0) -> float:
+    raw = str(value or "").strip().lower().replace("h", "")
+    if "/" in raw:
+        raw = raw.split("/", 1)[0]
+    try:
+        hours = float(raw)
+    except (TypeError, ValueError):
+        return default
+    return min(max(hours, 0.0), 24.0)
+
+
+def calculate_daily_dli(samples: list[dict[str, Any]], light_hours: float = 18.0) -> dict[str, Any]:
+    points: list[tuple[datetime, float]] = []
+    for row in samples:
+        value = row.get("ppfd_umol_m2_s")
+        stamp = row.get("timestamp")
+        if value is None or not stamp:
+            continue
+        try:
+            number = float(value)
+            when = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not math.isfinite(number) or number < 0:
+            continue
+        points.append((when, number))
+    points.sort(key=lambda item: item[0])
+    if not points:
+        return {"dli_mol_m2_day": None, "sample_count": 0, "coverage_seconds": 0, "quality": "unavailable", "estimated": False}
+    if len(points) == 1:
+        estimate = points[0][1] * max(light_hours, 0.0) * 3600.0 / 1_000_000.0
+        return {
+            "dli_mol_m2_day": round(estimate, 3),
+            "sample_count": 1,
+            "coverage_seconds": 0,
+            "quality": "estimate",
+            "estimated": True,
+            "assumed_light_hours": light_hours,
+        }
+    max_gap = max(CAPTURE_INTERVAL_SECONDS * 3, 900)
+    total_umol = 0.0
+    coverage = 0.0
+    accepted_segments = 0
+    dropped_segments = 0
+    largest_gap = 0.0
+    for (left_t, left_v), (right_t, right_v) in zip(points, points[1:]):
+        gap = (right_t - left_t).total_seconds()
+        if gap <= 0:
+            continue
+        largest_gap = max(largest_gap, gap)
+        if gap > max_gap:
+            dropped_segments += 1
+            continue
+        total_umol += ((left_v + right_v) / 2.0) * gap
+        coverage += gap
+        accepted_segments += 1
+    quality = "continuous" if accepted_segments and dropped_segments == 0 else "partial"
+    return {
+        "dli_mol_m2_day": round(total_umol / 1_000_000.0, 3) if accepted_segments else None,
+        "sample_count": len(points),
+        "coverage_seconds": round(coverage, 1),
+        "largest_gap_seconds": round(largest_gap, 1),
+        "dropped_segments": dropped_segments,
+        "quality": quality if accepted_segments else "insufficient",
+        "estimated": False,
+    }
+
+
+def _today_room_dli(state: dict[str, Any], room: dict[str, Any]) -> dict[str, Any]:
+    rows = [row for row in state["sensor_history"] if row.get("room_id") == room["id"] and _is_today(row.get("timestamp"))]
+    return calculate_daily_dli(rows, _parse_light_hours(room.get("light_cycle")))
+
+
 def _profile_tasks_for_plant(profile: dict[str, Any] | None, plant: dict[str, Any]) -> list[dict[str, Any]]:
     if not profile:
         return []
@@ -478,6 +553,7 @@ async def today_checkin():
             "id": room["id"],
             "name": room.get("name", ""),
             "sensor_snapshot": snapshot,
+            "dli": _today_room_dli(state, room),
             "plants": plant_status,
             "tasks": tasks,
             "events": list(reversed(events[-100:])),
