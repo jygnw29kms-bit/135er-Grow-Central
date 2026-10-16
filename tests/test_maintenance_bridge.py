@@ -14,6 +14,7 @@ def test_maintenance_helper_is_strictly_whitelisted():
     assert "safe_relative_path" in helper
     assert 'app/*|local/cloud_link/*|web/*|shared/*' in helper
     assert 'find "$payload" -type l' in helper
+    assert '"requirements.txt"' in helper
     assert "sha256sum -c ../SHA256SUMS" in helper
     assert "MAX_FILES=500" in helper
     assert "50 * 1024 * 1024" in helper

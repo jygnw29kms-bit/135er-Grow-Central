@@ -45,6 +45,7 @@ safe_relative_path() {
     app/*|local/cloud_link/*|web/*|shared/*) ;;
     *) return 1 ;;
   esac
+  [[ "${rel##*/}" != "requirements.txt" ]] || return 1
   IFS='/' read -r -a parts <<<"$rel"
   for part in "${parts[@]}"; do
     [[ -n "$part" && "$part" != "." && "$part" != ".." && "$part" != .* ]] || return 1
