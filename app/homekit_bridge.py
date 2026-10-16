@@ -235,7 +235,7 @@ def run_bridge() -> None:
             super().__init__(*args, **kwargs)
             self.room_id = room_id
             soil = self.add_preload_service("HumiditySensor", chars=["Name"])
-            soil.configure_char("Name", value=f"{self.display_name} Bodenfeuchte")
+            soil.configure_char("Name", value=self.display_name)
             self.soil_char = soil.configure_char(
                 "CurrentRelativeHumidity",
                 value=max(0, min(100, float(initial_latest["soil_moisture_percent"]))),

@@ -190,4 +190,14 @@ def test_homekit_final_master_renders_export_diagnostics():
     js=(root/"web/platform-master.js").read_text(encoding="utf-8")
     assert 'id="homekitExports"' in html
     assert 'Array.isArray(state.accessories)' in js
-    assert 'AID ${esc(row.aid' in js
+    assert 'exports.replaceChildren()' in js
+    assert 'textContent=String(label)' in js
+    assert 'AID ${row.aid??"?"}' in js
+    assert 'exports.innerHTML=rows' not in js
+
+
+def test_homekit_soil_service_name_is_not_duplicated():
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    soil_block=source[source.index("class SoilAccessory"):source.index("class SwitchAccessory")]
+    assert 'soil.configure_char("Name", value=self.display_name)' in soil_block
+    assert 'self.display_name} Bodenfeuchte' not in soil_block

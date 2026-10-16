@@ -40,7 +40,7 @@ async function loadHomeKitStatus(){
     badge.textContent=state.paired?"VERBUNDEN":state.running?"PAIRING":"OFFLINE";
     message.textContent=state.message||"HomeKit-Status geladen.";
     const exports=document.getElementById("homekitExports");
-    if(exports){const rows=Array.isArray(state.accessories)?state.accessories:[];exports.innerHTML=rows.length?rows.map(row=>`<div><span>${esc(row.name||row.source_id||row.kind||"Zubeh?r")}</span><b>${esc((row.state||"published").toUpperCase())} ? AID ${esc(row.aid??"?")}</b></div>`).join(""):'<div><span>Apple Home Zubeh?r</span><b>noch nichts ver?ffentlicht</b></div>'; }
+    if(exports){const rows=Array.isArray(state.accessories)?state.accessories:[];exports.replaceChildren();const render=(label,value)=>{const line=document.createElement("div"),span=document.createElement("span"),strong=document.createElement("b");span.textContent=String(label);strong.textContent=String(value);line.append(span,strong);exports.append(line);};if(rows.length)rows.forEach(row=>render(row.name||row.source_id||row.kind||"Zubeh?r",`${String(row.state||"published").toUpperCase()} ? AID ${row.aid??"?"}`));else render("Apple Home Zubeh?r","noch nichts ver?ffentlicht");}
     card.hidden=false;
     if(state.running&&!state.paired){qr.src=`/api/v1/homekit/pairing.svg?ts=${Date.now()}`;qr.hidden=false;code.textContent=state.setup_code||"";}
     else{qr.hidden=true;qr.removeAttribute("src");code.textContent=state.paired?"Bereits gekoppelt":"";}
