@@ -59,6 +59,7 @@ def test_image_uses_cloud_link_v2_runtime():
     assert "local/cloud_link/agent_v2.py" in workflow
     assert "local/cloud_link/agent.py" not in workflow
 
+
 def test_test_maintenance_marker_is_nonempty():
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
     assert "printf 'enabled\\n' > /etc/135er-grow-central/test-maintenance-enabled" in workflow
@@ -68,7 +69,6 @@ def test_test_maintenance_marker_is_nonempty():
 def test_runtime_crypto_constraint_matches_cloud_link():
     root_req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
     cloud_req = (ROOT / "local/cloud_link/requirements.txt").read_text(encoding="utf-8")
-    expected = "cryptography>=45,<47"
+    expected = "cryptography>=50,<51"
     assert expected in root_req
     assert expected in cloud_req
-
