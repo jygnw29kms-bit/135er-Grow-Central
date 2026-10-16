@@ -15,6 +15,7 @@ def test_plesk_v7_router_keeps_v6_core_contract_public():
     assert "location = /health {" in routing
     assert "proxy_pass http://127.0.0.1:${CORE_PORT}/health;" in routing
     assert "location = /.well-known/growcentral-cloud {" in routing
+    assert "proxy_pass http://127.0.0.1:${PLATFORM_PORT}/.well-known/growcentral-cloud;" in routing
     assert "location = /pair {" in routing
     assert "location ^~ /api/v2/ {" in routing
     assert r'proxy_set_header Upgrade \$http_upgrade;' in routing
@@ -28,6 +29,9 @@ def test_plesk_v7_router_keeps_v6_core_contract_public():
 
 def test_platform_sidecar_exposes_pre_v7_pi_health_contract():
     source = read("cloud/v7/platform_status_app.py")
+    assert '@app.get("/.well-known/growcentral-cloud")' in source
+    assert '"official": PUBLIC_URL == "https://135ercloud.grow-central.de"' in source
+    assert '"cloud_version": 7' in source
     assert '@app.get("/api/health")' in source
     assert '"service": "135er-Grow Central Cloud"' in source
     assert '"version": "7"' in source
@@ -52,3 +56,17 @@ def test_platform_deploy_uses_checked_out_sources_and_verifies_core_routes():
     ):
         assert endpoint in workflow
     assert 'd.get("public_url") == "https://135ercloud.grow-central.de"' in workflow
+
+
+def test_platform_deploy_gates_extension_changes():
+    workflow = read(".github/workflows/deploy-grow-central-platform.yml")
+    assert "deploy_extension:" in workflow
+    assert "default: false" in workflow
+    assert "id: extension_changes" in workflow
+    assert 'changed=${{ inputs.deploy_extension }}' in workflow
+    assert 'git diff --quiet "$before" "$GITHUB_SHA" -- deploy/plesk-extension' in workflow
+    assert "DEPLOY_EXTENSION: ${{ steps.extension_changes.outputs.changed }}" in workflow
+    assert 'if [[ "${DEPLOY_EXTENSION}" == "true" ]]; then' in workflow
+    assert "remote_exec 'rm -f /tmp/grow-central-plesk-extension.zip'" in workflow
+    assert 'extension_rc=$?' in workflow
+    assert "successfully (upgraded|installed)|erfolgreich" in workflow

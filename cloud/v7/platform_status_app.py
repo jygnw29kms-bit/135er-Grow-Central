@@ -22,6 +22,7 @@ from sqlalchemy import create_engine, text
 DATABASE_URL = os.environ["DATABASE_URL"]
 ADMIN_TOKEN = os.environ.get("CLOUD_ADMIN_TOKEN", "").strip()
 REPORT_TTL = int(os.environ.get("PLATFORM_REPORT_TTL_SECONDS", "300"))
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://135ercloud.grow-central.de").rstrip("/")
 
 engine = create_engine(
     DATABASE_URL,
@@ -149,6 +150,25 @@ def health():
         "fresh_reports": fresh,
         "local_first": True,
         "cloud_required_for_homekit": False,
+    }
+
+
+@app.get("/.well-known/growcentral-cloud")
+def discovery():
+    return {
+        "product": "135er-GrowCentral",
+        "protocol_version": 2,
+        "cloud_version": 7,
+        "official": PUBLIC_URL == "https://135ercloud.grow-central.de",
+        "public_url": PUBLIC_URL,
+        "requires_https": True,
+        "device_identity": "ed25519",
+        "account_register_endpoint": f"{PUBLIC_URL}/api/v2/account/register",
+        "account_login_endpoint": f"{PUBLIC_URL}/api/v2/account/login",
+        "device_authorization_endpoint": f"{PUBLIC_URL}/api/v2/device/authorize",
+        "pairing_url": f"{PUBLIC_URL}/pair",
+        "device_websocket": PUBLIC_URL.replace("https://", "wss://", 1) + "/api/v2/device/connect",
+        "remote_websocket": PUBLIC_URL.replace("https://", "wss://", 1) + "/api/v2/remote/connect",
     }
 
 
