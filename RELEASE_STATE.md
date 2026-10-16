@@ -76,7 +76,7 @@ Ein Build wird erst nach erfolgreichem Durchlauf der automatisierten Prüfungen 
 
 ## Projekttrennung
 
-Ete’s Autoservice, Touran, God’s Eye und Dyson V11 BMS sind keine funktionalen Bestandteile von Grow Central. Falls sie vorübergehend dieselbe Repository- oder CI-Infrastruktur nutzen, müssen Builds, Deployments, Secrets, Releases und Dokumentation technisch getrennt bleiben.
+Projektfremde Anwendungen sind keine funktionalen Bestandteile von Grow Central und werden nicht mehr in diesem Repository oder dessen CI-Pipelines mitgef?hrt.
 
 ## Validierung des aktuellen Kandidaten
 

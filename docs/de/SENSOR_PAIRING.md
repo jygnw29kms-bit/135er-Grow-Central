@@ -2,7 +2,7 @@
 
 > **Produktionsregel ab Firmware 0.5.1:** Die Erstaufnahme eines neuen Soil-Sensors ist USB-first. Der Sensor bleibt bis zur vollständigen Firmware-/Hardwareidentitätsprüfung, Pflichtkalibrierung, TLS-MQTT-Prüfung sowie bestätigter Name-/Raumzuweisung `DISCOVERED`. Erst der finale Check setzt `TRUSTED`/`Einsatzbereit`. BLE bleibt Recovery-/Servicepfad und ist nicht mehr der primäre Erstaufnahmeweg. Der genaue Ablauf steht in [USB_SENSOR_SETUP.md](USB_SENSOR_SETUP.md).
 
-Die Vorgaben stammen aus dem vom Nutzer geteilten [Chat](https://chatgpt.com/share/6ace61d2-cc28-83eb-bab0-7651912da6d1). Der Remote-Stand `1cef7d9` enthält bereits HW-390/XIAO-Bodenfeuchte, MQTT, Raumzuordnung und Substratanzeige. Die hier ergänzte Änderung betrifft die manuelle Vertrauensentscheidung und deren Durchsetzung. Touran-Code bleibt unberührt.
+Die Vorgaben stammen aus dem vom Nutzer geteilten [Chat](https://chatgpt.com/share/6ace61d2-cc28-83eb-bab0-7651912da6d1). Der Remote-Stand `1cef7d9` enthält bereits HW-390/XIAO-Bodenfeuchte, MQTT, Raumzuordnung und Substratanzeige. Die hier ergänzte Änderung betrifft die manuelle Vertrauensentscheidung und deren Durchsetzung.
 
 ## Implementierter Ablauf
 

@@ -102,7 +102,7 @@ Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servic
 4. Öffentliche Builds, Images, App-Pakete und Installationsskripte werden – sofern technisch und rechtlich veröffentlichbar – über die Open-Source-Projektkanäle dokumentiert und bereitgestellt.
 5. Die öffentliche Projektseite unter [grow-central.de](https://grow-central.de/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
 6. Zugangsdaten, Tokens, private Schlüssel, lokale Adressen, Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse werden niemals veröffentlicht.
-7. Projektfremde Komponenten wie Touran, Ete’s Autoservice, God’s Eye oder Dyson V11 BMS dürfen gemeinsame Infrastruktur nur nutzen, wenn Builds, Deployments, Secrets, Releases und Dokumentation sauber getrennt bleiben.
+7. Projektfremde Komponenten geh?ren nicht in dieses Repository. Gemeinsame Infrastruktur darf nur ?ber klar getrennte Schnittstellen, Secrets, Releases und Dokumentation genutzt werden.
 
 ## Lizenz
 

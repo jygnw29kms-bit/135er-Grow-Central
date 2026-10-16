@@ -105,12 +105,12 @@ jobs:
           cp dist/ios/GrowLightMeter-iOS-unsigned.ipa.sha256 dist/publish/
           cp dist/ios/GrowLightMeter-iOS-Sideload.zip dist/publish/
           cp dist/ios/GrowLightMeter-iOS-Sideload.zip.sha256 dist/publish/
-      - name: Deploy apps to dezender.de writable web area
+      - name: Deploy apps to canonical Grow-Central download area
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
         with:
           username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           password: ${{ secrets.SFTP_PASSWORD }}
           local_path: './dist/publish/*'
-          remote_path: '/var/www/vhosts/dezender.de/httpdocs/godseye/grow-light-meter/'
+          remote_path: '/var/www/vhosts/grow-central.de/httpdocs/downloads/light-meter/'
           delete_remote_files: false
