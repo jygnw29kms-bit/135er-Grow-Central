@@ -9,6 +9,7 @@ from app.recipes import router as recipes_router
 from app.timelapse import router as timelapse_router
 from app.recordings import router as recordings_router
 from app.grow_photos import router as grow_photos_router
+from app.grow_photo_ui import GrowPhotoUiMiddleware
 from app.auth_middleware import GuiAuthMiddleware
 from app.gui_auth import router as gui_auth_router
 from app.firstboot import router as firstboot_router
@@ -34,6 +35,9 @@ app.add_middleware(GuiAuthMiddleware)
 # unprovisioned device can answer captive-portal probes and setup requests
 # before normal GUI/API authentication exists.
 app.add_middleware(SetupPortalMiddleware)
+# The photo enhancement is injected only into the approved product HTML shell;
+# setup/captive/legacy responses are positively excluded by the middleware.
+app.add_middleware(GrowPhotoUiMiddleware)
 # No kiosk/touch HTML rewriting is used anymore. Browser and mobile clients
 # provide their native input methods and receive responses byte-for-byte.
 app.include_router(gui_auth_router)
