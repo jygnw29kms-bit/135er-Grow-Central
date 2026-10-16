@@ -834,6 +834,21 @@ jobs:
           rm -rf /var/lib/apt/lists/*
           CHROOT
 
+          if [[ "$GC_TEST_MAINTENANCE_ENABLED" == "true" ]]; then
+            test -s "$ROOT/etc/135er-grow-central/test-maintenance-enabled"
+            test -x "$ROOT/usr/local/sbin/growcentral-maint"
+            test -s "$ROOT/home/gcmaint/.ssh/authorized_keys"
+            grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' "$ROOT/home/gcmaint/.ssh/authorized_keys"
+            test -f "$ROOT/etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf"
+            grep -q '^Match User gcmaint$' "$ROOT/etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf"
+            test -f "$ROOT/etc/sudoers.d/growcentral-maint"
+            sudo chroot "$ROOT" visudo -cf /etc/sudoers.d/growcentral-maint
+            sudo chroot "$ROOT" id gcmaint >/dev/null
+            grep -Fq 'gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint apply-staged' "$ROOT/etc/sudoers.d/growcentral-maint"
+          else
+            test ! -e "$ROOT/etc/135er-grow-central/test-maintenance-enabled"
+          fi
+
           sync
           cleanup
           trap - EXIT

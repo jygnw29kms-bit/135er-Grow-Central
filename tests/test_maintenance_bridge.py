@@ -47,3 +47,8 @@ def test_test_maintenance_access_is_build_scoped_and_key_only():
     assert "AllowTcpForwarding no" in workflow
     assert "192.168.0.0/16 to any port 22 proto tcp" in workflow
     assert "\n          ufw allow 22/tcp\n" not in workflow
+    assert 'test -s "$ROOT/etc/135er-grow-central/test-maintenance-enabled"' in workflow
+    assert 'test -x "$ROOT/usr/local/sbin/growcentral-maint"' in workflow
+    assert 'test -s "$ROOT/home/gcmaint/.ssh/authorized_keys"' in workflow
+    assert 'sudo chroot "$ROOT" visudo -cf /etc/sudoers.d/growcentral-maint' in workflow
+    assert 'sudo chroot "$ROOT" id gcmaint >/dev/null' in workflow
