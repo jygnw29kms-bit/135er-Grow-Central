@@ -1,12 +1,12 @@
 # Roadmap – 135er-Grow Central
 
-**Stand:** 14. Oktober 2026. Verbindlicher Release-Status:
+**Stand:** 16. Oktober 2026. Verbindlicher Release-Status:
 [`RELEASE_STATE.md`](../RELEASE_STATE.md).
 
-`alpha-0.7.5`, Pi-Candidate **Build 375**, Sensor-Firmware **0.4.1**.
+`alpha-0.7.5`, Pi-Candidate **Build 431**, Sensor-Firmware **0.5.2**.
 Quellcodeverbesserungen auf `master` erzeugen kein neues Pi-Image und ersetzen
-keine Hardwarevalidierung. Build 369 mit Hotfixes bleibt der dokumentierte
-reale Pi-4-Sensorteiltest.
+keine Hardwarevalidierung. Der Pi-4-Sensortest vom 14. Oktober bleibt als
+historischer Hardwarebefund dokumentiert; aktive Hotfix-Installationspfade gibt es nicht mehr.
 
 ## Im aktuellen Quellstand umgesetzt
 
@@ -33,7 +33,7 @@ reale Pi-4-Sensorteiltest.
 
 ## Priorität 1: Nachweisbarer Betrieb auf Zielhardware
 
-Build 375 auf Pi 4 frisch installieren, Einrichtung, Neustart, Netzwerkübergang,
+Build 431 auf Pi 4 frisch installieren, Einrichtung, Neustart, Netzwerkübergang,
 MQTT-TLS, Sensoraufnahme und Dauerbetrieb prüfen. Pi 3 und Pi 5 separat prüfen.
 Kamera, LED-Steuerung, FRITZ!/Tapo und weitere Geräte nur mit passender realer
 Hardware validieren. Prüfergebnisse und Supportarchive dokumentieren.

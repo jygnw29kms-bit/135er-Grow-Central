@@ -2,13 +2,13 @@
 
 ## Hardware und Messgrenzen
 
-Der derzeitige USB-Flashpfad unterstützt **Seeed XIAO ESP32-C3 / HW-390**, Firmware **0.4.1** im aktuellen Quellstand. Der HW-390 liefert einen kapazitiven Feuchte-Referenzwert. Er misst weder Temperatur noch Luftfeuchte, pH oder EC/Nährstoffgehalt. Dafür sind zusätzliche Sensoren erforderlich.
+Der derzeitige USB-Flashpfad unterstützt **Seeed XIAO ESP32-C3 / HW-390**, Firmware **0.5.2** im aktuellen Quellstand. Der HW-390 liefert einen kapazitiven Feuchte-Referenzwert. Er misst weder Temperatur noch Luftfeuchte, pH oder EC/Nährstoffgehalt. Dafür sind zusätzliche Sensoren erforderlich.
 
 Die Prozentzahl ist ohne Substratkalibrierung kein exakter volumetrischer Wassergehalt. Salzgehalt, Substrat und Einstecktiefe beeinflussen die Messung. Ein angezeigtes `AIR_DRY` beschreibt den Firmwarezustand anhand der Referenzen; es ersetzt keine Bewertung des konkreten Substrats.
 
 ## Aktueller Image-Stand
 
-Der veröffentlichte Candidate **Build 375** enthält Firmware 0.4.1 und die beschriebenen Korrekturen. Das historische Original-Image 369 benötigt Hotfixes. Der bestätigte Pi-4-Teiltest stammt aus einer aktualisierten Build-369-Installation; die vollständige Prüfung von Build 375 ist noch offen.
+Der veröffentlichte Candidate **Build 431** enthält Firmware 0.5.2 und den integrierten USB-/MQTT-TLS-/Bodenfeuchte-Pfad. Separate Hotfix-Installer für ältere Images sind nicht mehr Bestandteil des aktiven Projekts. Die vollständige reale Prüfung von Build 431 ist noch offen.
 
 ## Einrichtung
 
@@ -41,7 +41,3 @@ Nach der Referenzkalibrierung dieselbe Einstecktiefe und Position verwenden. Den
 Die signierte Telemetrie liefert Roh-/Median-/Filterwerte, Min/Max, Streuung, Qualität, Messzustand, Trocken-/Nassreferenz, WLAN-Signalstärke, Laufzeit und Firmware. Die Raumhistorie zeigt aktuell den Feuchte-Mittelwert; eine separate Diagnoseansicht ist noch nicht implementiert.
 
 Bei MQTT-Problemen `NET INFO` lesen: `wifi_status=3`, eine IP und `mqtt_connected=yes` zeigen eine bestehende Verbindung. Firmware 0.4.1 meldet zusätzlich UTC-Epoch, `ca_bytes` und bei Fehlern `tls_error`. Ein `OK broker CA stored` allein garantiert bei alter Firmware keinen vollständigen Transfer. Keine Zertifikatsprüfung abschalten; [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md) beachten.
-
-## Bestehende Installation aktualisieren
-
-Build 369 mit bereits funktionierender Firmware 0.4.1 kann über [`apply-sensor-tls-diagnostics.py`](../../scripts/apply-sensor-tls-diagnostics.py) den zusätzlichen CA-Transferschutz im Backend übernehmen. Der Installer prüft gepinnte Downloads und sichert bekannte Ausgangsstände. Er flasht nicht automatisch; bei Firmware 0.4.1 muss der Sensor nicht erneut geflasht oder aufgenommen werden. Die UI-Anzeige wird separat über [`apply-soil-display-hotfix.py`](../../scripts/apply-soil-display-hotfix.py) aktualisiert. Ältere Baseline-Installationen benötigen zuerst den dokumentierten UI-/Mosquitto-Hotfix; unbekannte lokale Änderungen werden nicht überschrieben.

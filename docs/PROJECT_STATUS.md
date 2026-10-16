@@ -1,10 +1,10 @@
 # Project Status – 135er-Grow Central
 
-- **Stand:** 14. Oktober 2026
+- **Stand:** 16. Oktober 2026
 - **Version:** `alpha-0.7.5`
 - **Hauptbranch:** `master`
-- **Veröffentlichter Pi-Candidate:** **Build 375**; enthält Firmware 0.4.1 und aktuelle Korrekturen
-- **Aktuelle Sensor-Firmware im Git-Quellstand:** **0.4.1**
+- **Veröffentlichter Pi-Candidate:** **Build 431**; enthält Firmware 0.4.1 und aktuelle Korrekturen
+- **Aktuelle Sensor-Firmware im Git-Quellstand:** **0.5.2**
 - **Status:** `CANDIDATE` – reale Teilprüfung auf Pi 4 bestätigt, vollständige Hardwarevalidierung offen
 - **Entwicklungsmodus:** Open Source
 
@@ -16,7 +16,7 @@ Grow Central ist eine dauerhaft headless, lokale Raspberry-Pi-Zentrale mit Deskt
 
 ## Bestätigte reale Teilprüfung
 
-Ein Pi 4 mit Build 369 und Hotfixes nimmt den XIAO ESP32-C3 / HW-390 per USB auf. Firmware 0.4.1 verbindet sich mit dem lokalen MQTT-Broker über TLS; Bodenfeuchte wird in der Raum-Sensorhistorie angezeigt. Die Nutzer-Rückmeldungen bestätigen Aufnahme und Anzeige. Der Befund gilt für diese Kombination und ersetzt keinen vollständigen Plattformtest.
+Ein Pi-4-Sensortest vom 14. Oktober best?tigte USB-Aufnahme, MQTT ?ber TLS und die Bodenfeuchte-Anzeige. Der aktuelle Quellstand enth?lt diese Korrekturen direkt und verwendet keine separaten Build-369-Hotfix-Installer mehr. Der historische Befund ersetzt weiterhin keinen vollst?ndigen Plattformtest von Build 431.
 
 Der ursprüngliche Fehler war ein abgeschnittener CA-Transfer über USB. Das Firmware-Log meldete einen X509-Formatfehler und 307 statt 554 gespeicherte PEM-Bytes. Paketweise Übertragung stellte die Verbindung her. Der aktuelle Backendcode überträgt lange Befehle in kleinen Paketen und prüft die gespeicherte CA-Länge.
 
