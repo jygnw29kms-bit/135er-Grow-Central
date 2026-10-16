@@ -64,14 +64,18 @@ jobs:
 
           remote_exec 'id -u' >/tmp/remote-uid
           remote_copy /tmp/grow-central-plesk-extension.zip /tmp/grow-central-plesk-extension.zip
+          remote_copy scripts/install-platform-status-v1.sh /tmp/install-platform-status-v1.sh
+          remote_copy scripts/configure-v7-routing.sh /tmp/configure-v7-routing.sh
+          remote_copy cloud/v7/platform_status_app.py /tmp/platform_status_app.py
 
           cat > /tmp/growcentral-remote-deploy.sh <<'REMOTE'
           set -Eeuo pipefail
           export DEBIAN_FRONTEND=noninteractive
 
-          curl -fsSL https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-platform-status-v1.sh -o /tmp/install-platform-status-v1.sh
-          chmod 0755 /tmp/install-platform-status-v1.sh
-          /tmp/install-platform-status-v1.sh
+          chmod 0755 /tmp/install-platform-status-v1.sh /tmp/configure-v7-routing.sh
+          PLATFORM_SOURCE=/tmp/platform_status_app.py \
+          ROUTER_SOURCE=/tmp/configure-v7-routing.sh \
+            /tmp/install-platform-status-v1.sh
 
           if command -v plesk >/dev/null 2>&1; then
             if plesk bin extension --list 2>/dev/null | grep -qi 'grow-central'; then
@@ -87,7 +91,7 @@ jobs:
           systemctl is-active --quiet 135er-growcentral-cloud-platform
           curl -fsS --connect-timeout 5 http://127.0.0.1:18767/health >/dev/null
           plesk bin extension --list | grep -qi 'grow-central'
-          rm -f /tmp/install-platform-status-v1.sh /tmp/grow-central-plesk-extension.zip
+          rm -f /tmp/install-platform-status-v1.sh /tmp/configure-v7-routing.sh /tmp/platform_status_app.py /tmp/grow-central-plesk-extension.zip
           REMOTE
           B64="$(base64 -w0 /tmp/growcentral-remote-deploy.sh)"
 
@@ -107,6 +111,11 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/platform/health
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and int(d.get("version",0)) >= 6'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/.well-known/growcentral-cloud | python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d.get("protocol_version",0)) >= 2'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and d.get("service") == "135er-Grow Central Cloud" and str(d.get("version")) == "7"'
+          pair_code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 -X POST -H 'Content-Type: application/json' -d '{}' https://135ercloud.grow-central.de/api/v2/device/authorize -o /tmp/pair-probe.json -w '%{http_code}')"
+          printf '%s\n' "$pair_code" | grep -Eq '^(400|422)$'
           code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/v7/platform/challenge \
             -H 'Content-Type: application/json' \
             -d '{"device_id":"00000000-0000-0000-0000-000000000000"}' \

@@ -152,6 +152,26 @@ def health():
     }
 
 
+@app.get("/api/health")
+def legacy_pi_health():
+    """Compatibility health contract for pre-V7 Grow-Central Pi agents.
+
+    The endpoint intentionally lives on the platform sidecar so it is only
+    healthy while the shared V7 database/status service is healthy. New agents
+    use /v7/health and /platform/health directly.
+    """
+    current = health()
+    return {
+        "ok": True,
+        "service": "135er-Grow Central Cloud",
+        "version": "7",
+        "compatibility": "v7-platform-status",
+        "reports": current["reports"],
+        "fresh_reports": current["fresh_reports"],
+        "local_first": True,
+    }
+
+
 @app.post("/api/v7/platform/challenge")
 def challenge(body: DeviceIdentity):
     t = now()

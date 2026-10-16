@@ -29,6 +29,47 @@ fi
 write_locations(){
   cat <<EOF
 # BEGIN 135ER-GROWCENTRAL-V7
+# Current V7 services coexist with the V6 account/device core.  Keep these
+# routes explicit in Plesk mode; do not depend on an older catch-all block.
+location = /api/health {
+    proxy_pass http://127.0.0.1:${PLATFORM_PORT}/api/health;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+}
+location = /health {
+    proxy_pass http://127.0.0.1:${CORE_PORT}/health;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+}
+location = /.well-known/growcentral-cloud {
+    proxy_pass http://127.0.0.1:${CORE_PORT}/.well-known/growcentral-cloud;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+}
+location = /pair {
+    proxy_pass http://127.0.0.1:${CORE_PORT};
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+}
+location ^~ /api/v2/ {
+    proxy_pass http://127.0.0.1:${CORE_PORT};
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_buffering off;
+}
 location ^~ /api/v7/platform/ {
     proxy_pass http://127.0.0.1:${PLATFORM_PORT};
     proxy_http_version 1.1;

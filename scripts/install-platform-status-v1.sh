@@ -12,6 +12,8 @@ CONF_DIR="${CONF_DIR:-/etc/${SERVICE}}"
 ENV_FILE="${ENV_FILE:-${CONF_DIR}/cloud.env}"
 SYSTEMD_FILE="/etc/systemd/system/${PLATFORM_SERVICE}.service"
 GITHUB_RAW="${GITHUB_RAW:-https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master}"
+PLATFORM_SOURCE="${PLATFORM_SOURCE:-}"
+ROUTER_SOURCE="${ROUTER_SOURCE:-}"
 PLATFORM_PORT="${V7_PLATFORM_PORT:-18767}"
 
 log(){ printf '\033[1;36m[GrowCentral Platform]\033[0m %s\n' "$*"; }
@@ -33,7 +35,12 @@ set +a
 PLATFORM_PORT="${V7_PLATFORM_PORT:-$PLATFORM_PORT}"
 
 log "Installiere Platform-Status-App"
-curl -fsSL "$GITHUB_RAW/cloud/v7/platform_status_app.py" -o "$APP_DIR/platform_status_v1.py"
+if [[ -n "$PLATFORM_SOURCE" ]]; then
+  [[ -f "$PLATFORM_SOURCE" ]] || die "PLATFORM_SOURCE fehlt: $PLATFORM_SOURCE"
+  install -m 0644 -o root -g root "$PLATFORM_SOURCE" "$APP_DIR/platform_status_v1.py"
+else
+  curl -fsSL "$GITHUB_RAW/cloud/v7/platform_status_app.py" -o "$APP_DIR/platform_status_v1.py"
+fi
 chown root:root "$APP_DIR/platform_status_v1.py"
 chmod 0644 "$APP_DIR/platform_status_v1.py"
 
@@ -74,11 +81,11 @@ systemctl is-active --quiet "$PLATFORM_SERVICE" || die "$PLATFORM_SERVICE starte
 curl -fsS --connect-timeout 4 "http://127.0.0.1:${PLATFORM_PORT}/health" >/dev/null || die "Platform-Healthcheck fehlgeschlagen"
 
 ROUTER="/usr/lib/${SERVICE}/configure-v7-routing.sh"
-if [[ ! -x "$ROUTER" ]]; then
-  curl -fsSL "$GITHUB_RAW/scripts/configure-v7-routing.sh" -o "$ROUTER"
-  chmod 0755 "$ROUTER"
+if [[ -n "$ROUTER_SOURCE" ]]; then
+  [[ -f "$ROUTER_SOURCE" ]] || die "ROUTER_SOURCE fehlt: $ROUTER_SOURCE"
+  install -m 0755 -o root -g root "$ROUTER_SOURCE" "$ROUTER"
 else
-  # Always refresh the managed router so the new platform locations are known.
+  # Package/normal install path follows the selected repository channel.
   curl -fsSL "$GITHUB_RAW/scripts/configure-v7-routing.sh" -o "$ROUTER"
   chmod 0755 "$ROUTER"
 fi
