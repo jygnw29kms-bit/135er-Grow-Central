@@ -103,7 +103,8 @@ def test_sensor_csv_is_scoped_bounded_and_formula_safe(state_file):
     assert len(rows) == 1 and rows[0]['power_w'] == '0'
     assert rows[0]['temperature_c'] == ''
     assert rows[0]['source'] == "'=1+1"
-    assert rows[0]['soil_reference_percent'] == '42.5'
+    assert rows[0]['soil_moisture_percent'] == '42.5'
+    assert 'soil_substrate_state' in rows[0]
     assert rows[0]['soil_calibration_status'] == 'calibration_required'
     assert response.headers['cache-control'] == 'no-store'
     assert 'attachment' in response.headers['content-disposition']

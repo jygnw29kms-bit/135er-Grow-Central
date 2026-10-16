@@ -5,6 +5,10 @@ from pathlib import Path
 import subprocess
 from types import SimpleNamespace
 import pytest
+import os
+
+if os.name == 'nt':
+    pytest.skip('UI hotfix installer uses POSIX account/group APIs', allow_module_level=True)
 
 spec=importlib.util.spec_from_file_location('ui_hotfix',Path(__file__).resolve().parents[1]/'scripts/apply-grow-ui-hotfix.py')
 installer=importlib.util.module_from_spec(spec);spec.loader.exec_module(installer)

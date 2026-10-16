@@ -1,5 +1,6 @@
 from pathlib import Path
 import asyncio
+import os
 
 import app.rooms as rooms
 
@@ -20,7 +21,8 @@ def test_rooms_state_roundtrip(tmp_path, monkeypatch):
     loaded = rooms.load_state()
     assert loaded["rooms"][0]["name"] == "Zelt 1"
     assert loaded["assignments"]["plug_1"] == "room_test"
-    assert target.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert target.stat().st_mode & 0o777 == 0o600
 
 
 def test_sensor_sample_gets_vpd_and_room_id(tmp_path, monkeypatch):
@@ -46,7 +48,7 @@ async def _soil_device_overview(*, refresh: bool):
             {
                 "id": "growcentral_esp32:gc-soil-test",
                 "online": True,
-                "state": {"soil_moisture": 42.5},
+                "state": {"soil_moisture": 42.5, "soil_substrate_reference_percent": 67.3, "soil_substrate_index_percent": 63.15, "soil_substrate_delta_pp": -24.8},
             }
         ]
     }
@@ -68,6 +70,10 @@ def test_room_capture_includes_assigned_soil_moisture(tmp_path, monkeypatch):
     assert captured == 1
     saved = rooms.load_state()
     assert saved["sensor_history"][-1]["soil_moisture_percent"] == 42.5
+    assert saved["sensor_history"][-1]["soil_substrate_reference_percent"] == 67.3
+    assert saved["sensor_history"][-1]["soil_substrate_index_percent"] == 63.15
+    assert saved["sensor_history"][-1]["soil_substrate_delta_pp"] == -24.8
+    assert saved["sensor_history"][-1]["soil_substrate_state"] == "below_reference"
     assert saved["sensor_history"][-1]["source"] == "assigned-devices"
 
 
@@ -117,3 +123,27 @@ def test_native_gc_soil_node_can_be_assigned_to_room(tmp_path, monkeypatch):
 
     assert result["ok"] is True
     assert rooms.load_state()["assignments"]["growcentral_esp32:gc-soil-native"] == "room_native"
+
+
+def test_sensor_csv_exports_distinct_soil_reference_fields(tmp_path, monkeypatch):
+    monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
+    state=rooms.empty_state()
+    state["rooms"].append({"id":"room_csv","name":"CSV"})
+    rooms.append_sensor(state,"room_csv",{
+        "soil_moisture_percent":42.5,
+        "soil_substrate_reference_percent":67.3,
+        "soil_substrate_index_percent":63.15,
+        "soil_substrate_delta_pp":-24.8,
+        "soil_substrate_state":"below_reference",
+        "soil_calibration_status":"valid",
+        "source":"test",
+    })
+    rooms.save_state(state)
+    response=asyncio.run(rooms.export_sensor_history("room_csv",5000))
+    text=response.body.decode("utf-8")
+    assert "soil_moisture_percent" in text
+    assert "soil_substrate_reference_percent" in text
+    assert "soil_substrate_index_percent" in text
+    assert "soil_substrate_delta_pp" in text
+    assert "soil_substrate_state" in text
+    assert "42.5" in text and "67.3" in text and "63.15" in text and "-24.8" in text and "below_reference" in text

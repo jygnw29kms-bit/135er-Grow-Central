@@ -13,3 +13,4 @@ aiomqtt>=2,<3
 tinytuya>=1.17,<2
 pyserial>=3.5,<4
 esptool==5.5.0
+HAP-python[QRCode]==5.0.0

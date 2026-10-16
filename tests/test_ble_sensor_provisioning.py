@@ -16,7 +16,7 @@ from app import rooms
 
 ID='gc-soil-aabbcc'
 HARDWARE_UID='0011223344556677'
-ANN={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'GC Soil','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.5.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
+ANN={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'GC Soil','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.5.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'substrate_done':True,'air_raw':3767,'wet_raw':1310,'substrate_raw':2500},'capabilities':['soil_moisture']}
 
 class FakeSensor:
     def __init__(self,confirm=True):
@@ -80,7 +80,7 @@ def appenv(monkeypatch,tmp_path):
 
 def seed_calibration():
     row=TrustStore().get(ID)
-    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.5.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
+    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.5.0',air_raw=3767,wet_raw=1310,substrate_raw=2500,quality={'status':'verified','signal_quality':'GOOD'})
 
 def test_secure_ble_discovery_and_manual_provision(appenv):
     client,sensor,calls=appenv

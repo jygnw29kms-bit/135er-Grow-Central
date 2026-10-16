@@ -82,14 +82,16 @@ def _write(payload: dict[str, Any]) -> None:
     STORE_PATH.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(prefix=".credentials-", dir=STORE_PATH.parent)
     try:
-        os.fchmod(descriptor, 0o600)
+        if hasattr(os, 'fchmod'):
+            os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             json.dump(envelope, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary, STORE_PATH)
-        os.chmod(STORE_PATH, 0o600)
+        if os.name != 'nt':
+            os.chmod(STORE_PATH, 0o600)
     finally:
         Path(temporary).unlink(missing_ok=True)
 

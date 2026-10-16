@@ -10,6 +10,12 @@ on:
       - 'deploy/plesk-extension/**'
       - '.github/workflows/deploy-grow-central-platform.yml'
   workflow_dispatch:
+    inputs:
+      deploy_extension:
+        description: 'Plesk extension in addition to cloud platform services'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -22,6 +28,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect Plesk extension changes
+        id: extension_changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "changed=${{ inputs.deploy_extension }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          before="${{ github.event.before }}"
+          if [[ -z "$before" || "$before" =~ ^0+$ ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$before" "$GITHUB_SHA" -- deploy/plesk-extension; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate deployment payload
         shell: bash
@@ -40,6 +66,7 @@ jobs:
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT || secrets.SFTP_PORT }}
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          DEPLOY_EXTENSION: ${{ steps.extension_changes.outputs.changed }}
         shell: bash
         run: |
           set -euo pipefail
@@ -63,31 +90,48 @@ jobs:
           }
 
           remote_exec 'id -u' >/tmp/remote-uid
-          remote_copy /tmp/grow-central-plesk-extension.zip /tmp/grow-central-plesk-extension.zip
+          if [[ "${DEPLOY_EXTENSION}" == "true" ]]; then
+            remote_copy /tmp/grow-central-plesk-extension.zip /tmp/grow-central-plesk-extension.zip
+          else
+            remote_exec 'rm -f /tmp/grow-central-plesk-extension.zip'
+          fi
+          remote_copy scripts/install-platform-status-v1.sh /tmp/install-platform-status-v1.sh
+          remote_copy scripts/configure-v7-routing.sh /tmp/configure-v7-routing.sh
+          remote_copy cloud/v7/platform_status_app.py /tmp/platform_status_app.py
 
           cat > /tmp/growcentral-remote-deploy.sh <<'REMOTE'
           set -Eeuo pipefail
           export DEBIAN_FRONTEND=noninteractive
 
-          curl -fsSL https://raw.githubusercontent.com/jygnw29kms-bit/135er-Grow-Central/master/scripts/install-platform-status-v1.sh -o /tmp/install-platform-status-v1.sh
-          chmod 0755 /tmp/install-platform-status-v1.sh
-          /tmp/install-platform-status-v1.sh
+          chmod 0755 /tmp/install-platform-status-v1.sh /tmp/configure-v7-routing.sh
+          PLATFORM_SOURCE=/tmp/platform_status_app.py \
+          ROUTER_SOURCE=/tmp/configure-v7-routing.sh \
+            /tmp/install-platform-status-v1.sh
 
-          if command -v plesk >/dev/null 2>&1; then
+          if [[ -f /tmp/grow-central-plesk-extension.zip ]]; then
+            command -v plesk >/dev/null 2>&1 || { echo 'Plesk CLI fehlt auf Zielhost' >&2; exit 20; }
+            set +e
             if plesk bin extension --list 2>/dev/null | grep -qi 'grow-central'; then
-              plesk bin extension --upgrade /tmp/grow-central-plesk-extension.zip
+              extension_output="$(plesk bin extension --upgrade /tmp/grow-central-plesk-extension.zip 2>&1)"
+              extension_rc=$?
             else
-              plesk bin extension --install /tmp/grow-central-plesk-extension.zip
+              extension_output="$(plesk bin extension --install /tmp/grow-central-plesk-extension.zip 2>&1)"
+              extension_rc=$?
             fi
-          else
-            echo 'Plesk CLI fehlt auf Zielhost' >&2
-            exit 20
+            set -e
+            printf '%s\n' "$extension_output"
+            if [[ "$extension_rc" -ne 0 ]]; then
+              printf '%s\n' "$extension_output" | grep -Eqi 'successfully (upgraded|installed)|erfolgreich' \
+                && plesk bin extension --list | grep -qi 'grow-central' \
+                || exit "$extension_rc"
+              echo "Plesk meldete rc=$extension_rc trotz erfolgreicher Extension-Aktion; Installation verifiziert."
+            fi
+            plesk bin extension --list | grep -qi 'grow-central'
           fi
 
           systemctl is-active --quiet 135er-growcentral-cloud-platform
           curl -fsS --connect-timeout 5 http://127.0.0.1:18767/health >/dev/null
-          plesk bin extension --list | grep -qi 'grow-central'
-          rm -f /tmp/install-platform-status-v1.sh /tmp/grow-central-plesk-extension.zip
+          rm -f /tmp/install-platform-status-v1.sh /tmp/configure-v7-routing.sh /tmp/platform_status_app.py /tmp/grow-central-plesk-extension.zip
           REMOTE
           B64="$(base64 -w0 /tmp/growcentral-remote-deploy.sh)"
 
@@ -107,6 +151,11 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/platform/health
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and int(d.get("version",0)) >= 4'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/.well-known/growcentral-cloud | python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d.get("protocol_version",0)) >= 2 and d.get("public_url") == "https://135ercloud.grow-central.de"'
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/health | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True and d.get("service") == "135er-Grow Central Cloud" and str(d.get("version")) == "7"'
+          pair_code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 -X POST -H 'Content-Type: application/json' -d '{}' https://135ercloud.grow-central.de/api/v2/device/authorize -o /tmp/pair-probe.json -w '%{http_code}')"
+          printf '%s\n' "$pair_code" | grep -Eq '^(400|422)$'
           code="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 8 https://135ercloud.grow-central.de/api/v7/platform/challenge \
             -H 'Content-Type: application/json' \
             -d '{"device_id":"00000000-0000-0000-0000-000000000000"}' \

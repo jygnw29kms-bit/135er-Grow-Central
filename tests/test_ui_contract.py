@@ -49,3 +49,10 @@ def test_room_views_use_real_room_api_and_no_demo_metrics():
 def test_capacitor_launcher_targets_mobile_route():
     launcher = read("mobile/www/app.js")
     assert "url.pathname = '/mobile'" in launcher
+
+
+def test_favicon_alias_uses_brand_mark():
+    source=Path("app/main.py").read_text(encoding="utf-8")
+    assert '@app.get("/favicon.ico"' in source
+    assert 'WEB_DIR / "brand-mark.png"' in source
+    assert 'max-age=86400' in source

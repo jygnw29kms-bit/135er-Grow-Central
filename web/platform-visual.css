@@ -16,7 +16,7 @@ html,body{margin:0;background:#061014}.master-shell{width:1546px!important;min-h
 
 .fm-overview{width:1352px!important}.fm-hero{height:210px!important;min-height:210px!important;border-radius:0!important;border-left:0!important;border-right:0!important;padding:23px 38px!important;display:grid!important;grid-template-columns:560px 1fr!important;align-items:center!important}.fm-hero:after{background:linear-gradient(90deg,rgba(3,11,14,.98) 0%,rgba(3,11,14,.78) 29%,rgba(3,11,14,.08) 58%,rgba(3,11,14,.42) 100%),url('/static/master-grow-hero.jpg') center/cover no-repeat!important}.hero-copy>span{font-size:16px!important;font-weight:600}.hero-copy h1{font-size:46px!important;letter-spacing:-1.5px!important;margin:3px 0 7px!important}.hero-copy h1 span{color:#24e59b!important;font-size:inherit!important}.hero-copy h2{font-size:18px!important;margin:0 0 5px!important}.hero-copy p{font-size:11px!important;color:#b8c6c9!important}.fm-hero-actions{display:flex;gap:10px;margin-top:16px}.fm-hero-actions button{height:37px;padding:0 17px;border:1px solid #28414a;border-radius:6px;background:#0b1b22;color:#dce8e9;font-size:10px;font-weight:700}.fm-hero-actions button:first-child{background:#24e59b;color:#04271c;border-color:#24e59b}.fm-hero-cards{justify-self:end;align-self:end;display:grid;grid-template-columns:235px 170px 165px;gap:8px;margin-bottom:17px}.fm-hero-cards article{height:92px;padding:14px 14px;display:flex;gap:11px;border:1px solid rgba(82,126,117,.48);border-radius:7px;background:rgba(8,30,24,.86);backdrop-filter:blur(5px);box-shadow:0 8px 18px rgba(0,0,0,.28)}.fm-hero-cards article>i{font-style:normal;font-size:26px;color:#29eb98}.fm-hero-cards small,.fm-hero-cards b,.fm-hero-cards em{display:block}.fm-hero-cards small{font-size:9px;color:#9aada9}.fm-hero-cards b{font-size:14px;margin-top:7px;color:#f3f8f7}.fm-hero-cards em{font-size:8px;margin-top:7px;color:#a7b6b3;font-style:normal}.fm-hero-cards article:last-child b{color:#23e89a}
 
-.fm-metrics-six{margin:9px 14px 0!important;display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:8px!important}.fm-metrics-six .master-metric{height:106px!important;min-height:106px!important;padding:10px 11px!important;border-radius:8px!important}.fm-metrics-six .master-metric strong{font-size:20px!important}.fm-metrics-six .master-metric header{font-size:9px!important}.fm-metrics-six .state-badge{margin-left:auto;font-size:7px!important;border:1px solid #16895d;background:#0a3024;padding:3px 6px;border-radius:10px}.master-metric.soil{color:#91a3ab}.master-metric.soil:after{background:#82959d!important}
+.fm-metrics-six{margin:9px 14px 0!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}.fm-metrics-six .master-metric{height:106px!important;min-height:106px!important;padding:10px 11px!important;border-radius:8px!important}.fm-metrics-six .master-metric strong{font-size:20px!important}.fm-metrics-six .master-metric header{font-size:9px!important}.fm-metrics-six .state-badge{margin-left:auto;font-size:7px!important;border:1px solid #16895d;background:#0a3024;padding:3px 6px;border-radius:10px}.master-metric.soil{color:#91a3ab}.master-metric.soil:after{background:#82959d!important}
 
 .fm-board-top{margin:9px 14px 0!important;display:grid!important;grid-template-columns:386px 478px 446px!important;gap:8px!important}.fm-board-top>.master-panel{height:230px!important}.room-overview-panel .master-room-summary{display:block!important}.room-overview-panel .master-room-summary .device-row{height:164px!important;min-height:164px!important;width:100%!important;background:linear-gradient(180deg,rgba(3,11,13,.02),rgba(3,11,13,.12) 50%,rgba(3,11,13,.92)),url('/static/master-grow-room.jpg') center/cover no-repeat!important}.live-camera-panel .camera-master-frame{height:165px!important}.fm-camera-actions{height:29px;display:grid;grid-template-columns:90px 100px 92px 1fr;gap:5px;margin-top:5px}.fm-camera-actions button{border:1px solid #233b44;border-radius:5px;background:#0b1a21;color:#d0dddf;font-size:8px}.fm-control-grid{display:grid;gap:7px}.fm-control-grid>div{display:flex;align-items:center;gap:6px}.fm-control-grid b{width:126px;height:34px;padding:0 10px;display:flex;align-items:center;border:1px solid #26434b;border-radius:6px;background:#0b1b22;color:#dce7e8;font-size:9px}.fm-control-grid button{height:34px;min-width:70px;padding:0 10px;border:1px solid #243b43;border-radius:6px;background:#0b1a21;color:#c8d5d7;font-size:8px}.fm-control-grid button:first-of-type{border-color:#15d894;box-shadow:inset 0 0 0 1px rgba(21,216,148,.13)}
 
@@ -137,52 +137,12 @@ html,body{margin:0;background:#061014}.master-shell{width:1546px!important;min-h
   .master-nav{height:calc(100dvh - 80px)!important;max-height:none!important;min-height:0!important}
 }
 
-/* === FINAL MASTER DESKTOP FLUID v1 === */
-@media (min-width: 701px){
-  html,body{width:100%!important;min-width:0!important;overflow-x:hidden!important}
-  .master-shell{width:100%!important;min-width:0!important;min-height:100vh!important;grid-template-columns:194px minmax(0,1fr)!important}
-  .master-sidebar{width:194px!important;min-height:100vh!important}
-  .master-main{width:auto!important;min-width:0!important;padding:0!important}
-  .master-view,.fm-overview{width:100%!important;max-width:none!important;margin:0!important}
-  .master-topbar{width:100%!important;box-sizing:border-box!important}
-  .fm-hero{width:100%!important;box-sizing:border-box!important;grid-template-columns:minmax(440px,42%) minmax(0,1fr)!important}
-  .fm-hero-cards{grid-template-columns:minmax(190px,1.25fr) minmax(150px,.9fr) minmax(150px,.9fr)!important;max-width:620px;width:min(48vw,620px)!important}
-  .fm-metrics-six{grid-template-columns:repeat(6,minmax(0,1fr))!important}
-  .fm-board-top{grid-template-columns:minmax(0,30fr) minmax(0,36fr) minmax(0,34fr)!important}
-  .fm-board-middle{grid-template-columns:minmax(0,37fr) minmax(0,27fr) minmax(0,36fr)!important}
-  .fm-board-bottom{grid-template-columns:minmax(0,30fr) minmax(0,28fr) minmax(0,19fr) minmax(0,23fr)!important}
-  .fm-board-top,.fm-board-middle,.fm-board-bottom,.fm-metrics-six{width:auto!important;margin-left:14px!important;margin-right:14px!important}
-  .fm-board-top>.master-panel,.fm-board-middle>.master-panel,.fm-board-bottom>.master-panel{min-width:0!important;width:auto!important}
-  .master-two-col{grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr)!important}
-  .master-room-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))!important}
-  .master-camera-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))!important}
-  .provider-grid,#providerGridExtensions{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;gap:10px!important;width:100%!important}
-  #extensions.master-view,#settings.master-view,#devices.master-view,#grow.master-view,#climate.master-view,#irrigation.master-view,#lighting.master-view,#automation.master-view,#recipes.master-view,#growlog.master-view,#camera.master-view,#recordings.master-view,#timelapse.master-view,#users.master-view,#backups.master-view,#updates.master-view{padding:0 18px 28px!important;box-sizing:border-box!important}
-  .master-section-head{width:100%!important;box-sizing:border-box!important}
-  .master-panel{box-sizing:border-box!important}
-}
+/* Optional metrics stay out of the Final Master until explicitly enabled. */
+.gc-optional-metric[hidden]{display:none!important}
+html[data-show-co2="true"] .gc-optional-metric[data-optional-metric="co2"]{display:block!important}
+html[data-show-co2="true"] .fm-metrics-six{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 
-@media (min-width: 1700px){
-  .master-sidebar{width:220px!important}.master-shell{grid-template-columns:220px minmax(0,1fr)!important}
-  .master-nav button{font-size:11px!important}.master-nav button i{font-size:15px!important}
-  .fm-hero{min-height:235px!important;height:235px!important;padding-left:42px!important;padding-right:42px!important}
-  .hero-copy h1{font-size:52px!important}.hero-copy h2{font-size:20px!important}.hero-copy p{font-size:12px!important}
-  .fm-metrics-six .master-metric{min-height:118px!important;height:118px!important}
-  .fm-board-top>.master-panel{height:255px!important}.live-camera-panel .camera-master-frame{height:188px!important}
-  .fm-board-middle>.master-panel{height:215px!important}.fm-board-bottom>.master-panel{height:194px!important}
-}
-
-/* === FINAL MASTER DESKTOP POLISH v2 === */
-@media (min-width:701px){
-  .fm-topstatus{justify-content:flex-end!important}
-  .master-search{flex:0 0 clamp(300px,24vw,430px)!important}
-  .master-section-head{padding-top:22px!important;padding-bottom:16px!important}
-  #extensions .master-panel,#devices .master-panel,#settings .master-panel{width:100%!important}
-  #extensions .provider-grid,#providerGridExtensions{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;align-items:stretch!important}
-  #extensions .provider-grid>*{min-width:0!important;width:auto!important}
-}
-@media (min-width:1900px){
-  .fm-topstatus{left:auto!important;width:auto!important;right:22px!important}
-  .fm-hero-cards{width:min(44vw,700px)!important;max-width:700px!important}
-  .fm-metrics-six,.fm-board-top,.fm-board-middle,.fm-board-bottom{gap:10px!important}
+/* Long Final-Master navigation: keep lower entries above the fixed room/core footer. */
+@media(min-width:701px){
+  .master-nav{max-height:790px!important;overflow-y:auto!important;overscroll-behavior:contain!important;scrollbar-width:thin!important}
 }

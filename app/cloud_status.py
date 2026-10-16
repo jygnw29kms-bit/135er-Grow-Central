@@ -118,18 +118,28 @@ async def cloud_status():
     elif enabled and not service_active:
         detail = "Cloud-Link-Dienst ist nicht aktiv"
 
-    # Health probing is advisory only. A reachable /api/health endpoint does not
-    # mean telemetry sync works; agent_v2 owns the authoritative connection state.
+    # Health probing is advisory only. V7 is primary; /api/health remains a
+    # compatibility fallback. agent_v2 owns the authoritative connection state.
     health_reachable = False
     if enabled and origin:
         try:
             import time
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 started = time.monotonic()
-                response = await client.get(f"{origin}/api/health", timeout=4.0)
-                latency_ms = round((time.monotonic() - started) * 1000)
+                response = await client.get(f"{origin}/v7/health", timeout=4.0)
                 payload = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-                health_reachable = response.is_success and isinstance(payload, dict) and payload.get("ok") is True and payload.get("service") == "135er-Grow Central Cloud"
+                health_reachable = (
+                    response.is_success
+                    and isinstance(payload, dict)
+                    and payload.get("ok") is True
+                    and isinstance(payload.get("version"), int)
+                    and payload.get("version") >= 7
+                )
+                if not health_reachable:
+                    response = await client.get(f"{origin}/api/health", timeout=4.0)
+                    payload = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+                    health_reachable = response.is_success and isinstance(payload, dict) and payload.get("ok") is True and payload.get("service") == "135er-Grow Central Cloud"
+                latency_ms = round((time.monotonic() - started) * 1000)
         except Exception:
             health_reachable = False
 

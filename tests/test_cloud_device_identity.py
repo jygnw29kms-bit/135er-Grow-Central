@@ -35,7 +35,8 @@ def test_device_identity_is_persistent_and_private(monkeypatch, tmp_path):
     assert first.device_id is None
     assert len(_b64decode(first.public_key)) == 32
     assert len(_b64decode((identity_dir / "device-ed25519.key").read_text().strip())) == 32
-    assert os.stat(identity_dir / "device-ed25519.key").st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert os.stat(identity_dir / "device-ed25519.key").st_mode & 0o777 == 0o600
 
     monkeypatch.setattr(device_pairing, "IDENTITY_DIR", identity_dir)
     monkeypatch.setattr(device_pairing, "PAIR_STATE_FILE", identity_dir / "pairing.json")

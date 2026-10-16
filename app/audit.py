@@ -17,7 +17,7 @@ def append_audit(event: str, **fields: Any) -> None:
         "event": event,
         **fields,
     }
-    flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC
+    flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY | getattr(os, "O_CLOEXEC", 0)
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
     fd = os.open(path, flags, 0o640)

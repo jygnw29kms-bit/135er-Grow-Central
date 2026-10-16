@@ -1,4 +1,5 @@
 import stat
+import os
 
 from app.smarthome.models import DeviceConfig
 from app.smarthome.registry import DeviceRegistry
@@ -26,7 +27,8 @@ def test_registered_devices_survive_registry_restart(monkeypatch, tmp_path):
 
     assert [row.id for row in restarted.list()] == ["fritz-lampe"]
     assert restarted.get("fritz-lampe").native_id == "11657 0675300"
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if os.name != 'nt':
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
 def test_stale_registry_instances_do_not_overwrite_other_devices(monkeypatch, tmp_path):

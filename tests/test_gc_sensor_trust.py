@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import os
 from types import SimpleNamespace
 from pathlib import Path
 import pytest
@@ -19,7 +20,7 @@ from app import rooms
 
 ID='gc-soil-test'
 HARDWARE_UID='0011223344556677'
-ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
+ANNOUNCE={'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':ID,'name':'Soil node','device_class':'sensor','model':'GC-SOIL-XIAO-C3-HW390','firmware':'0.3.0','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'substrate_done':True,'air_raw':3767,'wet_raw':1310,'substrate_raw':2500},'capabilities':['soil_moisture']}
 
 def packet(key, kind='announce', seq=1, body=None, device_id=ID):
     raw=json.dumps({'device_id':device_id,'kind':kind,'seq':seq,'body':ANNOUNCE if body is None else body},separators=(',',':'))
@@ -36,7 +37,7 @@ def discovered(tmp_path,monkeypatch):
 
 
 def add_calibration(row):
-    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'GOOD'})
+    return CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,substrate_raw=2500,quality={'status':'verified','signal_quality':'GOOD'})
 
 def accept(store,row,assign=lambda:None):
     return store.accept(ID,name='Topf links',room_id='room1',fingerprint=row['fingerprint'][-16:],proved_key=row['public_key'],assign=assign)
@@ -47,7 +48,8 @@ def test_discovery_does_not_grant_access_and_survives_restart(discovered):
     assert row['status']=='DISCOVERED' and row['name'] is None and row['room_id'] is None
     with pytest.raises(PermissionError):store.require_trusted(ID)
     assert TrustStore(store.path).get(ID)['fingerprint']==row['fingerprint']
-    assert store.path.stat().st_mode & 0o777 == 0o600
+    if os.name != 'nt':
+        assert store.path.stat().st_mode & 0o777 == 0o600
 
 @pytest.mark.parametrize('state',['REJECTED','REVOKED'])
 def test_decisions_survive_rediscovery_and_need_manual_release(discovered,state):
@@ -263,3 +265,29 @@ def test_room_counter_ignores_stale_untrusted_native_assignment(discovered, monk
     accept(store, row)
     result = asyncio.run(rooms.list_rooms())
     assert result['rooms'][0]['device_count'] == 1
+
+
+def test_provider_derives_three_point_reference_from_signed_filtered_raw(discovered,monkeypatch):
+    store,key,row=discovered;accept(store,row)
+    CalibrationStore().record(device_id=ID,fingerprint=row['fingerprint'],public_key=row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3770,wet_raw=1180,substrate_raw=2027,quality={'status':'verified'})
+    provider=GrowCentralEsp32Provider()
+    class FakeClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self,*args): pass
+        async def subscribe(self,topic): pass
+        async def publish(self,topic,payload,**kwargs): self.nonce=json.loads(payload)['nonce']
+        @property
+        def messages(self):
+            async def stream():
+                body={'nonce':self.nonce,'hardware_uid':HARDWARE_UID,'calibration':ANNOUNCE['calibration'],'state':{'soil_moisture':12.3,'meta':{'filtered_raw':2027.0,'firmware':'0.3.0','sensor_ok':True,'quality':'GOOD'}}}
+                yield SimpleNamespace(topic=device_topic(provider.root,ID,'proof'),payload=packet(key,'proof',seq=3,body=body))
+            return stream()
+    monkeypatch.setattr(provider,'_client',FakeClient)
+    result=asyncio.run(provider.state(ID))
+    assert result['soil_moisture'] == pytest.approx(67.297, abs=0.002)
+    assert result['soil_substrate_reference_percent'] == pytest.approx(67.297, abs=0.002)
+    assert result['soil_substrate_index_percent'] == pytest.approx(100.0)
+    assert result['soil_substrate_delta_pp'] == pytest.approx(0.0)
+    assert result['meta']['calculation_source'] == 'server_three_point_reference'
+    assert result['meta']['sensor_reported_soil_moisture'] == 12.3
+    assert result['meta']['calibration_consistency_pp'] > 50

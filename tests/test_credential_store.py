@@ -1,6 +1,8 @@
 import asyncio
 import json
+import os
 import stat
+import pytest
 
 from app import credential_store
 from app.smarthome import fritz_onboarding
@@ -33,8 +35,9 @@ def test_credentials_are_encrypted_and_roundtrip(monkeypatch, tmp_path):
         "very-secret-fritz-password",
     )
     assert credential_store.get_provider_config("fritz")["host"] == "fritz.box"
-    assert stat.S_IMODE(store.stat().st_mode) == 0o600
-    assert stat.S_IMODE(key.stat().st_mode) == 0o600
+    if os.name != 'nt':
+        assert stat.S_IMODE(store.stat().st_mode) == 0o600
+        assert stat.S_IMODE(key.stat().st_mode) == 0o600
 
 
 def test_delete_credentials_removes_provider(monkeypatch, tmp_path):
@@ -67,6 +70,7 @@ def test_legacy_plaintext_store_is_migrated_on_write(monkeypatch, tmp_path):
     }
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Windows symlink creation requires Developer Mode/admin rights')
 def test_credential_store_rejects_symlinked_key(monkeypatch, tmp_path):
     _store, key = _paths(monkeypatch, tmp_path)
     target = tmp_path / "unrelated"

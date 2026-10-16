@@ -10,7 +10,7 @@
 #include "ble_provisioning.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.5.1";
+static constexpr char FW_VERSION[] = "0.5.2";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -18,6 +18,7 @@ static constexpr uint8_t SOIL_PIN = A0;          // XIAO ESP32-C3 D0 / GPIO2
 static constexpr uint16_t ADC_MAX = 4095;
 static constexpr uint16_t DEFAULT_AIR_RAW = 3767;
 static constexpr uint16_t DEFAULT_WATER_RAW = 1310;
+static constexpr uint16_t DEFAULT_SUBSTRATE_RAW = 2500;
 static constexpr uint8_t SAMPLE_COUNT = 64;
 static constexpr uint16_t SAMPLE_DELAY_MS = 2;
 static constexpr uint32_t REPORT_INTERVAL_MS = 1000;
@@ -35,8 +36,10 @@ BleProvisioner bleProvisioner;
 
 uint16_t airRaw = DEFAULT_AIR_RAW;
 uint16_t waterRaw = DEFAULT_WATER_RAW;
+uint16_t substrateRaw = DEFAULT_SUBSTRATE_RAW;
 bool airCalibrated = false;
 bool waterCalibrated = false;
+bool substrateCalibrated = false;
 String hardwareUid;
 float emaRaw = NAN;
 float lastPublishedPct = NAN;
@@ -207,8 +210,10 @@ static void saveCalibration() {
   prefs.begin("gc-soil", false);
   prefs.putUShort("air", airRaw);
   prefs.putUShort("water", waterRaw);
+  prefs.putUShort("substrate", substrateRaw);
   prefs.putBool("air_ok", airCalibrated);
   prefs.putBool("water_ok", waterCalibrated);
+  prefs.putBool("substrate_ok", substrateCalibrated);
   prefs.end();
 }
 
@@ -216,14 +221,21 @@ static void loadCalibration() {
   prefs.begin("gc-soil", true);
   airRaw = prefs.getUShort("air", DEFAULT_AIR_RAW);
   waterRaw = prefs.getUShort("water", DEFAULT_WATER_RAW);
+  substrateRaw = prefs.getUShort("substrate", DEFAULT_SUBSTRATE_RAW);
   airCalibrated = prefs.getBool("air_ok", false);
   waterCalibrated = prefs.getBool("water_ok", false);
+  substrateCalibrated = prefs.getBool("substrate_ok", false);
   prefs.end();
   if (airRaw <= waterRaw + 100 || airRaw > ADC_MAX || waterRaw < 50) {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
     airCalibrated = false;
     waterCalibrated = false;
+    substrateCalibrated = false;
+  }
+  if (substrateCalibrated && !(substrateRaw > waterRaw + 50 && substrateRaw + 50 < airRaw)) {
+    substrateRaw = DEFAULT_SUBSTRATE_RAW;
+    substrateCalibrated = false;
   }
 }
 
@@ -286,13 +298,15 @@ static String topic(const char* leaf) {
   return String(MQTT_ROOT) + "/devices/" + deviceId + "/" + leaf;
 }
 
-static bool calibrationReady() { return airCalibrated && waterCalibrated && airRaw > waterRaw + 100; }
+static bool calibrationReady() { return airCalibrated && waterCalibrated && substrateCalibrated && airRaw > substrateRaw + 50 && substrateRaw > waterRaw + 50; }
 
 static String calibrationJson() {
   return String("{\"ready\":") + (calibrationReady() ? "true" : "false") +
     ",\"air_done\":" + (airCalibrated ? "true" : "false") +
     ",\"wet_done\":" + (waterCalibrated ? "true" : "false") +
-    ",\"air_raw\":" + String(airRaw) + ",\"wet_raw\":" + String(waterRaw) + "}";
+    ",\"substrate_done\":" + (substrateCalibrated ? "true" : "false") +
+    ",\"air_raw\":" + String(airRaw) + ",\"wet_raw\":" + String(waterRaw) +
+    ",\"substrate_raw\":" + String(substrateRaw) + ",\"substrate_reference\":\"fresh_potting_soil\"}";
 }
 
 static String announcementPayload() {
@@ -327,6 +341,7 @@ static String statePayload(const SoilReading& r) {
   payload += ",\"sensor_ok\":" + String(r.sensorOk ? "true" : "false");
   payload += ",\"air_raw\":" + String(airRaw);
   payload += ",\"water_raw\":" + String(waterRaw);
+  payload += ",\"substrate_raw\":" + String(substrateRaw);
   payload += ",\"rssi_dbm\":" + String(rssi);
   payload += ",\"uptime_ms\":" + String(millis());
   payload += ",\"firmware\":\"" + String(FW_VERSION) + "\"}}";
@@ -479,16 +494,16 @@ static void printNetworkInfo() {
 static void printInfo() {
   Serial.printf("Grow-Central Soil Node %s firmware=%s\n", deviceId.c_str(), FW_VERSION);
   Serial.printf("GC_ID fingerprint=%s hardware_uid=%s\n", identity.getFingerprint().c_str(), hardwareUid.c_str());
-  Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u calibrated=%s air_calibrated=%s wet_calibrated=%s\n", airRaw, waterRaw, calibrationReady() ? "yes" : "no", airCalibrated ? "yes" : "no", waterCalibrated ? "yes" : "no");
+  Serial.printf("pin=A0/GPIO2 adc=12bit air_raw=%u water_raw=%u substrate_raw=%u calibrated=%s air_calibrated=%s wet_calibrated=%s substrate_calibrated=%s\n", airRaw, waterRaw, substrateRaw, calibrationReady() ? "yes" : "no", airCalibrated ? "yes" : "no", waterCalibrated ? "yes" : "no", substrateCalibrated ? "yes" : "no");
   Serial.println("commands:");
-  Serial.println("  INFO | CAL AIR | CAL WATER | RESET CAL");
+  Serial.println("  INFO | CAL AIR | CAL WATER | CAL SUBSTRATE | RESET CAL");
   Serial.println("  USB ID <64-character nonce> (signed identity, no private key)");
   Serial.println("  NET INFO");
   Serial.println("  NET WIFI <ssid>|<password>");
   Serial.println("  NET MQTT <host>|<port>|<user>|<password>");
   Serial.println("  NET CA <base64 DER CA certificate> (USB only)");
   Serial.println("  NET NAME <display name> | NET CLEAR | REBOOT");
-  Serial.println("WATER is engineering reference only; final substrate calibration comes later.");
+  Serial.println("AIR and WATER define the electrical range; FRESH SUBSTRATE is an agronomic reference, not field capacity.");
 }
 
 static void parseWifiCommand(const String& value) {
@@ -569,11 +584,27 @@ static void handleSerialCommands() {
     saveCalibration();
     emaRaw = NAN;
     Serial.printf("CAL WATER SAVED: %u\n", waterRaw);
+  } else if (upper == "CAL SUBSTRATE") {
+    Serial.println("CAL SUBSTRATE: place probe in representative fresh potting soil...");
+    const uint16_t candidate = calibrationSnapshot();
+    if (!airCalibrated || !waterCalibrated) {
+      Serial.println("ERR calibrate AIR and WATER first");
+    } else if (!(candidate > waterRaw + 50 && candidate + 50 < airRaw)) {
+      Serial.printf("ERR substrate reference implausible: %u\n", candidate);
+    } else {
+      substrateRaw = candidate;
+      substrateCalibrated = true;
+      saveCalibration();
+      emaRaw = NAN;
+      Serial.printf("CAL SUBSTRATE SAVED: %u\n", substrateRaw);
+    }
   } else if (upper == "RESET CAL") {
     airRaw = DEFAULT_AIR_RAW;
     waterRaw = DEFAULT_WATER_RAW;
+    substrateRaw = DEFAULT_SUBSTRATE_RAW;
     airCalibrated = false;
     waterCalibrated = false;
+    substrateCalibrated = false;
     saveCalibration();
     emaRaw = NAN;
     Serial.println("CALIBRATION RESET TO PROVISIONAL REFERENCES");

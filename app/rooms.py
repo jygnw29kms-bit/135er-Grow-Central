@@ -6,11 +6,15 @@ import csv
 import io
 import logging
 from contextlib import contextmanager
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows test/development hosts
+    fcntl = None
 import json
 import math
 import os
 import tempfile
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,11 +22,12 @@ from typing import Any, Iterator, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.security import require_write_auth
 from app.devices.runtime import runtime
 from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import classify_soil_substrate_delta
 from app.smarthome.registry import DeviceRegistry
 from app.smarthome.router import device_overview
 
@@ -30,6 +35,7 @@ DATA_FILE = Path(os.getenv("GC_ROOMS_FILE", "/var/lib/135er-grow-central/rooms.j
 CAPTURE_INTERVAL_SECONDS = max(60, int(os.getenv("GC_ROOM_CAPTURE_INTERVAL", "300")))
 router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
 _capture_task: asyncio.Task | None = None
+_LOCAL_STATE_LOCK = threading.RLock()
 logger = logging.getLogger(__name__)
 
 
@@ -109,17 +115,24 @@ def _state_lock() -> Iterator[None]:
     lock_path = DATA_FILE.with_name(f".{DATA_FILE.name}.lock")
     fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
     try:
-        os.fchmod(fd, 0o600)
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        if hasattr(os, 'fchmod'):
+            os.fchmod(fd, 0o600)
+        if fcntl is not None:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        else:
+            _LOCAL_STATE_LOCK.acquire()
         yield
     finally:
+        if fcntl is None:
+            _LOCAL_STATE_LOCK.release()
         os.close(fd)
 
 
 def _write_state(state: dict[str, Any]) -> None:
     fd, temp = tempfile.mkstemp(prefix=f".{DATA_FILE.name}-", dir=DATA_FILE.parent)
     try:
-        os.fchmod(fd, 0o600)
+        if hasattr(os, 'fchmod'):
+            os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(state, handle, ensure_ascii=False, indent=2, allow_nan=False)
             handle.write("\n")
@@ -173,6 +186,16 @@ class RoomCreate(BaseModel):
     target_temperature_c: float | None = Field(default=None, ge=0, le=60)
     target_humidity_percent: float | None = Field(default=None, ge=0, le=100)
     light_cycle: str = Field(default="", max_length=32)
+    soil_reference_low_index_percent: float | None = Field(default=None, ge=0, le=300)
+    soil_reference_high_index_percent: float | None = Field(default=None, ge=0, le=300)
+
+    @model_validator(mode="after")
+    def validate_soil_reference_thresholds(self):
+        low = self.soil_reference_low_index_percent
+        high = self.soil_reference_high_index_percent
+        if low is not None and high is not None and low >= high:
+            raise ValueError("untere Soil-Referenzschwelle muss kleiner als die obere sein")
+        return self
 
 
 class RoomUpdate(RoomCreate):
@@ -205,6 +228,10 @@ class SensorSample(BaseModel):
     humidity_percent: float | None = Field(default=None, ge=0, le=100)
     co2_ppm: float | None = Field(default=None, ge=0, le=100000)
     soil_moisture_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_substrate_reference_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_substrate_index_percent: float | None = Field(default=None, ge=0)
+    soil_substrate_delta_pp: float | None = Field(default=None, ge=-100, le=100)
+    soil_substrate_state: Literal["below_reference", "near_reference", "above_reference"] | None = None
     power_w: float | None = Field(default=None, ge=0)
     energy_wh: float | None = Field(default=None, ge=0)
     source: str = Field(default="manual", max_length=100)
@@ -397,12 +424,14 @@ async def export_sensor_history(room_id: str, limit: int = Query(default=5000, g
     room_or_404(state, room_id)
     rows = [row for row in state["sensor_history"] if row["room_id"] == room_id][-limit:]
     columns = ["timestamp", "temperature_c", "humidity_percent", "vpd_kpa", "co2_ppm",
-               "soil_reference_percent", "soil_calibration_status", "power_w", "energy_wh", "source"]
+               "soil_moisture_percent", "soil_substrate_reference_percent",
+               "soil_substrate_index_percent", "soil_substrate_delta_pp", "soil_substrate_state",
+               "soil_calibration_status", "power_w", "energy_wh", "source"]
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(columns)
     for row in rows:
-        export = {**row, "soil_reference_percent": row.get("soil_moisture_percent"),
+        export = {**row,
                   "soil_calibration_status": row.get("soil_calibration_status") or ("calibration_required" if row.get("soil_moisture_percent") is not None else "")}
         writer.writerow([_csv_cell(export.get(key)) for key in columns])
     return Response(output.getvalue(), media_type="text/csv", headers={
@@ -454,6 +483,9 @@ async def capture_room_sensors_once() -> int:
                 "humidity_percent": ("humidity_percent", 0, 100, "humidity"),
                 "co2_ppm": ("co2_ppm", 0, 100000, None),
                 "soil_moisture_percent": ("soil_moisture", 0, 100, None),
+                "soil_substrate_reference_percent": ("soil_substrate_reference_percent", 0, 100, None),
+                "soil_substrate_index_percent": ("soil_substrate_index_percent", 0, None, None),
+                "soil_substrate_delta_pp": ("soil_substrate_delta_pp", -100, 100, None),
                 "power_w": ("power_w", 0, None, None),
                 "energy_wh": ("energy_wh", 0, None, None),
             }
@@ -463,6 +495,8 @@ async def capture_room_sensors_once() -> int:
                 total = sum(values)
                 payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
             calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
+            if payload.get("soil_substrate_delta_pp") is not None:
+                payload["soil_substrate_state"] = classify_soil_substrate_delta(float(payload["soil_substrate_delta_pp"]))
             if any(value == 'valid' for value in calibration_states):
                 payload['soil_calibration_status'] = 'valid'
             elif any(value == 'required' for value in calibration_states):
@@ -488,16 +522,20 @@ async def _capture_loop() -> None:
 
 
 def install(app) -> None:
-    @app.on_event("startup")
     async def start_room_capture() -> None:
         global _capture_task
-        if _capture_task is None or _capture_task.done(): _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
+        if _capture_task is None or _capture_task.done():
+            _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
 
-    @app.on_event("shutdown")
     async def stop_room_capture() -> None:
         global _capture_task
         if _capture_task:
             _capture_task.cancel()
-            try: await _capture_task
-            except asyncio.CancelledError: pass
+            try:
+                await _capture_task
+            except asyncio.CancelledError:
+                pass
             _capture_task = None
+
+    app.router.add_event_handler("startup", start_room_capture)
+    app.router.add_event_handler("shutdown", stop_room_capture)

@@ -16,6 +16,8 @@
   document.body.append(dialog);
   dialog.querySelector('.usb-close').onclick = () => dialog.close();
   let devices = [], selected = null, renderedState = '', firmwareReady = false, activeRequest = false, polling = false;
+  const autoConnectionAttempted = new Set();
+  const autoInspected = new Set();
   const content = dialog.querySelector('.usb-content');
   const error = dialog.querySelector('.usb-error');
   async function api(path, options = {}) {
@@ -82,18 +84,69 @@
       const details = document.createElement('details'); details.append(make('summary', 'Geprüfte Sensoridentität'), make('code', selected.device_id + '\nFingerprint: ' + selected.fingerprint + '\nHardware-ID: ' + (selected.hardware_uid || '–'))); content.append(details);
     }
   }
+  function calibrationCard(title, description, image, alt, reference, done, actionButton) {
+    const card = make('article', null, 'usb-calibration-card');
+    const visual = document.createElement('img');
+    visual.className = 'usb-calibration-visual';
+    visual.src = image;
+    visual.alt = alt;
+    visual.loading = 'eager';
+    visual.decoding = 'async';
+    const copy = make('div', null, 'usb-calibration-copy');
+    copy.append(make('h4', title), make('p', description));
+    const ref = make('code', reference, 'usb-calibration-reference');
+    copy.append(ref);
+    if (done) copy.append(make('span', 'Referenz gespeichert', 'usb-calibration-done'));
+    copy.append(actionButton);
+    card.append(visual, copy);
+    return card;
+  }
+
   function renderCalibration() {
     const box = make('div', null, 'usb-calibration');
     box.append(make('h3', 'Pflichtkalibrierung vor Freigabe'));
     const uid = selected.hardware_uid ? 'Hardware-ID: ' + selected.hardware_uid : 'Hardware-ID wird geprüft';
     box.append(make('p', uid), make('p', 'Die Kalibrierung gehört fest zu diesem kryptografisch geprüften Sensor. Ein Gerätewechsel während des Ablaufs wird blockiert.'));
-    const air = make('p', '1. Trockenreferenz: Sensorfläche sauber und vollständig trocken in Luft halten.');
+    box.append(make('p', 'Bei Substratwechsel oder Sensorabweichungen wird immer die komplette Dreipunkt-Kalibrierung neu durchgeführt. Einzelne alte Referenzpunkte werden nicht mit neuen Punkten gemischt.'));
+    if (selected.air_calibrated || selected.wet_calibrated || selected.substrate_calibrated) {
+      const reset = button('Alle 3 Referenzpunkte neu kalibrieren', () => action('/calibration/reset'));
+      reset.className = 'secondary';
+      box.append(reset);
+    }
+
     const airButton = button(selected.air_calibrated ? 'Trockenreferenz erneut messen' : 'Trockenreferenz messen', () => action('/calibrate/air'));
-    const wet = make('p', '2. Nassreferenz: Nur die Sensorfläche/Probe eintauchen, Elektronik und XIAO unbedingt trocken halten.');
-    const wetButton = button(selected.wet_calibrated ? 'Nassreferenz erneut messen' : 'Nassreferenz messen', () => action('/calibrate/wet'));
-    box.append(air, airButton, wet, wetButton);
-    if (selected.air_raw != null || selected.wet_raw != null) box.append(make('p', `Messpunkte: trocken ${selected.air_raw ?? '–'} · nass ${selected.wet_raw ?? '–'}`));
-    if (selected.calibration_ready) box.append(make('p', 'Kalibrierung vollständig und plausibel. Der nächste Schritt wird freigegeben.'));
+    const wetButton = button(selected.wet_calibrated ? 'Wasserreferenz erneut messen' : 'Wasserreferenz messen', () => action('/calibrate/wet'));
+    const substrateButton = button(selected.substrate_calibrated ? 'Substratreferenz erneut messen' : 'Substratreferenz messen', () => action('/calibrate/substrate'));
+    wetButton.disabled = !selected.air_calibrated;
+    substrateButton.disabled = !selected.air_calibrated || !selected.wet_calibrated;
+
+    box.append(
+      calibrationCard(
+        '1. Sensor trocken in Luft',
+        'Sensorfläche sauber und vollständig trocken frei in der Luft halten. Keine Erde, kein Wasser.',
+        '/static/assets/sensor-calibration/01-air-dry.png',
+        'Kalibrierpunkt 1: Grow-Central Bodenfeuchtesensor trocken in Luft',
+        'AIR_DRY', selected.air_calibrated, airButton
+      ),
+      calibrationCard(
+        '2. Sensor im Wasser',
+        'Nur die Sensorfläche in sauberes Wasser eintauchen. Elektronik, XIAO und Antenne bleiben vollständig trocken.',
+        '/static/assets/sensor-calibration/02-water-saturated.png',
+        'Kalibrierpunkt 2: Sensorfläche im Wasser, Elektronik bleibt trocken',
+        'WATER_SATURATED', selected.wet_calibrated, wetButton
+      ),
+      calibrationCard(
+        '3. Frisches torfhaltiges Substrat nach Sättigung',
+        'Frische torfhaltige Blumenerde vollständig sättigen und frei abtropfen lassen. Nicht ausdrücken. Erst messen, wenn kein freies Wasser mehr abläuft; Sensor auf die spätere Einbautiefe stecken.',
+        '/static/assets/sensor-calibration/03-fresh-substrate-cc.png',
+        'Kalibrierpunkt 3: Sensor in vollständig gesättigtem und frei abgetropftem frischem Substrat',
+        'FRESH_SUBSTRATE_CC', selected.substrate_calibrated, substrateButton
+      )
+    );
+    if (selected.air_raw != null || selected.wet_raw != null || selected.substrate_raw != null) {
+      box.append(make('p', `Messpunkte: Luft ${selected.air_raw ?? '-'} · Wasser ${selected.wet_raw ?? '-'} · Substrat ${selected.substrate_raw ?? '-'}`));
+    }
+    if (selected.calibration_ready) box.append(make('p', 'Alle drei Referenzen sind vollständig und plausibel. Der nächste Schritt wird freigegeben.'));
     content.append(box);
   }
 
@@ -104,7 +157,11 @@
     const label = make('label', 'Dieser Pi als MQTT-Broker'); const host = document.createElement('select'); host.required = true; label.append(host); form.append(label);
     form.append(make('p', 'GC erstellt das lokale Zertifikat und einen individuellen Sensorzugang und überträgt sie direkt per USB.'));
     const submit = make('button', 'WLAN und Sensorzugang einrichten'); submit.type = 'submit'; submit.disabled = true; form.append(submit); content.append(form);
-    content.append(button('Sensor hat bereits eine Verbindung – prüfen', () => action('/connection')));
+    if (selected.wifi_configured && selected.mqtt_configured && selected.ca_configured) {
+      content.append(button('Vorhandene WLAN/TLS-Verbindung pr\u00fcfen', () => action('/connection')));
+    } else {
+      content.append(make('p', 'Der Sensor hat noch keine vollst\u00e4ndige WLAN/TLS-MQTT-Konfiguration. Trage unten das WLAN ein; erst danach kann die Live-Identit\u00e4t best\u00e4tigt werden.'));
+    }
     form.onsubmit = e => {
       e.preventDefault(); const body = {ssid:ssid.value, password:password.value, broker_host:host.value}; password.value = ''; action('/network', body);
     };
@@ -156,6 +213,16 @@
     polling = true;
     try {
       const result = await api(''); devices = result.devices || []; firmwareReady = result.firmware_ready;
+      // After a Pi/service reboot USB sessions are intentionally empty. Re-establish
+      // only the signed hardware identity automatically; never flash or provision here.
+      for (const device of devices) {
+        if (device.state === 'DETECTED' && !device.busy && !device.device_id && !autoInspected.has(device.id)) {
+          autoInspected.add(device.id);
+          api('/' + encodeURIComponent(device.id) + '/inspect', {method:'POST'})
+            .then(() => setTimeout(refresh, 250))
+            .catch(e => { status.textContent = 'USB-Identit\u00e4tspr\u00fcfung: ' + e.message; });
+        }
+      }
       list.replaceChildren();
       for (const device of devices) {
         const row = make('article', null, 'pairing-card'); const info = make('div');
@@ -168,6 +235,19 @@
         const current = devices.find(device => device.id === selected.id);
         if (current) { selected = current; renderDialog(); }
         else { const session=(result.sessions||[]).find(item=>item.id===selected.id);if(session){selected={...selected,...session};renderDialog();}error.textContent='USB-Gerät wurde getrennt. Wieder an den Pi anschließen.';content.querySelectorAll('button').forEach(b=>{b.disabled=true;});renderedState=''; }
+      }
+      for (const device of devices) {
+        const networkReady = device.state === 'NETWORK' && device.device_id && device.wifi_configured === true && device.mqtt_configured === true && device.mqtt_connected === true && device.ca_configured === true && !device.busy;
+        if (networkReady && !autoConnectionAttempted.has(device.id)) {
+          autoConnectionAttempted.add(device.id);
+          try {
+            await api('/' + encodeURIComponent(device.id) + '/connection', {method:'POST'});
+          } catch (e) {
+            autoConnectionAttempted.delete(device.id);
+            status.textContent = e.message;
+          }
+        }
+        if (device.state === 'ASSIGN' || device.state === 'READY') autoConnectionAttempted.delete(device.id);
       }
       window.dispatchEvent(new CustomEvent('gc:usb-sessions', {detail:devices}));
     } catch (e) { status.textContent = e.message; }

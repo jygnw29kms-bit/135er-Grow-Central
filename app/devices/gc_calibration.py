@@ -3,12 +3,61 @@ from __future__ import annotations
 from contextlib import contextmanager, closing
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import sqlite3
 
-SCHEMA_VERSION = 1
-CALIBRATION_KIND = "soil_air_water_engineering_reference"
+SCHEMA_VERSION = 2
+CALIBRATION_KIND = "soil_air_water_fresh_substrate_reference"
+SUBSTRATE_REFERENCE_TOLERANCE_PP = 5.0
+
+
+def classify_soil_substrate_delta(delta_pp: float) -> str:
+    delta = float(delta_pp)
+    if not math.isfinite(delta):
+        raise ValueError("non-finite soil substrate delta")
+    if delta < -SUBSTRATE_REFERENCE_TOLERANCE_PP:
+        return "below_reference"
+    if delta > SUBSTRATE_REFERENCE_TOLERANCE_PP:
+        return "above_reference"
+    return "near_reference"
+
+
+def derive_soil_reference_metrics(raw: float, points: dict) -> dict[str, float | str]:
+    """Derive engineering moisture plus a fresh-substrate reference index.
+
+    AIR/WATER remain the electrical 0..100 % engineering range. The fresh
+    substrate point is an agronomic reference only: index 100 means the current
+    electrical reading matches that reference. No field-capacity percentage is
+    invented from the third point.
+    """
+    try:
+        raw_value = float(raw)
+        air = float(points["air_raw"])
+        wet = float(points["wet_raw"])
+        substrate = float(points["substrate_raw"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid soil calibration points") from exc
+    if not all(math.isfinite(value) for value in (raw_value, air, wet, substrate)):
+        raise ValueError("non-finite soil calibration input")
+    if not (air > substrate + 50 and substrate > wet + 50):
+        raise ValueError("invalid three-point soil calibration")
+    span = air - wet
+    moisture = min(100.0, max(0.0, (air - raw_value) * 100.0 / span))
+    substrate_percent = (air - substrate) * 100.0 / span
+    if substrate_percent <= 0:
+        raise ValueError("invalid fresh-substrate reference")
+    reference_index = moisture * 100.0 / substrate_percent
+    delta_pp = moisture - substrate_percent
+    state = classify_soil_substrate_delta(delta_pp)
+    return {
+        "soil_moisture_percent": round(moisture, 3),
+        "soil_substrate_reference_percent": round(substrate_percent, 3),
+        "soil_substrate_index_percent": round(reference_index, 3),
+        "soil_substrate_delta_pp": round(delta_pp, 3),
+        "soil_substrate_state": state,
+    }
 
 
 def now_iso() -> str:
@@ -67,10 +116,12 @@ class CalibrationStore:
             return [self.public(row) for row in db.execute('SELECT * FROM calibrations ORDER BY calibrated_at DESC,device_id')]
 
     def record(self, *, device_id: str, fingerprint: str, public_key: str, hardware_uid: str, firmware_version: str,
-               air_raw: int, wet_raw: int, quality: dict, capability: str = 'soil_moisture'):
+               air_raw: int, wet_raw: int, substrate_raw: int, quality: dict, capability: str = 'soil_moisture'):
         if air_raw <= wet_raw + 100:
             raise ValueError('calibration span too small')
-        points = {"air_raw": int(air_raw), "wet_raw": int(wet_raw), "span_raw": int(air_raw - wet_raw)}
+        if not (air_raw > substrate_raw + 50 and substrate_raw > wet_raw + 50):
+            raise ValueError('fresh substrate reference must lie between air and water references')
+        points = {"air_raw": int(air_raw), "wet_raw": int(wet_raw), "substrate_raw": int(substrate_raw), "span_raw": int(air_raw - wet_raw)}
         row = (device_id, fingerprint, public_key, hardware_uid, capability, SCHEMA_VERSION, CALIBRATION_KIND,
                json.dumps(points, separators=(',', ':')), json.dumps(quality, separators=(',', ':')),
                now_iso(), firmware_version, 1, None)
@@ -88,6 +139,9 @@ class CalibrationStore:
         row = self.get(device_id)
         if not row or not row['valid']:
             raise PermissionError('sensor calibration required')
+        if row.get('schema_version') != SCHEMA_VERSION or 'substrate_raw' not in row.get('points', {}):
+            self.invalidate(device_id, 'calibration schema outdated; fresh substrate reference required')
+            raise PermissionError('sensor fresh-substrate calibration required')
         if fingerprint and row['fingerprint'] != fingerprint:
             self.invalidate(device_id, 'identity fingerprint changed')
             raise PermissionError('sensor calibration identity mismatch')
@@ -107,12 +161,19 @@ class CalibrationStore:
 from fastapi import APIRouter
 import asyncio
 from .gc_trust import TrustStore
-from .runtime import runtime
+
+class _LazyRuntimeProxy:
+    def get(self, key):
+        from .runtime import runtime as device_runtime
+        return device_runtime.get(key)
+
+runtime = _LazyRuntimeProxy()
 
 router = APIRouter(prefix='/api/v1/sensor-calibration', tags=['sensor calibration'])
 
 @router.get('')
 async def calibration_status():
+    # Runtime provider lookup stays lazy to keep clean application startup cycle-free.
     records = {row['device_id']: row for row in CalibrationStore().list()}
     devices = []
     for trust in TrustStore().list():

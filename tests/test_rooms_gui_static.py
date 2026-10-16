@@ -28,4 +28,23 @@ def test_rooms_feature_does_not_remove_firstboot_network_path():
 def test_room_views_show_substrate_moisture():
     js = (ROOT / "web" / "room_views.js").read_text(encoding="utf-8")
     assert "soil_moisture_percent" in js
-    assert "Substrat" in js
+    assert "Frischsubstrat" in js
+    assert "soil_substrate_index_percent" in js
+    assert r"Dreipunkt-Kalibrierung g\u00fcltig" in js
+
+
+def test_console_uses_calibrated_three_point_soil_display():
+    js = (ROOT / "web" / "console.js").read_text(encoding="utf-8")
+    assert "soilHistoryValid" in js
+    assert "soilHistoryDetail" in js
+    assert "Frischsubstrat-Index" in js
+    assert "soil_substrate_state" in js
+
+
+def test_room_overview_hides_uncalibrated_soil_percentage():
+    room_js = (ROOT / "web" / "room_views.js").read_text(encoding="utf-8")
+    console_js = (ROOT / "web" / "console.js").read_text(encoding="utf-8")
+    assert "soilValid(s)?`Bodenfeuchte:" in room_js
+    assert "soilHistoryValid(s)?Number(s.soil_moisture_percent)" in console_js
+    assert "Kalibrierung erforderlich" in room_js
+    assert "Kalibrierung erforderlich" in console_js

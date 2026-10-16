@@ -1,13 +1,19 @@
 """Configuration-backed device registry."""
 from __future__ import annotations
 
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows test/development hosts
+    fcntl = None
 import json
 import os
 import tempfile
+import threading
 from pathlib import Path
 
 from .models import DeviceConfig
+
+_LOCAL_REGISTRY_LOCK = threading.RLock()
 
 
 class DeviceRegistry:
@@ -46,8 +52,12 @@ class DeviceRegistry:
         lock_path = path.with_name(f".{path.name}.lock")
         lock_descriptor = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
         try:
-            os.fchmod(lock_descriptor, 0o600)
-            fcntl.flock(lock_descriptor, fcntl.LOCK_EX)
+            if hasattr(os, 'fchmod'):
+                os.fchmod(lock_descriptor, 0o600)
+            if fcntl is not None:
+                fcntl.flock(lock_descriptor, fcntl.LOCK_EX)
+            else:
+                _LOCAL_REGISTRY_LOCK.acquire()
             # Reload under the lock so concurrent discovery/import requests do
             # not overwrite devices registered by the other request.
             current = DeviceRegistry.from_env()._devices
@@ -58,21 +68,27 @@ class DeviceRegistry:
             payload = {"devices": [item.model_dump(mode="json") for item in self.list()]}
             descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}-", dir=path.parent)
             try:
-                os.fchmod(descriptor, 0o600)
+                if hasattr(os, 'fchmod'):
+                    os.fchmod(descriptor, 0o600)
                 with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                     json.dump(payload, handle, indent=2, ensure_ascii=False)
                     handle.write("\n")
                     handle.flush()
                     os.fsync(handle.fileno())
                 os.replace(temporary, path)
-                os.chmod(path, 0o600)
-                directory_descriptor = os.open(path.parent, os.O_RDONLY)
-                try:
-                    os.fsync(directory_descriptor)
-                finally:
-                    os.close(directory_descriptor)
+                if os.name != 'nt':
+                    os.chmod(path, 0o600)
+                if os.name != 'nt':
+                    directory_descriptor = os.open(path.parent, os.O_RDONLY)
+                    try:
+                        os.fsync(directory_descriptor)
+                    finally:
+                        os.close(directory_descriptor)
             finally:
                 Path(temporary).unlink(missing_ok=True)
         finally:
-            fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+            if fcntl is not None:
+                fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+            else:
+                _LOCAL_REGISTRY_LOCK.release()
             os.close(lock_descriptor)

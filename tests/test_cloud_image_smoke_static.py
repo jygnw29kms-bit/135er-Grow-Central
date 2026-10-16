@@ -7,19 +7,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_cloud_smoke_is_optional_read_only_and_local_first():
-    source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text()
+    source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text(encoding="utf-8")
     assert "https://135ercloud.grow-central.de" in source
     assert "/api/health" in source
     assert "/health" in source
     assert "DEGRADED" in source
-    assert "lokaler Betrieb bleibt gültig" in source
+    assert "lokaler Betrieb bleibt g\u00fcltig" in source
     assert "GESAMTSTATUS: LOCAL-FIRST OK" in source
     assert "api/v1/telemetry" not in source
     assert "GC_REMOTE_COMMANDS" not in source
 
 
 def test_cloud_smoke_enforces_headless_final_image():
-    source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text()
+    source = (ROOT / "image-builder/firstboot/cloud-smoke-test.sh").read_text(encoding="utf-8")
     assert "HEADLESS-PRUNE" in source
     assert "apt-get purge -y --auto-remove" in source
     for component in (
@@ -38,8 +38,8 @@ def test_cloud_smoke_enforces_headless_final_image():
 
 
 def test_image_workflow_installs_and_runs_cloud_smoke():
-    workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
-    setup_ap = (ROOT / "image-builder/firstboot/setup-ap.sh").read_text()
+    workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    setup_ap = (ROOT / "image-builder/firstboot/setup-ap.sh").read_text(encoding="utf-8")
     assert "grow-central-cloud-smoke-test" in workflow
     assert "cloud-smoke-test.sh" in workflow
     assert "GC_REMOTE_COMMANDS=false" in workflow
@@ -49,9 +49,9 @@ def test_image_workflow_installs_and_runs_cloud_smoke():
 
 
 def test_closed_test_image_has_no_remote_maintenance_activation_path():
-    workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
-    firstboot = (ROOT / "app/firstboot.py").read_text()
-    apply_setup = (ROOT / "image-builder/firstboot/apply_setup.py").read_text()
+    workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    firstboot = (ROOT / "app/firstboot.py").read_text(encoding="utf-8")
+    apply_setup = (ROOT / "image-builder/firstboot/apply_setup.py").read_text(encoding="utf-8")
 
     assert "maintenance_activation_code" not in firstboot
     assert "maintenance_activation_code" not in apply_setup
@@ -64,17 +64,17 @@ def test_remote_maintenance_assets_remain_dormant_if_retained_for_future_work():
     controller_path = ROOT / "image-builder/firstboot/remote-maintenance.sh"
     unit_path = ROOT / "image-builder/firstboot/grow-central-remote-maintenance.service"
     if controller_path.exists() and unit_path.exists():
-        controller = controller_path.read_text()
-        unit = unit_path.read_text()
+        controller = controller_path.read_text(encoding="utf-8")
+        unit = unit_path.read_text(encoding="utf-8")
         assert "systemctl enable --now" in controller
         assert "StrictHostKeyChecking=yes" in unit
         assert "BatchMode=yes" in unit
-        workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text()
+        workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
         assert "grow-central-remote-maintenance.service" not in workflow
 
 
 def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
-    installer = (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_text()
+    installer = (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_text(encoding="utf-8")
     assert "growcentral-maintenance-code" in installer
     assert "growcentral-maintenance-worker" in installer
     assert 'permitlisten="127.0.0.1:{port}"' in installer
@@ -85,7 +85,8 @@ def test_cloud_installer_provisions_one_time_enrollment_without_exposing_ssh():
 
 
 def test_packaged_cloud_installer_matches_current_payload():
-    wrapper = (ROOT / "scripts/install-135ercloud-v6.sh").read_text()
+    wrapper = (ROOT / "scripts/install-135ercloud-v6.sh").read_text(encoding="utf-8")
     encoded = wrapper.split("base64 -d <<'__GCLOUD_PAYLOAD__' | gzip -dc > \"$TMP\"\n", 1)[1].split("\n__GCLOUD_PAYLOAD__", 1)[0]
     decoded = gzip.decompress(base64.b64decode(encoded))
-    assert decoded == (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_bytes()
+    payload = (ROOT / "scripts/install-135ercloud-v6.payload.sh").read_bytes().replace(b"\r\n", b"\n")
+    assert decoded == payload

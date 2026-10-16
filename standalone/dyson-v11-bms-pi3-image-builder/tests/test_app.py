@@ -4,6 +4,10 @@ import sys
 import time
 import types
 import unittest
+import pytest
+
+if os.name == 'nt':
+    pytest.skip('Dyson serial tests require POSIX termios', allow_module_level=True)
 from pathlib import Path
 from unittest.mock import patch
 

@@ -41,7 +41,7 @@ def signed(key,kind,sequence,body,device_id=ID):
 
 
 def announce(device_id=ID):
-    return {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':device_id,'name':'TLS Software Sensor','device_class':'sensor','firmware':'0.3.0','model':'test-node','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'air_raw':3767,'wet_raw':1310},'capabilities':['soil_moisture']}
+    return {'schema':'gc-device-v1','protocol':'gc-esp32-mqtt-v1','id':device_id,'name':'TLS Software Sensor','device_class':'sensor','firmware':'0.3.0','model':'test-node','hardware_uid':HARDWARE_UID,'calibration':{'ready':True,'air_done':True,'wet_done':True,'substrate_done':True,'air_raw':3767,'wet_raw':1310,'substrate_raw':2500},'capabilities':['soil_moisture']}
 
 
 @pytest.mark.skipif(not BROKER or not PASSWORD_TOOL,reason='native Mosquitto tools required for TLS integration')
@@ -104,7 +104,7 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
             assert [d.native_id for d in discovered]==[ID]
             assert discovered[0].metadata['trust_status']=='DISCOVERED'
             trust_row=TrustStore().get(ID)
-            CalibrationStore().record(device_id=ID,fingerprint=trust_row['fingerprint'],public_key=trust_row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,quality={'status':'verified','signal_quality':'EXCELLENT'})
+            CalibrationStore().record(device_id=ID,fingerprint=trust_row['fingerprint'],public_key=trust_row['public_key'],hardware_uid=HARDWARE_UID,firmware_version='0.3.0',air_raw=3767,wet_raw=1310,substrate_raw=2500,quality={'status':'verified','signal_quality':'EXCELLENT'})
             with pytest.raises(PermissionError):await provider.state(ID)
             sequence=1
             async def respond():

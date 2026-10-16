@@ -1,7 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-  const titles = {overview:'Übersicht',grow:'Growboxen',devices:'Geräte',automation:'Automationen',camera:'Kamera',energy:'Energie',system:'System'};
+  const titles = {overview:'Übersicht',grow:'Räume',devices:'Geräte',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bewässerung',lighting:'Beleuchtung',automation:'Zeitpläne',recipes:'Rezepte',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
   const state = {platform:null,runtime:null,smart:null,discovered:[],filter:'all',mode:localStorage.getItem('gc.mode') === 'advanced' ? 'advanced' : 'simple'};
 
   async function api(path, options={}) {
@@ -39,6 +39,7 @@
     if (id === 'camera') loadCamera();
     if (id === 'energy') loadEnergy(true);
     if (id === 'system') loadSystem();
+    window.dispatchEvent(new CustomEvent('gc:view',{detail:{id}}));
   }
 
   function providerCard(provider) {
@@ -169,6 +170,6 @@
   document.querySelectorAll('#mainNav [data-view],[data-open]').forEach((node)=>node.addEventListener('click',()=>openView(node.dataset.view||node.dataset.open)));
   document.querySelectorAll('.filterbar [data-filter]').forEach((node)=>node.addEventListener('click',()=>{document.querySelectorAll('.filterbar [data-filter]').forEach((x)=>x.classList.remove('active'));node.classList.add('active');state.filter=node.dataset.filter;renderDeviceTable();}));
   $('simpleMode').addEventListener('click',()=>setMode('simple')); $('advancedMode').addEventListener('click',()=>setMode('advanced'));
-  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('discoverBtn').addEventListener('click',universalDiscover);
+  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('cameraRefreshMaster')?.addEventListener('click',loadCamera); $('discoverBtn').addEventListener('click',universalDiscover);
   setMode(state.mode); refreshAll(false); setInterval(()=>refreshAll(false),60000);
 })();

@@ -17,7 +17,7 @@ Der Flow ist in Desktop-, Mobile- und Legacy-Oberfläche vorhanden; die produkti
 
 ## Geräteidentität und Replay-Schutz
 
-Firmware **0.5.1** erzeugt bzw. bewahrt ein individuelles P-256-Schlüsselpaar im NVS und bindet zusätzlich die aus dem ESP32-C3-eFuse abgeleitete Hardware-UID in die signierte Geräteankündigung ein. Hardware-Entropie wird zur Erzeugung aktiviert und vor ADC-Messungen wieder deaktiviert. Der private Schlüssel wird nicht über API oder serielle Diagnose ausgegeben. Seine Speicherung ist noch **nicht** gegen physische Flash-Auslese geschützt; Secure Boot/Flash-/NVS-Verschlüsselung sind nicht eingerichtet.
+Firmware **0.5.2** erzeugt bzw. bewahrt ein individuelles P-256-Schlüsselpaar im NVS und bindet zusätzlich die aus dem ESP32-C3-eFuse abgeleitete Hardware-UID in die signierte Geräteankündigung ein. Hardware-Entropie wird zur Erzeugung aktiviert und vor ADC-Messungen wieder deaktiviert. Der private Schlüssel wird nicht über API oder serielle Diagnose ausgegeben. Seine Speicherung ist noch **nicht** gegen physische Flash-Auslese geschützt; Secure Boot/Flash-/NVS-Verschlüsselung sind nicht eingerichtet.
 
 Envelope:
 
@@ -72,7 +72,7 @@ Ein aktiver BLE-Man-in-the-Middle kann dadurch höchstens die Sitzung stören: D
 
 ADC-Erfassung läuft in einer eigenen FreeRTOS-Aufgabe; blockierende Netzwerkverbindungen dürfen diese nicht stoppen. MQTT bleibt in der Netzwerk-/Hauptaufgabe; Identitätsanfragen werden gepuffert und außerhalb des MQTT-Callbacks verarbeitet. Das folgt der ausdrücklichen Deadlock-Warnung der verwendeten **256dpi/MQTT 2.5.3**-Bibliothek. WLAN und MQTT haben getrennten Backoff bis 60 Sekunden. Kalibrierung bleibt lokal; Kommunikationsverlust löst keine Aktoraktion aus.
 
-Nonce-Antworten liefern den aktuellen Mess-Snapshot, einschließlich freigegebener RAW-/Qualitätsdiagnosewerte. Feuchte muss endlich und zwischen 0 und 100 liegen oder bei Sensorfehler `null` sein; falsche Typen und ungültige Bereiche werden verworfen. Luft/Wasser bleibt eine technische Referenzskala, **keine bestätigte volumetrische Wassergehaltsmessung**. Substratprofile, Offline-Historiennachlieferung, Watchdog-/Brownout-Diagnose und echte Driftvalidierung sind weitere, hier nicht behauptete Funktionen.
+Nonce-Antworten liefern den aktuellen Mess-Snapshot, einschließlich freigegebener RAW-/Qualitätsdiagnosewerte. Feuchte muss endlich und zwischen 0 und 100 liegen oder bei Sensorfehler `null` sein; falsche Typen und ungültige Bereiche werden verworfen. AIR_DRY/WATER_SATURATED bleibt eine technische Referenzskala, **keine bestätigte volumetrische Wassergehaltsmessung**. FRESH_SUBSTRATE_CC ergänzt die produktive Kalibrierung für frisches, gesättigtes und frei abgetropftes Substrat. Offline-Historiennachlieferung, Watchdog-/Brownout-Diagnose und echte Driftvalidierung sind weitere, hier nicht behauptete Funktionen.
 
 ## Nachweise und Grenzen
 

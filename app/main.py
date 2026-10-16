@@ -22,6 +22,7 @@ from app.devices.router import router as devices_router
 from app.devices.gc_pairing import router as pairing_router
 from app.smarthome.router import router as smarthome_router
 from app.smarthome.ha_bridge import router as ha_bridge_router
+from app.homekit_bridge import router as homekit_router
 from app.provisioning.usb import router as usb_router
 from app.provisioning.ble import router as ble_provisioning_router
 from app.network import router as network_router
@@ -45,6 +46,7 @@ app.include_router(devices_router)
 app.include_router(pairing_router)
 app.include_router(smarthome_router)
 app.include_router(ha_bridge_router)
+app.include_router(homekit_router)
 app.include_router(usb_router)
 app.include_router(ble_provisioning_router)
 app.include_router(diagnostics_router)
@@ -105,6 +107,11 @@ async def index():
 @app.get("/legacy")
 async def legacy_index():
     return FileResponse(WEB_DIR / "index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(WEB_DIR / "brand-mark.png", media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/api/health")

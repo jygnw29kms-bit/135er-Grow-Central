@@ -19,6 +19,9 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes, serialization
 import pytest
 
+if os.name == 'nt':
+    pytest.skip('broker provisioning requires POSIX mosquitto account APIs', allow_module_level=True)
+
 from app.provisioning import broker_service as broker
 
 PASSWD = os.getenv('GC_TEST_MOSQUITTO_PASSWD') or shutil.which('mosquitto_passwd')
