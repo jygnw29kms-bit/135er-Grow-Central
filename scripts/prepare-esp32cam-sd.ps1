@@ -3,7 +3,7 @@ param(
     [int]$DiskNumber = 6,
 
     [Parameter(Mandatory = $false)]
-    [string]$Label = '135er-GC-Cam'
+    [string]$Label = '135erGC-Cam'
 )
 
 $ErrorActionPreference = 'Stop'
