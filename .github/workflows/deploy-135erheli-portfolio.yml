@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [deploy-135erheli]
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/deploy-135erheli-portfolio.yml'
 
 permissions:
   contents: read
@@ -19,7 +23,7 @@ jobs:
           ref: main
           path: site
 
-      - name: Configure Plesk site and deploy
+      - name: Deploy exact SVG master to Plesk
         env:
           SSH_HOST: ${{ secrets.SSH_HOST || secrets.SFTP_HOST }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
@@ -37,31 +41,34 @@ jobs:
           export SSHPASS="$SSH_PASSWORD"
 
           tar -C site -czf /tmp/135erheli-site.tar.gz index.html styles.css app.js assets
-          REMOTE_HOME="$(sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" 'printf "%s" "$HOME"')"
-          REMOTE_ARCHIVE="$REMOTE_HOME/135erheli-site.tar.gz"
-          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no /tmp/135erheli-site.tar.gz "$SSH_USERNAME@$SSH_HOST:$REMOTE_ARCHIVE"
+          ARCHIVE_B64="$(base64 -w0 /tmp/135erheli-site.tar.gz)"
 
           REMOTE='set -euo pipefail
           FQDN="135erheli.de"
           TARGET="/var/www/vhosts/$FQDN/httpdocs"
-          ARCHIVE="$1"
+          ARCHIVE="/tmp/135erheli-site.tar.gz"
+          STAGE="/tmp/135erheli-stage"
+          BACKUP="/tmp/135erheli-backup-$(date +%Y%m%d-%H%M%S)"
+
+          printf "%s" "__ARCHIVE_B64__" | base64 -d > "$ARCHIVE"
+          test -s "$ARCHIVE"
 
           command -v plesk >/dev/null
           plesk bin site --update "$FQDN" -www-root httpdocs -seo-redirect non-www
           plesk sbin httpdmng --reconfigure-domain "$FQDN"
-
           test -d "$TARGET"
-          test -f "$ARCHIVE"
+
           OWNER="$(stat -c %U "$TARGET")"
           GROUP="$(stat -c %G "$TARGET")"
 
-          rm -rf /tmp/135erheli-stage
-          mkdir -p /tmp/135erheli-stage
-          tar -xzf "$ARCHIVE" -C /tmp/135erheli-stage
-          test -s /tmp/135erheli-stage/index.html
-          grep -q "RAW CITY HARDWARE" /tmp/135erheli-stage/index.html
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          tar -xzf "$ARCHIVE" -C "$STAGE"
+          test -s "$STAGE/index.html"
+          test -s "$STAGE/assets/hero-master.svg"
+          test -s "$STAGE/assets/135er-wordmark.svg"
+          grep -q "RAW CITY HARDWARE" "$STAGE/index.html"
 
-          BACKUP="/tmp/135erheli-backup-$(date +%Y%m%d-%H%M%S)"
           mkdir -p "$BACKUP"
           cp -a "$TARGET"/. "$BACKUP"/ 2>/dev/null || true
 
@@ -71,10 +78,10 @@ jobs:
             -exec rm -rf {} +
 
           install -m 0755 -o "$OWNER" -g "$GROUP" -d "$TARGET/assets"
-          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/index.html "$TARGET/index.html"
-          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/styles.css "$TARGET/styles.css"
-          install -m 0644 -o "$OWNER" -g "$GROUP" /tmp/135erheli-stage/app.js "$TARGET/app.js"
-          cp -a /tmp/135erheli-stage/assets/. "$TARGET/assets/"
+          install -m 0644 -o "$OWNER" -g "$GROUP" "$STAGE/index.html" "$TARGET/index.html"
+          install -m 0644 -o "$OWNER" -g "$GROUP" "$STAGE/styles.css" "$TARGET/styles.css"
+          install -m 0644 -o "$OWNER" -g "$GROUP" "$STAGE/app.js" "$TARGET/app.js"
+          cp -a "$STAGE/assets"/. "$TARGET/assets"/
           chown -R "$OWNER:$GROUP" "$TARGET/assets"
           find "$TARGET/assets" -type d -exec chmod 0755 {} +
           find "$TARGET/assets" -type f -exec chmod 0644 {} +
@@ -84,14 +91,17 @@ jobs:
           systemctl reload nginx
 
           test -s "$TARGET/index.html"
+          test -s "$TARGET/assets/hero-master.svg"
           grep -q "RAW CITY HARDWARE" "$TARGET/index.html"
-          rm -rf /tmp/135erheli-stage "$ARCHIVE"'
+          rm -rf "$STAGE" "$ARCHIVE"'
 
-          B64="$(printf '%s' "$REMOTE" | base64 -w0)"
+          REMOTE="${REMOTE/__ARCHIVE_B64__/$ARCHIVE_B64}"
+          SCRIPT_B64="$(printf '%s' "$REMOTE" | base64 -w0)"
+
           if sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" 'id -u' | grep -qx 0; then
-            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "echo '$B64' | base64 -d | bash -s -- '$REMOTE_ARCHIVE'"
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "echo '$SCRIPT_B64' | base64 -d | bash"
           else
-            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$B64' | base64 -d | bash -s -- '$REMOTE_ARCHIVE'\""
+            printf '%s\n' "$SSH_PASSWORD" | sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USERNAME@$SSH_HOST" "sudo -S -p '' bash -c \"echo '$SCRIPT_B64' | base64 -d | bash\""
           fi
 
       - name: Verify live website
@@ -101,10 +111,10 @@ jobs:
           for i in {1..12}; do
             if curl --http1.1 -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
               && grep -q 'RAW CITY HARDWARE' /tmp/135erheli.html \
-              && grep -q 'AKTUELLE PROJEKTE' /tmp/135erheli.html \
-              && curl --http1.1 -LfsS https://135erheli.de/assets/hero-homebrew.svg -o /tmp/hero.svg \
-              && grep -q 'JL1976' /tmp/hero.svg; then
-              echo '135erHeli.de is live with current hero.'
+              && curl --http1.1 -LfsS https://135erheli.de/assets/hero-master.svg -o /tmp/hero.svg \
+              && grep -q 'JL1976' /tmp/hero.svg \
+              && curl --http1.1 -LfsS https://135erheli.de/assets/135er-wordmark.svg -o /tmp/wordmark.svg; then
+              echo '135erHeli.de SVG master is live.'
               exit 0
             fi
             sleep 5
