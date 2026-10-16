@@ -38,7 +38,9 @@ def test_image_installs_only_explicit_nopasswd_actions():
 def test_test_maintenance_access_is_build_scoped_and_key_only():
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
     assert "github.event_name == 'workflow_dispatch'" in workflow
-    assert "startsWith(github.ref_name, 'image/firstboot-')" in workflow
+    assert 'enable_test_maintenance:' in workflow
+    assert 'inputs.enable_test_maintenance == true' in workflow
+    assert "startsWith(github.ref_name, 'image/firstboot-')" not in workflow
     assert "secrets.GC_TEST_PI_MAINTENANCE_PUBKEY" in workflow
     assert "AuthenticationMethods publickey" in workflow
     assert "PasswordAuthentication no" in workflow
