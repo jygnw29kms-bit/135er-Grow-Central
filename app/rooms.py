@@ -223,7 +223,7 @@ class DeviceAssignment(BaseModel):
 
 
 class JournalEntry(BaseModel):
-    category: Literal["note", "watering", "feeding", "training", "defoliation", "pest", "flowering", "harvest", "other"] = "note"
+    category: Literal["note", "watering", "feeding", "training", "defoliation", "pest", "flowering", "photo", "observation", "diagnosis", "repotting", "harvest", "other"] = "note"
     title: str = Field(min_length=1, max_length=120)
     text: str = Field(default="", max_length=5000)
 
@@ -423,6 +423,73 @@ async def delete_grow_profile(profile_id: str):
         return {"ok": True}
 
 
+def _is_today(timestamp: str | None) -> bool:
+    if not timestamp:
+        return False
+    try:
+        value = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone().date() == datetime.now().astimezone().date()
+    except ValueError:
+        return False
+
+
+def _profile_tasks_for_plant(profile: dict[str, Any] | None, plant: dict[str, Any]) -> list[dict[str, Any]]:
+    if not profile:
+        return []
+    phase = plant.get("phase")
+    rows = []
+    for task in profile.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        task_phase = task.get("phase")
+        if task_phase and task_phase != phase:
+            continue
+        rows.append({**task, "plant_id": plant["id"], "plant_name": plant.get("name", "")})
+    return rows
+
+
+@router.get("/today")
+async def today_checkin():
+    state = load_state()
+    profiles = {row["id"]: row for row in state["grow_profiles"]}
+    rooms = []
+    for room in state["rooms"]:
+        room_plants = [plant for plant in state["plants"] if plant.get("room_id") == room["id"]]
+        events = [event for event in state["grow_events"] if event.get("room_id") == room["id"] and _is_today(event.get("timestamp"))]
+        tasks: list[dict[str, Any]] = []
+        plant_status = []
+        snapshot = _latest_sensor_snapshot(state, room["id"])
+        for plant in room_plants:
+            profile = profiles.get(plant.get("profile_id"))
+            tasks.extend(_profile_tasks_for_plant(profile, plant))
+            phase_profile = _phase_profile(profile, plant.get("phase"))
+            targets = (phase_profile or {}).get("targets", {})
+            plant_status.append({
+                "id": plant["id"],
+                "name": plant.get("name", ""),
+                "phase": plant.get("phase"),
+                "profile_id": plant.get("profile_id"),
+                "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
+                "targets": targets,
+            })
+        rooms.append({
+            "id": room["id"],
+            "name": room.get("name", ""),
+            "sensor_snapshot": snapshot,
+            "plants": plant_status,
+            "tasks": tasks,
+            "events": list(reversed(events[-100:])),
+        })
+    return {
+        "date": datetime.now().astimezone().date().isoformat(),
+        "rooms": rooms,
+        "event_count": sum(len(room["events"]) for room in rooms),
+        "task_count": sum(len(room["tasks"]) for room in rooms),
+    }
+
+
 @router.get("")
 async def list_rooms():
     state = load_state()
@@ -537,7 +604,7 @@ async def add_room_journal(room_id: str, body: JournalEntry):
         snapshot = _latest_sensor_snapshot(state, room_id)
         row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["room_journal"].append(row)
-        _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
+        _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
         return row
 
 
@@ -628,7 +695,7 @@ async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
         snapshot = _latest_sensor_snapshot(state, room_id)
         row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["plant_journal"].append(row)
-        _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.category if body.category in {"watering", "feeding", "training", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
+        _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
         return row
 
 
