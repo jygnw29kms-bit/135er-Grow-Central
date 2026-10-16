@@ -1,0 +1,57 @@
+#!/bin/bash
+set -euo pipefail
+
+CORE=135er-grow-central.service
+CLOUD=135er-grow-central-cloud-link.service
+HOMEKIT=grow-central-homekit.service
+
+usage() {
+  echo "usage: growcentral-maint {status|restart-core|restart-cloud|restart-homekit|restart-all}" >&2
+  exit 64
+}
+
+state() {
+  local unit="$1"
+  systemctl is-active "$unit" 2>/dev/null || true
+}
+
+health_core() {
+  curl --fail --silent --show-error --max-time 12 http://127.0.0.1:8080/api/health     | jq -e '.ok == true and .service == "135er-Grow Central Local"' >/dev/null
+}
+
+restart_unit() {
+  local unit="$1"
+  systemctl reset-failed "$unit" >/dev/null 2>&1 || true
+  systemctl restart "$unit"
+  systemctl is-active --quiet "$unit"
+}
+
+case "${1:-}" in
+  status)
+    printf 'core=%s
+' "$(state "$CORE")"
+    printf 'cloud=%s
+' "$(state "$CLOUD")"
+    printf 'homekit=%s
+' "$(state "$HOMEKIT")"
+    ;;
+  restart-core)
+    restart_unit "$CORE"
+    sleep 2
+    health_core
+    ;;
+  restart-cloud)
+    restart_unit "$CLOUD"
+    ;;
+  restart-homekit)
+    restart_unit "$HOMEKIT"
+    ;;
+  restart-all)
+    restart_unit "$CORE"
+    sleep 2
+    health_core
+    restart_unit "$CLOUD"
+    restart_unit "$HOMEKIT"
+    ;;
+  *) usage ;;
+esac

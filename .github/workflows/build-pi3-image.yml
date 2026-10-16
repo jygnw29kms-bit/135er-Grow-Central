@@ -462,6 +462,16 @@ jobs:
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/setup-ap.sh /usr/local/sbin/grow-central-setup-ap.sh
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/apply_setup.py /usr/local/sbin/grow-central-apply-setup.py
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot-debug.sh /usr/local/sbin/grow-central-support-bundle
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/growcentral-maint /usr/local/sbin/growcentral-maint
+          cat >/etc/sudoers.d/growcentral-maint <<'EOF'
+          GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status
+          GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-core
+          GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-cloud
+          GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-homekit
+          GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-all
+          EOF
+          chmod 0440 /etc/sudoers.d/growcentral-maint
+          visudo -cf /etc/sudoers.d/growcentral-maint
 
           cat >/etc/systemd/system/grow-central-setup-ap.service <<'EOF'
           [Unit]
@@ -621,6 +631,11 @@ jobs:
           test "$(systemctl is-enabled grow-central-healthcheck.timer)" = enabled
           /bin/bash -n /usr/local/sbin/grow-central-healthcheck.sh
           /bin/bash -n /usr/local/sbin/grow-central-cloud-smoke-test
+          /bin/bash -n /usr/local/sbin/growcentral-maint
+          test -x /usr/local/sbin/growcentral-maint
+          visudo -cf /etc/sudoers.d/growcentral-maint
+          grep -Fqx 'GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status' /etc/sudoers.d/growcentral-maint
+          ! grep -Eq 'NOPASSWD: *ALL|growcentral-maint +\*' /etc/sudoers.d/growcentral-maint
           grep -qx 'GC_CLOUD_ENABLED=true' /opt/135er-grow-central/.env
           grep -qx 'GC_CLOUD_TEST_MODE=true' /opt/135er-grow-central/.env
           grep -qx 'GC_CLOUD_TOKEN=' /opt/135er-grow-central/.env
