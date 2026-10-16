@@ -67,7 +67,7 @@ jobs:
           test -s "$STAGE/index.html"
           test -s "$STAGE/assets/hero-master.svg"
           test -s "$STAGE/assets/135er-wordmark.svg"
-          grep -q "RAW CITY HARDWARE" "$STAGE/index.html"
+          grep -q "raw-title" "$STAGE/index.html"
 
           mkdir -p "$BACKUP"
           cp -a "$TARGET"/. "$BACKUP"/ 2>/dev/null || true
@@ -92,7 +92,7 @@ jobs:
 
           test -s "$TARGET/index.html"
           test -s "$TARGET/assets/hero-master.svg"
-          grep -q "RAW CITY HARDWARE" "$TARGET/index.html"
+          grep -q "raw-title" "$TARGET/index.html"
           rm -rf "$STAGE" "$ARCHIVE"'
 
           REMOTE="${REMOTE/__ARCHIVE_B64__/$ARCHIVE_B64}"
@@ -110,7 +110,7 @@ jobs:
           set -euo pipefail
           for i in {1..12}; do
             if curl --http1.1 -LfsS https://135erheli.de/ -o /tmp/135erheli.html \
-              && grep -q 'RAW CITY HARDWARE' /tmp/135erheli.html \
+              && grep -q 'raw-title' /tmp/135erheli.html \
               && curl --http1.1 -LfsS https://135erheli.de/assets/hero-master.svg -o /tmp/hero.svg \
               && grep -q 'JL1976' /tmp/hero.svg \
               && curl --http1.1 -LfsS https://135erheli.de/assets/135er-wordmark.svg -o /tmp/wordmark.svg; then
