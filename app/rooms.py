@@ -16,7 +16,7 @@ import os
 import tempfile
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
@@ -181,6 +181,13 @@ def plant_or_404(state: dict[str, Any], plant_id: str) -> dict[str, Any]:
     return row
 
 
+def profile_or_404(state: dict[str, Any], profile_id: str) -> dict[str, Any]:
+    row = next((r for r in state["grow_profiles"] if r["id"] == profile_id), None)
+    if not row:
+        raise HTTPException(404, "Grow-Profil nicht gefunden")
+    return row
+
+
 def calc_vpd(temp_c: float | None, rh: float | None) -> float | None:
     if temp_c is None or rh is None or not (0 <= rh <= 100):
         return None
@@ -253,6 +260,47 @@ class SensorSample(BaseModel):
     source: str = Field(default="manual", max_length=100)
 
 
+PHASE_TYPES = Literal["germination", "seedling", "vegetative", "flowering", "flush", "finish", "harvest", "completed", "other"]
+
+
+class GrowTargets(BaseModel):
+    temperature_c_min: float | None = Field(default=None, ge=0, le=60)
+    temperature_c_max: float | None = Field(default=None, ge=0, le=60)
+    humidity_percent_min: float | None = Field(default=None, ge=0, le=100)
+    humidity_percent_max: float | None = Field(default=None, ge=0, le=100)
+    vpd_kpa_min: float | None = Field(default=None, ge=0, le=5)
+    vpd_kpa_max: float | None = Field(default=None, ge=0, le=5)
+    ppfd_umol_m2_s_min: float | None = Field(default=None, ge=0, le=5000)
+    ppfd_umol_m2_s_max: float | None = Field(default=None, ge=0, le=5000)
+    dli_mol_m2_day_target: float | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def validate_ranges(self):
+        for low_name, high_name in (
+            ("temperature_c_min", "temperature_c_max"),
+            ("humidity_percent_min", "humidity_percent_max"),
+            ("vpd_kpa_min", "vpd_kpa_max"),
+            ("ppfd_umol_m2_s_min", "ppfd_umol_m2_s_max"),
+        ):
+            low, high = getattr(self, low_name), getattr(self, high_name)
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{low_name} darf nicht größer als {high_name} sein")
+        return self
+
+
+class GrowProfilePhase(BaseModel):
+    phase: PHASE_TYPES
+    expected_days: int | None = Field(default=None, ge=1, le=365)
+    targets: GrowTargets = Field(default_factory=GrowTargets)
+
+
+class GrowProfileCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=1000)
+    phases: list[GrowProfilePhase] = Field(default_factory=list, max_length=20)
+    tasks: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+
+
 GROW_EVENT_TYPES = Literal["watering", "feeding", "repotting", "training", "phase_changed", "photo", "observation", "diagnosis", "harvest", "other"]
 
 
@@ -301,6 +349,78 @@ def _append_grow_event(
     state["grow_events"].append(row)
     state["grow_events"] = state["grow_events"][-50000:]
     return row
+
+
+def _phase_profile(profile: dict[str, Any] | None, phase: str | None) -> dict[str, Any] | None:
+    if not profile or not phase:
+        return None
+    return next((row for row in profile.get("phases", []) if row.get("phase") == phase), None)
+
+
+def evaluate_vpd(value: float | None, targets: dict[str, Any] | None) -> dict[str, Any]:
+    low = (targets or {}).get("vpd_kpa_min")
+    high = (targets or {}).get("vpd_kpa_max")
+    if value is None or low is None or high is None:
+        return {"status": "unknown", "value": value, "target_min": low, "target_max": high}
+    if value < low:
+        status = "low"
+    elif value > high:
+        status = "high"
+    else:
+        status = "target"
+    return {"status": status, "value": value, "target_min": low, "target_max": high}
+
+
+def _cycle_forecast(plant: dict[str, Any], profile: dict[str, Any] | None) -> dict[str, Any]:
+    raw_start = str(plant.get("start_date") or "").strip()
+    if not raw_start or not profile:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    try:
+        start = date.fromisoformat(raw_start[:10])
+    except ValueError:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    days = sum(int(row.get("expected_days") or 0) for row in profile.get("phases", []))
+    if days <= 0:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    center = start + timedelta(days=days)
+    spread = max(2, min(14, round(days * 0.05)))
+    return {
+        "expected_harvest_from": (center - timedelta(days=spread)).isoformat(),
+        "expected_harvest_to": (center + timedelta(days=spread)).isoformat(),
+        "forecast": True,
+    }
+
+
+@router.get("/grow-profiles")
+async def list_grow_profiles():
+    return {"profiles": load_state()["grow_profiles"]}
+
+
+@router.post("/grow-profiles", dependencies=[Depends(require_write_auth)])
+async def create_grow_profile(body: GrowProfileCreate):
+    with edit_state() as state:
+        row = {"id": new_id("profile"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
+        state["grow_profiles"].append(row)
+        return row
+
+
+@router.put("/grow-profiles/{profile_id}", dependencies=[Depends(require_write_auth)])
+async def update_grow_profile(profile_id: str, body: GrowProfileCreate):
+    with edit_state() as state:
+        row = profile_or_404(state, profile_id)
+        row.update(body.model_dump())
+        row["updated_at"] = now_iso()
+        return row
+
+
+@router.delete("/grow-profiles/{profile_id}", dependencies=[Depends(require_write_auth)])
+async def delete_grow_profile(profile_id: str):
+    with edit_state() as state:
+        profile_or_404(state, profile_id)
+        if any(plant.get("profile_id") == profile_id for plant in state["plants"]):
+            raise HTTPException(409, "Grow-Profil ist noch Pflanzen zugeordnet")
+        state["grow_profiles"] = [row for row in state["grow_profiles"] if row["id"] != profile_id]
+        return {"ok": True}
 
 
 @router.get("")
@@ -432,6 +552,8 @@ async def create_plant(room_id: str, body: PlantCreate):
     with edit_state() as state:
         room_or_404(state, room_id)
         values = body.model_dump()
+        if values.get("profile_id"):
+            profile_or_404(state, values["profile_id"])
         if not values.get("phase_started_at"):
             values["phase_started_at"] = now_iso()
         row = {"id": new_id("plant"), "room_id": room_id, **values, "created_at": now_iso(), "updated_at": now_iso()}
@@ -447,6 +569,8 @@ async def update_plant(room_id: str, plant_id: str, body: PlantCreate):
         if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
         previous_phase = row.get("phase")
         values = body.model_dump()
+        if values.get("profile_id"):
+            profile_or_404(state, values["profile_id"])
         if values.get("phase") != previous_phase and not values.get("phase_started_at"):
             values["phase_started_at"] = now_iso()
         elif not values.get("phase_started_at"):
@@ -466,6 +590,27 @@ async def delete_plant(room_id: str, plant_id: str):
         state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] != plant_id]
         state["grow_events"] = [e for e in state["grow_events"] if e.get("plant_id") != plant_id]
         return {"ok": True}
+
+
+@router.get("/{room_id}/plants/{plant_id}/grow-status")
+async def plant_grow_status(room_id: str, plant_id: str):
+    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+    if plant["room_id"] != room_id:
+        raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    profile = None
+    if plant.get("profile_id"):
+        profile = next((row for row in state["grow_profiles"] if row["id"] == plant["profile_id"]), None)
+    phase_profile = _phase_profile(profile, plant.get("phase"))
+    snapshot = _latest_sensor_snapshot(state, room_id)
+    targets = (phase_profile or {}).get("targets", {})
+    return {
+        "plant": plant,
+        "profile": profile,
+        "phase_profile": phase_profile,
+        "sensor_snapshot": snapshot,
+        "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
+        "harvest_window": _cycle_forecast(plant, profile),
+    }
 
 
 @router.get("/{room_id}/plants/{plant_id}/journal")
