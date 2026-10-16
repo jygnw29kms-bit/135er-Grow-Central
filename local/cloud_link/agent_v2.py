@@ -1,4 +1,9 @@
-"""Grow Central Cloud Link runtime v2."""
+"""Grow Central Cloud Link runtime for the V7 control plane.
+
+The cloud link is optional and local-first. It only handles current device
+pairing, signed platform reports and advisory cloud health. Local device
+control continues independently when the cloud is unavailable.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -7,35 +12,69 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import time
+from urllib.parse import urlparse
 
 import httpx
 
 try:
-    from . import agent as legacy
+    from .cloud_url import https_origin
     from .device_identity import DEVICE_ID_FILE
     from .device_pairing import load_state as load_pairing_state, poll_pairing
     from .platform_report import send_platform_report
 except ImportError:
-    import agent as legacy  # type: ignore[no-redef]
+    from cloud_url import https_origin  # type: ignore[no-redef]
     from device_identity import DEVICE_ID_FILE  # type: ignore[no-redef]
     from device_pairing import load_state as load_pairing_state, poll_pairing  # type: ignore[no-redef]
     from platform_report import send_platform_report  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 
-CLOUD_STATE = legacy.CONTACT_ACK.with_name("cloud-link-status.json")
+CLOUD_ENABLED = os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true"
+CLOUD_URL = os.getenv("GC_CLOUD_URL", "").rstrip("/")
+SITE = os.getenv("GC_SITE_ID", "").strip()
+SYNC = min(max(int(os.getenv("GC_SYNC_SECONDS", "30")), 10), 3600)
+LOCAL_API = os.getenv("GC_LOCAL_API", "http://127.0.0.1:8080").rstrip("/")
+LOCAL_TOKEN = os.getenv("GC_LOCAL_API_TOKEN", "").strip()
+CLOUD_STATE = Path(os.getenv("GC_CLOUD_STATE", "/var/lib/135er-grow-central/cloud-link-status.json"))
 LOCAL_TOKEN_FILE = Path("/var/lib/135er-grow-central/local-api-token")
+MACHINE_ID_FILE = Path("/etc/machine-id")
 MIN_RETRY = 30
 MAX_RETRY = 600
 PLATFORM_REPORT_SECONDS = min(max(int(os.getenv("GC_PLATFORM_REPORT_SECONDS", "120")), 60), 3600)
 PAIRING_POLL_SECONDS = min(max(int(os.getenv("GC_PAIRING_POLL_SECONDS", "10")), 5), 60)
-EXPECTED_LEGACY_CLOUD_SERVICE = "135er-Grow Central Cloud"
-LEGACY_DEVICE_ID = legacy.device_id
+
+
+def _read_text(path: Path, default: str = "") -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return default
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        os.chmod(temporary, 0o640)
+        os.replace(temporary, path)
+    except OSError as exc:
+        logger.warning("Could not persist cloud-link state: %s", type(exc).__name__)
+
+
+def installation_fallback_device_id() -> str:
+    """Stable pre-pairing identifier used until the cloud assigns its UUID."""
+    machine_id = _read_text(MACHINE_ID_FILE)
+    suffix = re.sub(r"[^a-fA-F0-9]", "", machine_id)[-12:]
+    return f"raspberry-pi-{suffix}" if suffix else "raspberry-pi-test"
+
+
+FALLBACK_DEVICE_ID = installation_fallback_device_id
 
 
 def effective_device_id() -> str:
-    """Prefer the cloud-approved UUID once paired, otherwise keep legacy continuity."""
     configured = os.getenv("GC_DEVICE_ID", "").strip()
     if configured:
         return configured
@@ -45,23 +84,28 @@ def effective_device_id() -> str:
         approved = ""
     if len(approved) == 36:
         return approved
-    return LEGACY_DEVICE_ID()
+    return FALLBACK_DEVICE_ID()
 
 
-# All telemetry, contact snapshots and mirrored bundles must identify the same
-# cloud device as the signed platform report once pairing has been approved.
-legacy.device_id = effective_device_id
+def validate_configuration() -> None:
+    try:
+        https_origin(CLOUD_URL)
+    except ValueError as exc:
+        raise RuntimeError("GC_CLOUD_URL must be a plain HTTPS origin") from exc
+    local = urlparse(LOCAL_API)
+    if local.scheme != "http" or local.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        raise RuntimeError("GC_LOCAL_API must use loopback HTTP")
 
 
 def _persist_state(**values) -> None:
     payload = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
-        "cloud_origin": legacy.CLOUD_URL,
-        "site_id": legacy.SITE,
+        "cloud_origin": CLOUD_URL,
         "device_id": effective_device_id(),
+        **({"site_id": SITE} if SITE else {}),
         **values,
     }
-    legacy._write_json(CLOUD_STATE, payload)
+    _write_json(CLOUD_STATE, payload)
 
 
 def local_headers() -> dict[str, str]:
@@ -71,23 +115,14 @@ def local_headers() -> dict[str, str]:
     except OSError:
         token = ""
     if len(token) < 32:
-        configured = legacy.LOCAL_TOKEN.strip()
+        configured = LOCAL_TOKEN.strip()
         token = configured if len(configured) >= 32 and configured.lower() != "test" else ""
     return {"X-API-Token": token} if token else {}
 
 
-# Legacy diagnostic helpers resolve this global at call time. Replacing it here
-# keeps all local cloud-link calls on the same per-device credential.
-legacy.local_headers = local_headers
-
-
 async def local_status(client: httpx.AsyncClient) -> dict:
     try:
-        response = await client.get(
-            f"{legacy.LOCAL_API}/api/status",
-            headers=local_headers(),
-            timeout=5,
-        )
+        response = await client.get(f"{LOCAL_API}/api/status", headers=local_headers(), timeout=5)
         if response.is_success:
             payload = response.json()
             return payload if isinstance(payload, dict) else {}
@@ -98,97 +133,51 @@ async def local_status(client: httpx.AsyncClient) -> dict:
 
 
 async def cloud_capabilities(client: httpx.AsyncClient) -> dict:
-    """Probe the current V7 control plane, with a pre-V7 fallback."""
-    origin = legacy.CLOUD_URL.rstrip("/")
-    v7_error: str | None = None
+    """Probe only the current V7 control plane."""
+    origin = CLOUD_URL.rstrip("/")
     try:
         response = await client.get(f"{origin}/v7/health", timeout=10)
-        if response.is_success:
-            data = response.json()
-            version = data.get("version") if isinstance(data, dict) else None
-            compatible = (
-                isinstance(data, dict)
-                and data.get("ok") is True
-                and isinstance(version, int)
-                and version >= 7
-            )
-            result = {
-                "reachable": True,
-                "compatible": compatible,
-                "architecture": "v7-control-v2-device",
-                "version": version,
-                "service": "grow-central-cloud-v7",
-                "admin_mode": data.get("admin_mode") if isinstance(data, dict) else None,
-                "legacy_telemetry": False,
-                "platform_reports": True,
-                "device_pairing": True,
-            }
-            if not compatible:
-                result["reason"] = "unexpected_v7_health"
-            return result
-        v7_error = f"http_{response.status_code}"
     except Exception as exc:
-        v7_error = type(exc).__name__
-
-    # Compatibility fallback for older closed-test clouds.  New V7/V4-V6
-    # deployments expose /v7/health, so legacy V1 telemetry is never assumed
-    # merely because /api/health exists as a compatibility alias.
-    try:
-        response = await client.get(f"{origin}/api/health", timeout=10)
-        if not response.is_success:
-            return {
-                "reachable": True,
-                "compatible": False,
-                "http_status": response.status_code,
-                "v7_error": v7_error,
-            }
-        data = response.json()
-        if not isinstance(data, dict):
-            return {"reachable": True, "compatible": False, "reason": "invalid_health_payload", "v7_error": v7_error}
-        service = data.get("service")
-        version = data.get("version")
-        compatible = bool(data.get("ok")) and service == EXPECTED_LEGACY_CLOUD_SERVICE and isinstance(version, str) and bool(version.strip())
-        result = {
+        return {"reachable": False, "compatible": False, "error": type(exc).__name__}
+    if not response.is_success:
+        return {
             "reachable": True,
-            "compatible": compatible,
-            "architecture": "legacy-v1",
-            "version": version,
-            "service": service,
-            "closed_test_mode": data.get("closed_test_mode"),
-            "legacy_telemetry": True,
-            "platform_reports": False,
-            "device_pairing": False,
-            "v7_error": v7_error,
+            "compatible": False,
+            "http_status": response.status_code,
+            "reason": "v7_health_unavailable",
         }
-        if not compatible:
-            result["reason"] = "unexpected_cloud_identity"
-        return result
-    except Exception as exc:
-        return {"reachable": False, "compatible": False, "error": type(exc).__name__, "v7_error": v7_error}
-
-
-async def telemetry_payload(client: httpx.AsyncClient) -> tuple[dict, dict]:
-    local = await local_status(client)
-    return {
-        "site_id": legacy.SITE,
-        "device_id": effective_device_id(),
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "temperature_c": None,
-        "humidity_pct": None,
-        "vpd_kpa": None,
-        "fan_speed_pct": None,
-        "device_online": bool(local),
-        "extra": {"df100m": local, "closed_test_mode": legacy.CLOSED_TEST, "runtime": "cloud-link-v2"},
-    }, local
+    try:
+        data = response.json()
+    except Exception:
+        return {"reachable": True, "compatible": False, "reason": "invalid_v7_health_payload"}
+    version = data.get("version") if isinstance(data, dict) else None
+    compatible = (
+        isinstance(data, dict)
+        and data.get("ok") is True
+        and isinstance(version, int)
+        and version >= 7
+    )
+    result = {
+        "reachable": True,
+        "compatible": compatible,
+        "architecture": "v7-control-v2-device",
+        "version": version,
+        "service": "grow-central-cloud-v7",
+        "admin_mode": data.get("admin_mode") if isinstance(data, dict) else None,
+        "platform_reports": True,
+        "device_pairing": True,
+    }
+    if not compatible:
+        result["reason"] = "unexpected_v7_health"
+    return result
 
 
 async def _poll_pending_pairing(client: httpx.AsyncClient) -> dict | None:
-    """Complete an already user-started device-code flow without blocking local control."""
     state = load_pairing_state()
     if not state or not state.get("device_code"):
         return None
     try:
-        result = await poll_pairing(client, cloud_url=legacy.CLOUD_URL)
+        result = await poll_pairing(client, cloud_url=CLOUD_URL)
         if result.get("status") == "approved":
             logger.info("Grow Central cloud device pairing approved")
         return result
@@ -198,19 +187,18 @@ async def _poll_pending_pairing(client: httpx.AsyncClient) -> dict | None:
 
 
 async def main() -> None:
-    if not legacy.CLOUD_ENABLED:
-        _persist_state(state="disabled", detail="cloud link disabled", cloud_compatible=None, platform_report={"state": "disabled", "sent": False})
+    if not CLOUD_ENABLED:
+        _persist_state(
+            state="disabled",
+            detail="cloud link disabled",
+            cloud_compatible=None,
+            platform_report={"state": "disabled", "sent": False},
+        )
         print("Grow Central Cloud Link disabled / Cloud-Link deaktiviert")
         return
 
-    legacy.validate_configuration()
-    headers = {"X-API-Token": legacy.TOKEN} if legacy.TOKEN else {}
+    validate_configuration()
     retry_seconds = MIN_RETRY
-    connected = False
-    ever_connected = False
-    last_bundle_signature = None
-    next_diag = 0.0
-    next_bundle_refresh = 0.0
     next_platform_report = 0.0
     next_pairing_poll = 0.0
     platform_state: dict = {"state": "pending", "sent": False}
@@ -220,17 +208,16 @@ async def main() -> None:
         while True:
             capabilities = await cloud_capabilities(client)
             if not capabilities.get("compatible"):
-                connected = False
                 _persist_state(
                     state="degraded",
-                    detail="cloud health unavailable or incompatible",
+                    detail="V7 cloud health unavailable or incompatible",
                     cloud_compatible=False,
                     capabilities=capabilities,
                     retry_seconds=retry_seconds,
                     platform_report=platform_state,
                     pairing=pairing_state,
                 )
-                logger.warning("Cloud unavailable/incompatible: %s; retry in %ss", json.dumps(capabilities), retry_seconds)
+                logger.warning("V7 cloud unavailable/incompatible: %s; retry in %ss", json.dumps(capabilities), retry_seconds)
                 await asyncio.sleep(retry_seconds)
                 retry_seconds = min(MAX_RETRY, retry_seconds * 2)
                 continue
@@ -240,21 +227,16 @@ async def main() -> None:
                 pairing_state = await _poll_pending_pairing(client)
                 next_pairing_poll = now + PAIRING_POLL_SECONDS
                 if pairing_state and pairing_state.get("status") == "approved":
-                    # Pairing just produced the device_id required by the signed
-                    # platform report. Send immediately instead of waiting for
-                    # the normal reporting interval.
                     next_platform_report = 0.0
 
             if now >= next_platform_report:
                 platform_state = await send_platform_report(
                     client,
-                    cloud_url=legacy.CLOUD_URL,
-                    local_api=legacy.LOCAL_API,
+                    cloud_url=CLOUD_URL,
+                    local_api=LOCAL_API,
                     local_headers=local_headers(),
                     capabilities={
                         "cloud_health_version": capabilities.get("version"),
-                        "diagnostics": bool(capabilities.get("legacy_telemetry", False)),
-                        "support_bundle": bool(capabilities.get("legacy_telemetry", False)),
                         "cloud_architecture": capabilities.get("architecture"),
                     },
                 )
@@ -264,95 +246,19 @@ async def main() -> None:
                 elif platform_state.get("state") not in {"unpaired", "pending"}:
                     logger.warning("Platform report degraded: %s", platform_state.get("reason", "unknown"))
 
-            if not capabilities.get("legacy_telemetry", True):
-                local = await local_status(client)
-                connected = True
-                ever_connected = True
-                retry_seconds = MIN_RETRY
-                _persist_state(
-                    state="connected",
-                    detail="v7 control plane active",
-                    cloud_compatible=True,
-                    capabilities=capabilities,
-                    local_online=bool(local),
-                    retry_seconds=legacy.SYNC,
-                    platform_report=platform_state,
-                    pairing=pairing_state,
-                )
-                await asyncio.sleep(legacy.SYNC)
-                continue
-
-            try:
-                telemetry, local = await telemetry_payload(client)
-                response = await client.post(f"{legacy.CLOUD_URL}/api/v1/telemetry", json=telemetry, headers=headers, timeout=10)
-                if response.status_code == 404:
-                    connected = False
-                    _persist_state(
-                        state="degraded",
-                        detail="cloud telemetry endpoint missing",
-                        cloud_compatible=False,
-                        http_status=404,
-                        retry_seconds=retry_seconds,
-                        platform_report=platform_state,
-                        pairing=pairing_state,
-                    )
-                    await asyncio.sleep(retry_seconds)
-                    retry_seconds = min(MAX_RETRY, retry_seconds * 2)
-                    continue
-                response.raise_for_status()
-
-                if not connected:
-                    reason = "reconnect" if ever_connected else "startup"
-                    await legacy.contact_handshake(client, headers, local, reason)
-                    connected = True
-                    ever_connected = True
-                    last_bundle_signature = None
-                    next_diag = now + legacy.DIAG_SYNC
-                    next_bundle_refresh = now + legacy.BUNDLE_REFRESH
-
-                if now >= next_bundle_refresh:
-                    await legacy.request_fresh_bundle(client)
-                    next_bundle_refresh = now + legacy.BUNDLE_REFRESH
-
-                if now >= next_diag:
-                    full_diag = await legacy.full_local_diagnostics(client)
-                    diag_response = await client.post(
-                        f"{legacy.CLOUD_URL}/api/v1/diagnostics/snapshot",
-                        json=legacy.diagnostic_payload(local, full_diag),
-                        headers=headers,
-                        timeout=30,
-                    )
-                    diag_response.raise_for_status()
-                    next_diag = now + legacy.DIAG_SYNC
-
-                last_bundle_signature = await legacy.mirror_bundle_if_changed(client, headers, last_bundle_signature)
-                _persist_state(
-                    state="connected",
-                    detail="telemetry sync active",
-                    cloud_compatible=True,
-                    capabilities=capabilities,
-                    retry_seconds=legacy.SYNC,
-                    platform_report=platform_state,
-                    pairing=pairing_state,
-                )
-                retry_seconds = MIN_RETRY
-            except Exception as exc:
-                connected = False
-                _persist_state(
-                    state="degraded",
-                    detail=f"cloud sync failed: {type(exc).__name__}",
-                    cloud_compatible=True,
-                    capabilities=capabilities,
-                    retry_seconds=retry_seconds,
-                    platform_report=platform_state,
-                    pairing=pairing_state,
-                )
-                logger.warning("Cloud sync degraded: %s; retry in %ss", type(exc).__name__, retry_seconds)
-                await asyncio.sleep(retry_seconds)
-                retry_seconds = min(MAX_RETRY, retry_seconds * 2)
-                continue
-
-            await asyncio.sleep(legacy.SYNC)
+            local = await local_status(client)
+            retry_seconds = MIN_RETRY
+            _persist_state(
+                state="connected",
+                detail="v7 control plane active",
+                cloud_compatible=True,
+                capabilities=capabilities,
+                local_online=bool(local),
+                retry_seconds=SYNC,
+                platform_report=platform_state,
+                pairing=pairing_state,
+            )
+            await asyncio.sleep(SYNC)
 
 
 if __name__ == "__main__":

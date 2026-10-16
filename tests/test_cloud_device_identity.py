@@ -145,11 +145,11 @@ def test_platform_report_signature_matches_cloud_contract(monkeypatch):
     assert accepted["report"] is not None
 
 
-def test_cloud_link_prefers_approved_device_uuid_but_keeps_legacy_fallback(monkeypatch, tmp_path):
+def test_cloud_link_prefers_approved_device_uuid_but_keeps_installation_fallback(monkeypatch, tmp_path):
     approved_file = tmp_path / "device-id"
     monkeypatch.setattr(agent_v2, "DEVICE_ID_FILE", approved_file)
     monkeypatch.delenv("GC_DEVICE_ID", raising=False)
-    monkeypatch.setattr(agent_v2, "LEGACY_DEVICE_ID", lambda: "raspberry-pi-a1b2c3d4e5f6")
+    monkeypatch.setattr(agent_v2, "FALLBACK_DEVICE_ID", lambda: "raspberry-pi-a1b2c3d4e5f6")
 
     assert agent_v2.effective_device_id() == "raspberry-pi-a1b2c3d4e5f6"
 

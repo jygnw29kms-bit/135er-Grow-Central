@@ -5,7 +5,6 @@ def test_cloud_diagnostics_contract_present():
     cloud = Path("cloud/app/diagnostics.py").read_text(encoding="utf-8")
     db = Path("cloud/app/db.py").read_text(encoding="utf-8")
     main = Path("cloud/app/main.py").read_text(encoding="utf-8")
-    agent = Path("local/cloud_link/agent.py").read_text(encoding="utf-8")
     agent_v2 = Path("local/cloud_link/agent_v2.py").read_text(encoding="utf-8")
 
     assert 'latest-pi-diagnostic.json' in cloud
@@ -14,10 +13,10 @@ def test_cloud_diagnostics_contract_present():
     assert '_MAX_BUNDLE_BYTES' in cloud
     assert 'diagnostic_events' in db
     assert 'app.include_router(diagnostics_router)' in main
-    assert '/api/v1/diagnostics/snapshot' in agent
-    assert '/api/v1/diagnostics/bundle/' in agent
-    assert 'mirror_bundle_if_changed' in agent
-    assert 'GC_REMOTE_COMMANDS' in agent
+    assert '/v7/health' in agent_v2
+    assert 'send_platform_report' in agent_v2
+    assert 'poll_pairing' in agent_v2
+    assert '/api/v1/telemetry' not in agent_v2
     assert 'cloud-link-status.json' in agent_v2
     assert 'local_headers()' in agent_v2
 

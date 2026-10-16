@@ -16,11 +16,9 @@ def test_failed_firstboot_reuses_hardened_ap_bootstrap_and_verifies_dhcp():
     assert "Setup-AP-Wiederherstellung fehlgeschlagen" in text
 
 
-def test_v7_proxy_limits_accept_cloud_link_support_bundle_cap():
+def test_v7_proxy_limits_are_single_owner_and_idempotent():
     routing = read("scripts/configure-v7-routing.sh")
-    agent = read("local/cloud_link/agent.py")
     example = read("deploy/nginx/grow-central-cloud.conf.example")
-    assert "32 * 1024 * 1024" in agent
     # Standalone nginx owns one explicit 40 MiB limit. In Plesk mode Grow
     # Central must not add a second same-context directive because nginx rejects
     # duplicate client_max_body_size values and Plesk owns that setting.
