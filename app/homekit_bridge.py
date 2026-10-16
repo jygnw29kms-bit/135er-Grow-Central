@@ -93,7 +93,8 @@ def _stable_aid(kind: str, identifier: str, used: set[int]) -> int:
 def _accessory_aids(room_rows, switches) -> dict[tuple[str, str], int]:
     used: set[int] = {1, 7}
     result: dict[tuple[str, str], int] = {}
-    keys = [("room", str(row.get("id") or "")) for row in room_rows]
+    keys = [("room", str(row.get("id") or "")) for row in room_rows if any(service != "soil_moisture" for service in tuple(row.get("services") or ()))]
+    keys += [("soil", str(row.get("id") or "")) for row in room_rows if "soil_moisture" in tuple(row.get("services") or ())]
     keys += [("switch", str(getattr(device, "id", ""))) for device in switches]
     for key in sorted(keys):
         result[key] = _stable_aid(key[0], key[1], used)
@@ -158,6 +159,32 @@ def _topology_signature(room_rows=None, switches=None):
     return rooms, switch_rows
 
 
+def _export_diagnostics(room_rows, switches, aids) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for room in room_rows:
+        room_id = str(room.get("id") or "")
+        name = str(room.get("name") or room_id)
+        services = tuple(room.get("services") or ())
+        air_services = [service for service in services if service != "soil_moisture"]
+        if air_services:
+            rows.append({
+                "kind": "room", "source_id": room_id, "name": name,
+                "aid": aids[("room", room_id)], "services": air_services, "state": "published",
+            })
+        if "soil_moisture" in services:
+            rows.append({
+                "kind": "soil_moisture", "source_id": room_id, "name": f"{name} Bodenfeuchte",
+                "aid": aids[("soil", room_id)], "services": ["soil_moisture"], "state": "published",
+            })
+    for device in switches:
+        device_id = str(getattr(device, "id", ""))
+        rows.append({
+            "kind": "switch", "source_id": device_id, "name": str(getattr(device, "name", device_id)),
+            "aid": aids[("switch", device_id)], "services": ["switch"], "state": "published",
+        })
+    return sorted(rows, key=lambda row: (row["kind"], row["source_id"]))
+
+
 def run_bridge() -> None:
     from pyhap.accessory import Accessory, Bridge
     from pyhap.accessory_driver import AccessoryDriver
@@ -174,17 +201,12 @@ def run_bridge() -> None:
             self.room_id = room_id
             self.temperature_char = None
             self.humidity_char = None
-            self.soil_char = None
             if "temperature" in services:
                 temperature = self.add_preload_service("TemperatureSensor")
                 self.temperature_char = temperature.configure_char("CurrentTemperature", value=max(-270, min(100, float(initial_latest["temperature_c"]))))
             if "humidity" in services:
                 humidity = self.add_preload_service("HumiditySensor")
                 self.humidity_char = humidity.configure_char("CurrentRelativeHumidity", value=max(0, min(100, float(initial_latest["humidity_percent"]))))
-            if "soil_moisture" in services:
-                soil = self.add_preload_service("HumiditySensor", chars=["Name"])
-                soil.configure_char("Name", value=f"{self.display_name} Bodenfeuchte")
-                self.soil_char = soil.configure_char("CurrentRelativeHumidity", value=max(0, min(100, float(initial_latest["soil_moisture_percent"]))))
 
         def _update(self):
             row = {item["id"]: item for item in _latest_room_values()}.get(self.room_id)
@@ -193,12 +215,38 @@ def run_bridge() -> None:
             latest = row["latest"]
             temperature = latest.get("temperature_c")
             humidity = latest.get("humidity_percent")
-            soil = latest.get("soil_moisture_percent")
             if self.temperature_char is not None and _valid_number(temperature):
                 self.temperature_char.set_value(max(-270, min(100, float(temperature))))
             if self.humidity_char is not None and _valid_number(humidity):
                 self.humidity_char.set_value(max(0, min(100, float(humidity))))
-            if self.soil_char is not None and _valid_number(soil):
+
+        async def run(self):
+            while True:
+                try:
+                    self._update()
+                except Exception:
+                    pass
+                await asyncio.sleep(15)
+
+    class SoilAccessory(Accessory):
+        category = 10
+
+        def __init__(self, *args, room_id: str, initial_latest: dict[str, Any], **kwargs):
+            super().__init__(*args, **kwargs)
+            self.room_id = room_id
+            soil = self.add_preload_service("HumiditySensor", chars=["Name"])
+            soil.configure_char("Name", value=f"{self.display_name} Bodenfeuchte")
+            self.soil_char = soil.configure_char(
+                "CurrentRelativeHumidity",
+                value=max(0, min(100, float(initial_latest["soil_moisture_percent"]))),
+            )
+
+        def _update(self):
+            row = {item["id"]: item for item in _latest_room_values()}.get(self.room_id)
+            if not row:
+                return
+            soil = row["latest"].get("soil_moisture_percent")
+            if _valid_number(soil):
                 self.soil_char.set_value(max(0, min(100, float(soil))))
 
         async def run(self):
@@ -242,9 +290,10 @@ def run_bridge() -> None:
                 await asyncio.sleep(10)
 
     class GrowCentralBridge(Bridge):
-        def __init__(self, *args, topology_signature, **kwargs):
+        def __init__(self, *args, topology_signature, export_diagnostics, **kwargs):
             super().__init__(*args, **kwargs)
             self.topology_signature = topology_signature
+            self.export_diagnostics = export_diagnostics
 
         async def run(self):
             # Bridge.run schedules each child accessory's run() coroutine. Without
@@ -267,7 +316,8 @@ def run_bridge() -> None:
                     "port": self.driver.state.port,
                     "setup_code": None if paired else self.driver.state.pincode.decode(),
                     "setup_uri": None if paired else self.xhm_uri(),
-                    "accessories_exported": len(self.accessories),
+                    "accessories_exported": len(self.export_diagnostics),
+                    "accessories": self.export_diagnostics,
                     "message": "Mit Apple Home gekoppelt." if paired else "Bereit zum Koppeln mit Apple Home.",
                 }
                 STATUS_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -282,11 +332,24 @@ def run_bridge() -> None:
     driver = AccessoryDriver(port=int(os.getenv("GC_HOMEKIT_PORT", "51827")), persist_file=str(PERSIST_FILE))
     room_rows = _latest_room_values()
     selected_switches = _selected_switches()
-    bridge = GrowCentralBridge(driver, "Grow-Central", topology_signature=_topology_signature(room_rows, selected_switches))
     aids = _accessory_aids(room_rows, selected_switches)
+    bridge = GrowCentralBridge(
+        driver, "Grow-Central", topology_signature=_topology_signature(room_rows, selected_switches),
+        export_diagnostics=_export_diagnostics(room_rows, selected_switches, aids),
+    )
     for row in room_rows:
         try:
-            bridge.add_accessory(RoomAccessory(driver, row["name"], aid=aids[("room", str(row["id"]))], room_id=row["id"], initial_latest=row["latest"], services=tuple(row["services"])))
+            room_services = tuple(service for service in tuple(row["services"]) if service != "soil_moisture")
+            if room_services:
+                bridge.add_accessory(RoomAccessory(
+                    driver, row["name"], aid=aids[("room", str(row["id"]))],
+                    room_id=row["id"], initial_latest=row["latest"], services=room_services,
+                ))
+            if "soil_moisture" in tuple(row["services"]):
+                bridge.add_accessory(SoilAccessory(
+                    driver, f"{row['name']} Bodenfeuchte", aid=aids[("soil", str(row["id"]))],
+                    room_id=row["id"], initial_latest=row["latest"],
+                ))
         except Exception:
             continue
     for device in selected_switches:

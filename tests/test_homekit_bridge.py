@@ -149,3 +149,45 @@ def test_homekit_text_and_stability_contract():
     assert 'soil_calibration_status") == "valid"' in source
     assert "_accessory_aids" in source
     assert "ge?ndert" not in source
+
+
+def test_homekit_soil_is_a_standalone_stable_accessory():
+    room={"id":"room-soil","name":"Garage","services":("temperature","soil_moisture"),"latest":{"temperature_c":22.0,"soil_moisture_percent":42.0}}
+    aids=homekit._accessory_aids([room],[])
+    assert ("room","room-soil") in aids
+    assert ("soil","room-soil") in aids
+    assert aids[("room","room-soil")] != aids[("soil","room-soil")]
+    assert aids == homekit._accessory_aids([room],[])
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    assert "class SoilAccessory(Accessory):" in source
+    assert 'Bodenfeuchte", aid=aids[("soil"' in source
+    assert 'aid=aids[("soil", str(row["id"]))]' in source
+    room_block=source[source.index("class RoomAccessory"):source.index("class SoilAccessory") ]
+    assert 'add_preload_service("HumiditySensor", chars=["Name"])' not in room_block
+
+
+def test_homekit_export_diagnostics_match_standalone_topology():
+    from types import SimpleNamespace
+    rooms=[
+        {"id":"garage","name":"Garage","services":("temperature","humidity","soil_moisture")},
+        {"id":"soil-only","name":"Topf","services":("soil_moisture",)},
+    ]
+    switches=[SimpleNamespace(id="plug-1",name="Lampe")]
+    aids=homekit._accessory_aids(rooms,switches)
+    assert ("room","soil-only") not in aids
+    rows=homekit._export_diagnostics(rooms,switches,aids)
+    soil=[row for row in rows if row["kind"]=="soil_moisture"]
+    assert {row["name"] for row in soil}=={"Garage Bodenfeuchte","Topf Bodenfeuchte"}
+    assert all(row["state"]=="published" and row["services"]==["soil_moisture"] for row in soil)
+    assert len({row["aid"] for row in rows})==len(rows)
+    assert any(row["kind"]=="room" and row["source_id"]=="garage" for row in rows)
+    assert not any(row["kind"]=="room" and row["source_id"]=="soil-only" for row in rows)
+
+
+def test_homekit_final_master_renders_export_diagnostics():
+    root=Path(__file__).resolve().parents[1]
+    html=(root/"web/platform.html").read_text(encoding="utf-8")
+    js=(root/"web/platform-master.js").read_text(encoding="utf-8")
+    assert 'id="homekitExports"' in html
+    assert 'Array.isArray(state.accessories)' in js
+    assert 'AID ${esc(row.aid' in js

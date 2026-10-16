@@ -39,6 +39,8 @@ async function loadHomeKitStatus(){
     const state=await response.json(); if(!response.ok)throw new Error(state.detail||`HTTP ${response.status}`);
     badge.textContent=state.paired?"VERBUNDEN":state.running?"PAIRING":"OFFLINE";
     message.textContent=state.message||"HomeKit-Status geladen.";
+    const exports=document.getElementById("homekitExports");
+    if(exports){const rows=Array.isArray(state.accessories)?state.accessories:[];exports.innerHTML=rows.length?rows.map(row=>`<div><span>${esc(row.name||row.source_id||row.kind||"Zubeh?r")}</span><b>${esc((row.state||"published").toUpperCase())} ? AID ${esc(row.aid??"?")}</b></div>`).join(""):'<div><span>Apple Home Zubeh?r</span><b>noch nichts ver?ffentlicht</b></div>'; }
     card.hidden=false;
     if(state.running&&!state.paired){qr.src=`/api/v1/homekit/pairing.svg?ts=${Date.now()}`;qr.hidden=false;code.textContent=state.setup_code||"";}
     else{qr.hidden=true;qr.removeAttribute("src");code.textContent=state.paired?"Bereits gekoppelt":"";}
