@@ -53,6 +53,8 @@ jobs:
       BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
       BASE_SHA256: acff736ca7945e3b305f07cda4abdb870910e12634991da69783611756e381b3
       IMAGE_NAME: 135er_Grow_Central_RPi3Plus_Universal
+      GC_TEST_MAINTENANCE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, 'image/firstboot-') }}
+      GC_TEST_MAINTENANCE_PUBKEY: ${{ secrets.GC_TEST_PI_MAINTENANCE_PUBKEY }}
     steps:
       - name: Checkout 135er-Grow Central
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -115,6 +117,15 @@ jobs:
           sudo mount -t proc proc "$ROOT/proc"
           sudo mount -t sysfs sys "$ROOT/sys"
           sudo cp /etc/resolv.conf "$ROOT/etc/resolv.conf"
+
+          # Test-only maintenance access is injected from a repository secret.
+          # It is never enabled for master/push release images.
+          set +x
+          if [[ "$GC_TEST_MAINTENANCE_ENABLED" == "true" && -n "$GC_TEST_MAINTENANCE_PUBKEY" ]]; then
+            printf '%s\n' "$GC_TEST_MAINTENANCE_PUBKEY" | tr -d '\r' | head -n1 | sudo tee "$ROOT/run/gc-test-maintenance.pub" >/dev/null
+            sudo touch "$ROOT/run/gc-test-maintenance-enabled"
+          fi
+          set -x
 
           sudo chroot "$ROOT" /bin/bash -eux <<'CHROOT'
           export DEBIAN_FRONTEND=noninteractive
@@ -193,6 +204,40 @@ jobs:
           install -d -o growcentral -g growcentral -m 0750 /var/lib/135er-grow-central
           install -d -o root -g growcentral -m 0750 /etc/135er-grow-central
           install -d -o root -g growcentral -m 0750 /var/lib/135er-grow-central/support
+
+          if [[ -f /run/gc-test-maintenance-enabled && -s /run/gc-test-maintenance.pub ]]; then
+            grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' /run/gc-test-maintenance.pub
+            getent group growcentral-maint >/dev/null || groupadd --system growcentral-maint
+            if ! id gcmaint >/dev/null 2>&1; then
+              useradd --create-home --shell /bin/bash --gid growcentral-maint gcmaint
+            fi
+            usermod -aG growcentral,systemd-journal gcmaint
+            set +x
+            GCMAINT_RANDOM_PASSWORD="$(openssl rand -hex 32)"
+            usermod --password "$(openssl passwd -6 "$GCMAINT_RANDOM_PASSWORD")" gcmaint
+            unset GCMAINT_RANDOM_PASSWORD
+            set -x
+            install -d -o gcmaint -g growcentral-maint -m 0700 /home/gcmaint/.ssh
+            install -o gcmaint -g growcentral-maint -m 0600 /run/gc-test-maintenance.pub /home/gcmaint/.ssh/authorized_keys
+            cat >/etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf <<'EOF'
+          Match User gcmaint
+              AuthenticationMethods publickey
+              PubkeyAuthentication yes
+              PasswordAuthentication no
+              KbdInteractiveAuthentication no
+              AllowAgentForwarding no
+              AllowTcpForwarding no
+              X11Forwarding no
+              PermitTunnel no
+          Match all
+          EOF
+            chmod 0644 /etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf
+            touch /etc/135er-grow-central/test-maintenance-enabled
+            chmod 0644 /etc/135er-grow-central/test-maintenance-enabled
+            install -d -o root -g growcentral-maint -m 2770 /var/lib/135er-grow-central/maintenance/staged
+            install -d -o root -g root -m 0700 /var/lib/135er-grow-central/maintenance/backups
+            rm -f /run/gc-test-maintenance.pub /run/gc-test-maintenance-enabled
+          fi
           install -d -o root -g systemd-journal -m 2755 /var/log/journal
           mkdir -p /etc/polkit-1/rules.d
           cat >/etc/polkit-1/rules.d/60-grow-central-network.rules <<'EOF'
@@ -373,7 +418,11 @@ jobs:
           chage --expiredate -1 --inactive -1 GrowCentral
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
-          for unit in ssh.socket ssh.service sshd.service; do systemctl disable --now "$unit" >/dev/null 2>&1 || true; done
+          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
+            systemctl enable --now ssh.service >/dev/null 2>&1 || systemctl start ssh.service
+          else
+            for unit in ssh.socket ssh.service sshd.service; do systemctl disable --now "$unit" >/dev/null 2>&1 || true; done
+          fi
           touch /var/lib/135er-grow-central/.headless-firstboot-ready
           EOF
           chmod 0755 /usr/local/sbin/grow-central-headless-firstboot.sh
@@ -427,6 +476,12 @@ jobs:
           ufw allow 8080/tcp
           ufw allow 5353/udp
           ufw allow 51827/tcp
+          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
+            # Test-image maintenance SSH is LAN-only and key-only.
+            ufw allow from 10.0.0.0/8 to any port 22 proto tcp
+            ufw allow from 172.16.0.0/12 to any port 22 proto tcp
+            ufw allow from 192.168.0.0/16 to any port 22 proto tcp
+          fi
           # Native Grow-Central ESP32 MQTT: private LAN only.
           ufw allow from 10.0.0.0/8 to any port 8883 proto tcp
           ufw allow from 172.16.0.0/12 to any port 8883 proto tcp
@@ -464,12 +519,23 @@ jobs:
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot-debug.sh /usr/local/sbin/grow-central-support-bundle
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/growcentral-maint /usr/local/sbin/growcentral-maint
           cat >/etc/sudoers.d/growcentral-maint <<'EOF'
+          growcentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status
           GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status
           GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-core
           GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-cloud
           GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-homekit
           GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-all
           EOF
+          if id gcmaint >/dev/null 2>&1; then
+            cat >>/etc/sudoers.d/growcentral-maint <<'EOF'
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-core
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-cloud
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-homekit
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart-all
+          gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint apply-staged
+          EOF
+          fi
           chmod 0440 /etc/sudoers.d/growcentral-maint
           visudo -cf /etc/sudoers.d/growcentral-maint
 
@@ -617,6 +683,20 @@ jobs:
           test "$(systemctl is-enabled grow-central-firstboot-debug.service)" = enabled
           test "$(systemctl is-enabled grow-central-support-bundle.path)" = enabled
           test "$(systemctl is-enabled ssh.service 2>/dev/null || true)" != enabled
+          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
+            id gcmaint
+            test "$(passwd --status gcmaint | awk '{print $2}')" = P
+            ! id -nG gcmaint | grep -qw sudo
+            test -s /home/gcmaint/.ssh/authorized_keys
+            test "$(stat -c '%a' /home/gcmaint/.ssh)" = 700
+            test "$(stat -c '%a' /home/gcmaint/.ssh/authorized_keys)" = 600
+            grep -q '^Match User gcmaint$' /etc/ssh/sshd_config.d/98-grow-central-test-maintenance.conf
+            grep -q '^gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint apply-staged$' /etc/sudoers.d/growcentral-maint
+            test "$(stat -c '%U:%G:%a' /var/lib/135er-grow-central/maintenance/staged)" = root:growcentral-maint:2770
+            sshd -t
+          else
+            ! id gcmaint >/dev/null 2>&1
+          fi
           test "$(systemctl is-enabled avahi-daemon.service)" = enabled
           test "$(systemctl is-enabled 135er-grow-central.service)" = enabled
           test "$(systemctl is-enabled grow-central-homekit.service)" = enabled
@@ -634,6 +714,7 @@ jobs:
           /bin/bash -n /usr/local/sbin/growcentral-maint
           test -x /usr/local/sbin/growcentral-maint
           visudo -cf /etc/sudoers.d/growcentral-maint
+          grep -Fqx 'growcentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status' /etc/sudoers.d/growcentral-maint
           grep -Fqx 'GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status' /etc/sudoers.d/growcentral-maint
           ! grep -Eq 'NOPASSWD: *ALL|growcentral-maint +\*' /etc/sudoers.d/growcentral-maint
           grep -qx 'GC_CLOUD_ENABLED=true' /opt/135er-grow-central/.env
@@ -665,7 +746,9 @@ jobs:
           systemd-analyze verify /etc/systemd/system/grow-central-provisioning.service /etc/systemd/system/135er-grow-central.service /etc/systemd/system/grow-central-homekit.service /etc/systemd/system/135er-grow-central-cloud-link.service /etc/systemd/system/grow-central-http.socket /etc/systemd/system/grow-central-http.service /etc/systemd/system/grow-central-healthcheck.service /etc/systemd/system/grow-central-healthcheck.timer /etc/systemd/system/grow-central-setup-ap.service /etc/systemd/system/grow-central-apply-setup.path /etc/systemd/system/grow-central-apply-setup.service /etc/systemd/system/grow-central-firstboot-debug.service /etc/systemd/system/grow-central-support-bundle.path /etc/systemd/system/grow-central-support-bundle.service /etc/systemd/system/grow-central-support-on-failure@.service
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'ufw allow 51827/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          ! grep -q 'ufw allow 22/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          ! grep -q '^ufw allow 22/tcp$' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q 'test-maintenance-enabled' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q '192.168.0.0/16 to any port 22 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           test -f /etc/mosquitto/conf.d/grow-central.conf
