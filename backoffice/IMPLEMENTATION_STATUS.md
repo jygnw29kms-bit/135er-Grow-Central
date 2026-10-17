@@ -21,10 +21,15 @@ Stand: 2026-10-17
 - Passwörter ausschließlich als PBKDF2-SHA256-Hash mit Salt und 210.000 Iterationen.
 - TOTP-MFA für Backoffice-Benutzer.
 - MFA-Secrets AES-GCM-verschlüsselt mit getrenntem 32-Byte-Server-Master-Key.
-- zufällige Sitzungstokens; in der Datenbank wird nur der SHA-256-Hash gespeichert.
-- 8-Stunden-Sitzungen, Logout/Revoke und Auth-Audit.
-- Rate-Limit für Login/Bootstrap.
+- zusätzliche Benutzer bleiben bis zur eigenen erfolgreichen TOTP-Bestätigung im Enrollment-Zustand und können sich vorher nicht regulär anmelden.
+- produktiver Session-Endpunkt gibt 30-Minuten-Access-Tokens plus 30-Tage-Refresh-Tokens aus.
+- Access- und Refresh-Tokens werden in PostgreSQL nur als SHA-256-Hash gespeichert.
+- Refresh-Tokens werden bei jeder Erneuerung rotiert; das vorherige Refresh-Token ist danach nicht mehr verwendbar.
+- Logout widerruft die Sitzung und entfernt den aktiven Refresh-Hash.
+- Auth-Audit für Bootstrap, Benutzeranlage, MFA-Bestätigung, Login, Refresh-Rotation und Logout.
+- Rate-Limit für Login, Enrollment, Refresh und Bootstrap.
 - Bootstrap-Token kann nur die erste Owner-Anlage autorisieren und ersetzt keine normale Sitzungsauthentifizierung.
+- der ältere `/auth/login`-Pfad bleibt vorübergehend kompatibel, erhält aber ebenfalls nur ein kurzlebiges Access-Token; produktiver Client-Zielpfad ist `/auth/session` plus `/auth/refresh`.
 
 ### Betreiber- / Steuerkonfiguration
 - Rechtsform im Projekt verbindlich `sole_proprietor` / Einzelunternehmen.
@@ -84,7 +89,8 @@ Stand: 2026-10-17
 
 ### Backoffice API
 - ASP.NET Core / .NET 8 und PostgreSQL über Npgsql.
-- Authentifizierung mit Session + TOTP-MFA + RBAC.
+- Authentifizierung mit TOTP-MFA, RBAC, kurzlebigem Access-Token und rotierendem Refresh-Token.
+- bestätigter MFA-Enrolment-Endpunkt für zusätzliche Benutzer.
 - Dokumenttyp-Katalog, Rechnungs-Compliance und Dokumentvalidierung.
 - serverseitige Dokumentnummernvergabe, Entwurf, Lesen, Freigabe und Finalisierung.
 - Betreiber-/Steuerkonfiguration inklusive Validierung.
@@ -96,14 +102,14 @@ Stand: 2026-10-17
 - eigener gehärteter Container für Backoffice API.
 - PostgreSQL als separater Container und internes Datenbanknetz.
 - separates persistentes Volume für Originalbelege.
-- Basis-Schema plus Ledger- und Belegmigrationen für frische Installationen.
+- Basis-Schema plus Ledger-, Beleg- und Auth-Hardening-Migrationen für frische Installationen.
 - API nur an `127.0.0.1:8091`; Veröffentlichung ausschließlich über abgesicherten Reverse Proxy vorgesehen.
 - bestehende Python/SQLite-Cloud für Geräte/Telemetrie bleibt getrennt.
 
 ### CI
 - Domain-Tests auf Linux/.NET 8.
 - gesonderte API-Tests für Passwort-Hashing, TOTP, MFA-Secret-Verschlüsselung, RBAC und Steuerkonfiguration.
-- Tests für E-Rechnungs-Ausnahmen/Versionsmatrix und Doppelbuchungsregeln.
+- Tests für E-Rechnungs-Ausnahmen/Versionsmatrix, Beleg-Dateisignaturen und Doppelbuchungsregeln.
 - API-Restore und Release-Build.
 - Docker-Compose-Validierung und echter Docker-Image-Build.
 - vorhandene Repository-Python-, Security- und Domain-Checks bleiben aktiv.
@@ -121,24 +127,22 @@ Stand: 2026-10-17
 
 Die folgenden Punkte bleiben verbindliche Release-Gates:
 
-1. MFA-Ersteinrichtung für zusätzlich angelegte Benutzer als bestätigter Enrollment-Workflow statt sofort aktiver MFA-Zuordnung.
-2. kürzere Access-Sitzungen plus rotierende Refresh-Tokens beziehungsweise gleichwertiges, geprüftes Sitzungskonzept.
-3. reale Betreiber-/Steuerdaten eintragen und fachlich gegen tatsächliche Finanzamts-/Unternehmensdaten prüfen.
-4. vollständige EN-16931-Erzeugung und externe Schematron-/KoSIT-Validierung für XRechnung 3.0.2.
-5. echte ZUGFeRD-2.5.2-Erzeugung und Validierung inklusive PDF/A-3-Anforderungen.
-6. strukturierte E-Rechnungsinhalte sicher visualisieren und fachlich klassifizieren, ohne das Original zu verändern.
-7. Eingangsbeleg-Klassifizierung, Rechnungsdatenextraktion, Dubletten-/Plausibilitätsprüfung und Buchungsvorschläge.
-8. SKR03/SKR04-Kontenstamm und rechtlich/fachlich geprüfte automatische Buchungsregeln.
-9. Bank/Stripe/PayPal-Reconciliation.
-10. USt-Ledger, Vorsteuerlogik und UStVA-Referenzfälle.
-11. Monatsabschluss vollständig verdrahten und Abschluss-Checkliste automatisieren.
-12. EÜR, Anlagenverzeichnis/AfA und DATEV-Export.
-13. Migrationstooling für bereits bestehende PostgreSQL-Volumes; `docker-entrypoint-initdb.d` reicht nur für Neuinstallationen.
-14. Backup-/Restore-Nachweis einschließlich Originalbeleg-Volume und Prüfsummenprüfung.
-15. Verfahrensdokumentation automatisiert aus Software-, Schema- und Regelversionen erzeugen.
-16. WinUI-3-Client gegen die Backoffice API.
-17. Installer, Signierung und sicherer Updatekanal.
-18. abschließende fachliche Steuer-/Rechtsprüfung vor erstem realen Geschäftsbetrieb.
+1. reale Betreiber-/Steuerdaten eintragen und fachlich gegen tatsächliche Finanzamts-/Unternehmensdaten prüfen.
+2. vollständige EN-16931-Erzeugung und externe Schematron-/KoSIT-Validierung für XRechnung 3.0.2.
+3. echte ZUGFeRD-2.5.2-Erzeugung und Validierung inklusive PDF/A-3-Anforderungen.
+4. strukturierte E-Rechnungsinhalte sicher visualisieren und fachlich klassifizieren, ohne das Original zu verändern.
+5. Eingangsbeleg-Klassifizierung, Rechnungsdatenextraktion, Dubletten-/Plausibilitätsprüfung und Buchungsvorschläge.
+6. SKR03/SKR04-Kontenstamm und rechtlich/fachlich geprüfte automatische Buchungsregeln.
+7. Bank/Stripe/PayPal-Reconciliation.
+8. USt-Ledger, Vorsteuerlogik und UStVA-Referenzfälle.
+9. Monatsabschluss vollständig verdrahten und Abschluss-Checkliste automatisieren.
+10. EÜR, Anlagenverzeichnis/AfA und DATEV-Export.
+11. Migrationstooling für bereits bestehende PostgreSQL-Volumes; `docker-entrypoint-initdb.d` reicht nur für Neuinstallationen.
+12. Backup-/Restore-Nachweis einschließlich Originalbeleg-Volume und Prüfsummenprüfung.
+13. Verfahrensdokumentation automatisiert aus Software-, Schema- und Regelversionen erzeugen.
+14. WinUI-3-Client gegen die Backoffice API.
+15. Installer, Signierung und sicherer Updatekanal.
+16. abschließende fachliche Steuer-/Rechtsprüfung vor erstem realen Geschäftsbetrieb.
 
 ## Verbindliche Sicherheitsgrenze
 
