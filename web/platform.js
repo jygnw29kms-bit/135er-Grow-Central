@@ -1,7 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-  const titles = {overview:'Übersicht',grow:'Räume',devices:'Geräte',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bewässerung',lighting:'Beleuchtung',automation:'Zeitpläne',recipes:'Rezepte',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
+  const titles = {overview:'Übersicht',grow:'Räume',devices:'Geräte',calibration:'Sensor-Kalibrierung',climate:'Klima',irrigation:'Bewässerung',lighting:'Beleuchtung',automation:'Zeitpläne',recipes:'Grow-Profile',growlog:'Growtagebuch',camera:'Live-Ansicht',recordings:'Aufnahmen',timelapse:'Zeitraffer',settings:'Einstellungen',applehome:'Apple Home',users:'Benutzer',backups:'Backups',updates:'Update',extensions:'Erweiterungen',energy:'Energie'};
   const state = {platform:null,runtime:null,smart:null,discovered:[],filter:'all',mode:localStorage.getItem('gc.mode') === 'advanced' ? 'advanced' : 'simple'};
 
   async function api(path, options={}) {
@@ -36,6 +36,7 @@
     setText('pageTitle', titles[id] || 'Grow Central');
     if (id === 'devices') renderDeviceTable();
     if (id === 'automation') loadAutomations();
+    if (id === 'recipes') loadProfiles();
     if (id === 'camera') loadCamera();
     if (id === 'energy') loadEnergy(true);
     if (id === 'system') loadSystem();
@@ -150,6 +151,27 @@
     finally{button.disabled=false;button.textContent='Geräte suchen';}
   }
 
+  function profileCard(row) {
+    return `<button class="profile-card" data-profile-id="${esc(row.id)}"><span><small>${esc(row.category || 'Kultur')}</small><strong>${esc(row.name)}</strong><em>${esc(row.scientific_name || '')}</em></span><span class="profile-meta">${esc(row.difficulty || '')} · ${row.phase_count || 0} Phasen</span></button>`;
+  }
+  async function openProfile(profileId) {
+    try {
+      const data = await api(`/api/v1/profiles/${encodeURIComponent(profileId)}`);
+      const row = data.profile || {};
+      const phases = (row.phases || []).map((phase) => `<article class="master-panel profile-phase"><div class="master-panel-head"><h3>${esc(phase.title)}</h3>${Object.keys(phase.targets||{}).length?'<span class="state-badge">RICHTWERTE</span>':''}</div><ul>${(phase.todos||[]).map((todo)=>`<li><span class="todo-box"></span>${esc(todo)}</li>`).join('')}</ul>${Object.entries(phase.targets||{}).length?`<div class="profile-targets">${Object.entries(phase.targets||{}).map(([k,v])=>`<span><small>${esc(k)}</small><b>${esc(v)}</b></span>`).join('')}</div>`:''}</article>`).join('');
+      $('profileDetail').innerHTML = `<article class="master-panel profile-head"><div><small>${esc(row.category||'Kulturprofil')}</small><h3>${esc(row.name||'Profil')}</h3><p><i>${esc(row.scientific_name||'')}</i> · ${esc(row.summary||'')}</p><div class="tags">${(row.systems||[]).map((x)=>`<span>${esc(x)}</span>`).join('')}</div></div><div class="profile-actions"><a class="master-primary" target="_blank" rel="noopener" href="/api/v1/profiles/${encodeURIComponent(profileId)}/print">Drucken / PDF</a></div></article><div class="profile-phases">${phases}</div><article class="master-panel"><div class="master-panel-head"><h3>Hinweis</h3></div><p class="master-copy">${esc(data.policy?.note||'Profilwerte dienen der Orientierung.')}</p></article>`;
+      document.querySelectorAll('.profile-card').forEach((node)=>node.classList.toggle('active',node.dataset.profileId===profileId));
+    } catch (error) { $('profileDetail').innerHTML=`<article class="master-panel"><div class="empty">Profil: ${esc(error.message)}</div></article>`; }
+  }
+  async function loadProfiles() {
+    try {
+      const data = await api('/api/v1/profiles');
+      const rows = data.profiles || [];
+      $('profileLibrary').innerHTML = rows.length ? rows.map(profileCard).join('') : '<article class="master-panel"><div class="empty">Keine Profile verfügbar.</div></article>';
+      document.querySelectorAll('.profile-card').forEach((node)=>node.addEventListener('click',()=>openProfile(node.dataset.profileId)));
+      if (rows.length && !$('profileDetail').innerHTML.trim()) openProfile(rows[0].id);
+    } catch (error) { $('profileLibrary').innerHTML=`<article class="master-panel"><div class="empty">Profilbibliothek: ${esc(error.message)}</div></article>`; }
+  }
   async function loadAutomations(){try{const d=await api('/api/v1/automations');const rows=d.automations||[];$('automationList').innerHTML=rows.length?rows.map((r)=>`<article class="rule-card"><div><strong>${esc(r.name||'Automation')}</strong><small>${esc([r.trigger,r.device_id].filter(Boolean).join(' · '))}</small></div><span class="state-badge ${r.enabled===false?'offline':''}">${r.enabled===false?'PAUSIERT':'HINTERLEGT'}</span></article>`).join(''):'<div class="empty">Noch keine lokalen Regeln angelegt.</div>';}catch(e){$('automationList').innerHTML=`<div class="empty">Automationen: ${esc(e.message)}</div>`;}}
   async function loadCamera(){try{const d=await api('/api/v1/camera/status?refresh=true');const rows=d.devices||[];$('cameraGrid').innerHTML=rows.length?rows.map((r)=>`<article class="camera-card"><div class="camera-placeholder">◉</div><footer><strong>${esc(r.c920_match?'Logitech C920':r.name||r.device||'Kamera')}</strong><small>${esc(r.capture_capable?'Capture bereit':'Gerät erkannt · prüfen')}</small></footer></article>`).join(''):'<div class="empty">Keine lokale Kamera erkannt.</div>';}catch(e){$('cameraGrid').innerHTML=`<div class="empty">Kamera: ${esc(e.message)}</div>`;}}
   async function loadEnergy(refresh=false){const d=await loadSmart(refresh);if(!d)return;const s=d.summary||{};setText('energyPower',(s.power_w!=null&&s.power_w!==''&&Number.isFinite(Number(s.power_w)))?fmt(s.power_w):'—');setText('energyTotal',(s.energy_wh!=null&&s.energy_wh!==''&&Number.isFinite(Number(s.energy_wh)))?fmt(Number(s.energy_wh)/1000,3):'—');setText('energyOnline',`${s.online||0} / ${s.configured||0}`);setText('energyOn',s.switched_on??'—');$('energyDevices').innerHTML=(d.devices||[]).length?(d.devices||[]).map(miniDevice).join(''):'<div class="empty">Keine Energiedaten verfügbar.</div>';}

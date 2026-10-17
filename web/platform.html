@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/platform-master.css?v=20261015-menu2">
 <link rel="stylesheet" href="/static/platform-visual.css?v=20261015-menu2">
 <link rel="stylesheet" href="/static/sensor_pairing.css?v=20261015-live4">
+<link rel="stylesheet" href="/static/profiles.css?v=1">
 </head>
 <body>
 <div class="app-shell master-shell">
@@ -31,7 +32,7 @@
       <button data-view="irrigation"><i>◒</i><span>Bewässerung</span></button>
       <button data-view="lighting"><i>☼</i><span>Beleuchtung</span></button>
       <button data-view="automation"><i>◷</i><span>Zeitpläne</span></button>
-      <button data-view="recipes"><i>▤</i><span>Rezepte</span></button>
+      <button data-view="recipes"><i>▤</i><span>Profile</span></button>
       <button data-view="growlog"><i>▧</i><span>Growtagebuch</span></button>
       <small class="nav-group-title">KAMERAS</small>
       <button data-view="camera"><i>◉</i><span>Live-Ansicht</span></button>
@@ -123,7 +124,7 @@
 
     <section id="automation" class="view master-view"><div class="master-section-head"><div><small>ANBAU / ZEITPLÄNE</small><h2>Zeitpläne & Automationen</h2><p>Lokale Regeln für Licht, Klima und weitere freigegebene Gerätefunktionen.</p></div><button class="secondary" id="automationRefreshMaster">Aktualisieren</button></div><div id="automationList" class="rule-list master-rules"><div class="empty">Automationen werden geladen…</div></div><article class="master-panel advanced-only"><div class="master-panel-head"><h3>Safety Model</h3></div><p class="master-copy">Provider dürfen nur deklarierte Capabilities schreiben. Kritische Funktionen bleiben read-only, bis Modell und Firmware auf realer Hardware validiert wurden.</p></article></section>
 
-    <section id="recipes" class="view master-view"><div class="master-section-head"><div><small>ANBAU / REZEPTE</small><h2>Rezepte</h2><p>Wiederverwendbare Grow-Profile für Phasen, Klima-Sollwerte, Lichtzyklen und Arbeitsnotizen.</p></div></div><article class="master-panel progress-page"><span>?</span><h3>Rezepte werden geladen</h3><p>Profile sind deklarativ und schalten keine Aktoren ungeprüft.</p></article></section>
+    <section id="recipes" class="view master-view"><div class="master-section-head"><div><small>ANBAU / PROFILE</small><h2>Grow-Profile</h2><p>Kulturprofile mit Phasen, Richtwerten, Aufgaben und druckbaren Checklisten. Profile geben Orientierung; Automationen werden niemals ungefragt aus Profilwerten aktiviert.</p></div></div><div id="profileLibrary" class="profile-library"><article class="master-panel"><div class="empty">Profile werden geladen…</div></article></div><div id="profileDetail" class="profile-detail"></div></section>
 
     <section id="growlog" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GROWTAGEBUCH</small><h2>Growtagebuch</h2><p>Chronik des Grows.</p></div></div><article class="master-panel progress-page"><span>▧</span><h3>Growtagebuch</h3><p>Chronik wird geladen…</p></article></section>
 
