@@ -1,4 +1,4 @@
-﻿name: Deploy Grow Central Website to grow-central.de via SFTP
+name: Deploy Grow Central Website to grow-central.de via SFTP
 
 on:
   push:
@@ -62,6 +62,7 @@ jobs:
           put public-site/impressum.html impressum.html
           put public-site/datenschutz.html datenschutz.html
           put public-site/sensorik.html sensorik.html
+          chmod 644 index.html styles.css impressum.html datenschutz.html sensorik.html
           put public-site/assets/brand/135er-grow-central-lockup-v0.9.png assets/brand/135er-grow-central-lockup-v0.9.png
           put public-site/assets/brand/135er-grow-central-mark.png assets/brand/135er-grow-central-mark.png
           put public-site/assets/gui/local-desktop-v0.9.png assets/gui/local-desktop-v0.9.png
