@@ -26,7 +26,16 @@ public static class LedgerEndpoints
         {
             var actor = await AuthenticateAsync(request, auth, ct);
             if (actor is null || !BackofficeRoles.CanRead(actor.Role)) return Results.Unauthorized();
-            return Results.Ok(DoubleEntryLedgerPolicy.Validate(payload));
+            var accounting = DoubleEntryLedgerPolicy.Validate(payload);
+            var scope = GrowCentralContractBillingLedgerPolicy.ValidateScope(payload);
+            return Results.Ok(new
+            {
+                is_valid = accounting.IsValid && scope.Count == 0,
+                accounting_errors = accounting.Errors,
+                scope_errors = scope,
+                debit_total = accounting.DebitTotal,
+                credit_total = accounting.CreditTotal
+            });
         });
 
         app.MapPost("/api/backoffice/ledger/entries", async (HttpRequest request, JournalEntryDraft payload, PostgresAuthStore auth, PostgresLedgerStore ledger, CancellationToken ct) =>
@@ -86,7 +95,6 @@ public static class LedgerEndpoints
         });
 
         app.MapAuthHardeningEndpoints();
-        app.MapReceiptEndpoints();
     }
 
     private static async Task<BackofficeActor?> AuthenticateAsync(HttpRequest request, PostgresAuthStore auth, CancellationToken ct)
