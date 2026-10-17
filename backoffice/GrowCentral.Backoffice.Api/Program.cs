@@ -10,6 +10,7 @@ var adminToken = Environment.GetEnvironmentVariable("GC_BACKOFFICE_ADMIN_TOKEN")
 var actorId = Environment.GetEnvironmentVariable("GC_BACKOFFICE_ACTOR_ID") ?? "owner";
 
 builder.Services.AddSingleton(new PostgresBackofficeStore(connectionString));
+builder.Services.AddSingleton(new PostgresBackofficeWorkflowStore(connectionString));
 builder.Services.AddSingleton<BusinessDocumentService>();
 builder.Services.AddSingleton<BusinessDocumentRenderer>();
 
@@ -32,7 +33,7 @@ app.MapGet("/api/backoffice/health", async (HttpRequest request, PostgresBackoff
     {
         ok = dbOk,
         service = "GrowCentral Backoffice API",
-        version = "0.2.0",
+        version = "0.3.0",
         database_configured = store.IsConfigured,
         database_reachable = dbOk,
         auth_mode = "bootstrap-admin-token",
@@ -131,6 +132,37 @@ app.MapGet("/api/backoffice/documents/{id:guid}", async (
     if (!store.IsConfigured) return Results.Problem("Backoffice PostgreSQL ist nicht konfiguriert.", statusCode: 503);
     var document = await store.GetAsync(id, ct);
     return document is null ? Results.NotFound() : Results.Ok(document);
+});
+
+app.MapPost("/api/backoffice/documents/{id:guid}/approve", async (
+    Guid id,
+    HttpRequest request,
+    ApproveDocumentRequest payload,
+    PostgresBackofficeStore store,
+    PostgresBackofficeWorkflowStore workflow,
+    CancellationToken ct) =>
+{
+    if (!IsAuthorized(request)) return Results.Unauthorized();
+    if (!store.IsConfigured) return Results.Problem("Backoffice PostgreSQL ist nicht konfiguriert.", statusCode: 503);
+    if (string.IsNullOrWhiteSpace(payload.Reason))
+        return Results.BadRequest(new { error = "Eine nachvollziehbare Freigabebegründung ist erforderlich." });
+
+    try
+    {
+        var stored = await store.GetAsync(id, ct);
+        if (stored is null) return Results.NotFound();
+        var definition = BusinessDocumentCatalog.Get(stored.TemplateCode);
+        if (!definition.LegalReviewRequired)
+            return Results.BadRequest(new { error = "Dieser Dokumenttyp benötigt keine gesonderte fachlich/rechtliche Freigabe." });
+
+        var idempotencyKey = request.Headers["Idempotency-Key"].FirstOrDefault();
+        var newVersion = await workflow.ApproveAsync(id, stored.Version, actorId, payload.Reason, idempotencyKey, ct);
+        return Results.Ok(new { id, status = "Approved", version = newVersion, approved_by = actorId });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 });
 
 app.MapPost("/api/backoffice/documents/{id:guid}/finalize", async (
@@ -262,6 +294,8 @@ public sealed record CreateDocumentRequest(
     Guid? PartyId,
     int? DocumentYear,
     Dictionary<string, string?> Values);
+
+public sealed record ApproveDocumentRequest(string Reason);
 
 public sealed record FinalizeDocumentRequest(
     InvoiceComplianceRequest? InvoiceCompliance,
