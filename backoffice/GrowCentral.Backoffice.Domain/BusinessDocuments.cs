@@ -32,6 +32,8 @@ public sealed record BusinessDocumentLink(Guid TargetDocumentId, string Relation
 
 public sealed class BusinessDocument
 {
+    private readonly List<BusinessDocumentLink> _links = [];
+
     public Guid Id { get; init; } = Guid.NewGuid();
     public required string TemplateCode { get; init; }
     public required string Number { get; init; }
@@ -43,37 +45,62 @@ public sealed class BusinessDocument
     public DateTimeOffset? FinalizedAtUtc { get; private set; }
     public string? FinalizedBy { get; private set; }
     public Dictionary<string, string?> Values { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public List<BusinessDocumentLink> Links { get; } = [];
+    public IReadOnlyList<BusinessDocumentLink> Links => _links;
 
-    public void MarkReviewRequired() => ChangeStatus(BusinessDocumentStatus.ReviewRequired);
-    public void Approve() => ChangeStatus(BusinessDocumentStatus.Approved);
+    public bool IsContentLocked => Status is BusinessDocumentStatus.Finalized
+        or BusinessDocumentStatus.Sent
+        or BusinessDocumentStatus.Settled
+        or BusinessDocumentStatus.Cancelled
+        or BusinessDocumentStatus.Corrected
+        or BusinessDocumentStatus.Archived;
+
+    public void MarkReviewRequired() => Transition(BusinessDocumentStatus.ReviewRequired, BusinessDocumentStatus.Draft);
+    public void Approve() => Transition(BusinessDocumentStatus.Approved, BusinessDocumentStatus.Draft, BusinessDocumentStatus.ReviewRequired);
 
     public void FinalizeDocument(string actor)
     {
-        if (Status is not (BusinessDocumentStatus.Approved or BusinessDocumentStatus.Draft))
-            throw new InvalidOperationException($"Dokument im Status {Status} kann nicht finalisiert werden.");
-        Status = BusinessDocumentStatus.Finalized;
+        ArgumentException.ThrowIfNullOrWhiteSpace(actor);
+        Transition(BusinessDocumentStatus.Finalized, BusinessDocumentStatus.Draft, BusinessDocumentStatus.Approved);
         FinalizedAtUtc = DateTimeOffset.UtcNow;
         FinalizedBy = actor;
-        Version++;
     }
 
-    public void MarkSent() => ChangeStatus(BusinessDocumentStatus.Sent);
-    public void MarkSettled() => ChangeStatus(BusinessDocumentStatus.Settled);
-    public void MarkCorrected() => ChangeStatus(BusinessDocumentStatus.Corrected);
-    public void Archive() => ChangeStatus(BusinessDocumentStatus.Archived);
+    public void MarkSent() => Transition(BusinessDocumentStatus.Sent, BusinessDocumentStatus.Finalized);
+    public void MarkSettled() => Transition(BusinessDocumentStatus.Settled, BusinessDocumentStatus.Finalized, BusinessDocumentStatus.Sent);
+    public void MarkCorrected() => Transition(BusinessDocumentStatus.Corrected, BusinessDocumentStatus.Finalized, BusinessDocumentStatus.Sent, BusinessDocumentStatus.Settled);
+    public void MarkCancelled() => Transition(BusinessDocumentStatus.Cancelled, BusinessDocumentStatus.Finalized, BusinessDocumentStatus.Sent);
+    public void Archive() => Transition(BusinessDocumentStatus.Archived, BusinessDocumentStatus.Finalized, BusinessDocumentStatus.Sent, BusinessDocumentStatus.Settled, BusinessDocumentStatus.Cancelled, BusinessDocumentStatus.Corrected);
 
     public void SetValue(string key, string? value)
     {
-        if (Status is BusinessDocumentStatus.Finalized or BusinessDocumentStatus.Sent or BusinessDocumentStatus.Settled or BusinessDocumentStatus.Archived)
-            throw new InvalidOperationException("Finalisierte Geschäftsdokumente dürfen nicht still überschrieben werden. Korrektur-/Stornobeleg erzeugen.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        EnsureContentMutable();
         Values[key] = value;
         Version++;
     }
 
-    private void ChangeStatus(BusinessDocumentStatus status)
+    public void AddLink(Guid targetDocumentId, string relation)
     {
-        Status = status;
+        if (targetDocumentId == Guid.Empty) throw new ArgumentException("Zieldokument fehlt.", nameof(targetDocumentId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(relation);
+        EnsureContentMutable();
+        if (_links.Any(x => x.TargetDocumentId == targetDocumentId && string.Equals(x.Relation, relation, StringComparison.OrdinalIgnoreCase)))
+            return;
+        _links.Add(new(targetDocumentId, relation.Trim()));
+        Version++;
+    }
+
+    private void EnsureContentMutable()
+    {
+        if (IsContentLocked)
+            throw new InvalidOperationException("Finalisierte oder abgeschlossene Geschäftsdokumente dürfen nicht still überschrieben werden. Korrektur-/Stornobeleg erzeugen.");
+    }
+
+    private void Transition(BusinessDocumentStatus target, params BusinessDocumentStatus[] allowedFrom)
+    {
+        if (!allowedFrom.Contains(Status))
+            throw new InvalidOperationException($"Ungültiger Dokumentstatuswechsel {Status} -> {target}.");
+        Status = target;
         Version++;
     }
 }
