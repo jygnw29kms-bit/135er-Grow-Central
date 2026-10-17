@@ -154,13 +154,39 @@ def make_xiao(kind):
     spine=_rr(7,22,5,2.2,1.5); spine.translate(App.Vector(-4,(D-22)/2,0)); spine=spine.cut(Part.makeBox(3.5,7,7,App.Vector(-2.5,(D-22)/2+3,1))); spine=spine.cut(Part.makeBox(3.5,7,7,App.Vector(-2.5,(D-22)/2+12,1))); base=base.fuse(spine)
     # lid
     lid=_rr(W,D,2.8,rad,0); tongue=_rr(W-2*(wall+0.3),D-2*(wall+0.3),2.8,max(1.0,rad-wall-0.3),-2.6); tongue.translate(App.Vector(wall+0.3,wall+0.3,0)); lid=lid.fuse(tongue)
-    rows=2 if not hub else 3; cols=3 if not hub else 5
-    for r in range(rows):
-        for c in range(cols): lid=slot(lid,8+c*9+(r%2)*2,8+r*7,-2.9,5.8,2.6,6,1.3)
+    # Keep lid vents outside the 40 x 20 mm FPC antenna adhesion zone.
+    vent_xs=(9,18,27) if not hub else (9,19,29,39,49)
+    for vx in vent_xs:
+        lid=slot(lid,vx,2.2,-2.9,5.8,2.6,6,1.3)
+        lid=slot(lid,vx,D-4.8,-2.9,5.8,2.6,6,1.3)
     # shallow inset perimeter motif shared with Pi enclosure
     go=_rr(W-8,D-8,0.42,max(1.8,rad-1.8),2.40); go.translate(App.Vector(4,4,0))
     gi=_rr(W-12,D-12,0.52,max(1.2,rad-2.8),2.35); gi.translate(App.Vector(6,6,0))
     lid=lid.cut(go.cut(gi))
+    # Protected underside carrier for the supplied Seeed XIAO ESP32-C3 FPC antenna.
+    # Antenna nominal: 40 x 20 mm, coax approx. 1.13 mm. The carrier provides
+    # a full adhesive surface, 0.4 mm clearance around the max-size FPC and
+    # a cable exit notch without covering the RF area with clips.
+    ant_w,ant_d=42.0,22.0
+    ant_x=(W-ant_w)/2.0; ant_y=(D-ant_d)/2.0
+    carrier=Part.makeBox(ant_w,ant_d,0.70,App.Vector(ant_x,ant_y,-3.25))
+    lid=lid.fuse(carrier)
+    rail=0.60; rail_h=0.65; rz=-3.90
+    r1=Part.makeBox(ant_w,rail,rail_h,App.Vector(ant_x,ant_y,rz))
+    r2=Part.makeBox(ant_w,rail,rail_h,App.Vector(ant_x,ant_y+ant_d-rail,rz))
+    r3=Part.makeBox(rail,ant_d-2*rail,rail_h,App.Vector(ant_x,ant_y+rail,rz))
+    r4=Part.makeBox(rail,ant_d-2*rail,rail_h,App.Vector(ant_x+ant_w-rail,ant_y+rail,rz))
+    # 2.2 mm cable notch at the FPC feed end.
+    notch=Part.makeBox(rail+0.4,2.2,rail_h+0.2,App.Vector(ant_x+ant_w-rail-0.2,ant_y+ant_d/2-1.1,rz-0.1))
+    rim=r1.fuse(r2).fuse(r3).fuse(r4).cut(notch)
+    lid=lid.fuse(rim)
+    # Small underside strain-relief bridge for the 1.13 mm coax, outside the antenna face.
+    clip_x=max(3.0,W-10.0); clip_y=1.2
+    clip=Part.makeBox(6.0,3.0,1.3,App.Vector(clip_x,clip_y,-3.85))
+    clip=clip.cut(Part.makeBox(3.8,1.5,1.5,App.Vector(clip_x+1.1,clip_y+0.75,-3.95)))
+    lid=lid.fuse(clip)
+    ant_ref=Part.makeBox(40.0,20.0,0.35,App.Vector(ant_x+1.0,ant_y+1.0,-3.60))
+    ant_obj=add_obj(doc,'REF_FPC_Antenna_40x20',ant_ref,(0.85,0.45,0.08),65)
     # Raised two-colour branding as a separate body for AMS colour assignment.
     brand=gc_badge(W-10,D-10,2.8,0.85,0.72 if hub else 0.62)
     title_size=4.2 if hub else 3.6
