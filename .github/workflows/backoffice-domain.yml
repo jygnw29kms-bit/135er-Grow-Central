@@ -28,11 +28,16 @@ jobs:
           cache: true
           cache-dependency-path: |
             backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
+            backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj
             backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
-      - name: Restore tests
+      - name: Restore domain tests
         run: dotnet restore backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
       - name: Test domain
         run: dotnet test backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj --configuration Release --no-restore
+      - name: Restore API tests
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj
+      - name: Test API security and tax policy
+        run: dotnet test backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj --configuration Release --no-restore
       - name: Restore API
         run: dotnet restore backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
       - name: Build API
