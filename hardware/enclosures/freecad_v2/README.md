@@ -44,3 +44,10 @@ Empfohlener erster P2S-Testdruck: 0,4-mm-Duese, 0,20-mm-Layer, 4 Waende, PETG. V
 ## Render
 
 `render_blender.py` rendert direkt aus den produktiven STL-Geometrien. Die Bilder unter `previews/` und `previews/hero/` sind daher echte Modellvorschauen und keine generierten Konzeptbilder.
+
+
+## Branding / dual-colour FDM rule
+
+Grow-Central enclosure branding is raised/extruded, never engraved. It is exported as a separate branding body/STL so Bambu Studio/AMS can assign a second filament colour without painting individual faces. For the 0.4 mm nozzle family the current raised height is 0.85 mm and lettering is sized for robust FDM readability. On the Pi4 lid, branding must remain on the free side of the lid and outside the GPIO/pin-header service opening.
+
+For Bambu/Orca print projects, generate the final 3MF through the slicer itself rather than hand-building the 3MF metadata container. The Bambu-native export is the validated reference path.

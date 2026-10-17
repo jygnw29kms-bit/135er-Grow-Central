@@ -1,7 +1,7 @@
 import os, math
 import FreeCAD as App
 import Part
-from brand_helpers import text_solid, engrave_text
+from brand_helpers import text_solid
 
 ROOT=os.path.dirname(os.path.abspath(__file__))
 REF=os.path.join(ROOT,'references')
@@ -101,13 +101,15 @@ def make_pi4():
     groove_outer=_rr(W-10,D-10,0.45,max(2.0,rad-2.0),2.58); groove_outer.translate(App.Vector(5,5,0))
     groove_inner=_rr(W-15,D-15,0.55,max(1.5,rad-3.0),2.52); groove_inner.translate(App.Vector(7.5,7.5,0))
     lid=lid.cut(groove_outer.cut(groove_inner))
-    lid=lid.fuse(gc_badge(82,51,3.0,1.2,1.0))
-    lid=engrave_text(lid,text_solid(doc,'GROW CENTRAL',6.4,0.78,9,56.2,2.42))
-    lid=engrave_text(lid,text_solid(doc,'PI4',4.2,0.72,11,50.7,2.42))
+    # Raised two-colour branding on the free side, away from the GPIO/pin-header window.
+    brand=gc_badge(84,41,3.0,0.85,0.95)
+    brand=brand.fuse(text_solid(doc,'GROW CENTRAL',6.4,0.85,8.5,40.0,3.0))
+    brand=brand.fuse(text_solid(doc,'PI4',4.4,0.85,10.0,34.0,3.0))
     # raised product family bar
-    lid=lid.fuse(_rr(42,3.2,0.9,1.4,3.0).translated(App.Vector(8,7,0)) if False else Part.makeBox(42,3.2,0.9,App.Vector(8,7,3.0)))
+    lid=lid.fuse(Part.makeBox(42,3.2,0.9,App.Vector(8,7,3.0)))
     b=add_obj(doc,'GC_Pi4_Base_V2',base,(0.12,0.14,0.16),0); l=add_obj(doc,'GC_Pi4_Lid_V2',lid,(0.12,0.14,0.16),0)
-    export_obj(b,'GrowCentral_Pi4_Base_V2'); export_obj(l,'GrowCentral_Pi4_Lid_V2')
+    br=add_obj(doc,'GC_Pi4_Branding_V2',brand,(0.20,0.80,0.25),0)
+    export_obj(b,'GrowCentral_Pi4_Base_V2'); export_obj(l,'GrowCentral_Pi4_Lid_V2'); export_obj(br,'GrowCentral_Pi4_Branding_V2')
     doc.recompute(); doc.saveAs(os.path.join(OUT,'GrowCentral_Pi4_V2.FCStd')); App.closeDocument(doc.Name)
 
 def xiao_reference(with_headers=True):
@@ -159,13 +161,15 @@ def make_xiao(kind):
     go=_rr(W-8,D-8,0.42,max(1.8,rad-1.8),2.40); go.translate(App.Vector(4,4,0))
     gi=_rr(W-12,D-12,0.52,max(1.2,rad-2.8),2.35); gi.translate(App.Vector(6,6,0))
     lid=lid.cut(go.cut(gi))
-    lid=lid.fuse(gc_badge(W-10,D-10,2.8,1.1,0.72 if hub else 0.62))
+    # Raised two-colour branding as a separate body for AMS colour assignment.
+    brand=gc_badge(W-10,D-10,2.8,0.85,0.72 if hub else 0.62)
     title_size=4.2 if hub else 3.6
-    lid=engrave_text(lid,text_solid(doc,'GC HUB' if hub else 'GC NODE',title_size,0.72,6,D-7.6,2.26))
+    brand=brand.fuse(text_solid(doc,'GC HUB' if hub else 'GC NODE',title_size,0.85,6,D-7.6,2.8))
     tag='HUB' if hub else 'NODE'
-    lid=engrave_text(lid,text_solid(doc,tag,3.2 if hub else 2.8,0.68,7,4.8,2.26))
+    brand=brand.fuse(text_solid(doc,tag,3.2 if hub else 2.8,0.85,7,4.8,2.8))
     b=add_obj(doc,'GC_XIAO_'+kind+'_Base_V2',base,(0.12,0.14,0.16),0); l=add_obj(doc,'GC_XIAO_'+kind+'_Lid_V2',lid,(0.12,0.14,0.16),0)
-    export_obj(b,'GrowCentral_XIAO_'+kind+'_Base_V2'); export_obj(l,'GrowCentral_XIAO_'+kind+'_Lid_V2')
+    br=add_obj(doc,'GC_XIAO_'+kind+'_Branding_V2',brand,(0.20,0.80,0.25),0)
+    export_obj(b,'GrowCentral_XIAO_'+kind+'_Base_V2'); export_obj(l,'GrowCentral_XIAO_'+kind+'_Lid_V2'); export_obj(br,'GrowCentral_XIAO_'+kind+'_Branding_V2')
     doc.recompute(); doc.saveAs(os.path.join(OUT,'GrowCentral_XIAO_'+kind+'_V2.FCStd')); App.closeDocument(doc.Name)
 
 if __name__=='__main__':

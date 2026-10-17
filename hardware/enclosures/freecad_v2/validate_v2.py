@@ -12,10 +12,13 @@ for fn in files:
     ref=next((o for o in objs if o.Name.startswith('REF_')),None)
     base=next((o for o in objs if '_Base_' in o.Name),None)
     lid=next((o for o in objs if '_Lid_' in o.Name),None)
+    brand=next((o for o in objs if '_Branding_' in o.Name),None)
     if ref and base:
         c=ref.Shape.common(base.Shape)
         print('COLLISION ref/base volume',round(c.Volume,4),'solids',len(c.Solids))
     if ref and lid:
         c=ref.Shape.common(lid.Shape)
         print('COLLISION ref/lid volume',round(c.Volume,4),'solids',len(c.Solids))
+    if brand:
+        print('BRANDING valid',brand.Shape.isValid(),'solids',len(brand.Shape.Solids),'z',round(brand.Shape.BoundBox.ZMin,2),'to',round(brand.Shape.BoundBox.ZMax,2))
     App.closeDocument(doc.Name)
