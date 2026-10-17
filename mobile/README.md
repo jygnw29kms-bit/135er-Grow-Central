@@ -1,57 +1,36 @@
-# 135er-Grow Central · Nexus Mobile 0.2.1
+# Grow Central Mobile
 
-Nexus Mobile ist der iOS-/Android-Client der 135er-Grow-Central-Plattform. Die App folgt dem verbindlichen GrowCentral-Nexus-Design und bleibt bewusst ein Client: Raspberry Pi bzw. ausdrücklich eingerichteter Server bleiben die autoritativen Instanzen für Geräte, Policy, Automation und Zugangsdaten.
+Grow Central follows a **PWA-first** architecture. The installable Web/PWA interface is the canonical mobile client for iPhone, iPad and Android. This avoids Apple signing/provisioning overhead, keeps one UI code path for mobile and desktop, and prevents native clients from drifting away from the Raspberry-Pi/WebGUI feature set.
 
-**Kanonischer Plattformstand:** `alpha-0.7.5` · Branch `master` · Build-118-Runtime-/Image-Anker `e339602` · Pi-Hardwaretest-Kandidat **Build 118** (`pi-universal-alpha-0.7.5-118`).
+## Canonical client
 
-> `e339602` ist der Pi-Laufzeitanker des Kandidaten. Der Repository-HEAD enthält danach zusätzliche Mobile-/Doku-/Packaging-Commits, ohne den Pi-Kandidaten künstlich hochzuzählen.
+- iPhone / iPad: Grow Central PWA added to the Home Screen.
+- Android: the same Grow Central PWA can be installed from the browser.
+- Desktop: the same responsive WebGUI/PWA is used directly in the browser.
+- Raspberry Pi: the Pi remains the local authority for devices, automation, Smart Home, camera, rooms, sensor data and audit.
+- Remote access: HTTPS only.
 
-## Architektur
+## Login and credentials
 
-- **Raspberry Pi:** lokale Geräteautorität, Automationen, Smart Home, Kamera, Räume, Sensorik und Audit.
-- **Nexus Mobile:** Bedienoberfläche / WebGUI-Client.
-- **Lokal:** `http://135er-Grow-Central.local/` oder First Boot `http://10.42.0.1/`.
-- **Remote:** ausschließlich über eine abgesicherte HTTPS-Serveradresse.
-- **Branding:** Logo und Markenidentität bleiben unverändert; UI folgt GrowCentral Nexus.
+- Login fields use standard browser autocomplete semantics so iOS/Android/browser password managers can offer to save credentials.
+- Grow Central itself does not persist plaintext passwords in browser storage.
+- Application sessions use opaque HttpOnly cookies.
+- The optional "Angemeldet bleiben" mode extends the server-side session lifetime without storing the password in application JavaScript storage.
 
-## CI-Pakete
+## Native clients
 
-`.github/workflows/mobile-build.yml` erzeugt bei Änderungen unter `mobile/**` automatisch beide Plattformpakete neu:
+The historical Capacitor/Nexus iOS and Android packages remain only as **legacy/fallback test clients**. They are not the primary product path and must not receive duplicated business logic. Native code is justified only when a required feature cannot be implemented safely through current Web/PWA APIs.
 
-- `GrowCentral-Nexus-Android-APK`
-  - `135er-GrowCentral-Nexus-Android-debug.apk`
-  - SHA-256-Prüfsumme
-- `GrowCentral-Nexus-iOS-Sideload-IPA`
-  - `135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa`
-  - SHA-256-Prüfsumme
+The native CI workflow is therefore manual-only. No native iOS/Android package is built automatically for normal mobile/Web changes.
 
-Die iOS-IPA wird bewusst **unsigned** erzeugt. Sie wird beim Sideloading mit der Apple-ID bzw. Provisionierung des Zielgeräts signiert; private Apple-Zugangsdaten liegen nicht im Repository oder CI-Workflow.
+## Security rules
 
-## Nexus Mobile UI
+- no FRITZ!Box, Tapo or device credentials in client packages;
+- no passwords or long-lived secrets in URLs;
+- no plaintext credential persistence in `localStorage`;
+- local HTTP only for explicit local/first-boot appliance access;
+- non-local access requires HTTPS;
+- server-side permissions and Grow-Central sessions remain authoritative;
+- native fallback clients may not bypass API policy gates.
 
-Der Startscreen bietet:
-
-- offizielles 135er-Grow-Central-Branding;
-- Local-/Mobile-/Remote-Architekturstatus;
-- gespeicherte Zielinstanz;
-- Direktzugriff auf die First-Boot-IP;
-- Plattformkennzeichnung;
-- HTTPS-Zwang für nicht-lokale Ziele;
-- keine Credentials in der Ziel-URL.
-
-Nach dem Verbinden übernimmt die lokale Grow-Central-WebGUI die Sitzung und Gerätebedienung. Damit stehen neue Pi-GUI-Funktionen wie Kamera-/LED-, Raum-, Energie- oder Geräteansichten ohne doppelte native Implementierung auch mobil bereit.
-
-## Sicherheit
-
-- keine FRITZ!Box-, Tapo- oder Geräte-Credentials im Paket;
-- lokale HTTP-Verbindungen nur zu `.local` bzw. privaten IPv4-Netzen;
-- Remote ausschließlich HTTPS;
-- serverseitige Grow-Central-Sitzung und Rechte bleiben maßgeblich;
-- iOS erhält einen Local-Network-Nutzungstext;
-- Signing-Geheimnisse werden nicht im öffentlichen CI gespeichert.
-
-## Release-Regel
-
-Mobile 0.2.1 wird neu aus dem konsolidierten Repository-Stand gebaut. Die Pakete bleiben Test-/Sideload-Artefakte, bis reale iOS-/Android-Gerätetests gegen Build 118 bzw. die dann gültige Pi-Basis abgeschlossen sind.
-
-Siehe [INSTALLATION.md](INSTALLATION.md) und [`../RELEASE_STATE.md`](../RELEASE_STATE.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the binding architecture statement.
