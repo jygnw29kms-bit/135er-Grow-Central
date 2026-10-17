@@ -1,0 +1,52 @@
+name: Backoffice Domain and API
+
+on:
+  pull_request:
+    paths:
+      - 'backoffice/**'
+      - 'database/backoffice_schema.sql'
+      - 'docker-compose.cloud.yml'
+      - '.github/workflows/backoffice-domain.yml'
+  push:
+    branches: [ master ]
+    paths:
+      - 'backoffice/**'
+      - 'database/backoffice_schema.sql'
+      - 'docker-compose.cloud.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          cache: true
+          cache-dependency-path: |
+            backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
+            backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj
+            backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
+      - name: Restore domain tests
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
+      - name: Test domain
+        run: dotnet test backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj --configuration Release --no-restore
+      - name: Restore API tests
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj
+      - name: Test API security and tax policy
+        run: dotnet test backoffice/GrowCentral.Backoffice.Api.Tests/GrowCentral.Backoffice.Api.Tests.csproj --configuration Release --no-restore
+      - name: Restore API
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
+      - name: Build API
+        run: dotnet build backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj --configuration Release --no-restore
+      - name: Prepare CI environment files
+        run: |
+          cp cloud/.env.example cloud/.env
+          cp backoffice/.env.example backoffice/.env
+      - name: Validate compose
+        run: docker compose -f docker-compose.cloud.yml config --quiet
+      - name: Build Backoffice API image
+        run: docker build -f backoffice/GrowCentral.Backoffice.Api/Dockerfile -t growcentral-backoffice-api:ci .
