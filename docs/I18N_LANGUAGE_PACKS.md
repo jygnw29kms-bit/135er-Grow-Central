@@ -2,7 +2,7 @@
 
 ## Product rule
 
-GrowCentral is an international grow-control platform. The product name remains `GrowCentral` in every locale.
+GrowCentral is an international controlled-growing platform. The product name remains `GrowCentral` in every locale.
 
 The UI is currently German-first, but the architecture must be locale-neutral. English is the canonical source language for translation keys and semantic meaning. German remains a fully supported bundled locale.
 

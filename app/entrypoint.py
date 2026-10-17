@@ -26,6 +26,7 @@ from app.maintenance import router as maintenance_router
 from app.grow_alerts import router as grow_alerts_router
 from app.edition import router as edition_router
 from app.setup_portal import SetupPortalMiddleware
+from app.power_monitor import install as install_power_monitor
 
 _install_camera_policy(_camera)
 del _camera, _install_camera_policy
