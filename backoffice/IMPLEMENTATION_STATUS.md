@@ -15,24 +15,66 @@ Stand: 2026-10-17
 - serverseitig definierte Nummernkreis-Policies für alle Dokumenttypen.
 - dokumentierte Freigabepflicht für rechtlich sensible Dokumente.
 
+### Authentifizierung / MFA / Rollen
+- serverseitige Benutzerverwaltung in PostgreSQL.
+- Rollen `Owner`, `Billing`, `Support`, `ReadOnly` mit serverseitiger Berechtigungsprüfung.
+- Passwörter ausschließlich als PBKDF2-SHA256-Hash mit Salt und 210.000 Iterationen.
+- TOTP-MFA für Backoffice-Benutzer.
+- MFA-Secrets AES-GCM-verschlüsselt mit getrenntem 32-Byte-Server-Master-Key.
+- zufällige Sitzungstokens; in der Datenbank wird nur der SHA-256-Hash gespeichert.
+- 8-Stunden-Sitzungen, Logout/Revoke und Auth-Audit.
+- Rate-Limit für Login/Bootstrap.
+- Bootstrap-Token kann nur die erste Owner-Anlage autorisieren und ersetzt keine normale Sitzungsauthentifizierung.
+
+### Betreiber- / Steuerkonfiguration
+- Rechtsform im Projekt verbindlich `sole_proprietor` / Einzelunternehmen.
+- Stammdaten für rechtlichen Namen, Geschäftsbezeichnung, Anschrift, Steuernummer, USt-IdNr., Wirtschafts-IdNr. und Finanzamt.
+- Regelbesteuerung/Kleinunternehmer, USt-Voranmeldungszeitraum, Soll-/Ist-Versteuerung sowie SKR03/SKR04 konfigurierbar.
+- Plausibilitätsregeln für § 19 UStG, insbesondere 25.000-EUR-Vorjahresgrenze und 100.000-EUR-Grenze im laufenden Jahr.
+- Hinweise für Verzicht/Bindungsfrist und widersprüchliche Steuerkonfigurationen.
+- Änderungen der Betreiber-/Steuerkonfiguration werden auditiert.
+
 ### Rechnung / E-Rechnung
 - E-Rechnungsentscheidung als eigene Domainregel.
 - Übergangsregel bis 31.12.2026 abgebildet.
 - zusätzliche Übergangsregel bis 31.12.2027 bei Vorjahresumsatz bis 800.000 EUR abgebildet.
-- strukturierte Formate im System: XRechnung, ZUGFeRD EN16931, sonstiges EN16931.
+- Ausnahmen für Kleinbetragsrechnungen bis 250 EUR, Kleinunternehmerrechnungen, Fahrausweise und die einschlägigen steuerfreien Umsätze nach § 4 Nr. 8 bis 29 UStG modelliert.
+- Kleinunternehmer-Ausnahme betrifft die Ausstellung; E-Rechnungs-Empfangsfähigkeit bleibt im Zielbild erhalten.
 - B2G wird bewusst als separater Regelpfad behandelt.
-- einfache PDF-Rechnung wird nicht als strukturierte E-Rechnung ausgegeben.
+- einfache PDF-Rechnung wird nicht als strukturierte E-Rechnung behandelt.
+- Zielmatrix Stand 17.10.2026: XRechnung 3.0.2, KoSIT-Validator 1.6.3, ZUGFeRD 2.5.2, EN 16931.
 
 ### Mahnwesen
 - Verbraucher: 40-EUR-Verzugspauschale blockiert.
 - Standard-Verzugszinsprüfung B2C/B2B vorbereitet.
 - Mahndokumente bleiben mit Forderungs-/Rechnungsreferenz verknüpfbar.
 
-### Persistenz
-- separates PostgreSQL-Zielschema für kaufmännische Daten.
-- Geschäftspartner.
-- Dokumente.
-- Dokumentverknüpfungen.
+### Doppelbuchungs-Ledger
+- Buchungsentwürfe mit Soll/Haben-Zeilen und Beleg-/Geschäftspartnerreferenzen.
+- Soll und Haben müssen centgenau ausgeglichen sein.
+- negative Buchungsbeträge werden nicht als nachträgliche Mutation akzeptiert; Korrekturen erfolgen über Gegenbuchungen.
+- PostgreSQL-Journal und Journalzeilen sind nach Verbuchung unveränderbar.
+- eindeutige Buchungsnummern über den zentralen Nummernkreis.
+- Buchungsperioden `open`, `closing`, `locked`, `reopened`.
+- gesperrte/abschließende Perioden nehmen keine Buchungen an.
+- Wiedereröffnung nur durch Owner mit nachvollziehbarer Begründung und Audit.
+- Konten unterstützen SKR03/SKR04; konkrete Konten-Mappings werden noch fachlich vervollständigt.
+
+### Eingangsbelege / Originalarchiv
+- separates persistentes Originalbeleg-Volume, getrennt von Geräte-/Telemetriedaten.
+- Originaldatei wird unverändert archiviert; Metadaten und SHA-256-Prüfsumme liegen in PostgreSQL.
+- Dublettenerkennung über SHA-256.
+- Speicherpfad wird aus der Prüfsumme erzeugt, nicht aus dem übermittelten Dateinamen.
+- Größenlimit 25 MiB.
+- zugelassene Typen: PDF, XML, JPEG, PNG.
+- Dateisignatur/Inhaltsprüfung gegen den deklarierten MIME-Typ vor Archivierung.
+- Originalbelegtabelle ist append-only.
+- Workflowstatus getrennt vom unveränderbaren Original.
+- Mindestaufbewahrung, Legal-Hold und verpflichtende Löschprüfung sind im Schema vorgesehen; keine automatische Löschung nur aufgrund eines Datums.
+
+### Persistenz / Audit
+- separates PostgreSQL-Schema für kaufmännische Daten.
+- Geschäftspartner, Dokumente und Dokumentverknüpfungen.
 - unveränderbare Dokumentrevisionen.
 - append-only Audit-Events.
 - atomare Nummernkreisvergabe.
@@ -41,56 +83,63 @@ Stand: 2026-10-17
 - Schutz gegen Löschen finalisierter Dokumente.
 
 ### Backoffice API
-- ASP.NET Core / .NET 8.
-- PostgreSQL über Npgsql.
-- Health-Endpunkt.
-- Dokumenttyp-Katalog.
-- Rechnungs-Compliance-Prüfung.
-- Dokumentvalidierung.
-- serverseitige Dokumentnummernvergabe.
-- Entwurf anlegen/lesen.
-- dokumentierte Freigabe mit Begründung + Audit.
-- Finalisierung mit optimistischer Versionsprüfung.
+- ASP.NET Core / .NET 8 und PostgreSQL über Npgsql.
+- Authentifizierung mit Session + TOTP-MFA + RBAC.
+- Dokumenttyp-Katalog, Rechnungs-Compliance und Dokumentvalidierung.
+- serverseitige Dokumentnummernvergabe, Entwurf, Lesen, Freigabe und Finalisierung.
+- Betreiber-/Steuerkonfiguration inklusive Validierung.
+- Ledger-Konten, Buchungsvalidierung, Buchung, Periodensperre und begründete Wiedereröffnung.
+- Originalbeleg-Upload, Metadatenabruf und authentifizierter Originalabruf.
 - unveränderbare Finalrevision mit SHA-256-Inhaltshash.
-- Idempotency für schreibende Kernvorgänge.
-- Bootstrap-Admin-Token nur als Entwicklungsstufe; API meldet ausdrücklich `production_auth_ready=false`.
 
 ### Deployment
 - eigener gehärteter Container für Backoffice API.
-- PostgreSQL als separater Container.
-- internes Datenbanknetz.
-- API nur an `127.0.0.1:8091`; Veröffentlichung ausschließlich über Reverse Proxy vorgesehen.
-- bestehende Python/SQLite-Cloud für Geräte/Telemetrie bleibt getrennt und unverändert.
+- PostgreSQL als separater Container und internes Datenbanknetz.
+- separates persistentes Volume für Originalbelege.
+- Basis-Schema plus Ledger- und Belegmigrationen für frische Installationen.
+- API nur an `127.0.0.1:8091`; Veröffentlichung ausschließlich über abgesicherten Reverse Proxy vorgesehen.
+- bestehende Python/SQLite-Cloud für Geräte/Telemetrie bleibt getrennt.
 
 ### CI
 - Domain-Tests auf Linux/.NET 8.
+- gesonderte API-Tests für Passwort-Hashing, TOTP, MFA-Secret-Verschlüsselung, RBAC und Steuerkonfiguration.
+- Tests für E-Rechnungs-Ausnahmen/Versionsmatrix und Doppelbuchungsregeln.
 - API-Restore und Release-Build.
-- Docker-Compose-Validierung.
-- vorhandene Repository-Security-/Domain-Checks bleiben aktiv.
-- erster erweiterter Lauf: 15/15 Domain-Tests erfolgreich; danach API-Compilerfehler in SQL-Stringsyntax entdeckt und korrigiert. Der korrigierte vollständige Lauf ist maßgeblich für die Freigabe.
+- Docker-Compose-Validierung und echter Docker-Image-Build.
+- vorhandene Repository-Python-, Security- und Domain-Checks bleiben aktiv.
+
+## Rechts-/Normstand, der im Code berücksichtigt ist
+
+- § 14 UStG / § 27 Abs. 38 UStG: E-Rechnung und Übergangsfristen.
+- § 19 UStG: Kleinunternehmergrenzen 25.000 EUR Vorjahr / 100.000 EUR laufendes Jahr.
+- §§ 33, 34, 34a UStDV: Kleinbetrag, Fahrausweis, Kleinunternehmerrechnung.
+- §§ 286, 288 BGB: Verzug, Verzugszinsen und 40-EUR-Pauschale.
+- GoBD in der Fassung nach der zweiten Änderung vom 14.07.2025.
+- achtjährige Mindestaufbewahrung für Rechnungen/Buchungsbelege nach aktueller Rechtslage, ohne automatische Löschannahme bei fortbestehender steuerlicher Relevanz.
 
 ## Noch nicht produktionsfreigegeben
 
-Die folgenden Punkte sind bewusste Release-Gates und dürfen vor echtem Geschäftsbetrieb nicht übersprungen werden:
+Die folgenden Punkte bleiben verbindliche Release-Gates:
 
-1. Backoffice-Login mit kurzlebigen Access-Tokens und rotierenden Refresh-Tokens.
-2. MFA für Owner/Backoffice.
-3. RBAC Owner/Billing/Support/ReadOnly.
-4. echte operator-/steuerliche Stammdaten statt Platzhalter.
-5. vollständige Rechnungserzeugung inkl. EN16931-Semantikvalidierung und XRechnung/ZUGFeRD-Ausgabe.
-6. strukturierten E-Rechnungs-Originaldatensatz archivieren und visualisieren.
-7. Eingangsbeleg-Workflow.
-8. Ledger/Buchungsengine und Kontenmapping.
+1. MFA-Ersteinrichtung für zusätzlich angelegte Benutzer als bestätigter Enrollment-Workflow statt sofort aktiver MFA-Zuordnung.
+2. kürzere Access-Sitzungen plus rotierende Refresh-Tokens beziehungsweise gleichwertiges, geprüftes Sitzungskonzept.
+3. reale Betreiber-/Steuerdaten eintragen und fachlich gegen tatsächliche Finanzamts-/Unternehmensdaten prüfen.
+4. vollständige EN-16931-Erzeugung und externe Schematron-/KoSIT-Validierung für XRechnung 3.0.2.
+5. echte ZUGFeRD-2.5.2-Erzeugung und Validierung inklusive PDF/A-3-Anforderungen.
+6. strukturierte E-Rechnungsinhalte sicher visualisieren und fachlich klassifizieren, ohne das Original zu verändern.
+7. Eingangsbeleg-Klassifizierung, Rechnungsdatenextraktion, Dubletten-/Plausibilitätsprüfung und Buchungsvorschläge.
+8. SKR03/SKR04-Kontenstamm und rechtlich/fachlich geprüfte automatische Buchungsregeln.
 9. Bank/Stripe/PayPal-Reconciliation.
-10. USt-Ledger und UStVA-Referenzfälle.
-11. Monatsabschluss und Periodensperren vollständig verdrahten.
-12. EÜR/Anlagen/AfA/DATEV.
-13. Backup-/Restore-Nachweis und Integritätsprüfung.
-14. Verfahrensdokumentation automatisiert aus Software-/Regelversionen erzeugen.
-15. fachliche Prüfung der realen Steuerkonfiguration des Betreibers.
+10. USt-Ledger, Vorsteuerlogik und UStVA-Referenzfälle.
+11. Monatsabschluss vollständig verdrahten und Abschluss-Checkliste automatisieren.
+12. EÜR, Anlagenverzeichnis/AfA und DATEV-Export.
+13. Migrationstooling für bereits bestehende PostgreSQL-Volumes; `docker-entrypoint-initdb.d` reicht nur für Neuinstallationen.
+14. Backup-/Restore-Nachweis einschließlich Originalbeleg-Volume und Prüfsummenprüfung.
+15. Verfahrensdokumentation automatisiert aus Software-, Schema- und Regelversionen erzeugen.
 16. WinUI-3-Client gegen die Backoffice API.
-17. Installer, Signierung und Updatekanal.
+17. Installer, Signierung und sicherer Updatekanal.
+18. abschließende fachliche Steuer-/Rechtsprüfung vor erstem realen Geschäftsbetrieb.
 
 ## Verbindliche Sicherheitsgrenze
 
-Bis die Produktionsauthentifizierung inklusive MFA und RBAC umgesetzt und geprüft ist, wird der Backoffice-Dienst nicht öffentlich als produktives Verwaltungsinterface freigegeben. Der Bootstrap-Token ist nur eine kontrollierte Entwicklungsbrücke.
+Der Dienst bleibt bis zum Abschluss der verbliebenen Release-Gates nur lokal bzw. hinter der vorgesehenen abgesicherten Verwaltungsstrecke erreichbar. Die implementierten Rechtsregeln sind technische Schutzregeln und ersetzen keine individuelle steuerliche oder anwaltliche Prüfung der realen Unternehmensdaten und Vertragsfälle.
