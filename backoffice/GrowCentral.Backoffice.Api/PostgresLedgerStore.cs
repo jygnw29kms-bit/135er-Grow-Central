@@ -7,7 +7,7 @@ using Npgsql;
 namespace GrowCentral.Backoffice.Api;
 
 public sealed record LedgerAccount(string AccountNumber, string ChartOfAccounts, string AccountName, string AccountType, bool Active = true);
-public sealed record PostedJournalEntry(Guid Id, string EntryNumber, DateOnly BookingDate, DateOnly DocumentDate, string Description, string? Reference, Guid? SourceDocumentId, Guid? ReversalOfEntryId, string ContentHash, DateTimeOffset PostedAt, string PostedBy);
+public sealed record PostedJournalEntry(Guid Id, string EntryNumber, DateOnly BookingDate, DateOnly DocumentDate, string Description, string? Reference, Guid? SourceDocumentId, Guid? ReversalOfEntryId, Guid ContractId, Guid? BillingPeriodId, Guid? PaymentId, string ContentHash, DateTimeOffset PostedAt, string PostedBy);
 
 public sealed class PostgresLedgerStore(string connectionString)
 {
@@ -17,7 +17,7 @@ public sealed class PostgresLedgerStore(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(account.AccountNumber) || account.AccountNumber.Length > 16) throw new ArgumentException("Ungültige Kontonummer.");
         if (account.ChartOfAccounts is not ("SKR03" or "SKR04")) throw new ArgumentException("Kontenrahmen muss SKR03 oder SKR04 sein.");
-        if (account.AccountType is not ("asset" or "liability" or "equity" or "revenue" or "expense" or "tax" or "clearing")) throw new ArgumentException("Ungültiger Kontotyp.");
+        if (account.AccountType is not ("asset" or "liability" or "revenue" or "expense" or "tax" or "clearing")) throw new ArgumentException("Ungültiger Kontotyp.");
         if (string.IsNullOrWhiteSpace(account.AccountName)) throw new ArgumentException("Kontoname ist erforderlich.");
 
         await using var connection = await OpenAsync(ct);
@@ -40,7 +40,11 @@ VALUES(@number,@chart,@name,@type,@active,FALSE)";
     public async Task<PostedJournalEntry> PostAsync(JournalEntryDraft draft, Guid actorId, CancellationToken ct)
     {
         var validation = DoubleEntryLedgerPolicy.Validate(draft);
-        if (!validation.IsValid) throw new ArgumentException(string.Join(" ", validation.Errors));
+        var scopeErrors = GrowCentralContractBillingLedgerPolicy.ValidateScope(draft);
+        var errors = validation.Errors.Concat(scopeErrors).ToArray();
+        if (errors.Length > 0) throw new ArgumentException(string.Join(" ", errors));
+        if (draft.ContractId is null) throw new InvalidOperationException("ContractId wurde trotz Scope-Prüfung nicht gesetzt.");
+
         var periodKey = AccountingPeriodKey.FromDate(draft.BookingDate);
         var (periodStart, periodEnd) = AccountingPeriodKey.ParseMonth(periodKey);
         var payload = JsonSerializer.Serialize(draft);
@@ -54,8 +58,8 @@ VALUES(@number,@chart,@name,@type,@active,FALSE)";
 
         var entryNumber = await NextNumberAsync(connection, tx, draft.BookingDate.Year, ct);
         const string entrySql = @"INSERT INTO backoffice_journal_entries
-(id,entry_number,booking_date,document_date,description,reference,source_document_id,reversal_of_entry_id,status,content_hash,posted_at,posted_by)
-VALUES(@id,@number,@booking_date,@document_date,@description,@reference,@source_document,@reversal_of,'posted',@hash,@posted_at,@posted_by)";
+(id,entry_number,booking_date,document_date,description,reference,source_document_id,reversal_of_entry_id,contract_id,billing_period_id,payment_id,status,content_hash,posted_at,posted_by)
+VALUES(@id,@number,@booking_date,@document_date,@description,@reference,@source_document,@reversal_of,@contract,@billing_period,@payment,'posted',@hash,@posted_at,@posted_by)";
         await using (var command = new NpgsqlCommand(entrySql, connection, tx))
         {
             command.Parameters.AddWithValue("id", id);
@@ -66,6 +70,9 @@ VALUES(@id,@number,@booking_date,@document_date,@description,@reference,@source_
             command.Parameters.AddWithValue("reference", (object?)draft.Reference ?? DBNull.Value);
             command.Parameters.AddWithValue("source_document", draft.SourceDocumentId.HasValue ? draft.SourceDocumentId.Value : DBNull.Value);
             command.Parameters.AddWithValue("reversal_of", draft.ReversalOfEntryId.HasValue ? draft.ReversalOfEntryId.Value : DBNull.Value);
+            command.Parameters.AddWithValue("contract", draft.ContractId.Value);
+            command.Parameters.AddWithValue("billing_period", draft.BillingPeriodId.HasValue ? draft.BillingPeriodId.Value : DBNull.Value);
+            command.Parameters.AddWithValue("payment", draft.PaymentId.HasValue ? draft.PaymentId.Value : DBNull.Value);
             command.Parameters.AddWithValue("hash", hash);
             command.Parameters.AddWithValue("posted_at", postedAt.UtcDateTime);
             command.Parameters.AddWithValue("posted_by", actorId.ToString());
@@ -96,7 +103,7 @@ VALUES(@id,@entry_id,@line_number,@account,@debit,@credit,@tax_code,@tax_rate,@t
 
         await AppendAuditAsync(connection, tx, actorId, draft.ReversalOfEntryId.HasValue ? "JournalReversalPosted" : "JournalPosted", id.ToString(), payload, ct);
         await tx.CommitAsync(ct);
-        return new(id, entryNumber, draft.BookingDate, draft.DocumentDate, draft.Description, draft.Reference, draft.SourceDocumentId, draft.ReversalOfEntryId, hash, postedAt, actorId.ToString());
+        return new(id, entryNumber, draft.BookingDate, draft.DocumentDate, draft.Description, draft.Reference, draft.SourceDocumentId, draft.ReversalOfEntryId, draft.ContractId.Value, draft.BillingPeriodId, draft.PaymentId, hash, postedAt, actorId.ToString());
     }
 
     public async Task LockPeriodAsync(string periodKey, Guid actorId, CancellationToken ct)
