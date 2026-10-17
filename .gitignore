@@ -34,3 +34,6 @@ hardware/enclosures/freecad_v2/patch_*.py
 .deploy-*/
 hardware/enclosures/freecad/test_shapestring.py
 
+
+# Isolated local pytest workdirs
+.pytest-*/
