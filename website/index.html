@@ -4,32 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#02070a">
-  <meta name="description" content="135er-Grow Central bündelt Grow-Überwachung, Geräte, Sensoren und Automationen in einer lokalen Raspberry-Pi-Zentrale mit optionaler Cloud-Erweiterung. Vollständig Open Source entwickelt und öffentlich dokumentiert.">
+  <meta name="description" content="Grow-Central ist eine lokale, herstellerunabhängige Plattform für Pflanzen, Gewächshaus, Hydroponik, Indoor-Farming und andere Controlled-Environment-Anwendungen. Mit XIAO ESP32-C3 Sensor-Nodes, Automationen und optionaler Cloud.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="135er-Grow Central · Die lokale Zentrale für deinen Grow">
-  <meta property="og:description" content="Herstellerübergreifend überwachen, steuern und automatisieren – vollständig Open Source und lokal-first.">
+  <meta property="og:title" content="Grow-Central · Local-First Grow Automation">
+  <meta property="og:description" content="Herstellerunabhängig messen, steuern und automatisieren. Von einem kleinen privaten Aufbau bis zur verteilten Anlage.">
   <meta property="og:image" content="assets/gui/local-desktop-v0.9.png">
   <meta property="og:url" content="https://grow-central.de/">
-  <title>135er-Grow Central · Local-First Grow Automation</title>
+  <title>Grow-Central · Local-First Grow Automation</title>
   <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
-  <link rel="stylesheet" href="styles.css?v=4.0.0">
-<style>
-
-    .sensor-hero{padding:9rem 0 4rem}.sensor-hero h1{max-width:900px}.sensor-hero .lead{max-width:920px}
-    .info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:2rem}
-    .info-card,.bom-wrap,.arch-box{background:rgba(9,18,22,.82);border:1px solid rgba(133,255,208,.14);border-radius:16px;padding:1.25rem}
-    .info-card h3{margin-top:.35rem}.arch-box{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;line-height:1.55;overflow:auto}
-    .table-scroll{overflow-x:auto;border:1px solid rgba(133,255,208,.14);border-radius:16px}
-    table{width:100%;border-collapse:collapse;min-width:980px;background:rgba(5,12,15,.84)}
-    th,td{padding:.8rem .75rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
-    th{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:#8dffd0;background:rgba(141,255,208,.06)}
-    td small{opacity:.74}.price{text-align:right;white-space:nowrap}.qty{text-align:center}.bom-total{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-top:1rem;padding:1rem 1.2rem;border:1px solid rgba(141,255,208,.24);border-radius:14px;background:rgba(141,255,208,.055)}
-    .bom-total strong{font-size:1.35rem}.note{font-size:.92rem;opacity:.78}.status-ok{color:#8dffd0}.status-extra{color:#ffd27a}
-    .link-list a{display:inline-block;margin:.25rem .5rem .25rem 0}
-    @media(max-width:900px){.info-grid{grid-template-columns:1fr}.sensor-hero{padding-top:7rem}.bom-total{align-items:flex-start;flex-direction:column}}
-  
-</style>
+  <link rel="stylesheet" href="styles.css?v=5.0.0">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -37,20 +21,17 @@
 
   <header class="site-header">
     <div class="wrap nav-wrap">
-      <a class="brand" href="#top">
-        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central">
-      </a>
+      <a class="brand" href="#top"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="Grow-Central"></a>
       <button class="menu-toggle" id="menuToggle" aria-label="Navigation öffnen" aria-expanded="false">☰</button>
       <nav class="site-nav" id="siteNav" aria-label="Hauptnavigation">
-        <a href="#produkt">Produkt</a>
-        <a href="#vorteile">Vorteile</a>
-        <a href="#funktionen">Funktionen</a>
+        <a href="#plattform">Plattform</a>
+        <a href="#profile">Profile</a>
+        <a href="#sensorik">Sensorik</a>
+        <a class="nav-bom" href="#bom">BOM</a>
         <a href="#integrationen">Integrationen</a>
         <a href="#hardware">Hardware</a>
-        <a href="#sensorik">Sensorik & BOM</a>
-        <a href="#apps">Apps</a>
         <a href="#status">Status</a>
-        <a class="nav-cta" href="#faq">FAQ</a>
+        <a class="nav-cta" href="#download">Downloads</a>
       </nav>
     </div>
   </header>
@@ -59,17 +40,17 @@
     <section class="hero" id="top">
       <div class="hero-grid wrap">
         <div class="hero-copy">
-          <div class="eyebrow"><span class="dot"></span> LOCAL-FIRST GROW AUTOMATION</div>
-          <h1>Eine Zentrale.<br><span>Dein ganzer Grow.</span></h1>
-          <p class="lead">135er-Grow Central führt Geräte, Sensorwerte, Räume und Automationen in einer übersichtlichen Plattform zusammen. Die lokale Raspberry-Pi-Zentrale arbeitet eigenständig – bedient wird sie bequem per Browser, Smartphone oder Tablet.</p>
+          <div class="eyebrow"><span class="dot"></span> LOCAL-FIRST · HERSTELLERUNABHÄNGIG · MODULAR</div>
+          <h1>Eine Plattform.<br><span>Alles, was wächst.</span></h1>
+          <p class="lead">Grow-Central verbindet Pflanzenprofile, Sensorik, Geräte und Automationen in einer gemeinsamen lokalen Plattform. Für Zimmerpflanzen, Gemüse, Kräuter, Pilze, Hydroponik, Gewächshaus, Indoor- und Vertical-Farming bis hin zu verteilten professionellen Anlagen.</p>
           <div class="hero-actions">
-            <a class="btn primary" href="#produkt">Grow Central entdecken</a>
-            <a class="btn ghost" href="#status">Entwicklungsstatus</a>
+            <a class="btn primary" href="#plattform">Plattform entdecken</a>
+            <a class="btn ghost bom-hero" href="#bom">XIAO Test-BOM ansehen</a>
           </div>
           <div class="trust-row" aria-label="Produktmerkmale">
             <span>LOCAL FIRST</span>
-            <span>HERSTELLERÜBERGREIFEND</span>
-            <span>DESKTOP + MOBILE</span>
+            <span>XIAO SENSOR NODES</span>
+            <span>PROFILE & PHASEN</span>
             <span>OPTIONALE CLOUD</span>
           </div>
         </div>
@@ -77,400 +58,173 @@
           <div class="status-orbit orbit-a"></div>
           <div class="status-orbit orbit-b"></div>
           <div class="screen-frame">
-            <div class="screen-top">
-              <span>GROW CENTRAL COMMAND CENTER</span>
-              <span class="live">● LOCAL</span>
-            </div>
-            <img src="assets/gui/local-desktop-v0.9.png" alt="Vorschau der Grow-Central-Benutzeroberfläche">
+            <div class="screen-top"><span>GROW-CENTRAL COMMAND CENTER</span><span class="live">● LOCAL</span></div>
+            <img src="assets/gui/local-desktop-v0.9.png" alt="Vorschau der Grow-Central Benutzeroberfläche">
           </div>
-          <div class="floating-card fc-one">
-            <small>ENTWICKLUNG</small>
-            <strong>OPEN SOURCE</strong>
-            <span>Öffentliche Entwicklung · Validierung läuft</span>
-          </div>
-          <div class="floating-card fc-two">
-            <small>BEDIENUNG</small>
-            <strong>ÜBERALL IM NETZ</strong>
-            <span>Desktop · Tablet · Mobil</span>
-          </div>
+          <div class="floating-card fc-one"><small>SENSOR-NODE</small><strong>XIAO ESP32-C3</strong><span>I²C · RS485 · 1-Wire · GPIO · Analog</span></div>
+          <div class="floating-card fc-two"><small>BETRIEB</small><strong>LOCAL FIRST</strong><span>Automationen laufen vor Ort weiter</span></div>
         </div>
       </div>
     </section>
 
     <section class="signal-bar" aria-label="Plattformüberblick">
       <div class="wrap signal-grid">
-        <div><small>STEUERUNG</small><strong>Lokal auf dem Pi</strong></div>
-        <div><small>OBERFLÄCHE</small><strong>Responsive</strong></div>
-        <div><small>GERÄTE</small><strong>Eine Plattform</strong></div>
-        <div><small>CLOUD</small><strong>Optional</strong></div>
+        <div><small>KULTUREN</small><strong>Profile statt Einzweck-App</strong></div>
+        <div><small>SENSORIK</small><strong>Modulare XIAO-Nodes</strong></div>
+        <div><small>STEUERUNG</small><strong>Lokal auf dem Edge</strong></div>
+        <div><small>SKALIERUNG</small><strong>Home bis Enterprise</strong></div>
       </div>
     </section>
 
-    <section class="section intro" id="produkt">
+    <section class="section intro" id="plattform">
       <div class="wrap split-head">
-        <div>
-          <div class="eyebrow">DAS PRODUKT</div>
-          <h2>Weniger Einzel-Apps. Mehr Überblick.</h2>
-        </div>
-        <p>Grow Central ist als kompakte, dauerhaft laufende Zentrale gedacht. Statt Lampen, Lüfter, Steckdosen, Sensoren und Kameras getrennt zu verwalten, werden die wichtigen Informationen und Abläufe an einem Ort zusammengeführt.</p>
+        <div><div class="eyebrow">DIE PLATTFORM</div><h2>Nicht noch eine Geräte-App.</h2></div>
+        <p>Grow-Central trennt Kulturwissen, Standorte, Sensoren, Geräte und Automationen sauber voneinander. Dadurch bleibt dieselbe Bedienlogik erhalten, egal ob ein einzelnes Zelt, ein Gewächshaus oder mehrere Ebenen einer Anlage verwaltet werden.</p>
       </div>
-      <div class="value-grid wrap" id="vorteile">
-        <article class="value-card featured">
-          <div class="icon">⌁</div>
-          <h3>Local First</h3>
-          <p>Die lokale Steuerung bleibt vor Ort verfügbar. Eine Internet- oder Cloud-Verbindung ist für die Kernidee nicht Voraussetzung.</p>
-          <span>LOKALE AUTORITÄT</span>
-        </article>
-        <article class="value-card">
-          <div class="icon">◈</div>
-          <h3>Eine Gerätewelt</h3>
-          <p>Unterschiedliche Hersteller und Übertragungswege werden in einer gemeinsamen Bedienlogik zusammengeführt.</p>
-          <span>EINHEITLICHE BEDIENUNG</span>
-        </article>
-        <article class="value-card">
-          <div class="icon">◎</div>
-          <h3>Überall im Heimnetz</h3>
-          <p>Die Oberfläche ist für Desktop, Tablet und Smartphone ausgelegt. Ein eigener Monitor am Raspberry Pi ist nicht nötig.</p>
-          <span>RESPONSIVE</span>
-        </article>
-        <article class="value-card">
-          <div class="icon">⚙</div>
-          <h3>Automationen</h3>
-          <p>Zeitpläne und Messwerte können später gemeinsam genutzt werden, um wiederkehrende Abläufe zuverlässig zu automatisieren.</p>
-          <span>REGELN & ZEITPLÄNE</span>
-        </article>
+      <div class="value-grid wrap">
+        <article class="value-card featured"><div class="icon">⌁</div><h3>Local First</h3><p>Kernfunktionen, Regeln und Sensorverarbeitung bleiben lokal verfügbar. Cloud und Fernzugriff sind Ergänzungen, keine Lebensversicherung für die Anlage.</p><span>LOKALE AUTORITÄT</span></article>
+        <article class="value-card"><div class="icon">◎</div><h3>Standorte statt Chaos</h3><p>Site, Gebäude, Ebene, Raum, Zone, Rack, Zelt, Pflanze oder Tray lassen sich hierarchisch zuordnen.</p><span>KLARE ZUORDNUNG</span></article>
+        <article class="value-card"><div class="icon">◈</div><h3>Herstellerunabhängig</h3><p>Eigene Sensor-Nodes und Fremdsysteme werden über eine gemeinsame Geräte- und Messwertlogik zusammengeführt.</p><span>EINE DATENWELT</span></article>
+        <article class="value-card"><div class="icon">⚙</div><h3>Fail-safe Automation</h3><p>Automationen reagieren auf Messwertqualität und Fehlerzustände. Ein ausgefallener Sensor soll niemals stillschweigend eine gefährliche Aktion auslösen.</p><span>SICHERER BETRIEB</span></article>
       </div>
     </section>
 
-    <section class="section dark-section" id="funktionen">
+    <section class="section dark-section" id="profile">
       <div class="wrap">
-        <div class="section-title">
-          <div>
-            <div class="eyebrow">FUNKTIONEN</div>
-            <h2>Vom Einrichten bis zum täglichen Betrieb.</h2>
-          </div>
-          <p>Der Fokus liegt auf verständlicher Einrichtung, einem klaren Gesamtstatus und Funktionen, die im Alltag wirklich helfen.</p>
-        </div>
+        <div class="section-title"><div><div class="eyebrow">KULTURPROFILE</div><h2>Wissen und Betrieb gehören zusammen.</h2></div><p>Für jede Kultur kann Grow-Central Basisinformationen, Phasen, Richtwerte, Aufgaben und systemabhängige Varianten bereitstellen. Cannabis ist dabei eine Kultur unter vielen, nicht die Produktdefinition.</p></div>
         <div class="feature-grid">
-          <article>
-            <div class="num">01</div>
-            <h3>Geführte Einrichtung</h3>
-            <p>Netzwerk und Zugang werden beim ersten Start Schritt für Schritt eingerichtet.</p>
-            <span class="tag cyan">SETUP</span>
-          </article>
-          <article>
-            <div class="num">02</div>
-            <h3>Räume & Grow-Bereiche</h3>
-            <p>Geräte und Messwerte lassen sich strukturiert den jeweiligen Bereichen zuordnen.</p>
-            <span class="tag cyan">ORGANISATION</span>
-          </article>
-          <article>
-            <div class="num">03</div>
-            <h3>Live-Status & Verlauf</h3>
-            <p>Klima, Gerätezustände und wichtige Entwicklungen werden übersichtlich dargestellt.</p>
-            <span class="tag lime">MONITORING</span>
-          </article>
-          <article>
-            <div class="num">04</div>
-            <h3>Zeitpläne & Regeln</h3>
-            <p>Beleuchtung, Lüftung und weitere Abläufe können zeit- oder zustandsabhängig gesteuert werden.</p>
-            <span class="tag lime">AUTOMATION</span>
-          </article>
-          <article>
-            <div class="num">05</div>
-            <h3>Kamera</h3>
-            <p>Geeignete USB-Kameras können für lokale Einblicke und die Dokumentation eingebunden werden.</p>
-            <span class="tag amber">KAMERA</span>
-          </article>
-          <article>
-            <div class="num">06</div>
-            <h3>Systemdiagnose</h3>
-            <p>Ein gemeinsamer Systemstatus hilft dabei, Verbindungen und Komponenten nachvollziehbar zu prüfen.</p>
-            <span class="tag cyan">DIAGNOSE</span>
-          </article>
+          <article><div class="num">01</div><h3>Phasen & Richtwerte</h3><p>Temperatur, Feuchte, Licht, Bewässerung und weitere Zielbereiche passend zur jeweiligen Entwicklungsphase.</p><span class="tag lime">PROFILE</span></article>
+          <article><div class="num">02</div><h3>To-dos & Checklisten</h3><p>Aufgaben, Kontrollen und druckbare Checklisten werden mit der Kultur und dem verwendeten System verknüpft.</p><span class="tag cyan">WORKFLOW</span></article>
+          <article><div class="num">03</div><h3>Systemvarianten</h3><p>Erde, Coco, Hydro, Gewächshaus, Indoor und weitere Varianten können unterschiedliche Sollwerte und Abläufe verwenden.</p><span class="tag amber">SYSTEME</span></article>
         </div>
       </div>
     </section>
 
-    <section class="section integrations-section" id="integrationen">
+    <section class="section" id="sensorik">
       <div class="wrap">
-        <div class="split-head">
-          <div>
-            <div class="eyebrow">GERÄTEÖKOSYSTEM</div>
-            <h2>Offen für die Geräte, die bereits da sind.</h2>
-          </div>
-          <p>Grow Central wird herstellerübergreifend entwickelt. Der konkrete Funktionsumfang hängt vom jeweiligen Modell, der Firmware und dem Stand der Hardwarevalidierung ab.</p>
+        <div class="section-title"><div><div class="eyebrow">XIAO SENSOR-NODES</div><h2>Eine feste Node-Basis, viele Messaufgaben.</h2></div><p>Der Seeed XIAO ESP32-C3 ist die feste Entwicklungsbasis. Sensoren werden lokal an den Node angeschlossen, der Node meldet normalisierte Messwerte sicher an Grow-Central.</p></div>
+        <div class="sensor-architecture">
+          <div class="arch-node"><small>SENSOREN</small><strong>I²C · RS485 · 1-Wire · GPIO · Analog</strong><span>kurze lokale Leitungen</span></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node active"><small>NODE</small><strong>XIAO ESP32-C3</strong><span>Identität · Treiber · Qualität · Power</span></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node"><small>EDGE</small><strong>Grow-Central</strong><span>MQTT/TLS · Regeln · Historie · UI</span></div>
         </div>
+        <div class="feature-grid sensor-rules">
+          <article><div class="num">ID</div><h3>Sensoren nicht verwechseln</h3><p>Busadresse ist kein Identitätsbeweis. Grow-Central führt eine eigene Sensor-UUID und nutzt echte Hardware-IDs, wo verfügbar.</p></article>
+          <article><div class="num">V</div><h3>Versorgung überwachen</h3><p>Node- und Sensorbus-Spannung, Strom und Brownout-Zustände werden überwacht. Ein Busfehler soll von einem Power-Problem unterscheidbar sein.</p></article>
+          <article><div class="num">!</div><h3>Fehlerzustände</h3><p>GOOD, STALE, INVALID, BUS_ERROR, POWER_ERROR, OFFLINE und UNTRUSTED erlauben nachvollziehbare Reaktionen statt blindem Weiterbetrieb.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="sensorportfolio">
+      <div class="wrap">
+        <div class="section-title"><div><div class="eyebrow">REFERENZ-SENSORIK</div><h2>Verifizierte Richtung pro Messaufgabe.</h2></div><p>Die Tabelle unterscheidet bestätigte Herstellerfunktionen von Komponenten, deren konkrete Grow-Central-Integration noch praktisch validiert werden muss.</p></div>
+        <div class="table-scroll"><table class="gc-table">
+          <thead><tr><th>Messaufgabe</th><th>Referenz</th><th>Schnittstelle</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Lufttemperatur / RH</td><td>Sensirion SHT45</td><td>I²C</td><td><span class="status-chip ok">bestätigt</span></td></tr>
+            <tr><td>CO₂</td><td>Sensirion SCD41</td><td>I²C</td><td><span class="status-chip ok">bestätigt</span></td></tr>
+            <tr><td>Boden Feuchte / Temp / EC / pH</td><td>DFRobot SEN0604</td><td>RS485 / Modbus</td><td><span class="status-chip ok">dokumentiert</span></td></tr>
+            <tr><td>PPFD / PAR</td><td>DFRobot SEN0641</td><td>RS485 / Modbus</td><td><span class="status-chip ok">dokumentiert</span></td></tr>
+            <tr><td>Wassertemperatur</td><td>DS18B20</td><td>1-Wire</td><td><span class="status-chip ok">64-Bit ID</span></td></tr>
+            <tr><td>Reservoir pH</td><td>Atlas Scientific EZO-pH + Isolation</td><td>I²C / UART</td><td><span class="status-chip test">Integration testen</span></td></tr>
+            <tr><td>Reservoir EC</td><td>Atlas Scientific EZO-EC K1 + Isolation</td><td>I²C / UART</td><td><span class="status-chip test">Integration testen</span></td></tr>
+            <tr><td>Gelöster Sauerstoff</td><td>Atlas Scientific EZO-DO + Isolation</td><td>I²C / UART</td><td><span class="status-chip test">Hydro / Aquaponik</span></td></tr>
+            <tr><td>Wasserstand</td><td>4–20-mA Tauchdrucksonde</td><td>4–20 mA → ADC</td><td><span class="status-chip test">Konverter nötig</span></td></tr>
+            <tr><td>Durchfluss</td><td>DFRobot SEN0550</td><td>Pulse / GPIO</td><td><span class="status-chip test">Pegel anpassen</span></td></tr>
+            <tr><td>Gewicht</td><td>Load Cell + HX711</td><td>Digital</td><td><span class="status-chip test">optional</span></td></tr>
+            <tr><td>Leaf Temperature</td><td>Melexis MLX90614</td><td>I²C</td><td><span class="status-chip test">FOV validieren</span></td></tr>
+            <tr><td>Leaf Wetness</td><td>SenseCAP Industrial Leaf Wetness</td><td>RS485 / Modbus</td><td><span class="status-chip test">Pro / Enterprise</span></td></tr>
+            <tr><td>Wetterstation</td><td>DFRobot SEN0657 / SenseCAP ONE</td><td>RS485 / Modbus</td><td><span class="status-chip test">Pro / Enterprise</span></td></tr>
+            <tr><td>Differenzdruck</td><td>Sensirion SDP810-500Pa</td><td>I²C</td><td><span class="status-chip test">Lüftung / Filter</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section class="section bom-section" id="bom">
+      <div class="wrap">
+        <div class="bom-head">
+          <div><div class="eyebrow">BESTELLLISTE · XIAO TESTSTRECKE</div><h2>Bill of Materials</h2><p>Versuchsaufbau ohne Sensoren. Damit lassen sich I²C, RS485/Modbus, Analog, 4–20 mA, 1-Wire, Pulse, GPIO und Diagnose aufbauen und testen.</p></div>
+          <div class="bom-price"><small>RICHTWERT GESAMT</small><strong>125,00 €</strong><span>ohne XIAO, Sensoren und 230-V-Netzteil</span></div>
+        </div>
+        <div class="bom-callout"><strong>AliExpress-BOM:</strong> Jeder Eintrag enthält einen direkten Suchlink. Bewusst Suchlinks statt einzelner Händlerangebote, damit die Liste nicht morgen schon halb tot ist.</div>
+        <div class="table-scroll"><table class="gc-table bom-table">
+          <thead><tr><th>#</th><th>Bauteil</th><th>Menge</th><th>Summe</th><th>Zweck</th><th>AliExpress</th></tr></thead>
+          <tbody>
+            <tr><td>01</td><td>MB102 Breadboard 830 Kontakte</td><td>2</td><td>7,00 €</td><td>Versuchsaufbau</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=MB102+830+breadboard" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>02</td><td>XIAO Breakout / Expansion Board ohne MCU</td><td>1</td><td>5,00 €</td><td>XIAO-Pins sauber herausführen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=Seeed+XIAO+breakout+expansion+board" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>03</td><td>Dupont M-M / M-F / F-F Set</td><td>1</td><td>4,00 €</td><td>flexible Testverkabelung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=dupont+jumper+wire+male+female+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>04</td><td>Breadboard Jumper Wire Kit</td><td>1</td><td>4,00 €</td><td>saubere feste Längen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=breadboard+jumper+wire+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>05</td><td>isoliertes UART/TTL ↔ RS485 Modul, 3,3 V, Auto Direction</td><td>2</td><td>14,00 €</td><td>Modbus-Testbus + Reserve</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=isolated+UART+TTL+RS485+3.3V+automatic" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>06</td><td>ADS1115 16-Bit 4-Kanal ADC Modul</td><td>2</td><td>5,00 €</td><td>Analog / 4–20-mA-Auswertung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=ADS1115+16bit+4+channel+ADC+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>07</td><td>TCA9548A 8-Kanal I²C Multiplexer</td><td>2</td><td>4,00 €</td><td>I²C-Adressen / Bussegmentierung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=TCA9548A+I2C+multiplexer+8+channel" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>08</td><td>MCP23017 16-I/O Expander</td><td>1</td><td>2,50 €</td><td>zusätzliche GPIOs</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=MCP23017+16+IO+I2C+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>09</td><td>HX711 Load Cell Amplifier</td><td>2</td><td>3,00 €</td><td>Gewicht / Wägezellen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=HX711+load+cell+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>10</td><td>4–20-mA Receiver / Current-to-Voltage Modul</td><td>2</td><td>7,00 €</td><td>Industriesensorik</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=4-20mA+receiver+voltage+module+3.3V+ADC" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>11</td><td>MP1584EN Step-Down Modul</td><td>5</td><td>4,00 €</td><td>12 V → 5 V / Testspannungen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=MP1584EN+DC+DC+buck+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>12</td><td>JST-XH 2,54-mm Stecker-Set 2–6-polig</td><td>1</td><td>6,00 €</td><td>steckbare Sensorverkabelung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+2.54+connector+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>13</td><td>JST-XH vorkonfektionierte Kabel</td><td>1</td><td>5,00 €</td><td>Prototyping ohne Einzelcrimpen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+pre+crimped+cable" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>14</td><td>Schraubklemmen 5,08 mm, gemischt</td><td>1</td><td>5,00 €</td><td>12 V / GND / RS485 A/B</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=5.08mm+screw+terminal+block+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>15</td><td>2,54-mm Stift- und Buchsenleisten</td><td>1</td><td>3,00 €</td><td>Module steckbar aufbauen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=2.54mm+pin+header+socket+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>16</td><td>Widerstandssortiment 1 %</td><td>1</td><td>4,00 €</td><td>Pull-ups / Terminierung / Pegel</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=resistor+assortment+kit+1%25" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>17</td><td>Kondensatorsortiment</td><td>1</td><td>4,00 €</td><td>Entstörung / Versorgung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=capacitor+assortment+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>18</td><td>USB Logic Analyzer 8 Kanal / 24 MHz</td><td>1</td><td>8,00 €</td><td>I²C / UART / 1-Wire / Pulse debuggen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=USB+logic+analyzer+24MHz+8+channel" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>19</td><td>Krokoklemmen / Testleitungen</td><td>1</td><td>4,00 €</td><td>Mess- und Prüfaufbau</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=alligator+clip+test+lead+set" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>20</td><td>USB-C Datenkabel</td><td>1</td><td>4,00 €</td><td>XIAO Flash / Debug</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=USB-C+data+cable+USB+A" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>21</td><td>Aderendhülsen + kleine Leitungen</td><td>1</td><td>6,00 €</td><td>Versorgung und Busverdrahtung</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=ferrule+wire+kit+small+gauge" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>22</td><td>INA226 Spannungs-/Strommonitor Modul</td><td>2</td><td>6,00 €</td><td>5-V-Node und 12-V-Sensorbus überwachen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=INA226+voltage+current+monitor+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>23</td><td>3,3/5-V Logic-Level-Shifter Modul</td><td>4</td><td>3,00 €</td><td>Pegel sicher an XIAO anpassen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=3.3V+5V+logic+level+converter+module" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>24</td><td>Polyfuse / rückstellbare Sicherung Sortiment</td><td>1</td><td>4,00 €</td><td>Versorgungszweige absichern</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=resettable+polyfuse+assortment" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+            <tr><td>25</td><td>TVS-Dioden Sortiment</td><td>1</td><td>3,50 €</td><td>Transienten- und Eingangsschutz testen</td><td><a class="buy-link" href="https://www.aliexpress.com/wholesale?SearchText=TVS+diode+assortment+kit" target="_blank" rel="noopener">AliExpress ↗</a></td></tr>
+          </tbody>
+        </table></div>
+        <div class="bom-footer"><strong>125,00 € Richtwert</strong><span>AliExpress-Preise schwanken. Für Netzspannung wird bewusst ein dokumentiertes Marken-Netzteil vorgesehen.</span></div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="integrationen">
+      <div class="wrap">
+        <div class="section-title"><div><div class="eyebrow">INTEGRATIONEN</div><h2>Eigene Nodes und bestehende Gerätewelten.</h2></div><p>Grow-Central soll vorhandene Systeme dort nutzen, wo sie sinnvoll und technisch belastbar integrierbar sind.</p></div>
         <div class="integration-grid">
-          <article class="integration-card">
-            <div class="integration-head"><div class="logo-token">HOME</div><span class="state local">LOCAL</span></div>
-            <h3>Smart Home</h3>
-            <p>Integrationspfade für AVM FRITZ!, TP-Link Tapo, Shelly, Tuya / Smart Life und Home Assistant.</p>
-          </article>
-          <article class="integration-card">
-            <div class="integration-head"><div class="logo-token">GROW</div><span class="state guarded">VALIDIERUNG</span></div>
-            <h3>Grow-Hardware</h3>
-            <p>Anbindungen für ausgewählte Geräte und Sensorwege von Mars Hydro und Spider Farmer befinden sich in Entwicklung und Prüfung.</p>
-          </article>
-          <article class="integration-card">
-            <div class="integration-head"><div class="logo-token">MQTT</div><span class="state hybrid">BRIDGE</span></div>
-            <h3>Zigbee & MQTT</h3>
-            <p>Brücken für Zigbee2MQTT und klar definierte MQTT-Geräte erweitern die Plattform um zusätzliche Sensoren und Aktoren.</p>
-          </article>
-          <article class="integration-card">
-            <div class="integration-head"><div class="logo-token">ESP32</div><span class="state local">TEILTEST BESTÄTIGT</span></div>
-            <h3>XIAO Sensor-Node</h3>
-            <p>Der Seeed XIAO ESP32-C3 ist die feste Entwicklungsbasis für modulare Sensor-Nodes. I²C, RS485/Modbus, 1-Wire, Analog und digitale Wege werden getrennt validiert; Sensoridentität, Versorgung und Qualitätsstatus bleiben eindeutig.</p>
-            <a class="btn ghost" href="#sensorik">Sensorik & Entwicklungs-BOM</a>
-          </article>
+          <article class="integration-card"><div class="integration-head"><div class="logo-token">GC</div><span class="state local">NATIVE</span></div><h3>Grow-Central Sensor-Nodes</h3><p>XIAO ESP32-C3 Nodes bilden die eigene, kontrollierbare Sensorplattform.</p></article>
+          <article class="integration-card"><div class="integration-head"><div class="logo-token">HOME</div><span class="state local">LOCAL</span></div><h3>Smart Home</h3><p>Integrationspfade für AVM FRITZ!, TP-Link Tapo, Shelly, Tuya / Smart Life, Apple Home und Home Assistant.</p></article>
+          <article class="integration-card"><div class="integration-head"><div class="logo-token">GROW</div><span class="state guarded">VALIDIERUNG</span></div><h3>Grow-Hardware</h3><p>Anbindungen für ausgewählte Geräte von Mars Hydro und weiteren Herstellern werden modell- und firmwarebezogen geprüft.</p></article>
+          <article class="integration-card"><div class="integration-head"><div class="logo-token">MQTT</div><span class="state hybrid">BRIDGE</span></div><h3>MQTT & Bridges</h3><p>MQTT dient als kontrollierte lokale Transportebene. Zigbee- und weitere Bridges können zusätzliche Geräte einbinden.</p></article>
         </div>
       </div>
     </section>
 
-    <section class="section dark-section" id="bodensensor">
+    <section class="section" id="hardware">
       <div class="wrap">
-        <div class="section-title"><div><div class="eyebrow">BODENFEUCHTE · AKTUELLER TESTSTAND</div><h2>Vom USB-Anschluss zur Raumhistorie.</h2></div><p>Der native Bodensensor lässt sich am Pi einrichten, einem Raum zuordnen und in der Sensorhistorie anzeigen. Der bestätigte Teiltest gilt für Pi 4, XIAO ESP32-C3 und HW-390 mit Firmware 0.4.1 und den dokumentierten Korrekturen.</p></div>
+        <div class="section-title"><div><div class="eyebrow">EDGE-HARDWARE</div><h2>Vom Pi bis zur größeren lokalen Instanz.</h2></div><p>Der Edge sammelt Daten, verwaltet Regeln und bleibt die lokale Autorität. Sensor-Nodes können in großen Anlagen zonenweise verteilt werden.</p></div>
         <div class="feature-grid">
-          <article><div class="num">01</div><h3>Sicher aufnehmen</h3><p>Der Assistent führt durch Firmware, WLAN und Raumzuweisung. Individuelle Sensorzugänge, TLS und signierte Identitätsprüfung schützen die lokale Verbindung.</p></article>
-          <article><div class="num">02</div><h3>Bodenfeuchte verfolgen</h3><p>Eine eigene Kachel und Historienspalte zeigen Bodenfeuchte getrennt von Luftfeuchte. Der Wert ist eine relative Referenz und kein exakter Wassergehalt.</p></article>
-          <article><div class="num">03</div><h3>Passend kalibrieren</h3><p>Trocken-/Nassreferenzen lassen sich per USB speichern. Gießgrenzen müssen anschließend am verwendeten Substrat geprüft werden. Ein Kalibrierungsdialog ist noch in Planung.</p><a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/blob/master/docs/de/SOIL_SENSOR_GUIDE.md" target="_blank" rel="noopener">Sensor-Anleitung</a></article>
+          <article><div class="num">3</div><h3>Raspberry Pi 3B / 3B+</h3><p>Legacy/Lite-Klasse für ressourcenschonende Installationen.</p><span class="tag amber">LEGACY</span></article>
+          <article><div class="num">4</div><h3>Raspberry Pi 4 / CM4</h3><p>Empfohlene Standardplattform für lokale Grow-Central-Installationen.</p><span class="tag lime">STANDARD</span></article>
+          <article><div class="num">5</div><h3>Raspberry Pi 5 / CM5</h3><p>Mehr Reserve für größere Installationen, mehr Historie und zusätzliche lokale Dienste.</p><span class="tag cyan">PERFORMANCE</span></article>
         </div>
-        <p>Der neue <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-375" target="_blank" rel="noopener">Image-Candidate Build 375</a> enthält Firmware 0.4.1 und die Korrekturen. Der bestätigte Sensortest erfolgte zuvor auf einer aktualisierten Pi-4-Installation; die vollständige Prüfung des neuen Images, anderer Hardwareklassen und der Bewässerungsgrenzen steht noch aus.</p>
       </div>
     </section>
 
-    <section class="section dark-section" id="hardware">
+    <section class="section dark-section" id="status">
       <div class="wrap">
-        <div class="section-title">
-          <div>
-            <div class="eyebrow">RASPBERRY PI</div>
-            <h2>Eine Plattform für mehrere Leistungsklassen.</h2>
-          </div>
-          <p>Grow Central erkennt die Hardwareklasse und passt den Betrieb an die verfügbaren Ressourcen an. Für neue Installationen ist ein Raspberry Pi 4 oder 5 vorgesehen.</p>
-        </div>
+        <div class="section-title"><div><div class="eyebrow">PROJEKTSTATUS</div><h2>Verifiziertes bleibt verifiziert. Geplantes bleibt geplant.</h2></div><p>Grow-Central kennzeichnet Teststände und Hardwarepfade transparent. Eine dokumentierte Herstellerfunktion ist nicht automatisch gleichbedeutend mit vollständig validierter Grow-Central-Integration.</p></div>
         <div class="feature-grid">
-          <article>
-            <div class="num">3</div>
-            <h3>Pi 3B / 3B+</h3>
-            <p>Weiterhin als ressourcenschonende Legacy/Lite-Klasse vorgesehen.</p>
-            <span class="tag amber">Legacy/Lite</span>
-          </article>
-          <article>
-            <div class="num">4</div>
-            <h3>Pi 4 / 400 / CM4</h3>
-            <p>Empfohlene Standardplattform für eine ausgewogene Grow-Central-Installation.</p>
-            <span class="tag lime">Full Support</span>
-          </article>
-          <article>
-            <div class="num">5</div>
-            <h3>Pi 5 / CM5</h3>
-            <p>Zusätzliche Leistungsreserve für größere Installationen und künftige Funktionen.</p>
-            <span class="tag lime">PERFORMANCE</span>
-          </article>
+          <article><div class="num">01</div><h3>XIAO-Basis</h3><p>ESP32-C3, WLAN, MQTT/TLS sowie zentrale Entwicklungswege sind als Node-Grundlage gesetzt.</p><span class="tag lime">AKTIV</span></article>
+          <article><div class="num">02</div><h3>Sensor-Treiber</h3><p>Referenzsensoren werden einzeln integriert, identifiziert, plausibilisiert und danach für Automationen freigegeben.</p><span class="tag amber">IN PRÜFUNG</span></article>
+          <article><div class="num">03</div><h3>Fehlertoleranz</h3><p>Sensor-, Bus-, Power- und Node-Ausfälle werden getrennt behandelt. Kritische Regelungen müssen fail-safe reagieren.</p><span class="tag cyan">ARCHITEKTUR</span></article>
         </div>
       </div>
     </section>
 
-
-<section class="section dark-section" id="sensorik">
+    <section class="section" id="download">
       <div class="wrap">
-        <div class="section-title">
-          <div><div class="eyebrow">ARCHITEKTUR</div><h2>Kurze Sensorwege. Funk zwischen Node und Edge.</h2></div>
-          <p>Sensoren werden lokal am XIAO-Node angebunden. Der Node kommuniziert per WLAN/MQTT mit Grow Central. In großen Anlagen werden viele Nodes zonenweise verteilt, statt Sensorkabel quer durch Hallen zu ziehen.</p>
-        </div>
-        <div class="arch-box">Sensor(en)
-   │  I²C / RS485 / 1-Wire / GPIO / Analog
-   ▼
-XIAO ESP32-C3 Node
-   │  WLAN + MQTT/TLS
-   ▼
-Grow-Central Edge / Raspberry Pi
-   │
-   └── optionale Cloud / Remote-Verwaltung</div>
-        <div class="info-grid">
-          <article class="info-card"><small>I²C</small><h3>Lokale Module</h3><p>SHT45, SCD41, Atlas-EZO, INA226, ADS1115 und weitere kurze Verbindungen im Node-Bereich.</p></article>
-          <article class="info-card"><small>RS485</small><h3>Feldsensoren</h3><p>SEN0604 Soil, SEN0641 PPFD, Wetterstation und industrielle Sensorik über Modbus RTU.</p></article>
-          <article class="info-card"><small>WEITERE</small><h3>1-Wire / Pulse / Digital</h3><p>DS18B20, Durchflussimpulse, HX711 und definierte digitale Erweiterungen.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="sensoren">
-      <div class="wrap">
-        <div class="section-title">
-          <div><div class="eyebrow">VERIFIZIERTE SENSORRICHTUNG</div><h2>Referenzsensoren nach Messaufgabe.</h2></div>
-          <p>Die Auswahl trennt bestätigte Herstellerfunktionen von noch zu validierenden Integrationen. Eine Busadresse allein gilt nicht als Sensoridentität.</p>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Messaufgabe</th><th>Referenz</th><th>Anbindung</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td>Lufttemperatur / RH</td><td>Sensirion SHT45</td><td>I²C</td><td class="status-ok">Herstellerfunktion bestätigt</td></tr>
-              <tr><td>CO₂</td><td>Sensirion SCD41</td><td>I²C</td><td class="status-ok">Herstellerfunktion bestätigt</td></tr>
-              <tr><td>Boden: Feuchte / Temp / EC / pH</td><td>DFRobot SEN0604</td><td>RS485 / Modbus RTU</td><td class="status-ok">Register & Modbus dokumentiert</td></tr>
-              <tr><td>PPFD / PAR</td><td>DFRobot SEN0641</td><td>RS485 / Modbus RTU</td><td class="status-ok">Register & Modbus dokumentiert</td></tr>
-              <tr><td>Wassertemperatur</td><td>DS18B20</td><td>1-Wire</td><td class="status-ok">64-Bit Hardware-ID</td></tr>
-              <tr><td>Reservoir pH</td><td>Atlas Scientific EZO-pH</td><td>I²C / UART</td><td class="status-extra">isolierte Ausführung vorgesehen</td></tr>
-              <tr><td>Reservoir EC</td><td>Atlas Scientific EZO-EC K1</td><td>I²C / UART</td><td class="status-extra">isolierte Ausführung vorgesehen</td></tr>
-              <tr><td>Gelöster Sauerstoff</td><td>Atlas Scientific EZO-DO</td><td>I²C / UART</td><td class="status-extra">Hydro / Aquaponik</td></tr>
-              <tr><td>Wasserstand</td><td>4–20-mA Tauchdrucksonde</td><td>4–20 mA → ADC</td><td class="status-extra">Konverter erforderlich</td></tr>
-              <tr><td>Durchfluss</td><td>DFRobot SEN0550</td><td>Pulse / GPIO</td><td class="status-extra">Pegelwandler/Isolation erforderlich</td></tr>
-              <tr><td>Gewicht</td><td>Load Cell + HX711</td><td>Digital</td><td class="status-extra">optional</td></tr>
-              <tr><td>Leaf Temperature</td><td>Melexis MLX90614</td><td>I²C</td><td class="status-extra">Montage/FOV zu validieren</td></tr>
-              <tr><td>Leaf Wetness</td><td>SenseCAP Industrial Leaf Wetness</td><td>RS485 / Modbus RTU</td><td class="status-extra">Pro / Enterprise</td></tr>
-              <tr><td>Wetterstation</td><td>DFRobot SEN0657 / SenseCAP ONE</td><td>RS485 / Modbus RTU</td><td class="status-extra">Pro / Enterprise</td></tr>
-              <tr><td>Differenzdruck</td><td>Sensirion SDP810-500Pa</td><td>I²C</td><td class="status-extra">Lüftung / Filter</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="section dark-section" id="bom">
-      <div class="wrap">
-        <div class="section-title">
-          <div><div class="eyebrow">VERSUCHSAUFBAU OHNE SENSOREN</div><h2>Entwicklungs-BOM für den XIAO Sensor Hub.</h2></div>
-          <p>Die Liste deckt I²C, RS485, Analog, 4–20 mA, 1-Wire, Pulse, GPIO und Diagnose ab. AliExpress-Links sind bewusst Suchlinks, damit einzelne Händlerwechsel die Stückliste nicht sofort in digitales Geröll verwandeln.</p>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>#</th><th>Bauteil</th><th>Menge</th><th>Richtpreis</th><th>Zweck</th><th>AliExpress</th></tr></thead>
-            <tbody>
-              <tr><td>1</td><td>MB102 Breadboard 830 Kontakte</td><td class="qty">2</td><td class="price">7,00 €</td><td>Versuchsaufbau</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MB102+830+breadboard" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>2</td><td>XIAO Breakout / Expansion Board ohne MCU</td><td class="qty">1</td><td class="price">5,00 €</td><td>Pins sauber herausführen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=Seeed+XIAO+breakout+expansion+board" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>3</td><td>Dupont M-M / M-F / F-F Set</td><td class="qty">1</td><td class="price">4,00 €</td><td>flexible Testverkabelung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=dupont+jumper+wire+male+female+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>4</td><td>Breadboard Jumper Wire Kit</td><td class="qty">1</td><td class="price">4,00 €</td><td>saubere feste Längen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=breadboard+jumper+wire+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>5</td><td>isoliertes UART/TTL ↔ RS485 Modul, 3,3 V, Auto Direction</td><td class="qty">2</td><td class="price">14,00 €</td><td>Modbus-Testbus + Reserve</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=isolated+UART+TTL+RS485+3.3V+automatic" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>6</td><td>ADS1115 16-Bit 4-Kanal ADC Modul</td><td class="qty">2</td><td class="price">5,00 €</td><td>Analog- und 4–20-mA-Auswertung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=ADS1115+16bit+4+channel+ADC+module" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>7</td><td>TCA9548A 8-Kanal I²C Multiplexer</td><td class="qty">2</td><td class="price">4,00 €</td><td>gleiche I²C-Adressen / Bussegmentierung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=TCA9548A+I2C+multiplexer+8+channel" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>8</td><td>MCP23017 16-I/O Expander</td><td class="qty">1</td><td class="price">2,50 €</td><td>zusätzliche GPIOs</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MCP23017+16+IO+I2C+module" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>9</td><td>HX711 Load Cell Amplifier</td><td class="qty">2</td><td class="price">3,00 €</td><td>Gewicht/Wägezellen testen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=HX711+load+cell+module" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>10</td><td>4–20-mA Receiver / Current-to-Voltage Modul</td><td class="qty">2</td><td class="price">7,00 €</td><td>Industriesensorik</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=4-20mA+receiver+voltage+module+3.3V+ADC" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>11</td><td>MP1584EN Step-Down Modul</td><td class="qty">5</td><td class="price">4,00 €</td><td>12 V → 5 V / Testspannungen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MP1584EN+DC+DC+buck+module" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>12</td><td>JST-XH 2,54-mm Stecker-Set 2–6-polig</td><td class="qty">1</td><td class="price">6,00 €</td><td>steckbare Sensorverkabelung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+2.54+connector+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>13</td><td>JST-XH vorkonfektionierte Kabel</td><td class="qty">1</td><td class="price">5,00 €</td><td>Prototyping ohne Einzelcrimpen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+pre+crimped+cable" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>14</td><td>Schraubklemmen 5,08 mm, gemischt</td><td class="qty">1</td><td class="price">5,00 €</td><td>12 V / GND / RS485 A/B</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=5.08mm+screw+terminal+block+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>15</td><td>2,54-mm Stift- und Buchsenleisten</td><td class="qty">1</td><td class="price">3,00 €</td><td>Module steckbar aufbauen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=2.54mm+pin+header+socket+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>16</td><td>Widerstandssortiment</td><td class="qty">1</td><td class="price">4,00 €</td><td>Pull-ups, Terminierung, Pegelanpassung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=resistor+assortment+kit+1%25" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>17</td><td>Kondensatorsortiment</td><td class="qty">1</td><td class="price">4,00 €</td><td>Entstörung / Versorgung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=capacitor+assortment+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>18</td><td>USB Logic Analyzer 8 Kanal / 24 MHz</td><td class="qty">1</td><td class="price">8,00 €</td><td>I²C, UART, 1-Wire, Pulse debuggen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=USB+logic+analyzer+24MHz+8+channel" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>19</td><td>Krokoklemmen / Testleitungen</td><td class="qty">1</td><td class="price">4,00 €</td><td>Mess- und Prüfaufbau</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=alligator+clip+test+lead+set" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>20</td><td>USB-C Datenkabel</td><td class="qty">1</td><td class="price">4,00 €</td><td>XIAO Flash / Debug</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=USB-C+data+cable+USB+A" target="_blank" rel="noopener">Suchen</a></td></tr>
-              <tr><td>21</td><td>Aderendhülsen + kleine Leitungen</td><td class="qty">1</td><td class="price">6,00 €</td><td>saubere Versorgung und Busverdrahtung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=ferrule+wire+kit+small+gauge" target="_blank" rel="noopener">Suchen</a></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="bom-total"><div><strong>Richtwert gesamt: 108,50 €</strong><div class="note">ohne Sensoren, vorhandenen XIAO und 230-V-Netzteil · Preise sind Momentaufnahmen/Richtwerte</div></div><span class="tag lime">ENTWICKLUNGSSTRECKE</span></div>
-        <p class="note">Für ein Netzteil an 230 V wird bewusst kein namenloses AliExpress-Netzteil als Referenz festgelegt. Dafür ist ein Marken-Netzteil mit nachvollziehbarer Dokumentation vorgesehen.</p>
-      </div>
-    </section>
-
-    <section class="section" id="sicherheit">
-      <div class="wrap">
-        <div class="section-title"><div><div class="eyebrow">FIRMWARE-GRUNDSÄTZE</div><h2>Sensoren dürfen nicht verwechselt werden.</h2></div><p>Grow Central trennt technische Identität, Standort, Messwert und Qualitätsstatus.</p></div>
-        <div class="info-grid">
-          <article class="info-card"><small>IDENTITÄT</small><h3>GC Sensor UUID</h3><p>Busadresse ist kein Identitätsbeweis. Hardware-ID wird genutzt, wenn der Sensor eine liefert; zusätzlich führt Grow Central eine eigene UUID.</p></article>
-          <article class="info-card"><small>VERSORGUNG</small><h3>Spannung und Strom überwachen</h3><p>INA226/ADC-Messpunkte für Node- und Sensorbus-Versorgung, Brownout-Erkennung und Diagnose von Power-Fehlern.</p></article>
-          <article class="info-card"><small>FEHLERFALL</small><h3>Fail-safe statt Blindflug</h3><p>GOOD, STALE, INVALID, BUS_ERROR, POWER_ERROR und OFFLINE steuern, ob Automationen weiterlaufen oder sicher pausieren.</p></article>
-        </div>
-      </div>
-    </section>
-  
-
-<section class="section dark-section" id="apps">
-      <div class="wrap">
-        <div class="section-title">
-          <div>
-            <div class="eyebrow">GROW CENTRAL APPS</div>
-            <h2>Grow Licht-Messgerät für iPhone, iPad und Android.</h2>
-          </div>
-          <p>Die Kamera wird als Belichtungsmesser genutzt. Aus ISO, Belichtungszeit und Blende werden Lux, PPFD und DLI näherungsweise berechnet. Für präzise PAR-Messungen bleibt ein kalibriertes Quantum-Meter die Referenz.</p>
-        </div>
-
-        <div class="feature-grid">
-          <article>
-            <div class="num">iOS</div>
-            <h3>iPhone &amp; iPad · Sideload</h3>
-            <p>Unsigned IPA für eigene Signierung mit Sideloadly, AltStore oder SideStore. Entwickelt für iOS/iPadOS 16 und neuer.</p>
-            <a class="btn primary" href="https://grow-central.de/downloads/light-meter/GrowLightMeter-iOS-Sideload.zip" download>iOS Sideload ZIP herunterladen</a>
-            <p><small>ZIP entpacken und die enthaltene IPA anschließend mit Sideloadly, AltStore oder SideStore selbst signieren.</small></p>
-          </article>
-
-          <article>
-            <div class="num">APK</div>
-            <h3>Android · Direkt installieren</h3>
-            <p>Native Kotlin/Jetpack-Compose-App mit Camera2-Messung. Unterstützt Smartphones und Tablets ab Android 8.</p>
-            <a class="btn primary" href="https://grow-central.de/downloads/light-meter/GrowLightMeter-Android.zip" download>Android APK ZIP herunterladen</a>
-            <p><small>ZIP entpacken und die enthaltene APK installieren. Als App-Icon wird das offizielle Grow-Central-Projektlogo verwendet.</small></p>
-          </article>
-
-          <article>
-            <div class="num">OPEN</div>
-            <h3>Quelloffen im Projekt</h3>
-            <p>Android-Quellcode und das iOS-Xcode-Projekt liegen im öffentlichen Grow-Central-Repository und werden reproduzierbar über GitHub Actions gebaut.</p>
-            <a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/master/mobile/light-meter" target="_blank" rel="noopener">Quellcode auf GitHub</a>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="status">
-      <div class="wrap">
-        <div class="section-title">
-          <div>
-            <div class="eyebrow">PROJEKTSTATUS</div>
-            <h2>Offen entwickelt. Transparent dokumentiert.</h2>
-          </div>
-          <p>Grow Central wird vollständig Open Source entwickelt und auf realer Raspberry-Pi-Hardware getestet. Quellcode, Dokumentation und veröffentlichte Builds sind über das öffentliche Projekt-Repository verfügbar. Teststände bleiben als CANDIDATE gekennzeichnet, bis ihre Funktion auf der jeweiligen Hardware geprüft wurde.</p>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <div class="num">01</div>
-            <h3>Plattformaufbau</h3>
-            <p>Lokale Zentrale, responsive Oberflächen und Geräteintegration werden gemeinsam weiterentwickelt.</p>
-            <span class="tag lime">AKTIV</span>
-          </article>
-          <article>
-            <div class="num">02</div>
-            <h3>Hardwaretests</h3>
-            <p>Ein Build wird erst nach realen Tests auf der jeweiligen Hardwareklasse als validiert eingestuft.</p>
-            <span class="tag amber">IN PRÜFUNG</span>
-          </article>
-          <article>
-            <div class="num">03</div>
-            <h3>Verfügbarkeit</h3>
-            <p>Quellcode und Dokumentation sind öffentlich verfügbar. Veröffentlichte Images und App-Pakete findest du in den Projekt-Releases; die jeweilige Beschreibung nennt den Test- und Freigabestatus.</p>
-            <span class="tag cyan">OPEN SOURCE</span>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section dark-section" id="faq">
-      <div class="wrap">
-        <div class="section-title">
-          <div>
-            <div class="eyebrow">FAQ</div>
-            <h2>Häufige Fragen.</h2>
-          </div>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <h3>Braucht der Pi einen Monitor?</h3>
-            <p>Nein. Grow Central ist für den Betrieb ohne eigenen Desktop ausgelegt und wird über andere Geräte im Netzwerk bedient.</p>
-          </article>
-          <article>
-            <h3>Funktioniert Grow Central ohne Cloud?</h3>
-            <p>Die Kernidee ist Local First. Eine Cloud kann zusätzliche Fern- und Verwaltungsfunktionen ergänzen, bleibt aber optional.</p>
-          </article>
-          <article>
-            <h3>Sind alle genannten Geräte vollständig unterstützt?</h3>
-            <p>Noch nicht. Der Funktionsumfang hängt von Modell und Firmware ab. Kritische Schreibfunktionen werden erst nach sicherer Validierung freigegeben.</p>
-          </article>
-          <article>
-            <h3>Kann ich Grow Central schon herunterladen oder kaufen?</h3>
-            <p>Quellcode und Dokumentation findest du im <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">öffentlichen Repository</a>. Verfügbare Downloads stehen unter <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">Releases</a>. Beachte den jeweiligen Teststatus; ein CANDIDATE ist noch kein hardwarevalidierter Build.</p>
-          </article>
+        <div class="section-title"><div><div class="eyebrow">DOWNLOADS & QUELLCODE</div><h2>Öffentliche Entwicklung.</h2></div><p>Quellcode, Dokumentation und veröffentlichte Builds liegen im Grow-Central-Repository. Candidate-Builds sind keine automatisch hardwarevalidierten Releases.</p></div>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://github.com/jygnw29kms-bit/135er-Grow-Central" target="_blank" rel="noopener">GitHub Repository</a>
+          <a class="btn ghost" href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases" target="_blank" rel="noopener">Releases</a>
         </div>
       </div>
     </section>
@@ -478,61 +232,19 @@ Grow-Central Edge / Raspberry Pi
 
   <footer class="site-footer">
     <div class="wrap footer-grid">
-      <div>
-        <img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="135er-Grow Central">
-        <p>Local-First Steuerung, Monitoring und Automationen für Grow-Umgebungen.</p>
-      </div>
-      <div>
-        <strong>PLATTFORM</strong>
-        <a href="#produkt">Produkt</a>
-        <a href="#funktionen">Funktionen</a>
-        <a href="#hardware">Hardware</a>
-        <a href="#sensorik">Sensorik & BOM</a>
-      </div>
-      <div>
-        <strong>PROJEKT</strong>
-        <a href="#status">Status</a>
-        <a href="#faq">FAQ</a>
-        <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Quellcode</a>
-        <a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">Downloads</a>
-        <a href="impressum.html">Impressum</a>
-        <a href="datenschutz.html">Datenschutz</a>
-      </div>
-      <div>
-        <strong>ENTWICKLUNG</strong>
-        <span><i class="status-dot"></i>Vollständig Open Source</span>
-        <span>© 2026 135er-Grow Central</span>
-      </div>
+      <div><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="Grow-Central"><p>Local-First Monitoring, Sensorik und Automation für kontrollierte Wachstumsumgebungen.</p></div>
+      <div><strong>PLATTFORM</strong><a href="#plattform">Plattform</a><a href="#profile">Profile</a><a href="#sensorik">Sensorik</a><a href="#bom">BOM</a></div>
+      <div><strong>PROJEKT</strong><a href="#status">Status</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">Quellcode</a><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central/releases">Downloads</a><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a></div>
+      <div><strong>ENTWICKLUNG</strong><span><i class="status-dot"></i>Open Source</span><span>© 2026 Grow-Central</span></div>
     </div>
   </footer>
 
   <script>
-    const menuButton = document.getElementById('menuToggle');
-    const navigation = document.getElementById('siteNav');
-    if (menuButton && navigation) {
-      menuButton.addEventListener('click', () => {
-        const open = navigation.classList.toggle('open');
-        menuButton.setAttribute('aria-expanded', String(open));
-      });
-      navigation.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
-        navigation.classList.remove('open');
-        menuButton.setAttribute('aria-expanded', 'false');
-      }));
-    }
-    const revealTargets = document.querySelectorAll('.value-card,.feature-grid article,.integration-card');
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('reveal');
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.12 });
-      revealTargets.forEach((element) => observer.observe(element));
-    } else {
-      revealTargets.forEach((element) => element.classList.add('reveal'));
-    }
+    const menuButton=document.getElementById('menuToggle');
+    const navigation=document.getElementById('siteNav');
+    if(menuButton&&navigation){menuButton.addEventListener('click',()=>{const open=navigation.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});navigation.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{navigation.classList.remove('open');menuButton.setAttribute('aria-expanded','false');}));}
+    const revealTargets=document.querySelectorAll('.value-card,.feature-grid article,.integration-card,.arch-node,.bom-price');
+    if('IntersectionObserver'in window){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('reveal');observer.unobserve(entry.target);}}),{threshold:.1});revealTargets.forEach(el=>observer.observe(el));}else{revealTargets.forEach(el=>el.classList.add('reveal'));}
   </script>
 </body>
 </html>
