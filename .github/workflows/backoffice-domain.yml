@@ -37,5 +37,11 @@ jobs:
         run: dotnet restore backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
       - name: Build API
         run: dotnet build backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj --configuration Release --no-restore
+      - name: Prepare CI environment files
+        run: |
+          cp cloud/.env.example cloud/.env
+          cp backoffice/.env.example backoffice/.env
       - name: Validate compose
         run: docker compose -f docker-compose.cloud.yml config --quiet
+      - name: Build Backoffice API image
+        run: docker build -f backoffice/GrowCentral.Backoffice.Api/Dockerfile -t growcentral-backoffice-api:ci .
