@@ -1,4 +1,4 @@
-﻿import os, sys, math
+import os, sys, math
 import FreeCAD as App
 import Part
 
@@ -63,21 +63,50 @@ def make_pi4():
 def xiao_hw():
     hw=b.xiao_reference(True); hw.translate(App.Vector(8.0,7.0,7.0)); return hw
 
-def add_fpc_mount(doc,lid,W,D):
-    ant_w,ant_d=42.0,22.0; ant_x=(W-ant_w)/2; ant_y=(D-ant_d)/2
-    carrier=Part.makeBox(ant_w,ant_d,0.70,App.Vector(ant_x,ant_y,-3.25)); lid=lid.fuse(carrier)
-    rail=0.60; rh=0.65; rz=-3.90
-    rim=(Part.makeBox(ant_w,rail,rh,App.Vector(ant_x,ant_y,rz))
-         .fuse(Part.makeBox(ant_w,rail,rh,App.Vector(ant_x,ant_y+ant_d-rail,rz)))
-         .fuse(Part.makeBox(rail,ant_d-2*rail,rh,App.Vector(ant_x,ant_y+rail,rz)))
-         .fuse(Part.makeBox(rail,ant_d-2*rail,rh,App.Vector(ant_x+ant_w-rail,ant_y+rail,rz))))
-    notch=Part.makeBox(rail+0.5,2.4,rh+0.3,App.Vector(ant_x+ant_w-rail-0.25,ant_y+ant_d/2-1.2,rz-0.1))
-    lid=lid.fuse(rim.cut(notch))
-    clip_x=max(3.0,W-10.0); clip_y=3.2
-    clip=Part.makeBox(6.0,3.0,1.3,App.Vector(clip_x,clip_y,-3.85)).cut(Part.makeBox(3.8,1.5,1.5,App.Vector(clip_x+1.1,clip_y+0.75,-3.95)))
-    lid=lid.fuse(clip)
-    ant=Part.makeBox(40,20,0.35,App.Vector(ant_x+1,ant_y+1,-3.60)); add(doc,'REF_FPC_Antenna_40x20',ant,(0.85,0.45,0.08),65)
-    return lid
+def add_fpc_base_system(doc,base,W,D,H):
+    # Robust removable rear antenna carrier for the supplied 40 x 20 mm adhesive FPC antenna.
+    # The lid stays completely independent so servicing the enclosure never loads the U.FL lead.
+    # Carrier is a separate printable part that slides/clips onto two chunky rear-wall rails.
+    plate_w,plate_h,plate_t=44.0,24.0,2.6
+    px=(W-plate_w)/2.0
+    py=D+5.0
+    pz=max(0.6,(H-plate_h)/2.0)
+
+    # Full, uninterrupted adhesive face. The 40 x 20 antenna centres with a robust 2 mm border.
+    carrier=Part.makeBox(plate_w,plate_t,plate_h,App.Vector(px,py,pz))
+
+    # Twin broad T-rails on the base. They are intentionally overbuilt for FDM, not springy jewelry.
+    rail_z=pz+4.0
+    rail_h=plate_h-8.0
+    rail_centres=(W/2.0-12.0,W/2.0+12.0)
+    for cx in rail_centres:
+        stem=Part.makeBox(4.8,2.0,rail_h,App.Vector(cx-2.4,D-0.2,rail_z))
+        head=Part.makeBox(8.2,2.0,rail_h,App.Vector(cx-4.1,D+1.6,rail_z))
+        # Lower lead-in and top stop give a positive push-on / slide-on feel without thin flexures.
+        base=base.fuse(stem).fuse(head)
+
+        outer=Part.makeBox(10.0,4.6,rail_h+1.4,App.Vector(cx-5.0,D+0.9,rail_z-0.7))
+        cavity=Part.makeBox(8.7,3.80,rail_h+0.8,App.Vector(cx-4.35,D+0.55,rail_z-0.8))
+        clip=outer.cut(cavity)
+        # Back wall of clip overlaps the carrier plate and makes one stout body.
+        carrier=carrier.fuse(clip)
+
+    # Cable entry for the U.FL pigtail: enough for the tiny connector, with rounded stress relief.
+    # Positioned off-centre so it does not clash with the XIAO or the two mounting rails.
+    cable_x=W/2.0+7.0
+    cable_z=pz+5.2
+    cable_cut=Part.makeCylinder(2.7,6.0,App.Vector(cable_x,D-2.5,cable_z),App.Vector(0,1,0))
+    base=base.cut(cable_cut)
+
+    # Broad inside strain-relief bridge, sized for ~1.13 mm coax with generous hand-assembly clearance.
+    bridge=Part.makeBox(10.0,4.2,2.8,App.Vector(cable_x-5.0,D-5.6,cable_z-1.4))
+    tunnel=Part.makeBox(6.0,4.5,1.8,App.Vector(cable_x-3.0,D-5.8,cable_z-0.9))
+    base=base.fuse(bridge.cut(tunnel))
+
+    # Reference antenna is placed exactly on the adhesive face of the removable carrier.
+    ant=Part.makeBox(40.0,0.35,20.0,App.Vector(px+2.0,py+plate_t,pz+2.0))
+    add(doc,'REF_FPC_Antenna_40x20',ant,(0.85,0.45,0.08),65)
+    return base,carrier
 
 def add_sma_bulkhead(doc,base,W,D,wall,H):
     # Rear-wall horizontal SMA/RP-SMA bulkhead, 6.5 mm through-hole, reinforced flat seat.
@@ -112,13 +141,14 @@ def make_xiao(kind,mode):
         for yy in (12,29):
             bridge=Part.makeBox(18,3,4,App.Vector(40,yy,floor+3)).cut(Part.makeBox(12,1.5,5,App.Vector(43,yy+0.75,floor+2.5))); base=base.fuse(bridge)
     spine=rr(7,22,5,2.2,1.5); spine.translate(App.Vector(-4,(D-22)/2,0)); spine=spine.cut(Part.makeBox(3.5,7,7,App.Vector(-2.5,(D-22)/2+3,1))).cut(Part.makeBox(3.5,7,7,App.Vector(-2.5,(D-22)/2+12,1))); base=base.fuse(spine)
+    carrier=None
     if mode=='EXT': base=add_sma_bulkhead(doc,base,W,D,wall,H)
+    elif mode=='FPC': base,carrier=add_fpc_base_system(doc,base,W,D,H)
     lid=rr(W,D,2.8,rad,0); tongue=rr(W-2*(wall+0.3),D-2*(wall+0.3),2.8,max(1.0,rad-wall-0.3),-2.6); tongue.translate(App.Vector(wall+0.3,wall+0.3,0)); lid=lid.fuse(tongue)
     if mode=='FPC':
         vent_xs=(9,18,27) if not hub else (9,19,29,39,49)
         for vx in vent_xs:
             lid=slot(lid,vx,2.2,-2.9,5.8,2.6,6,1.3); lid=slot(lid,vx,D-4.8,-2.9,5.8,2.6,6,1.3)
-        lid=add_fpc_mount(doc,lid,W,D)
     else:
         rows=2 if not hub else 3; cols=3 if not hub else 5
         for r in range(rows):
@@ -132,6 +162,16 @@ def make_xiao(kind,mode):
     base_name=f'GrowCentral_XIAO_{kind}_{mode}_Base_V3'; lid_name=f'GrowCentral_XIAO_{kind}_{mode}_Lid_V3'; brand_name=f'GrowCentral_XIAO_{kind}_{mode}_Branding_V3'
     bo=add(doc,'GC_'+tag+'_Base_V3',base); lo=add(doc,'GC_'+tag+'_Lid_V3',lid); br=add(doc,'GC_'+tag+'_Branding_V3',brand,GREEN)
     export(bo,base_name); export(lo,lid_name); export(br,brand_name)
+    if mode=='FPC' and carrier is not None:
+        co=add(doc,'GC_'+tag+'_AntennaCarrier_V3',carrier,(0.12,0.14,0.16),0)
+        export(co,f'GrowCentral_XIAO_{kind}_{mode}_AntennaCarrier_V3')
+        # Print copy: rotate so the completely flat adhesive face sits on the build plate,
+        # while the chunky clip geometry grows upward without support.
+        cps=carrier.copy(); cps.rotate(App.Vector(0,0,0),App.Vector(1,0,0),-90)
+        bb=cps.BoundBox; cps.translate(App.Vector(-bb.XMin,-bb.YMin,-bb.ZMin))
+        cpo=add(doc,'GC_'+tag+'_AntennaCarrier_PRINT_V3',cps,(0.12,0.14,0.16),0)
+        export(cpo,f'GrowCentral_XIAO_{kind}_{mode}_AntennaCarrier_PRINT_V3')
+        doc.removeObject(cpo.Name)
     doc.recompute(); doc.saveAs(os.path.join(OUT,f'GrowCentral_XIAO_{kind}_{mode}_V3.FCStd')); App.closeDocument(doc.Name)
 
 if __name__=='__main__':

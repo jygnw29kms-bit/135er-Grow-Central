@@ -39,7 +39,7 @@
       "base_valid": true,
       "base_bbox": [
         52.0,
-        34.0,
+        37.6,
         25.0
       ],
       "base_solids": 1,
@@ -47,7 +47,7 @@
       "lid_bbox": [
         48.0,
         34.0,
-        6.7
+        5.4
       ],
       "lid_solids": 1,
       "branding_valid": true,
@@ -57,6 +57,13 @@
         0.9
       ],
       "branding_solids": 11,
+      "antenna_carrier_valid": true,
+      "antenna_carrier_bbox": [
+        44.0,
+        6.7,
+        24.0
+      ],
+      "antenna_carrier_solids": 1,
       "hw_base_collision_mm3": 0.0,
       "hw_lid_collision_mm3": 0.0,
       "base_lid_collision_mm3": 0.0,
@@ -65,12 +72,23 @@
         2.8,
         3.7
       ],
+      "base_carrier_overlap_mm3": 0.0,
+      "base_carrier_min_distance_mm": 0.0,
+      "carrier_lid_overlap_mm3": 0.0,
+      "carrier_hw_overlap_mm3": 0.0,
       "fpc_ref_bbox": [
         40.0,
-        20.0,
-        0.35
+        0.35,
+        20.0
       ],
-      "fpc_lid_collision_mm3": 0.0
+      "fpc_carrier_overlap_mm3": 0.0,
+      "fpc_carrier_distance_mm": 0.0,
+      "fpc_protected_margins_mm": [
+        2.0,
+        2.0,
+        2.0,
+        2.0
+      ]
     },
     {
       "case": "Node_EXT",
@@ -111,7 +129,7 @@
       "base_valid": true,
       "base_bbox": [
         70.0,
-        48.0,
+        51.6,
         28.0
       ],
       "base_solids": 1,
@@ -119,7 +137,7 @@
       "lid_bbox": [
         66.0,
         48.0,
-        6.7
+        5.4
       ],
       "lid_solids": 1,
       "branding_valid": true,
@@ -129,6 +147,13 @@
         0.9
       ],
       "branding_solids": 9,
+      "antenna_carrier_valid": true,
+      "antenna_carrier_bbox": [
+        44.0,
+        6.7,
+        24.0
+      ],
+      "antenna_carrier_solids": 1,
       "hw_base_collision_mm3": 0.0,
       "hw_lid_collision_mm3": 0.0,
       "base_lid_collision_mm3": 0.0,
@@ -137,12 +162,23 @@
         2.8,
         3.7
       ],
+      "base_carrier_overlap_mm3": 0.0,
+      "base_carrier_min_distance_mm": 0.0,
+      "carrier_lid_overlap_mm3": 0.0,
+      "carrier_hw_overlap_mm3": 0.0,
       "fpc_ref_bbox": [
         40.0,
-        20.0,
-        0.35
+        0.35,
+        20.0
       ],
-      "fpc_lid_collision_mm3": 0.0
+      "fpc_carrier_overlap_mm3": 0.0,
+      "fpc_carrier_distance_mm": 0.0,
+      "fpc_protected_margins_mm": [
+        2.0,
+        2.0,
+        2.0,
+        2.0
+      ]
     },
     {
       "case": "Hub_EXT",

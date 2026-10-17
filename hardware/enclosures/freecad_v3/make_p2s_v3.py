@@ -10,11 +10,11 @@ CASES={
  'Pi4':[
   'GrowCentral_Pi4_Base_V3.stl','GrowCentral_Pi4_Lid_V3.stl','GrowCentral_Pi4_Branding_V3.stl'],
  'Node_FPC':[
-  'GrowCentral_XIAO_Node_FPC_Base_V3.stl','GrowCentral_XIAO_Node_FPC_Lid_V3.stl','GrowCentral_XIAO_Node_FPC_Branding_V3.stl'],
+  'GrowCentral_XIAO_Node_FPC_Base_V3.stl','GrowCentral_XIAO_Node_FPC_Lid_V3.stl','GrowCentral_XIAO_Node_FPC_Branding_V3.stl','GrowCentral_XIAO_Node_FPC_AntennaCarrier_PRINT_V3.stl'],
  'Node_EXT':[
   'GrowCentral_XIAO_Node_EXT_Base_V3.stl','GrowCentral_XIAO_Node_EXT_Lid_V3.stl','GrowCentral_XIAO_Node_EXT_Branding_V3.stl'],
  'Hub_FPC':[
-  'GrowCentral_XIAO_Hub_FPC_Base_V3.stl','GrowCentral_XIAO_Hub_FPC_Lid_V3.stl','GrowCentral_XIAO_Hub_FPC_Branding_V3.stl'],
+  'GrowCentral_XIAO_Hub_FPC_Base_V3.stl','GrowCentral_XIAO_Hub_FPC_Lid_V3.stl','GrowCentral_XIAO_Hub_FPC_Branding_V3.stl','GrowCentral_XIAO_Hub_FPC_AntennaCarrier_PRINT_V3.stl'],
  'Hub_EXT':[
   'GrowCentral_XIAO_Hub_EXT_Base_V3.stl','GrowCentral_XIAO_Hub_EXT_Lid_V3.stl','GrowCentral_XIAO_Hub_EXT_Branding_V3.stl'],
 }

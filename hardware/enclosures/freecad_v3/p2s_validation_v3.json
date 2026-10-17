@@ -5,35 +5,39 @@
     {
       "file": "GrowCentral_Hub_EXT_P2S_V3.3mf",
       "ok": true,
-      "size": 742437,
+      "size": 742436,
       "printer": "Bambu Lab P2S 0.4 nozzle",
       "process": "0.20mm Standard @BBL P2S",
       "objects": [
+        "GrowCentral_XIAO_Hub_EXT_Branding_V3.stl",
         "GrowCentral_XIAO_Hub_EXT_Base_V3.stl",
-        "GrowCentral_XIAO_Hub_EXT_Lid_V3.stl",
-        "GrowCentral_XIAO_Hub_EXT_Branding_V3.stl"
+        "GrowCentral_XIAO_Hub_EXT_Lid_V3.stl"
       ],
+      "expected_objects": 3,
       "extruders": {
+        "6": "2",
         "2": "1",
-        "4": "1",
-        "6": "2"
+        "4": "1"
       },
       "lid_brand_aligned": true
     },
     {
       "file": "GrowCentral_Hub_FPC_P2S_V3.3mf",
       "ok": true,
-      "size": 706851,
+      "size": 719687,
       "printer": "Bambu Lab P2S 0.4 nozzle",
       "process": "0.20mm Standard @BBL P2S",
       "objects": [
-        "GrowCentral_XIAO_Hub_FPC_Branding_V3.stl",
         "GrowCentral_XIAO_Hub_FPC_Lid_V3.stl",
+        "GrowCentral_XIAO_Hub_FPC_Branding_V3.stl",
+        "GrowCentral_XIAO_Hub_FPC_AntennaCarrier_PRINT_V3.stl",
         "GrowCentral_XIAO_Hub_FPC_Base_V3.stl"
       ],
+      "expected_objects": 4,
       "extruders": {
-        "6": "2",
         "4": "1",
+        "6": "2",
+        "8": "1",
         "2": "1"
       },
       "lid_brand_aligned": true
@@ -41,54 +45,59 @@
     {
       "file": "GrowCentral_Node_EXT_P2S_V3.3mf",
       "ok": true,
-      "size": 621499,
+      "size": 621504,
       "printer": "Bambu Lab P2S 0.4 nozzle",
       "process": "0.20mm Standard @BBL P2S",
       "objects": [
-        "GrowCentral_XIAO_Node_EXT_Base_V3.stl",
+        "GrowCentral_XIAO_Node_EXT_Lid_V3.stl",
         "GrowCentral_XIAO_Node_EXT_Branding_V3.stl",
-        "GrowCentral_XIAO_Node_EXT_Lid_V3.stl"
+        "GrowCentral_XIAO_Node_EXT_Base_V3.stl"
       ],
+      "expected_objects": 3,
       "extruders": {
-        "2": "1",
+        "4": "1",
         "6": "2",
-        "4": "1"
+        "2": "1"
       },
       "lid_brand_aligned": true
     },
     {
       "file": "GrowCentral_Node_FPC_P2S_V3.3mf",
       "ok": true,
-      "size": 612405,
+      "size": 636737,
       "printer": "Bambu Lab P2S 0.4 nozzle",
       "process": "0.20mm Standard @BBL P2S",
       "objects": [
-        "GrowCentral_XIAO_Node_FPC_Base_V3.stl",
         "GrowCentral_XIAO_Node_FPC_Lid_V3.stl",
-        "GrowCentral_XIAO_Node_FPC_Branding_V3.stl"
+        "GrowCentral_XIAO_Node_FPC_Branding_V3.stl",
+        "GrowCentral_XIAO_Node_FPC_AntennaCarrier_PRINT_V3.stl",
+        "GrowCentral_XIAO_Node_FPC_Base_V3.stl"
       ],
+      "expected_objects": 4,
       "extruders": {
-        "2": "1",
         "4": "1",
-        "6": "2"
+        "8": "2",
+        "6": "1",
+        "2": "1"
       },
       "lid_brand_aligned": true
     },
     {
       "file": "GrowCentral_Pi4_P2S_V3.3mf",
       "ok": true,
-      "size": 891990,
+      "size": 891993,
       "printer": "Bambu Lab P2S 0.4 nozzle",
       "process": "0.20mm Standard @BBL P2S",
       "objects": [
         "GrowCentral_Pi4_Lid_V3.stl",
-        "GrowCentral_Pi4_Base_V3.stl",
-        "GrowCentral_Pi4_Branding_V3.stl"
+        "GrowCentral_Pi4_Branding_V3.stl",
+        "GrowCentral_Pi4_Base_V3.stl"
       ],
+      "expected_objects": 3,
       "extruders": {
         "4": "1",
-        "2": "1",
-        "6": "2"
+        "6": "2",
+        "2": "1"
       },
       "lid_brand_aligned": true
     }
