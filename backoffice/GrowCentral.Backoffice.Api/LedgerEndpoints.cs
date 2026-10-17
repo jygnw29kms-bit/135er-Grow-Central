@@ -84,6 +84,8 @@ public static class LedgerEndpoints
                 return Results.Conflict(new { error = ex.Message });
             }
         });
+
+        app.MapReceiptEndpoints();
     }
 
     private static async Task<BackofficeActor?> AuthenticateAsync(HttpRequest request, PostgresAuthStore auth, CancellationToken ct)
