@@ -69,6 +69,49 @@ public static class BackofficePasswordHasher
     }
 }
 
+public sealed class BackofficeSecretProtector
+{
+    private readonly byte[] _key;
+
+    public BackofficeSecretProtector(string base64Key)
+    {
+        try
+        {
+            _key = Convert.FromBase64String(base64Key);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException("GC_BACKOFFICE_SECRET_KEY muss Base64-kodiert sein.", ex);
+        }
+        if (_key.Length != 32)
+            throw new InvalidOperationException("GC_BACKOFFICE_SECRET_KEY muss exakt 32 zufällige Bytes enthalten.");
+    }
+
+    public string Protect(string plaintext)
+    {
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var tag = new byte[16];
+        var plain = Encoding.UTF8.GetBytes(plaintext);
+        var cipher = new byte[plain.Length];
+        using var aes = new AesGcm(_key, 16);
+        aes.Encrypt(nonce, plain, cipher, tag);
+        return $"v1.{Convert.ToBase64String(nonce)}.{Convert.ToBase64String(tag)}.{Convert.ToBase64String(cipher)}";
+    }
+
+    public string Unprotect(string protectedValue)
+    {
+        var parts = protectedValue.Split('.');
+        if (parts.Length != 4 || parts[0] != "v1") throw new CryptographicException("Unbekanntes Secret-Format.");
+        var nonce = Convert.FromBase64String(parts[1]);
+        var tag = Convert.FromBase64String(parts[2]);
+        var cipher = Convert.FromBase64String(parts[3]);
+        var plain = new byte[cipher.Length];
+        using var aes = new AesGcm(_key, 16);
+        aes.Decrypt(nonce, cipher, tag, plain);
+        return Encoding.UTF8.GetString(plain);
+    }
+}
+
 public static class BackofficeTotp
 {
     private const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
