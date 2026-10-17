@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#02070a">
+  <meta name="description" content="Grow-Central Sensorik: XIAO ESP32-C3 Sensor-Nodes, verifizierte Schnittstellen und BOM für die Entwicklungs-Teststrecke.">
+  <title>Grow Central · Sensorik & Entwicklungs-BOM</title>
+  <link rel="icon" type="image/png" href="assets/brand/135er-grow-central-mark.png">
+  <link rel="stylesheet" href="styles.css?v=4.0.0">
+  <style>
+    .sensor-hero{padding:9rem 0 4rem}.sensor-hero h1{max-width:900px}.sensor-hero .lead{max-width:920px}
+    .info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:2rem}
+    .info-card,.bom-wrap,.arch-box{background:rgba(9,18,22,.82);border:1px solid rgba(133,255,208,.14);border-radius:16px;padding:1.25rem}
+    .info-card h3{margin-top:.35rem}.arch-box{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;line-height:1.55;overflow:auto}
+    .table-scroll{overflow-x:auto;border:1px solid rgba(133,255,208,.14);border-radius:16px}
+    table{width:100%;border-collapse:collapse;min-width:980px;background:rgba(5,12,15,.84)}
+    th,td{padding:.8rem .75rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
+    th{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:#8dffd0;background:rgba(141,255,208,.06)}
+    td small{opacity:.74}.price{text-align:right;white-space:nowrap}.qty{text-align:center}.bom-total{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-top:1rem;padding:1rem 1.2rem;border:1px solid rgba(141,255,208,.24);border-radius:14px;background:rgba(141,255,208,.055)}
+    .bom-total strong{font-size:1.35rem}.note{font-size:.92rem;opacity:.78}.status-ok{color:#8dffd0}.status-extra{color:#ffd27a}
+    .link-list a{display:inline-block;margin:.25rem .5rem .25rem 0}
+    @media(max-width:900px){.info-grid{grid-template-columns:1fr}.sensor-hero{padding-top:7rem}.bom-total{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="site-header">
+    <div class="wrap nav-wrap">
+      <a class="brand" href="index.html#top"><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="Grow Central"></a>
+      <nav class="site-nav" aria-label="Hauptnavigation">
+        <a href="index.html#produkt">Produkt</a>
+        <a href="index.html#integrationen">Integrationen</a>
+        <a href="index.html#hardware">Hardware</a>
+        <a href="#architektur">Sensorik</a>
+        <a href="#bom">BOM</a>
+        <a class="nav-cta" href="index.html#status">Status</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="sensor-hero">
+      <div class="wrap">
+        <div class="eyebrow"><span class="dot"></span> SENSOR-NODE ENTWICKLUNG</div>
+        <h1>XIAO ESP32-C3 als feste Sensorbasis.</h1>
+        <p class="lead">Grow Central entwickelt die Sensorik rund um den vorhandenen Seeed XIAO ESP32-C3. Ein Node verwaltet einen räumlichen oder funktionalen Bereich, erkennt angeschlossene Sensoren über definierte Treiber und meldet normalisierte Messwerte sicher an die lokale Grow-Central-Zentrale.</p>
+        <div class="info-grid">
+          <article class="info-card"><small>NODE</small><h3>Einheitliche Basis</h3><p>XIAO ESP32-C3 für Home, Pro und verteilte Enterprise-Sensor-Nodes.</p></article>
+          <article class="info-card"><small>FELDBUS</small><h3>RS485 / Modbus</h3><p>Bevorzugt für robuste Feldsensoren, längere Leitungen und mehrere adressierbare Geräte.</p></article>
+          <article class="info-card"><small>SICHERHEIT</small><h3>Identität + Zustandsprüfung</h3><p>Node-ID, GC-Sensor-UUID, Qualitätsstatus, Watchdog, Brownout- und Versorgungsüberwachung.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="architektur">
+      <div class="wrap">
+        <div class="section-title">
+          <div><div class="eyebrow">ARCHITEKTUR</div><h2>Kurze Sensorwege. Funk zwischen Node und Edge.</h2></div>
+          <p>Sensoren werden lokal am XIAO-Node angebunden. Der Node kommuniziert per WLAN/MQTT mit Grow Central. In großen Anlagen werden viele Nodes zonenweise verteilt, statt Sensorkabel quer durch Hallen zu ziehen.</p>
+        </div>
+        <div class="arch-box">Sensor(en)
+   │  I²C / RS485 / 1-Wire / GPIO / Analog
+   ▼
+XIAO ESP32-C3 Node
+   │  WLAN + MQTT/TLS
+   ▼
+Grow-Central Edge / Raspberry Pi
+   │
+   └── optionale Cloud / Remote-Verwaltung</div>
+        <div class="info-grid">
+          <article class="info-card"><small>I²C</small><h3>Lokale Module</h3><p>SHT45, SCD41, Atlas-EZO, INA226, ADS1115 und weitere kurze Verbindungen im Node-Bereich.</p></article>
+          <article class="info-card"><small>RS485</small><h3>Feldsensoren</h3><p>SEN0604 Soil, SEN0641 PPFD, Wetterstation und industrielle Sensorik über Modbus RTU.</p></article>
+          <article class="info-card"><small>WEITERE</small><h3>1-Wire / Pulse / Digital</h3><p>DS18B20, Durchflussimpulse, HX711 und definierte digitale Erweiterungen.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="sensoren">
+      <div class="wrap">
+        <div class="section-title">
+          <div><div class="eyebrow">VERIFIZIERTE SENSORRICHTUNG</div><h2>Referenzsensoren nach Messaufgabe.</h2></div>
+          <p>Die Auswahl trennt bestätigte Herstellerfunktionen von noch zu validierenden Integrationen. Eine Busadresse allein gilt nicht als Sensoridentität.</p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Messaufgabe</th><th>Referenz</th><th>Anbindung</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Lufttemperatur / RH</td><td>Sensirion SHT45</td><td>I²C</td><td class="status-ok">Herstellerfunktion bestätigt</td></tr>
+              <tr><td>CO₂</td><td>Sensirion SCD41</td><td>I²C</td><td class="status-ok">Herstellerfunktion bestätigt</td></tr>
+              <tr><td>Boden: Feuchte / Temp / EC / pH</td><td>DFRobot SEN0604</td><td>RS485 / Modbus RTU</td><td class="status-ok">Register & Modbus dokumentiert</td></tr>
+              <tr><td>PPFD / PAR</td><td>DFRobot SEN0641</td><td>RS485 / Modbus RTU</td><td class="status-ok">Register & Modbus dokumentiert</td></tr>
+              <tr><td>Wassertemperatur</td><td>DS18B20</td><td>1-Wire</td><td class="status-ok">64-Bit Hardware-ID</td></tr>
+              <tr><td>Reservoir pH</td><td>Atlas Scientific EZO-pH</td><td>I²C / UART</td><td class="status-extra">isolierte Ausführung vorgesehen</td></tr>
+              <tr><td>Reservoir EC</td><td>Atlas Scientific EZO-EC K1</td><td>I²C / UART</td><td class="status-extra">isolierte Ausführung vorgesehen</td></tr>
+              <tr><td>Gelöster Sauerstoff</td><td>Atlas Scientific EZO-DO</td><td>I²C / UART</td><td class="status-extra">Hydro / Aquaponik</td></tr>
+              <tr><td>Wasserstand</td><td>4–20-mA Tauchdrucksonde</td><td>4–20 mA → ADC</td><td class="status-extra">Konverter erforderlich</td></tr>
+              <tr><td>Durchfluss</td><td>DFRobot SEN0550</td><td>Pulse / GPIO</td><td class="status-extra">Pegelwandler/Isolation erforderlich</td></tr>
+              <tr><td>Gewicht</td><td>Load Cell + HX711</td><td>Digital</td><td class="status-extra">optional</td></tr>
+              <tr><td>Leaf Temperature</td><td>Melexis MLX90614</td><td>I²C</td><td class="status-extra">Montage/FOV zu validieren</td></tr>
+              <tr><td>Leaf Wetness</td><td>SenseCAP Industrial Leaf Wetness</td><td>RS485 / Modbus RTU</td><td class="status-extra">Pro / Enterprise</td></tr>
+              <tr><td>Wetterstation</td><td>DFRobot SEN0657 / SenseCAP ONE</td><td>RS485 / Modbus RTU</td><td class="status-extra">Pro / Enterprise</td></tr>
+              <tr><td>Differenzdruck</td><td>Sensirion SDP810-500Pa</td><td>I²C</td><td class="status-extra">Lüftung / Filter</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="bom">
+      <div class="wrap">
+        <div class="section-title">
+          <div><div class="eyebrow">VERSUCHSAUFBAU OHNE SENSOREN</div><h2>Entwicklungs-BOM für den XIAO Sensor Hub.</h2></div>
+          <p>Die Liste deckt I²C, RS485, Analog, 4–20 mA, 1-Wire, Pulse, GPIO und Diagnose ab. AliExpress-Links sind bewusst Suchlinks, damit einzelne Händlerwechsel die Stückliste nicht sofort in digitales Geröll verwandeln.</p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Bauteil</th><th>Menge</th><th>Richtpreis</th><th>Zweck</th><th>AliExpress</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>MB102 Breadboard 830 Kontakte</td><td class="qty">2</td><td class="price">7,00 €</td><td>Versuchsaufbau</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MB102+830+breadboard" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>2</td><td>XIAO Breakout / Expansion Board ohne MCU</td><td class="qty">1</td><td class="price">5,00 €</td><td>Pins sauber herausführen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=Seeed+XIAO+breakout+expansion+board" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>3</td><td>Dupont M-M / M-F / F-F Set</td><td class="qty">1</td><td class="price">4,00 €</td><td>flexible Testverkabelung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=dupont+jumper+wire+male+female+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>4</td><td>Breadboard Jumper Wire Kit</td><td class="qty">1</td><td class="price">4,00 €</td><td>saubere feste Längen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=breadboard+jumper+wire+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>5</td><td>isoliertes UART/TTL ↔ RS485 Modul, 3,3 V, Auto Direction</td><td class="qty">2</td><td class="price">14,00 €</td><td>Modbus-Testbus + Reserve</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=isolated+UART+TTL+RS485+3.3V+automatic" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>6</td><td>ADS1115 16-Bit 4-Kanal ADC Modul</td><td class="qty">2</td><td class="price">5,00 €</td><td>Analog- und 4–20-mA-Auswertung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=ADS1115+16bit+4+channel+ADC+module" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>7</td><td>TCA9548A 8-Kanal I²C Multiplexer</td><td class="qty">2</td><td class="price">4,00 €</td><td>gleiche I²C-Adressen / Bussegmentierung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=TCA9548A+I2C+multiplexer+8+channel" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>8</td><td>MCP23017 16-I/O Expander</td><td class="qty">1</td><td class="price">2,50 €</td><td>zusätzliche GPIOs</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MCP23017+16+IO+I2C+module" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>9</td><td>HX711 Load Cell Amplifier</td><td class="qty">2</td><td class="price">3,00 €</td><td>Gewicht/Wägezellen testen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=HX711+load+cell+module" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>10</td><td>4–20-mA Receiver / Current-to-Voltage Modul</td><td class="qty">2</td><td class="price">7,00 €</td><td>Industriesensorik</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=4-20mA+receiver+voltage+module+3.3V+ADC" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>11</td><td>MP1584EN Step-Down Modul</td><td class="qty">5</td><td class="price">4,00 €</td><td>12 V → 5 V / Testspannungen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=MP1584EN+DC+DC+buck+module" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>12</td><td>JST-XH 2,54-mm Stecker-Set 2–6-polig</td><td class="qty">1</td><td class="price">6,00 €</td><td>steckbare Sensorverkabelung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+2.54+connector+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>13</td><td>JST-XH vorkonfektionierte Kabel</td><td class="qty">1</td><td class="price">5,00 €</td><td>Prototyping ohne Einzelcrimpen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=JST+XH+pre+crimped+cable" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>14</td><td>Schraubklemmen 5,08 mm, gemischt</td><td class="qty">1</td><td class="price">5,00 €</td><td>12 V / GND / RS485 A/B</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=5.08mm+screw+terminal+block+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>15</td><td>2,54-mm Stift- und Buchsenleisten</td><td class="qty">1</td><td class="price">3,00 €</td><td>Module steckbar aufbauen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=2.54mm+pin+header+socket+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>16</td><td>Widerstandssortiment</td><td class="qty">1</td><td class="price">4,00 €</td><td>Pull-ups, Terminierung, Pegelanpassung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=resistor+assortment+kit+1%25" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>17</td><td>Kondensatorsortiment</td><td class="qty">1</td><td class="price">4,00 €</td><td>Entstörung / Versorgung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=capacitor+assortment+kit" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>18</td><td>USB Logic Analyzer 8 Kanal / 24 MHz</td><td class="qty">1</td><td class="price">8,00 €</td><td>I²C, UART, 1-Wire, Pulse debuggen</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=USB+logic+analyzer+24MHz+8+channel" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>19</td><td>Krokoklemmen / Testleitungen</td><td class="qty">1</td><td class="price">4,00 €</td><td>Mess- und Prüfaufbau</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=alligator+clip+test+lead+set" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>20</td><td>USB-C Datenkabel</td><td class="qty">1</td><td class="price">4,00 €</td><td>XIAO Flash / Debug</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=USB-C+data+cable+USB+A" target="_blank" rel="noopener">Suchen</a></td></tr>
+              <tr><td>21</td><td>Aderendhülsen + kleine Leitungen</td><td class="qty">1</td><td class="price">6,00 €</td><td>saubere Versorgung und Busverdrahtung</td><td><a href="https://www.aliexpress.com/wholesale?SearchText=ferrule+wire+kit+small+gauge" target="_blank" rel="noopener">Suchen</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="bom-total"><div><strong>Richtwert gesamt: 108,50 €</strong><div class="note">ohne Sensoren, vorhandenen XIAO und 230-V-Netzteil · Preise sind Momentaufnahmen/Richtwerte</div></div><span class="tag lime">ENTWICKLUNGSSTRECKE</span></div>
+        <p class="note">Für ein Netzteil an 230 V wird bewusst kein namenloses AliExpress-Netzteil als Referenz festgelegt. Dafür ist ein Marken-Netzteil mit nachvollziehbarer Dokumentation vorgesehen.</p>
+      </div>
+    </section>
+
+    <section class="section" id="sicherheit">
+      <div class="wrap">
+        <div class="section-title"><div><div class="eyebrow">FIRMWARE-GRUNDSÄTZE</div><h2>Sensoren dürfen nicht verwechselt werden.</h2></div><p>Grow Central trennt technische Identität, Standort, Messwert und Qualitätsstatus.</p></div>
+        <div class="info-grid">
+          <article class="info-card"><small>IDENTITÄT</small><h3>GC Sensor UUID</h3><p>Busadresse ist kein Identitätsbeweis. Hardware-ID wird genutzt, wenn der Sensor eine liefert; zusätzlich führt Grow Central eine eigene UUID.</p></article>
+          <article class="info-card"><small>VERSORGUNG</small><h3>Spannung und Strom überwachen</h3><p>INA226/ADC-Messpunkte für Node- und Sensorbus-Versorgung, Brownout-Erkennung und Diagnose von Power-Fehlern.</p></article>
+          <article class="info-card"><small>FEHLERFALL</small><h3>Fail-safe statt Blindflug</h3><p>GOOD, STALE, INVALID, BUS_ERROR, POWER_ERROR und OFFLINE steuern, ob Automationen weiterlaufen oder sicher pausieren.</p></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div><img src="assets/brand/135er-grow-central-lockup-v0.9.png" alt="Grow Central"><p>Local-First Steuerung, Monitoring und Automationen für Grow-Umgebungen.</p></div>
+      <div><strong>PLATTFORM</strong><a href="index.html">Startseite</a><a href="#architektur">Sensorik</a><a href="#bom">BOM</a></div>
+      <div><strong>PROJEKT</strong><a href="https://github.com/jygnw29kms-bit/135er-Grow-Central">GitHub</a><a href="index.html#status">Status</a></div>
+    </div>
+  </footer>
+</body>
+</html>
