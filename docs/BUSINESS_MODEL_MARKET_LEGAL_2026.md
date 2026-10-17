@@ -547,3 +547,31 @@ Nicht empfohlen:
 - Bezahlstart vor Backup-/Restore- und Security-Reife.
 
 Strategisches Ziel: Nutzer kaufen **Komfort, Remotezugriff, Datensicherheit und Zeitersparnis**, nicht die Erlaubnis, ihre eigene lokale Hardware weiter benutzen zu dürfen.
+
+## 20. Freiwillige Unterstützung der Free-Version
+
+GrowCentral Core bleibt kostenlos und funktional vollständig lokal nutzbar. Zusätzlich darf die Oberfläche einen klar als freiwillig gekennzeichneten Bereich **„GrowCentral unterstützen“** anbieten.
+
+Empfohlen:
+- einmalige Unterstützung mit frei wählbarem Betrag;
+- optionale monatliche Unterstützung;
+- GitHub Sponsors als naheliegender Open-Source-Kanal, alternativ ein eigener Zahlungsanbieter nach steuerlicher Prüfung;
+- keine funktionalen Vorteile, keine Premium-Features und keine verkürzte Supportwarteschlange allein aufgrund einer freiwilligen Unterstützung;
+- keine irreführende Bezeichnung als steuerlich absetzbare „Spende“, solange keine entsprechend steuerbegünstigte Organisation vorliegt;
+- Formulierungen wie „Unterstützen“, „Sponsor werden“ oder „Projekt fördern“;
+- transparente Erklärung, wofür Beiträge verwendet werden, z. B. Hosting, Testhardware, Domains, Dokumentation und Entwicklungsaufwand;
+- jederzeit ablehnbar und ohne Nachteil für Free-Nutzer;
+- keine manipulativen Popups oder wiederkehrenden Zahlungsaufforderungen im laufenden Grow-Betrieb.
+
+### Steuer-/Umsatzsteuergrenze
+
+Ob eine freiwillige Zahlung umsatzsteuerlich als echter Zuschuss/Unterstützung ohne Leistungsaustausch oder als Entgelt einzuordnen ist, hängt von der konkreten Ausgestaltung ab. Sobald eine Zahlung mit einer konkreten Gegenleistung verbunden wird, steigt das Risiko einer steuerpflichtigen Leistung. Deshalb werden Unterstützerzahlungen im Produktmodell **nicht an Features gekoppelt**. Die konkrete steuerliche Behandlung muss vor öffentlicher Annahme von Zahlungen mit Steuerberatung festgelegt werden.
+
+### UX-Regel
+
+Im Free-Dashboard darf ein dezenter Bereich erscheinen:
+
+**GrowCentral unterstützen**
+„GrowCentral bleibt kostenlos und Open Source. Wer Entwicklung, Testhardware und Infrastruktur freiwillig unterstützen möchte, kann dies einmalig oder regelmäßig tun.“
+
+Kein Countdown, kein künstlicher Mangel, kein Funktionsentzug. Unterstützung ist Anerkennung, kein verstecktes Abo.

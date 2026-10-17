@@ -91,6 +91,11 @@
     </section>
     <section id="history" class="view"><article class="panel"><div class="panel-head"><div><div class="eyebrow">EVENT STREAM</div><h2>History</h2></div></div><div class="empty-state">Schalt- und Kamera-Control-Befehle werden auditiert. Persistente Leistungs-Zeitreihen folgen.</div></article></section>
     <section id="system" class="view">
+      <article class="panel edition-panel" id="editionPanel">
+        <div class="panel-head"><div><div class="eyebrow">GROWCENTRAL EDITION</div><h2>Free / Link / Pro</h2><p class="panel-copy">Die lokale Grow-Steuerung bleibt in jeder Edition vollständig verfügbar. Bezahlvarianten erweitern nur Online-, Backup- und Profi-Funktionen.</p></div><span class="pulse" id="editionBadge">FREE</span></div>
+        <div id="editionFeatureGrid" class="edition-feature-grid"><div class="empty-state">Edition wird geladen…</div></div>
+        <div id="editionTestControls" class="edition-test-controls" hidden><div class="eyebrow">TEST-PI · EDITION SIMULATION</div><div class="button-row"><button class="ghost" type="button" data-test-edition="FREE">FREE</button><button class="secondary" type="button" data-test-edition="LINK">LINK</button><button class="primary" type="button" data-test-edition="PRO">PRO</button><button class="danger" type="button" id="clearEditionTestBtn">RESET</button></div><div class="scan-status" id="editionTestStatus">Nur im ausdrücklich aktivierten Testmodus verfügbar.</div></div>
+      </article>
       <article class="panel setup-panel" id="firstBootSetupPanel" hidden>
         <div class="panel-head"><div><div class="eyebrow">GESCHÜTZTE ERSTEINRICHTUNG</div><h2>Netzwerk und Zugänge konfigurieren</h2><p class="panel-copy">Die Einrichtung findet direkt in der Haupt-GUI statt. Die interne Adresse bleibt immer <strong>135er-Grow-Central.local</strong>.</p></div></div>
         <div id="firstBootSetupStatus" class="scan-status">Setupstatus wird geladen…</div>
