@@ -6,6 +6,7 @@ API endpoint.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import json
@@ -89,6 +90,20 @@ def _remove_persistent_session(token: str) -> None:
     rows = _load_persistent_sessions()
     rows.pop(_token_hash(token), None)
     _save_persistent_sessions(rows)
+
+
+def _cookie_secure(request: Request) -> bool:
+    """Choose the Secure cookie flag explicitly or derive it from the request scheme.
+
+    Local first-boot/appliance HTTP must remain usable. Public/remote HTTPS sessions
+    should always receive Secure cookies. GC_GUI_COOKIE_SECURE accepts auto/true/false.
+    """
+    mode = os.getenv("GC_GUI_COOKIE_SECURE", "auto").strip().lower()
+    if mode in {"1", "true", "yes", "on"}:
+        return True
+    if mode in {"0", "false", "no", "off"}:
+        return False
+    return request.url.scheme.lower() == "https"
 
 
 class LoginBody(BaseModel):
@@ -186,19 +201,19 @@ async def login_page():
 
 
 @router.post("/api/auth/login")
-async def login(body: LoginBody, response: Response):
+async def login(body: LoginBody, request: Request, response: Response):
     expected_user = os.getenv("GC_GUI_USERNAME", "").strip()
     expected_hash = os.getenv("GC_GUI_PASSWORD_HASH", "").strip()
     if not expected_user or not expected_hash:
         raise HTTPException(503, "GUI authentication is not configured")
     if not secrets.compare_digest(body.username, expected_user) or not verify_password(body.password.get_secret_value(), expected_hash):
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
         raise HTTPException(401, "Benutzername oder Passwort falsch")
     ttl = REMEMBER_SESSION_TTL if body.remember else SESSION_TTL
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = GuiSession(expires=time.monotonic() + ttl)
     _persist_session(token, time.time() + ttl)
-    response.set_cookie(COOKIE_NAME, token, max_age=ttl, httponly=True, samesite="strict", secure=False, path="/")
+    response.set_cookie(COOKIE_NAME, token, max_age=ttl, httponly=True, samesite="strict", secure=_cookie_secure(request), path="/")
     return {"ok": True, "username": expected_user, "remembered": body.remember}
 
 
