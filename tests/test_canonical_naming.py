@@ -7,11 +7,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Legacy *brand* forms only. Generic descriptive wording such as
-# "grow control" or "Grow-Controller" is not the former product name and
-# must not make the repository test fail.
+# Detect only former branded spellings. Generic descriptive wording remains allowed.
+_LEGACY_COMPACT = "grow" + "control"
 LEGACY = re.compile(
-    r"(?:135er[\s_-]*)?growcontrol\b|135er[\s_-]+grow[\s_-]+control\b",
+    rf"(?:135er[\s_-]*)?{_LEGACY_COMPACT}\b|135er[\s_-]+grow[\s_-]+control\b",
     re.IGNORECASE,
 )
 TEXT_SUFFIXES = {
