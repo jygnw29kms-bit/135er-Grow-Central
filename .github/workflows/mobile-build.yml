@@ -1,23 +1,22 @@
-name: Build 135er-Grow Central Nexus Mobile
+name: Build Grow Central native fallback clients
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
-    paths:
-      - 'mobile/**'
-      - '.github/workflows/mobile-build.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: grow-central-nexus-mobile-${{ github.ref }}
+  group: grow-central-native-fallback-${{ github.ref }}
   cancel-in-progress: true
+
+# Grow Central is PWA-first. This workflow exists only for explicit fallback/testing
+# when a required platform capability cannot be delivered safely through the PWA.
+# Native clients must never become a second source of business logic.
 
 jobs:
   android:
-    name: Android Nexus test APK
+    name: Android fallback test APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -29,9 +28,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Install Mobile dependencies
+      - name: Install mobile dependencies
         working-directory: mobile
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Generate Android project
         working-directory: mobile
         run: npx cap add android
@@ -46,18 +45,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p mobile/dist
-          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk mobile/dist/135er-GrowCentral-Nexus-Android-debug.apk
-          sha256sum mobile/dist/135er-GrowCentral-Nexus-Android-debug.apk > mobile/dist/135er-GrowCentral-Nexus-Android-debug.apk.sha256
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk mobile/dist/GrowCentral-Android-fallback-debug.apk
+          sha256sum mobile/dist/GrowCentral-Android-fallback-debug.apk > mobile/dist/GrowCentral-Android-fallback-debug.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: GrowCentral-Nexus-Android-APK
+          name: GrowCentral-Android-Fallback
           path: |
-            mobile/dist/135er-GrowCentral-Nexus-Android-debug.apk
-            mobile/dist/135er-GrowCentral-Nexus-Android-debug.apk.sha256
+            mobile/dist/GrowCentral-Android-fallback-debug.apk
+            mobile/dist/GrowCentral-Android-fallback-debug.apk.sha256
           if-no-files-found: error
 
   ios:
-    name: iOS Nexus sideload IPA
+    name: iOS fallback sideload IPA
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
@@ -65,9 +64,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install Mobile dependencies
+      - name: Install mobile dependencies
         working-directory: mobile
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Generate iOS project
         working-directory: mobile
         run: npx cap add ios
@@ -81,10 +80,10 @@ jobs:
           set -euo pipefail
           PLIST="ios/App/App/Info.plist"
           test -f "$PLIST"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 135er Grow Central" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string '135er Grow Central'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Grow Central" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string 'Grow Central'" "$PLIST"
           /usr/libexec/PlistBuddy -c "Delete :NSLocalNetworkUsageDescription" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string '135er Grow Central verbindet sich mit deinem Raspberry Pi und anderen ausdrücklich eingerichteten Grow-Central-Instanzen im lokalen Netzwerk.'" "$PLIST"
-      - name: Build unsigned device app for sideload signing
+          /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 'Grow Central verbindet sich mit deiner lokalen Grow-Central-Instanz.'" "$PLIST"
+      - name: Build unsigned fallback app
         working-directory: mobile
         shell: bash
         run: |
@@ -107,12 +106,12 @@ jobs:
           rm -rf Payload dist
           mkdir -p Payload dist
           cp -R "$APP_PATH" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload dist/135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa
-          shasum -a 256 dist/135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa > dist/135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa.sha256
+          ditto -c -k --sequesterRsrc --keepParent Payload dist/GrowCentral-iOS-fallback-unsigned.ipa
+          shasum -a 256 dist/GrowCentral-iOS-fallback-unsigned.ipa > dist/GrowCentral-iOS-fallback-unsigned.ipa.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: GrowCentral-Nexus-iOS-Sideload-IPA
+          name: GrowCentral-iOS-Fallback
           path: |
-            mobile/dist/135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa
-            mobile/dist/135er-GrowCentral-Nexus-iOS-Sideload-unsigned.ipa.sha256
+            mobile/dist/GrowCentral-iOS-fallback-unsigned.ipa
+            mobile/dist/GrowCentral-iOS-fallback-unsigned.ipa.sha256
           if-no-files-found: error
