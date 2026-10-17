@@ -575,3 +575,17 @@ Im Free-Dashboard darf ein dezenter Bereich erscheinen:
 „GrowCentral bleibt kostenlos und Open Source. Wer Entwicklung, Testhardware und Infrastruktur freiwillig unterstützen möchte, kann dies einmalig oder regelmäßig tun.“
 
 Kein Countdown, kein künstlicher Mangel, kein Funktionsentzug. Unterstützung ist Anerkennung, kein verstecktes Abo.
+
+## 21. Betreiberstruktur: Einzelperson
+
+GrowCentral wird aktuell von **einer natürlichen Einzelperson** betrieben. Diese Betreiberstruktur ist für Geschäftsmodell, Verträge, Rechnungen, Datenschutz, Support und Haftungsorganisation verbindlich zu berücksichtigen.
+
+Projektregeln:
+- keine GmbH/UG/GbR oder andere Gesellschaft in UI, AGB, Rechnung oder Website suggerieren, solange diese nicht tatsächlich besteht;
+- zentrale Betreiberkonfiguration statt mehrfach hardcodierter Anbieterangaben;
+- öffentliche Bezahlfunktionen erst nach Klärung von Gewerbe-/Steuerstatus, Rechnungsangaben, Umsatzsteuer/OSS und ladungsfähigen Pflichtangaben;
+- Prozesse auf geringen manuellen Verwaltungsaufwand und hohe Automatisierung optimieren;
+- Vertretungs-/Notfallzugänge und Backups trotzdem technisch vorbereiten;
+- spätere Rechtsformänderung muss ohne Änderung von Kunden-/Vertrags-IDs möglich sein.
+
+Die Einzelpersonen-Struktur ist kein Grund, Sicherheits-, Verbraucher-, Datenschutz- oder Steuerpflichten zu reduzieren. Sie ist vielmehr ein Grund, unnötige Doppelpflege und manuelle Prozesse konsequent zu vermeiden.
