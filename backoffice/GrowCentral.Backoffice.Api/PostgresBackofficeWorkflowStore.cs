@@ -28,10 +28,10 @@ public sealed class PostgresBackofficeWorkflowStore(string connectionString)
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            await using var reservation = new NpgsqlCommand(
-                """INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
-                   VALUES(@key,'document.approve',@hash,NOW(),NOW()+INTERVAL '24 hours')
-                   ON CONFLICT (idempotency_key) DO NOTHING""", connection, tx);
+            const string reservationSql = @"INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
+VALUES(@key,'document.approve',@hash,NOW(),NOW()+INTERVAL '24 hours')
+ON CONFLICT (idempotency_key) DO NOTHING";
+            await using var reservation = new NpgsqlCommand(reservationSql, connection, tx);
             reservation.Parameters.AddWithValue("key", idempotencyKey);
             reservation.Parameters.AddWithValue("hash", requestHash);
             if (await reservation.ExecuteNonQueryAsync(cancellationToken) == 0)
@@ -39,10 +39,10 @@ public sealed class PostgresBackofficeWorkflowStore(string connectionString)
         }
 
         var newVersion = expectedVersion + 1;
-        await using (var update = new NpgsqlCommand(
-            """UPDATE backoffice_documents
-               SET status='Approved', version=@new_version
-               WHERE id=@id AND version=@expected_version AND status IN ('Draft','ReviewRequired')""", connection, tx))
+        const string updateSql = @"UPDATE backoffice_documents
+SET status='Approved', version=@new_version
+WHERE id=@id AND version=@expected_version AND status IN ('Draft','ReviewRequired')";
+        await using (var update = new NpgsqlCommand(updateSql, connection, tx))
         {
             update.Parameters.AddWithValue("new_version", newVersion);
             update.Parameters.AddWithValue("id", documentId);
@@ -51,10 +51,10 @@ public sealed class PostgresBackofficeWorkflowStore(string connectionString)
                 throw new InvalidOperationException("Dokument wurde parallel geändert oder ist nicht freigabefähig.");
         }
 
-        await using (var audit = new NpgsqlCommand(
-            """INSERT INTO backoffice_audit_events
-               (id,occurred_at,actor_id,action,entity_type,entity_id,entity_version,reason,idempotency_key,payload_hash)
-               VALUES(@audit_id,NOW(),@actor,'Approved','BusinessDocument',@entity_id,@version,@reason,@idempotency,@hash)""", connection, tx))
+        const string auditSql = @"INSERT INTO backoffice_audit_events
+(id,occurred_at,actor_id,action,entity_type,entity_id,entity_version,reason,idempotency_key,payload_hash)
+VALUES(@audit_id,NOW(),@actor,'Approved','BusinessDocument',@entity_id,@version,@reason,@idempotency,@hash)";
+        await using (var audit = new NpgsqlCommand(auditSql, connection, tx))
         {
             audit.Parameters.AddWithValue("audit_id", Guid.NewGuid());
             audit.Parameters.AddWithValue("actor", actor);
