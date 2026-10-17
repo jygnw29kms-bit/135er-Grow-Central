@@ -1,5 +1,5 @@
 -- GrowCentral Backoffice / Buchhaltung PostgreSQL schema
--- Ziel: zentrale persistente Quelle für kaufmännische Dokumente, Nummernkreise, Perioden und Audit.
+-- Ziel: zentrale persistente Quelle für kaufmännische Dokumente, Nummernkreise, Perioden, Benutzer und Audit.
 -- Keine produktive Buchhaltung auf der SQLite-Telemetriedatenbank.
 
 CREATE TABLE IF NOT EXISTS backoffice_operator_config (
@@ -11,14 +11,47 @@ CREATE TABLE IF NOT EXISTS backoffice_operator_config (
     vat_id TEXT,
     business_id TEXT,
     tax_office TEXT,
-    taxation_mode TEXT NOT NULL DEFAULT 'regular',
-    vat_filing_period TEXT NOT NULL DEFAULT 'monthly',
-    cash_or_accrual_vat TEXT NOT NULL DEFAULT 'cash',
-    chart_of_accounts TEXT NOT NULL DEFAULT 'SKR03',
+    taxation_mode TEXT NOT NULL DEFAULT 'regular' CHECK (taxation_mode IN ('regular','small_business')),
+    vat_filing_period TEXT NOT NULL DEFAULT 'monthly' CHECK (vat_filing_period IN ('monthly','quarterly','annual','none')),
+    cash_or_accrual_vat TEXT NOT NULL DEFAULT 'cash' CHECK (cash_or_accrual_vat IN ('cash','accrual')),
+    chart_of_accounts TEXT NOT NULL DEFAULT 'SKR03' CHECK (chart_of_accounts IN ('SKR03','SKR04')),
     prior_year_turnover NUMERIC(14,2),
+    current_year_turnover NUMERIC(14,2),
+    small_business_waiver_since DATE,
+    legal_form TEXT NOT NULL DEFAULT 'sole_proprietor' CHECK (legal_form='sole_proprietor'),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS backoffice_users (
+    id UUID PRIMARY KEY,
+    username TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('Owner','Billing','Support','ReadOnly')),
+    totp_secret TEXT,
+    mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMPTZ,
+    CONSTRAINT uq_backoffice_users_username UNIQUE (username),
+    CHECK (NOT mfa_enabled OR totp_secret IS NOT NULL)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_backoffice_users_username_ci ON backoffice_users(lower(username));
+
+CREATE TABLE IF NOT EXISTS backoffice_sessions (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES backoffice_users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    remote_address TEXT,
+    revoked_at TIMESTAMPTZ,
+    CHECK (expires_at > created_at)
+);
+CREATE INDEX IF NOT EXISTS idx_backoffice_sessions_user ON backoffice_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_backoffice_sessions_expiry ON backoffice_sessions(expires_at) WHERE revoked_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS backoffice_parties (
     id UUID PRIMARY KEY,
