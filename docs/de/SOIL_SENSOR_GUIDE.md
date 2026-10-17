@@ -39,6 +39,6 @@ Nach der Referenzkalibrierung dieselbe Einstecktiefe und Position verwenden. Den
 
 ## Vorhandene Diagnosewerte
 
-Die signierte Telemetrie liefert Roh-/Median-/Filterwerte, Min/Max, Streuung, Qualität, Messzustand, Trocken-/Nassreferenz, WLAN-Signalstärke, Laufzeit und Firmware. Die Raumhistorie zeigt aktuell den Feuchte-Mittelwert; eine separate Diagnoseansicht ist noch nicht implementiert.
+Die signierte Telemetrie liefert Roh-/Median-/Filterwerte, Min/Max, Streuung, Qualität, Messzustand, Trocken-/Nassreferenz, WLAN-Signalstärke, Laufzeit und Firmware. Die Raumhistorie zeigt den Feuchte-Mittelwert. Die Raumansicht enthält zusätzlich eine separate Live-Diagnose für angenommene Grow-Central-Sensoren mit Rohwert, Median, gefiltertem ADC, Min/Max, Streuung, Signalqualität, Messzustand, Kalibrierreferenzen, WLAN-Signal, Laufzeit und Firmware.
 
-Bei MQTT-Problemen `NET INFO` lesen: `wifi_status=3`, eine IP und `mqtt_connected=yes` zeigen eine bestehende Verbindung. Firmware 0.4.1 meldet zusätzlich UTC-Epoch, `ca_bytes` und bei Fehlern `tls_error`. Ein `OK broker CA stored` allein garantiert bei alter Firmware keinen vollständigen Transfer. Keine Zertifikatsprüfung abschalten; [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md) beachten.
+Bei MQTT-Problemen `NET INFO` lesen: `wifi_status=3`, eine IP und `mqtt_connected=yes` zeigen eine bestehende Verbindung. Firmware 0.5.2 meldet UTC-Epoch, `ca_bytes` und bei Fehlern `tls_error`. Ein `OK broker CA stored` allein garantiert bei alter Firmware keinen vollständigen Transfer. Keine Zertifikatsprüfung abschalten; [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md) beachten.
