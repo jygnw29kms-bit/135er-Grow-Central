@@ -24,6 +24,7 @@ builder.Services.AddSingleton(new PostgresBackofficeStore(connectionString));
 builder.Services.AddSingleton(new PostgresBackofficeWorkflowStore(connectionString));
 builder.Services.AddSingleton(new PostgresAuthStore(connectionString));
 builder.Services.AddSingleton(new PostgresOperatorConfigStore(connectionString));
+builder.Services.AddSingleton(new PostgresLedgerStore(connectionString));
 builder.Services.AddSingleton<BusinessDocumentService>();
 builder.Services.AddSingleton<BusinessDocumentRenderer>();
 builder.Services.AddRateLimiter(options =>
@@ -69,7 +70,7 @@ app.MapGet("/api/backoffice/health", async (PostgresBackofficeStore store, Postg
     {
         ok = dbOk,
         service = "GrowCentral Backoffice API",
-        version = "0.5.0",
+        version = "0.6.0",
         database_configured = store.IsConfigured,
         database_reachable = dbOk,
         owner_initialized = hasUsers,
@@ -322,6 +323,7 @@ app.MapPost("/api/backoffice/documents/{id:guid}/finalize", async (Guid id, Http
     }
 });
 
+app.MapLedgerEndpoints();
 app.Run();
 
 static BusinessDocument Rehydrate(StoredBusinessDocument stored)
