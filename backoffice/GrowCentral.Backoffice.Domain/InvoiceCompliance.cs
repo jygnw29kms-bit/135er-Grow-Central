@@ -15,7 +15,9 @@ public sealed record InvoiceComplianceContext(
     bool IsB2B,
     bool IsB2G = false,
     bool IsSmallAmountInvoice = false,
-    bool IsExemptTransaction = false);
+    bool IsExemptTransactionUnderSection4_8To29 = false,
+    bool IsSmallBusinessSupplier = false,
+    bool IsPassengerTicket = false);
 
 public sealed record EInvoiceDecision(EInvoiceRequirement Requirement, string Reason, string LegalReference);
 
@@ -32,8 +34,17 @@ public static class GermanEInvoicePolicy
         if (!context.SupplierEstablishedInGermany || !context.CustomerEstablishedInGermany)
             return new(EInvoiceRequirement.NotApplicable, "Die nationale Pflicht nach § 14 UStG betrifft regelmäßig Umsätze zwischen inländischen Unternehmern.", "§ 14 UStG");
 
-        if (context.IsSmallAmountInvoice || context.IsExemptTransaction)
-            return new(EInvoiceRequirement.NotApplicable, "Für den markierten Ausnahmefall wird keine allgemeine Pflicht zur strukturierten E-Rechnung erzwungen.", "§ 14 UStG / UStDV");
+        if (context.IsExemptTransactionUnderSection4_8To29)
+            return new(EInvoiceRequirement.NotApplicable, "Für viele nach § 4 Nr. 8 bis 29 UStG steuerfreie Umsätze besteht keine umsatzsteuerliche Pflicht zur Ausstellung einer E-Rechnung.", "§ 14 Abs. 2 UStG");
+
+        if (context.IsSmallAmountInvoice)
+            return new(EInvoiceRequirement.NotApplicable, "Kleinbetragsrechnungen bis 250 EUR dürfen unabhängig von der allgemeinen B2B-Pflicht als sonstige Rechnung ausgestellt werden.", "§ 33 UStDV");
+
+        if (context.IsSmallBusinessSupplier)
+            return new(EInvoiceRequirement.NotApplicable, "Rechnungen von Kleinunternehmern können als sonstige Rechnung ausgestellt werden; Empfangsfähigkeit für E-Rechnungen bleibt erforderlich.", "§ 34a UStDV i. V. m. § 19 UStG");
+
+        if (context.IsPassengerTicket)
+            return new(EInvoiceRequirement.NotApplicable, "Fahrausweise, die als Rechnung gelten, können als sonstige Rechnung ausgestellt werden.", "§ 34 UStDV");
 
         if (context.SupplyDate < new DateOnly(2025, 1, 1))
             return new(EInvoiceRequirement.NotApplicable, "Umsatz vor Einführung der neuen E-Rechnungsregeln.", "§ 27 UStG");
@@ -46,4 +57,13 @@ public static class GermanEInvoicePolicy
 
         return new(EInvoiceRequirement.StructuredEInvoiceRequired, "Für den inländischen B2B-Umsatz ist nach Ablauf der einschlägigen Übergangsfrist eine strukturierte E-Rechnung erforderlich.", "§ 14 UStG i. V. m. § 27 Abs. 38 UStG");
     }
+}
+
+public static class EInvoiceStandards2026
+{
+    public const string XRechnungVersion = "3.0.2";
+    public const string XRechnungBundle = "2026-08-31";
+    public const string KositValidatorVersion = "1.6.3";
+    public const string ZugferdVersion = "2.5.2";
+    public const string En16931 = "EN 16931";
 }
