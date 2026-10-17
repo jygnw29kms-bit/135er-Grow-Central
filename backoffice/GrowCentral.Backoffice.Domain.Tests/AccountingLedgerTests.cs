@@ -28,6 +28,47 @@ public sealed class AccountingLedgerTests
     }
 
     [Fact]
+    public void GrowCentral_billing_entry_requires_contract_and_source()
+    {
+        var entry = new JournalEntryDraft(
+            new DateOnly(2026, 10, 17),
+            new DateOnly(2026, 10, 17),
+            "Freie allgemeine Buchung",
+            null,
+            null,
+            new[]
+            {
+                new JournalLine("1200", 100m, 0m),
+                new JournalLine("8400", 0m, 100m)
+            });
+
+        var errors = GrowCentralContractBillingLedgerPolicy.ValidateScope(entry);
+        Assert.Contains(errors, x => x.Contains("ContractId", StringComparison.Ordinal));
+        Assert.Contains(errors, x => x.Contains("Rechnungs-/Dokumentquelle", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GrowCentral_contract_invoice_entry_is_inside_scope()
+    {
+        var entry = new JournalEntryDraft(
+            new DateOnly(2026, 10, 17),
+            new DateOnly(2026, 10, 17),
+            "GC Vertragsrechnung",
+            "RE-2026-000001",
+            Guid.NewGuid(),
+            new[]
+            {
+                new JournalLine("1200", 119m, 0m),
+                new JournalLine("8400", 0m, 100m),
+                new JournalLine("1776", 0m, 19m, "U19", 19m, 19m)
+            },
+            ContractId: Guid.NewGuid(),
+            BillingPeriodId: Guid.NewGuid());
+
+        Assert.Empty(GrowCentralContractBillingLedgerPolicy.ValidateScope(entry));
+    }
+
+    [Fact]
     public void Unbalanced_entry_is_rejected()
     {
         var entry = new JournalEntryDraft(
