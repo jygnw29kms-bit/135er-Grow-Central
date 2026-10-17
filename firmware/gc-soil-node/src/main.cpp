@@ -10,7 +10,7 @@
 #include "ble_provisioning.h"
 #include <bootloader_random.h>
 
-static constexpr char FW_VERSION[] = "0.5.2";
+static constexpr char FW_VERSION[] = "0.5.3";
 static constexpr char PROTOCOL[] = "gc-esp32-mqtt-v1";
 static constexpr char SCHEMA[] = "gc-device-v1";
 static constexpr char MQTT_ROOT[] = "growcentral/v1";
@@ -313,7 +313,7 @@ static String announcementPayload() {
   String payload = "{\"schema\":\"" + String(SCHEMA) + "\",\"protocol\":\"" + String(PROTOCOL) +
                    "\",\"id\":\"" + jsonEscape(deviceId) + "\",\"name\":\"" + jsonEscape(deviceName) +
                    "\",\"device_class\":\"sensor\",\"model\":\"GC-SOIL-XIAO-C3-HW390\",\"firmware\":\"" +
-                   String(FW_VERSION) + "\",\"hardware_uid\":\"" + hardwareUid + "\",\"calibration\":" + calibrationJson() + ",\"capabilities\":[\"soil_moisture\"]}";
+                   String(FW_VERSION) + "\",\"hardware_uid\":\"" + hardwareUid + "\",\"driver_id\":\"gc.hw390.analog\",\"driver_verification\":\"gc_hardware_validated\",\"sensor_health_model\":\"gc-sensor-health-v1\",\"calibration\":" + calibrationJson() + ",\"capabilities\":[\"soil_moisture\"]}";
   return payload;
 }
 

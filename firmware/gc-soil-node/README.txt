@@ -11,7 +11,7 @@ Measured engineering references on the first node
 - AIR_RAW: 3767
 - WATER_RAW: 1310
 
-Firmware 0.5.0 (BLE secure provisioning source/build verified; real BLE end-to-end hardware validation pending)
+Firmware 0.5.3 (driver identity/verification metadata added; BLE secure provisioning source/build verified; real BLE end-to-end hardware validation pending)
 - 12-bit ADC on A0/GPIO2
 - 64-sample acquisition windows
 - 12.5% trimmed mean for outlier suppression
@@ -22,6 +22,7 @@ Firmware 0.5.0 (BLE secure provisioning source/build verified; real BLE end-to-e
 - Persistent calibration and network configuration in ESP32 NVS
 - Stable device id derived from the ESP32 MAC, e.g. gc-soil-17caec
 - Native Grow-Central MQTT protocol gc-esp32-mqtt-v1
+- Announcement includes driver_id, driver_verification and gc-sensor-health-v1 metadata
 - Retained announce, state and availability topics
 - MQTT Last Will retained as offline
 - Diagnostics in the MQTT state meta object
