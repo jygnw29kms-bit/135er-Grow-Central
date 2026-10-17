@@ -61,6 +61,7 @@ app.include_router(calibration_router)
 install_mdns_alias(app)
 install_rooms(app)
 install_automation(app)
+install_power_monitor(app)
 
 install_observer(app)
 install_ble_observer(app)
