@@ -29,3 +29,8 @@ __pycache__/
 # Local third-party CAD references
 hardware/enclosures/freecad_v2/references/
 hardware/enclosures/freecad_v2/patch_*.py
+
+# Local deployment scratch
+.deploy-*/
+hardware/enclosures/freecad/test_shapestring.py
+
