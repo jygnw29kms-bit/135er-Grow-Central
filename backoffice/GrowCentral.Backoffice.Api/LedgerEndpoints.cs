@@ -85,6 +85,7 @@ public static class LedgerEndpoints
             }
         });
 
+        app.MapAuthHardeningEndpoints();
         app.MapReceiptEndpoints();
     }
 
