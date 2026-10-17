@@ -1,4 +1,7 @@
 -- GrowCentral Backoffice immutable incoming receipt archive, 2026-10-17
+-- Rechnungen/Buchungsbelege: gesetzliche Mindestaufbewahrung wird abgebildet,
+-- aber niemals allein aufgrund eines Datums automatisch gelöscht. Festsetzungsfristen,
+-- § 15a UStG und sonstige Legal-Holds können eine längere Aufbewahrung erfordern.
 
 CREATE TABLE IF NOT EXISTS backoffice_original_receipts (
     id UUID PRIMARY KEY,
@@ -21,6 +24,9 @@ CREATE TABLE IF NOT EXISTS backoffice_receipt_workflow (
     gross_amount NUMERIC(14,2),
     currency CHAR(3),
     structured_format TEXT,
+    minimum_retention_until DATE,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE,
+    deletion_review_required BOOLEAN NOT NULL DEFAULT TRUE,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by TEXT NOT NULL
@@ -28,6 +34,7 @@ CREATE TABLE IF NOT EXISTS backoffice_receipt_workflow (
 CREATE INDEX IF NOT EXISTS idx_backoffice_receipt_status ON backoffice_receipt_workflow(status);
 CREATE INDEX IF NOT EXISTS idx_backoffice_receipt_supplier ON backoffice_receipt_workflow(supplier_party_id);
 CREATE INDEX IF NOT EXISTS idx_backoffice_receipt_invoice_number ON backoffice_receipt_workflow(external_invoice_number);
+CREATE INDEX IF NOT EXISTS idx_backoffice_receipt_retention ON backoffice_receipt_workflow(minimum_retention_until);
 
 DROP TRIGGER IF EXISTS trg_backoffice_original_receipt_immutable ON backoffice_original_receipts;
 CREATE TRIGGER trg_backoffice_original_receipt_immutable
