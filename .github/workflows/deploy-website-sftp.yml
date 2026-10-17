@@ -30,7 +30,6 @@ jobs:
           cp website/styles.css public-site/styles.css
           cp website/impressum.html public-site/impressum.html
           cp website/datenschutz.html public-site/datenschutz.html
-          cp website/sensorik.html public-site/sensorik.html
           cp website/assets/brand/135er-grow-central-lockup-v0.9.png public-site/assets/brand/
           cp website/assets/brand/135er-grow-central-mark.png public-site/assets/brand/
           cp website/assets/gui/local-desktop-v0.9.png public-site/assets/gui/
@@ -61,8 +60,6 @@ jobs:
           put public-site/styles.css styles.css
           put public-site/impressum.html impressum.html
           put public-site/datenschutz.html datenschutz.html
-          put public-site/sensorik.html sensorik.html
-          chmod 644 index.html styles.css impressum.html datenschutz.html sensorik.html
           put public-site/assets/brand/135er-grow-central-lockup-v0.9.png assets/brand/135er-grow-central-lockup-v0.9.png
           put public-site/assets/brand/135er-grow-central-mark.png assets/brand/135er-grow-central-mark.png
           put public-site/assets/gui/local-desktop-v0.9.png assets/gui/local-desktop-v0.9.png
