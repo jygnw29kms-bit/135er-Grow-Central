@@ -36,6 +36,7 @@ public sealed class PostgresReceiptStore(string connectionString, string storage
         var tmpPath = Path.Combine(tmpDir, Guid.NewGuid().ToString("N"));
         long length = 0;
         string hash;
+        var prefix = new MemoryStream(512);
         try
         {
             await using (var output = new FileStream(tmpPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous | FileOptions.WriteThrough))
@@ -48,6 +49,11 @@ public sealed class PostgresReceiptStore(string connectionString, string storage
                     if (read == 0) break;
                     length += read;
                     if (length > MaxBytes) throw new ArgumentException("Beleg überschreitet die zulässige Größe von 25 MiB.");
+                    if (prefix.Length < 512)
+                    {
+                        var prefixBytes = Math.Min(read, 512 - (int)prefix.Length);
+                        prefix.Write(buffer, 0, prefixBytes);
+                    }
                     sha.AppendData(buffer, 0, read);
                     await output.WriteAsync(buffer.AsMemory(0, read), ct);
                 }
@@ -55,6 +61,8 @@ public sealed class PostgresReceiptStore(string connectionString, string storage
                 hash = Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant();
             }
             if (length == 0) throw new ArgumentException("Leere Belegdateien werden nicht archiviert.");
+            if (!ReceiptFilePolicy.MatchesDeclaredMediaType(prefix.ToArray(), mediaType))
+                throw new ArgumentException("Dateiinhalt stimmt nicht mit dem angegebenen Content-Type überein.");
 
             var storageKey = Path.Combine("original-receipts", hash[..2], hash).Replace('\\', '/');
             var finalPath = ResolveStorageKey(storageKey);
@@ -121,6 +129,7 @@ VALUES(@audit,NOW(),@actor,'ReceiptOriginalStored','Receipt',@entity,1,@hash,'{}
         }
         finally
         {
+            prefix.Dispose();
             if (File.Exists(tmpPath)) File.Delete(tmpPath);
         }
     }
