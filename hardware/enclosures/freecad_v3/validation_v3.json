@@ -1,0 +1,182 @@
+{
+  "ok": true,
+  "failures": [],
+  "cases": [
+    {
+      "case": "Pi4",
+      "base_valid": true,
+      "base_bbox": [
+        106.0,
+        70.0,
+        31.5
+      ],
+      "base_solids": 1,
+      "lid_valid": true,
+      "lid_bbox": [
+        101.0,
+        70.0,
+        5.8
+      ],
+      "lid_solids": 1,
+      "branding_valid": true,
+      "branding_bbox": [
+        81.26,
+        13.65,
+        0.9
+      ],
+      "branding_solids": 15,
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "branding_z": [
+        3.0,
+        3.9
+      ]
+    },
+    {
+      "case": "Node_FPC",
+      "base_valid": true,
+      "base_bbox": [
+        52.0,
+        34.0,
+        25.0
+      ],
+      "base_solids": 1,
+      "lid_valid": true,
+      "lid_bbox": [
+        48.0,
+        34.0,
+        6.7
+      ],
+      "lid_solids": 1,
+      "branding_valid": true,
+      "branding_bbox": [
+        36.76,
+        25.27,
+        0.9
+      ],
+      "branding_solids": 11,
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "branding_z": [
+        2.8,
+        3.7
+      ],
+      "fpc_ref_bbox": [
+        40.0,
+        20.0,
+        0.35
+      ],
+      "fpc_lid_collision_mm3": 0.0
+    },
+    {
+      "case": "Node_EXT",
+      "base_valid": true,
+      "base_bbox": [
+        47.0,
+        34.0,
+        25.0
+      ],
+      "base_solids": 1,
+      "lid_valid": true,
+      "lid_bbox": [
+        43.0,
+        34.0,
+        5.4
+      ],
+      "lid_solids": 1,
+      "branding_valid": true,
+      "branding_bbox": [
+        31.76,
+        24.66,
+        0.9
+      ],
+      "branding_solids": 14,
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "branding_z": [
+        2.8,
+        3.7
+      ],
+      "sma_ref_diameter_mm": 6.0,
+      "sma_base_collision_mm3": 0.0
+    },
+    {
+      "case": "Hub_FPC",
+      "base_valid": true,
+      "base_bbox": [
+        70.0,
+        48.0,
+        28.0
+      ],
+      "base_solids": 1,
+      "lid_valid": true,
+      "lid_bbox": [
+        66.0,
+        48.0,
+        6.7
+      ],
+      "lid_solids": 1,
+      "branding_valid": true,
+      "branding_bbox": [
+        55.36,
+        39.88,
+        0.9
+      ],
+      "branding_solids": 9,
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "branding_z": [
+        2.8,
+        3.7
+      ],
+      "fpc_ref_bbox": [
+        40.0,
+        20.0,
+        0.35
+      ],
+      "fpc_lid_collision_mm3": 0.0
+    },
+    {
+      "case": "Hub_EXT",
+      "base_valid": true,
+      "base_bbox": [
+        70.0,
+        48.0,
+        28.0
+      ],
+      "base_solids": 1,
+      "lid_valid": true,
+      "lid_bbox": [
+        66.0,
+        48.0,
+        5.4
+      ],
+      "lid_solids": 1,
+      "branding_valid": true,
+      "branding_bbox": [
+        55.36,
+        39.37,
+        0.9
+      ],
+      "branding_solids": 12,
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "branding_z": [
+        2.8,
+        3.7
+      ],
+      "sma_ref_diameter_mm": 6.0,
+      "sma_base_collision_mm3": 0.0
+    }
+  ]
+}
