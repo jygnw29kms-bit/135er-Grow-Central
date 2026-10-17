@@ -67,6 +67,7 @@ Stand: 2026-10-17
 - API-Restore und Release-Build.
 - Docker-Compose-Validierung.
 - vorhandene Repository-Security-/Domain-Checks bleiben aktiv.
+- erster erweiterter Lauf: 15/15 Domain-Tests erfolgreich; danach API-Compilerfehler in SQL-Stringsyntax entdeckt und korrigiert. Der korrigierte vollständige Lauf ist maßgeblich für die Freigabe.
 
 ## Noch nicht produktionsfreigegeben
 
