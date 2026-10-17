@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "C:/Users/dezen/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/AddIns/GrowCentralPi4/GrowCentralPi4.py", line 189, in run
+    add_side_ports(base, dims)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:/Users/dezen/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/AddIns/GrowCentralPi4/GrowCentralPi4.py", line 85, in add_side_ports
+    extrude_profile(comp, sk.profiles.item(i), -(wall+1.2),
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        adsk.fusion.FeatureOperations.CutFeatureOperation)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:/Users/dezen/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/AddIns/GrowCentralPi4/GrowCentralPi4.py", line 25, in extrude_profile
+    return exts.add(inp)
+           ~~~~~~~~^^^^^
+  File "C:\Users/dezen/AppData/Local/Autodesk/webdeploy/production/c657666a51cec7a9bbd042e10872bcd9532508a8/Api/Python/packages\adsk\fusion.py", line 35578, in add
+    return _fusion.ExtrudeFeatures_add(self, input)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+RuntimeError: 3 : Kein Zielkörper zum Schneiden gefunden.

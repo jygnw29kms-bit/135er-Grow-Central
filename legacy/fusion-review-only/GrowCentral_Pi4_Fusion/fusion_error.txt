@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:/Users/dezen/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/AddIns/GrowCentralPremium/GrowCentralPremium.py", line 370, in run
+    raise RuntimeError('Grow-Central-Logo konnte nicht als Relief erzeugt werden')
+RuntimeError: Grow-Central-Logo konnte nicht als Relief erzeugt werden
