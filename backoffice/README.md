@@ -1,173 +1,142 @@
-# GrowCentral Backoffice / Buchhaltung
+# GrowCentral Vertragsabrechnung / Backoffice
 
-## Verbindliche Architektur
+## Verbindlicher Zweck
 
-Die native Windows-App ist **eine einzige kaufmännische Anwendung** für Buchhaltung, Abrechnung und sämtliche Geschäftsdokumente. Es gibt kein separates Vorlagenprogramm und keine zweite Datenhaltung.
+Das GrowCentral-Backoffice ist **keine allgemeine Unternehmensbuchhaltung** und kein ERP für beliebige Geschäftsprozesse. Es dient ausschließlich der kaufmännischen Abwicklung der **GrowCentral-Verträge** und der daraus entstehenden Forderungen, Rechnungen und Zahlungen.
 
-### Module
+Der Betreiber ist als **Einzelunternehmen / sole proprietor** modelliert. Es gibt keine Aktiengesellschaft, keine Konzernstruktur, keine Gesellschafter-/Aktienverwaltung und keine dafür typischen Rechnungslegungsfunktionen.
 
-1. **Dashboard**
-   - Umsätze, offene Posten, Zahlungen, Kosten, USt, Liquidität
-   - offene Aufgaben und Freigaben
-   - nicht abgeglichene Bank-/Stripe-/PayPal-Vorgänge
+## Verbindliche Prozesskette
 
-2. **Buchhaltung**
-   - Journal / Ledger
-   - Kontenrahmen SKR03/SKR04 konfigurierbar
-   - Buchungssätze
-   - Privatentnahmen/-einlagen
-   - Steuerbuchungen
-   - Periodensperren und Abschluss
+`Kunde -> GrowCentral-Vertrag -> Abrechnungsperiode/Leistung -> Rechnung -> Zahlung -> ggf. Mahnung/Korrektur -> steuerliche Auswertung`
 
-3. **Belege**
-   - Eingangsrechnungen
-   - PDF/Bild/XML/ZUGFeRD/XRechnung
-   - Originaldatei unverändert archivieren
-   - Kontierung, Steuer, Zahlungsstatus
-   - Duplikaterkennung
+Jede buchungsrelevante Bewegung muss auf einen GrowCentral-Vertrag, eine daraus erzeugte Rechnung oder deren Zahlung/Korrektur zurückführbar sein. Freie allgemeine Unternehmensbuchungen außerhalb dieses Zusammenhangs gehören nicht zum Produktumfang.
 
-4. **Ausgangsrechnungen**
-   - Rechnung, Abschlag, Schlussrechnung
-   - Korrektur/Storno
-   - E-Rechnung EN 16931 / XRechnung / ZUGFeRD
-   - Zahlungs- und Mahnstatus
-   - Verknüpfung mit Vertrag, Kunde und Buchung
+## Module
 
-5. **Geschäftsdokumente**
-   - Angebote
-   - Auftragsbestätigungen
-   - Lieferscheine
-   - Leistungsnachweise
-   - Abnahmeprotokolle
-   - Mahnungen
-   - Reklamationen
-   - Verträge
-   - Datenschutzdokumente
-   - Behördenkorrespondenz
-   - interne Freigaben
-   - Verfahrensdokumentation
+1. **Übersicht**
+   - aktive GrowCentral-Verträge
+   - nächste Abrechnungen
+   - Umsatz aus GrowCentral-Verträgen
+   - offene Forderungen
+   - eingegangene Zahlungen
+   - überfällige Rechnungen / Mahnungen
+   - Providergebühren, soweit sie unmittelbar einer GC-Zahlung zugeordnet sind
 
-   Diese Dokumente verwenden das gemeinsame `BusinessDocument`-Modell und werden, sobald buchhaltungsrelevant, direkt mit Rechnung/Buchung/Beleg verknüpft.
+2. **Kunden**
+   - Rechnungs- und Kontaktdaten
+   - B2B/B2C-Kennzeichnung
+   - USt-ID soweit erforderlich
+   - zugehörige GrowCentral-Verträge
+   - Rechnungs- und Zahlungshistorie
 
-6. **Kunden & Lieferanten**
-   - Stammdaten
-   - Rechnungsadressen
-   - Steuerdaten
-   - Verträge
-   - Dokumente
-   - offene Posten
-   - Zahlungs-/Kommunikationshistorie
+3. **GrowCentral-Verträge**
+   - Vertragsnummer
+   - Kunde
+   - Produkt/Tarif
+   - Beginn, Laufzeit, Kündigung
+   - Abrechnungsintervall
+   - Preis und Steuerbehandlung
+   - Zahlungsart
+   - Status
+   - Vertragsänderungen mit Historie
+   - Grundlage jeder Abrechnung
 
-7. **Bank / Stripe / PayPal**
-   - Import/Sync
-   - Reconciliation
-   - Gebühren
-   - Refunds
-   - Chargebacks
-   - Zuordnung zu Rechnungen und Buchungen
+4. **Abrechnung / Rechnungen**
+   - periodische und einmalige Vertragsabrechnung
+   - Rechnung, Abschlag soweit vertraglich nötig, Korrektur/Storno
+   - EN 16931 / XRechnung / ZUGFeRD soweit gesetzlich erforderlich
+   - unveränderbare Finalfassung
+   - eindeutige Nummernkreise
+   - Verknüpfung mit Vertrag und Abrechnungsperiode
 
-8. **Mahnwesen**
+5. **Zahlungen**
+   - Zahlungseingänge zu GC-Rechnungen
+   - Stripe/PayPal/Bank nur als Zahlungsquellen der Vertragsabrechnung
+   - Gebühren und Refunds nur soweit sie einer GC-Zahlung zugeordnet sind
+   - automatische bzw. manuelle Zuordnung zur Rechnung
+   - keine allgemeine Bankbuchhaltung
+
+6. **Mahnwesen**
    - Zahlungserinnerung
    - Mahnstufen
-   - gesetzliche Verzugszinsen
-   - B2B/B2C-Unterscheidung
-   - keine 40-EUR-Verzugspauschale gegen Verbraucher
-   - Übergabe an gerichtliches Mahnverfahren nur nach manueller Freigabe
+   - Verzugszinsen und B2B/B2C-Regeln
+   - keine 40-EUR-Pauschale gegen Verbraucher
+   - Bezug immer auf eine offene GrowCentral-Rechnung
 
-9. **Steuern**
-   - Umsatzsteuer-Ledger
-   - UStVA-Vorschau
-   - EÜR
-   - Anlagen/AfA
-   - DATEV-Export
-   - später ERiC/ELSTER
+7. **Steuerliche Auswertung der GC-Abrechnung**
+   - Umsatzsteuer aus GrowCentral-Rechnungen
+   - vereinnahmte/vereinbarte Steuer entsprechend konfiguriertem Steuerstatus
+   - Korrekturen und Stornos
+   - Providergebühren nur soweit unmittelbar abrechnungsbezogen
+   - periodische Summen als Grundlage für die steuerliche Meldung
+   - keine allgemeine Kosten-, Anlagen-, Lohn- oder Lieferantenbuchhaltung
 
-10. **Monatsabschluss**
-    - Bankabgleich
-    - Providerabgleich
-    - offene Belege
-    - Rechnungen
-    - Gebühren
-    - Steuerabgleich
-    - EÜR
-    - Abschlussbericht
-    - Periodensperre
+8. **Audit / Archiv**
+   - Vertrag, Rechnung, Zahlung, Mahnung und Korrektur nachvollziehbar versioniert
+   - finalisierte Rechnungen unveränderbar
+   - Korrekturen nur über Korrektur-/Stornovorgänge
+   - Hash-/Integritätsprüfung
+   - gesetzlich erforderliche Aufbewahrung
 
-11. **Audit / Archiv**
-    - jede relevante Änderung versioniert
-    - finalisierte Dokumente unveränderbar
-    - Korrekturen nur über Storno/Korrektur
-    - Hash/Integritätsprüfung
-    - Export für Prüfung
+9. **Einstellungen**
+   - Betreiber als Einzelunternehmen
+   - Geschäftsbezeichnung
+   - Anschrift
+   - Steuernummer / USt-ID / Wirtschafts-ID soweit vorhanden
+   - Finanzamt
+   - Steuerstatus
+   - Ist-/Sollversteuerung
+   - Nummernkreise
+   - E-Rechnungsformat
+   - Zahlungsprovider
+   - Rollen und MFA
 
-12. **Einstellungen**
-    - Betreiberdaten
-    - Steuerstatus
-    - USt-ID / Steuernummer / Wirtschafts-ID
-    - Finanzamt
-    - Ist-/Sollversteuerung
-    - UStVA-Zeitraum
-    - Kontenrahmen
-    - Nummernkreise
-    - E-Rechnungsformat
-    - Bank/Stripe/PayPal
-    - Rollen und MFA
+## Ausdrücklich nicht Bestandteil
+
+Folgende Funktionen gehören **nicht** in die GrowCentral-Vertragsabrechnung:
+
+- allgemeine Kreditoren-/Lieferantenbuchhaltung
+- Einkaufsbestellungen und allgemeine Eingangsrechnungen
+- Lager, Warenwirtschaft oder Beschaffung
+- allgemeine Privatentnahmen/-einlagen-Verwaltung
+- Anlagenbuchhaltung und AfA-Verwaltung als eigenes Modul
+- Lohn-/Gehaltsbuchhaltung
+- allgemeine Kassenbuchhaltung
+- beliebige manuelle Journalbuchungen ohne GC-Vertrags-/Rechnungsbezug
+- Konzern-, Beteiligungs-, Gesellschafter- oder Aktienverwaltung
+- AG-spezifische Rechnungslegung, Hauptversammlung, Aktienkapital oder Dividenden
+- allgemeines ERP oder DATEV-Ersatz für das gesamte Unternehmen
+
+Wenn für die gesetzlich korrekte Abrechnung technisch Soll/Haben-Sätze oder Steuerkonten verwendet werden, bleiben diese **interne Mechanik der Vertragsabrechnung** und werden nicht zu einer frei nutzbaren Vollbuchhaltung ausgebaut.
 
 ## Eine Quelle der Wahrheit
 
-Alle Module greifen auf dieselben Cloud-Dienste und IDs zu. Die Windows-App ist niemals eine eigene Buchhaltungsdatenbank.
+Die Cloud ist die führende Datenquelle. Die Windows-App ist kein eigener Buchhaltungs-Master.
 
-Gemeinsame Verknüpfung:
+Verbindliche Referenzen:
 
-`Kunde -> Vertrag/Auftrag -> Geschäftsdokument -> Rechnung -> Zahlung -> Buchung -> Steuerperiode -> Abschluss`
+`CustomerId -> ContractId -> BillingPeriodId -> InvoiceId -> PaymentId`
 
-und für Einkauf:
-
-`Lieferant -> Bestellung -> Eingangsbeleg -> Zahlung -> Buchung -> Vorsteuer -> Abschluss`
-
-## Geschäftsdokumente + Buchhaltung
-
-Ein Geschäftsdokument erhält je nach Typ folgende Eigenschaften:
-
-- `AccountingRelevant`
-- `ImmutableAfterFinalization`
-- `LegalReviewRequired`
-- `AllowedParties` (B2B/B2C/Internal/Behörde/Personal)
-- Verknüpfungen zu Kunde, Auftrag, Vertrag, Rechnung, Beleg und Buchung
-
-Beispiele:
-
-- Angebot: nicht buchungswirksam, kann zu Auftrag/Rechnung führen
-- Rechnung: buchungswirksam, nach Finalisierung unveränderbar
-- Mahnung: mit offener Forderung verknüpft
-- Rechnungskorrektur: erzeugt Gegen-/Korrekturbuchung und verweist auf Ursprungsrechnung
-- Lieferantenrechnungsbeanstandung: mit Eingangsbeleg und Kreditor verknüpft
-- Verfahrensdokumentation: archiviert den GoBD-relevanten System- und Prozessstand
+Korrekturen und Mahnungen referenzieren zusätzlich immer die ursprüngliche `InvoiceId`.
 
 ## UI-Navigation
 
 Vorgesehene Hauptnavigation:
 
 - Übersicht
-- Buchhaltung
-- Belege
-- Rechnungen
-- Geschäftsdokumente
 - Kunden
-- Lieferanten
-- Bank
-- Stripe / PayPal
 - Verträge
-- Mahnwesen
-- Umsatzsteuer
-- Monatsabschluss
-- EÜR
-- Anlagen
-- Steuer / ELSTER
-- Exporte
-- Audit
+- Abrechnungen
+- Rechnungen
+- Zahlungen
+- Mahnungen
+- Steuerübersicht
+- Archiv / Audit
 - Einstellungen
+
+Kein Menüpunkt „Buchhaltung“ im Sinne einer universellen Finanzbuchhaltung. Die kaufmännische Logik erscheint dort, wo sie zur GC-Vertragsabrechnung gebraucht wird.
 
 ## Technische Regel
 
-Domainlogik wird nicht in WinUI-Seiten eingebaut. Die App verwendet gemeinsame Domain- und API-Modelle. Dadurch können später Plesk, API, Windows und ggf. Web-Backoffice dieselben fachlichen Regeln verwenden.
+Domainlogik wird nicht in WinUI-Seiten eingebaut. Vertrag, Abrechnungsperiode, Rechnung, Zahlung und Korrektur sind die zentralen Domainobjekte. Allgemeine Ledger-Technik darf intern verwendet werden, aber nur mit zwingendem Bezug auf diese Objekte.
