@@ -31,6 +31,7 @@ services:
       - grow-central-backoffice-db-data:/var/lib/postgresql/data
       - ./database/backoffice_schema.sql:/docker-entrypoint-initdb.d/10-backoffice.sql:ro
       - ./database/migrations/20261017_backoffice_ledger.sql:/docker-entrypoint-initdb.d/20-backoffice-ledger.sql:ro
+      - ./database/migrations/20261017_backoffice_receipts.sql:/docker-entrypoint-initdb.d/30-backoffice-receipts.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -58,6 +59,8 @@ services:
     depends_on:
       grow-central-backoffice-db:
         condition: service_healthy
+    volumes:
+      - grow-central-backoffice-files:/data/backoffice
     tmpfs:
       - /tmp:noexec,nosuid,size=32m
     ports:
@@ -70,6 +73,7 @@ services:
 volumes:
   grow-central-cloud-data:
   grow-central-backoffice-db-data:
+  grow-central-backoffice-files:
 
 networks:
   backoffice-internal:
