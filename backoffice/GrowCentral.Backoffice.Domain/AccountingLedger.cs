@@ -18,7 +18,10 @@ public sealed record JournalEntryDraft(
     string? Reference,
     Guid? SourceDocumentId,
     IReadOnlyList<JournalLine> Lines,
-    Guid? ReversalOfEntryId = null);
+    Guid? ReversalOfEntryId = null,
+    Guid? ContractId = null,
+    Guid? BillingPeriodId = null,
+    Guid? PaymentId = null);
 
 public sealed record LedgerValidation(IReadOnlyList<string> Errors, decimal DebitTotal, decimal CreditTotal)
 {
@@ -55,6 +58,24 @@ public static class DoubleEntryLedgerPolicy
         if (debit <= 0m || credit <= 0m) errors.Add("Buchungssumme muss größer als 0 sein.");
         if (debit != credit) errors.Add($"Buchung ist nicht ausgeglichen: Soll {debit:0.00} EUR, Haben {credit:0.00} EUR.");
         return new(errors, debit, credit);
+    }
+}
+
+public static class GrowCentralContractBillingLedgerPolicy
+{
+    public static IReadOnlyList<string> ValidateScope(JournalEntryDraft entry)
+    {
+        var errors = new List<string>();
+        if (entry.ContractId is null)
+            errors.Add("Buchung ist außerhalb des GrowCentral-Vertragsabrechnungs-Scope: ContractId fehlt.");
+
+        if (entry.SourceDocumentId is null && entry.PaymentId is null)
+            errors.Add("GC-Vertragsbuchung benötigt eine Rechnungs-/Dokumentquelle oder einen Zahlungseingang.");
+
+        if (entry.BillingPeriodId is null && entry.PaymentId is null && entry.ReversalOfEntryId is null)
+            errors.Add("Abrechnungsbuchung benötigt eine BillingPeriodId; Zahlungen und Gegenbuchungen sind davon ausgenommen.");
+
+        return errors;
     }
 }
 
