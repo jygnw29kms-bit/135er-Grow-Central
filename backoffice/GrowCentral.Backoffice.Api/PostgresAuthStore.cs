@@ -3,7 +3,11 @@ using Npgsql;
 namespace GrowCentral.Backoffice.Api;
 
 public sealed record BackofficeUserRecord(Guid Id, string Username, string PasswordHash, string Role, string? TotpSecret, bool MfaEnabled, bool Enabled);
-public sealed record BackofficeSessionTokens(string AccessToken, DateTimeOffset AccessExpiresAt, string RefreshToken, DateTimeOffset RefreshExpiresAt);
+public sealed record BackofficeSessionTokens(string AccessToken, DateTimeOffset AccessExpiresAt, string RefreshToken, DateTimeOffset RefreshExpiresAt)
+{
+    public string Token => AccessToken;
+    public DateTimeOffset ExpiresAt => AccessExpiresAt;
+}
 
 public sealed class PostgresAuthStore(string connectionString)
 {
