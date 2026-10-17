@@ -3,7 +3,7 @@ name: Validate GrowCentral Release Consistency
 on:
   workflow_dispatch:
   push:
-    branches: [ master, feature/profile-library-foundation ]
+    branches: [ master, "feature/**" ]
     paths:
       - 'RELEASE_STATE.md'
       - 'README.md'

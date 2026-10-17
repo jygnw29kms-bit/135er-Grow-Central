@@ -2,7 +2,7 @@ name: Python tests
 
 on:
   push:
-    branches: [master, feature/profile-library-foundation]
+    branches: [master, "feature/**"]
   pull_request:
 
 permissions:

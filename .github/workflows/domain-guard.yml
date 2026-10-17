@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - feature/profile-library-foundation
+      - "feature/**"
   pull_request:
   workflow_dispatch:
 

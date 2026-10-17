@@ -2,7 +2,7 @@ name: Grow Central GUI browser tests
 
 on:
   push:
-    branches: [master, feature/profile-library-foundation]
+    branches: [master, "feature/**"]
     paths: ['web/**', 'app/**', 'tests/browser/**', '.github/workflows/gui-browser-tests.yml']
   pull_request:
     paths: ['web/**', 'app/**', 'tests/browser/**', '.github/workflows/gui-browser-tests.yml']
