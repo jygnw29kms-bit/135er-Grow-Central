@@ -12,7 +12,7 @@ public sealed class BusinessDocumentService
         BusinessDocumentKind.InvoiceCorrection
     ];
 
-    public ValidationResult ValidateForFinalization(BusinessDocument document)
+    public ValidationResult ValidateForFinalization(BusinessDocument document, InvoiceComplianceContext? invoiceContext = null)
     {
         var template = BusinessDocumentCatalog.Get(document.TemplateCode);
         var issues = new List<ValidationIssue>();
@@ -30,7 +30,7 @@ public sealed class BusinessDocumentService
             issues.Add(new("legal.review_required", "Dieser Dokumenttyp erfordert vor Finalisierung eine dokumentierte fachliche/rechtliche Freigabe."));
 
         if (InvoiceKinds.Contains(template.Kind))
-            ValidateInvoice(document, issues);
+            ValidateInvoice(document, invoiceContext, issues);
 
         if (template.Kind is BusinessDocumentKind.FirstDunning or BusinessDocumentKind.FinalDunning)
             ValidateDunning(document, issues);
@@ -38,9 +38,9 @@ public sealed class BusinessDocumentService
         return new(issues.All(x => !x.IsBlocking), issues);
     }
 
-    public void Finalize(BusinessDocument document, string actor)
+    public void Finalize(BusinessDocument document, string actor, InvoiceComplianceContext? invoiceContext = null)
     {
-        var result = ValidateForFinalization(document);
+        var result = ValidateForFinalization(document, invoiceContext);
         if (!result.IsValid)
             throw new InvalidOperationException(string.Join(" ", result.Issues.Where(x => x.IsBlocking).Select(x => x.Message)));
         document.FinalizeDocument(actor);
@@ -65,24 +65,46 @@ public sealed class BusinessDocumentService
         correction.SetValue("correction_number", correctionNumber);
         correction.SetValue("original_invoice_id", original.Id.ToString());
         correction.SetValue("reason", reason);
-        correction.Links.Add(new(original.Id, "corrects"));
-        original.MarkCorrected();
+        correction.AddLink(original.Id, "corrects");
         return correction;
     }
 
-    private static void ValidateInvoice(BusinessDocument document, ICollection<ValidationIssue> issues)
+    public void FinalizeCorrection(BusinessDocument original, BusinessDocument correction, string actor, InvoiceComplianceContext? invoiceContext = null)
+    {
+        if (correction.TemplateCode != "B4" || !correction.Links.Any(x => x.TargetDocumentId == original.Id && string.Equals(x.Relation, "corrects", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Korrekturbeleg verweist nicht eindeutig auf den Ursprungsbeleg.");
+
+        Finalize(correction, actor, invoiceContext);
+        original.MarkCorrected();
+    }
+
+    private static void ValidateInvoice(BusinessDocument document, InvoiceComplianceContext? invoiceContext, ICollection<ValidationIssue> issues)
     {
         ValidateMoney(document, "gross_amount", issues);
         if (document.Values.ContainsKey("net_amount")) ValidateMoney(document, "net_amount", issues);
         if (document.Values.ContainsKey("tax_amount")) ValidateMoney(document, "tax_amount", issues);
 
-        if (document.PartyType == PartyType.Business && document.TemplateCode == "B1")
+        if (document.PartyType != PartyType.Business)
+            return;
+
+        if (invoiceContext is null)
         {
-            if (!document.Values.TryGetValue("e_invoice_format", out var format) || string.IsNullOrWhiteSpace(format))
-                issues.Add(new("invoice.einvoice_format_missing", "Für B2B-Ausgangsrechnungen muss das vorgesehene strukturierte E-Rechnungsformat dokumentiert werden (z. B. XRechnung oder ZUGFeRD/EN 16931)."));
-            else if (!new[] { "xrechnung", "zugferd-en16931", "other-en16931" }.Contains(format.Trim().ToLowerInvariant()))
-                issues.Add(new("invoice.einvoice_format_invalid", "Unbekanntes E-Rechnungsformat."));
+            issues.Add(new("invoice.compliance_context_missing", "Für B2B-Rechnungen müssen Leistungsdatum, Inlandsbezug, Vorjahresumsatz und Ausnahme-/B2G-Status zur E-Rechnungsprüfung vorliegen."));
+            return;
         }
+
+        var decision = GermanEInvoicePolicy.Evaluate(invoiceContext);
+        document.Values.TryGetValue("e_invoice_format", out var format);
+        var hasStructuredFormat = IsStructuredEInvoiceFormat(format);
+
+        if (decision.Requirement == EInvoiceRequirement.StructuredEInvoiceRequired && !hasStructuredFormat)
+            issues.Add(new("invoice.einvoice_required", $"Strukturierte E-Rechnung erforderlich: {decision.Reason} ({decision.LegalReference})."));
+
+        if (decision.Requirement == EInvoiceRequirement.TransitionalAlternativeAllowed && !hasStructuredFormat)
+            issues.Add(new("invoice.einvoice_transition", $"Übergangsregel genutzt: {decision.Reason} ({decision.LegalReference}).", IsBlocking: false));
+
+        if (!string.IsNullOrWhiteSpace(format) && !hasStructuredFormat)
+            issues.Add(new("invoice.einvoice_format_invalid", "Das angegebene strukturierte E-Rechnungsformat ist unbekannt. Zulässig im System: xrechnung, zugferd-en16931, other-en16931."));
     }
 
     private static void ValidateDunning(BusinessDocument document, ICollection<ValidationIssue> issues)
@@ -94,7 +116,7 @@ public sealed class BusinessDocumentService
         {
             var expected = document.PartyType == PartyType.Consumer ? 5m : 9m;
             if (rate != expected)
-                issues.Add(new("dunning.interest_rate_review", $"Der eingetragene Verzugszinssatz ({rate} Prozentpunkte über Basiszins) weicht vom Standardwert {expected} ab und muss begründet/geprüft werden."));
+                issues.Add(new("dunning.interest_rate_review", $"Der eingetragene Verzugszinssatz ({rate} Prozentpunkte über Basiszins) weicht vom gesetzlichen Standardwert {expected} ab und muss begründet/geprüft werden."));
         }
     }
 
@@ -104,6 +126,9 @@ public sealed class BusinessDocumentService
         if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
             issues.Add(new("field.money_invalid", $"{key} ist kein gültiger Dezimalbetrag. Intern ist invariant formatierter Dezimalwert zu verwenden."));
     }
+
+    private static bool IsStructuredEInvoiceFormat(string? format) =>
+        format is not null && new[] { "xrechnung", "zugferd-en16931", "other-en16931" }.Contains(format.Trim().ToLowerInvariant());
 
     private static bool IsTrue(string? value) => value is not null && new[] { "1", "true", "yes", "ja" }.Contains(value.Trim().ToLowerInvariant());
 }
