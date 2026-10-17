@@ -6,7 +6,14 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGACY = re.compile("grow" + r"[\s_-]*" + "control", re.IGNORECASE)
+
+# Legacy *brand* forms only. Generic descriptive wording such as
+# "grow control" or "Grow-Controller" is not the former product name and
+# must not make the repository test fail.
+LEGACY = re.compile(
+    r"(?:135er[\s_-]*)?growcontrol\b|135er[\s_-]+grow[\s_-]+control\b",
+    re.IGNORECASE,
+)
 TEXT_SUFFIXES = {
     "", ".cfg", ".conf", ".css", ".env", ".example", ".html", ".ini", ".js",
     ".json", ".md", ".py", ".service", ".sh", ".socket", ".sql", ".svg",
