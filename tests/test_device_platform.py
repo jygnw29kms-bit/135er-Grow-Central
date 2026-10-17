@@ -1,5 +1,5 @@
 from app.devices.catalog import PROVIDERS, provider_by_id, provider_catalog
-from app.devices.models import Capability, SupportLevel
+from app.devices.models import Capability, SupportLevel, VerificationLevel
 
 
 def test_provider_ids_are_unique_and_required_families_exist():
@@ -22,9 +22,19 @@ def test_catalog_is_json_ready_and_exposes_support_state():
     assert catalog
     assert all(isinstance(row["capabilities"], list) for row in catalog)
     assert all(row["support"] in {item.value for item in SupportLevel} for row in catalog)
+    assert all(row["verification"] in {item.value for item in VerificationLevel} for row in catalog)
 
 
 def test_native_esp32_is_reference_provider():
     provider = provider_by_id("growcentral_esp32")
     assert provider is not None
     assert set(provider.capabilities) == set(Capability)
+
+
+def test_verification_levels_match_current_evidence_policy():
+    assert provider_by_id("fritz").verification is VerificationLevel.VENDOR_VERIFIED
+    assert provider_by_id("shelly").verification is VerificationLevel.VENDOR_VERIFIED
+    assert provider_by_id("mqtt").verification is VerificationLevel.VENDOR_VERIFIED
+    assert provider_by_id("mars_hydro").verification is VerificationLevel.COMMUNITY_VERIFIED_READONLY
+    assert provider_by_id("spider_farmer").verification is VerificationLevel.COMMUNITY_VERIFIED_READONLY
+    assert provider_by_id("tapo").verification is VerificationLevel.CANDIDATE

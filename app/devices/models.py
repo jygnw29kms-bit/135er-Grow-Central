@@ -18,6 +18,13 @@ class SupportLevel(_StringEnum):
     CERTIFIED = "certified"
 
 
+class VerificationLevel(_StringEnum):
+    GC_HARDWARE_VALIDATED = "gc_hardware_validated"
+    VENDOR_VERIFIED = "vendor_verified"
+    COMMUNITY_VERIFIED_READONLY = "community_verified_readonly"
+    CANDIDATE = "candidate"
+
+
 class Transport(_StringEnum):
     BLE = "ble"
     WIFI_LOCAL = "wifi_local"
@@ -76,6 +83,7 @@ class ProviderDescriptor:
     device_classes: tuple[DeviceClass, ...]
     capabilities: tuple[Capability, ...]
     support: SupportLevel
+    verification: VerificationLevel
     local_first: bool
     enabled_by_default: bool = True
     notes: str = ""
@@ -86,4 +94,5 @@ class ProviderDescriptor:
         row["device_classes"] = [item.value for item in self.device_classes]
         row["capabilities"] = [item.value for item in self.capabilities]
         row["support"] = self.support.value
+        row["verification"] = self.verification.value
         return row

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from app.security import require_write_auth
 
 from .catalog import provider_by_id, provider_catalog
-from .models import Capability, DeviceClass, SupportLevel, Transport
+from .models import Capability, DeviceClass, SupportLevel, Transport, VerificationLevel
 from .runtime import runtime
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
@@ -28,6 +28,7 @@ async def platform_manifest():
         "principle": "local-first",
         "vendor_neutral": True,
         "support_levels": [item.value for item in SupportLevel],
+        "verification_levels": [item.value for item in VerificationLevel],
         "device_classes": [item.value for item in DeviceClass],
         "capabilities": [item.value for item in Capability],
         "transports": [item.value for item in Transport],
@@ -69,6 +70,7 @@ async def runtime_status():
             "id": item.descriptor.id,
             "name": item.descriptor.name,
             "support": item.descriptor.support.value,
+            "verification": item.descriptor.verification.value,
             "device_count": len(devices),
             "error": error,
         })
