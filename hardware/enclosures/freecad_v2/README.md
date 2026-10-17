@@ -1,32 +1,46 @@
-# Grow-Central FreeCAD V2 enclosures
+# Grow-Central Enclosures FreeCAD V2
 
-Completely new enclosure construction based on imported hardware reference STEP models.
+Komplett neu konstruierte Gehaeusefamilie fuer Raspberry Pi 4 und Seeed XIAO ESP32-C3.
 
-## Current models
-- GrowCentral_Pi4_V2
-- GrowCentral_XIAO_Node_V2
-- GrowCentral_XIAO_Hub_V2
+## Modelle
 
-## Design method
-The enclosures are built around hardware reference geometry, not by modifying the former V1 cases.
+- `GrowCentral_Pi4_V2.FCStd`
+- `GrowCentral_XIAO_Node_V2.FCStd`
+- `GrowCentral_XIAO_Hub_V2.FCStd`
 
-Raspberry Pi 4 reference geometry includes the board and connector stack. XIAO ESP32-C3 reference geometry uses a 22.32 x 17.78 mm model plus explicit 2.54 mm header strips with plastic carriers and pin protrusion above/below the PCB.
+Zu jedem produktiven Druckteil liegen STEP und STL unter `models/`.
 
-## Fit validation
-`validate_v2.py` performs FreeCAD BRep validation and calculates the common volume between the hardware reference and each enclosure part.
+## Hardware-Referenzen
 
-Current result:
-- Pi4 reference / Base: 0.0 mm3 collision
-- Pi4 reference / Lid: 0.0 mm3 collision
-- XIAO Node reference / Base: 0.0 mm3 collision
-- XIAO Node reference / Lid: 0.0 mm3 collision
-- XIAO Hub reference / Base: 0.0 mm3 collision
-- XIAO Hub reference / Lid: 0.0 mm3 collision
+Die Konstruktionen wurden um reale STEP-Referenzkoerper herum aufgebaut. Beim XIAO sind zusaetzlich zwei 2,54-mm-Pfostenleisten als Kollisionskoerper modelliert, inklusive Kunststoffkoerper und Pin-Ueberstand ober- und unterhalb der Platine.
 
-All exported enclosure parts are valid single solids.
+Die Referenzdateien unter `references/` bleiben lokal und werden wegen Fremdlizenzen nicht automatisch mitversioniert.
 
-## Reference sources
-Reference STEP files are kept locally in `references/` for CAD validation and are not intended to replace official manufacturer mechanical drawings. Raspberry Pi dimensions must continue to be checked against official Raspberry Pi mechanical data. XIAO dimensions are checked against Seeed Studio mechanical dimensions.
+## Verifikation
 
-## Output
-Editable FreeCAD, STEP and STL working outputs are generated under `models/`.
+`validate_v2.py` prueft:
+
+- Shape-Gueltigkeit
+- Anzahl der Solids
+- Bounding Box
+- Kollision Hardware gegen Base
+- Kollision Hardware gegen Deckel
+
+Aktueller Stand: Pi4, XIAO Node und XIAO Hub jeweils Base und Deckel als einzelner gueltiger Solid; Referenzhardware gegen Base und Deckel jeweils `0.0 mm3` unerwuenschte Kollision.
+
+## 0,4-mm-Duese / FDM
+
+Die sichtbaren Branding-Details sind bewusst fuer eine 0,4-mm-Duese ausgelegt:
+
+- keine absichtlich filigranen Einlinien-Schriften
+- gravierte Beschriftungen statt freistehender Schriftinseln
+- Gravurtiefe etwa 0,68 bis 0,78 mm
+- grosse Produktkennzeichnung: `GROW CENTRAL / PI4`, `GC NODE`, `GC HUB`
+- abgerundete Lueftungsschlitze mit deutlich groesserer Breite als eine einzelne Extrusionslinie
+- Deckel- und Gehaeusekanten fuer PETG/ASA und normale 0,20-mm-Schichthoehe ausgelegt
+
+Empfohlener erster P2S-Testdruck: 0,4-mm-Duese, 0,20-mm-Layer, 4 Waende, PETG. Vor Seriennutzung folgt ein realer Fit-/Drucktest.
+
+## Render
+
+`render_blender.py` rendert direkt aus den produktiven STL-Geometrien. Die Bilder unter `previews/` und `previews/hero/` sind daher echte Modellvorschauen und keine generierten Konzeptbilder.
