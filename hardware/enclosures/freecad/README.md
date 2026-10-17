@@ -40,3 +40,18 @@ Designed for FDM printing. PETG is the default material for normal indoor/grow-r
 
 ## Regeneration
 Run `build_gc_enclosures.py` with FreeCAD's bundled Python. `validate_gc_enclosures.py` checks FCStd solids, validity, volume and bounding boxes after generation.
+
+## STL previews
+
+### Raspberry Pi 4
+![Pi4 Base](previews/GrowCentral_Pi4_Base_FreeCAD_preview.png)
+![Pi4 GPIO Lid](previews/GrowCentral_Pi4_Lid_GPIO_FreeCAD_preview.png)
+
+### XIAO ESP32-C3 Node
+![XIAO Node Base](previews/GrowCentral_XIAO_Node_Base_FreeCAD_preview.png)
+![XIAO Node Lid](previews/GrowCentral_XIAO_Node_Lid_FreeCAD_preview.png)
+
+### XIAO ESP32-C3 Hub
+![XIAO Hub Base](previews/GrowCentral_XIAO_Hub_Base_FreeCAD_preview.png)
+![XIAO Hub Lid](previews/GrowCentral_XIAO_Hub_Lid_FreeCAD_preview.png)
+
