@@ -1,0 +1,27 @@
+name: Backoffice Domain
+
+on:
+  pull_request:
+    paths:
+      - 'backoffice/**'
+      - '.github/workflows/backoffice-domain.yml'
+  push:
+    branches: [ master ]
+    paths:
+      - 'backoffice/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
+      - name: Test
+        run: dotnet test backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj --configuration Release --no-restore
