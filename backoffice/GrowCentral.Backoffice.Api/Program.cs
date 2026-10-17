@@ -24,9 +24,6 @@ bool IsAuthorized(HttpRequest request)
     return left.Length == right.Length && CryptographicOperations.FixedTimeEquals(left, right);
 }
 
-IResult RequireAuth(HttpRequest request)
-    => IsAuthorized(request) ? Results.Ok() : Results.Unauthorized();
-
 app.MapGet("/api/backoffice/health", async (HttpRequest request, PostgresBackofficeStore store, CancellationToken ct) =>
 {
     if (!IsAuthorized(request)) return Results.Unauthorized();
