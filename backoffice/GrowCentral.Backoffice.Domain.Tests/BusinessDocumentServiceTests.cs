@@ -18,21 +18,75 @@ public class BusinessDocumentServiceTests
     {
         var invoice = ValidB2BInvoice();
         var service = new BusinessDocumentService();
-        service.Finalize(invoice, "owner");
+        service.Finalize(invoice, "owner", DomesticB2B(new DateOnly(2026, 10, 17), 100_000m));
 
         Assert.Throws<InvalidOperationException>(() => invoice.SetValue("gross_amount", "999.00"));
+        Assert.Throws<InvalidOperationException>(() => invoice.AddLink(Guid.NewGuid(), "tamper"));
     }
 
     [Fact]
-    public void B2BInvoiceRequiresStructuredEInvoiceFormat()
+    public void DraftCannotBeMarkedSettled()
+    {
+        var invoice = ValidB2BInvoice();
+        Assert.Throws<InvalidOperationException>(() => invoice.MarkSettled());
+    }
+
+    [Fact]
+    public void MissingB2BComplianceContextBlocksFinalization()
+    {
+        var result = new BusinessDocumentService().ValidateForFinalization(ValidB2BInvoice());
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, x => x.Code == "invoice.compliance_context_missing");
+    }
+
+    [Fact]
+    public void TransitionRuleAllowsOtherInvoiceThroughEndOf2026()
     {
         var invoice = ValidB2BInvoice();
         invoice.SetValue("e_invoice_format", null);
 
-        var result = new BusinessDocumentService().ValidateForFinalization(invoice);
+        var result = new BusinessDocumentService().ValidateForFinalization(
+            invoice,
+            DomesticB2B(new DateOnly(2026, 12, 31), 2_000_000m));
+
+        Assert.True(result.IsValid);
+        Assert.Contains(result.Issues, x => x.Code == "invoice.einvoice_transition" && !x.IsBlocking);
+    }
+
+    [Fact]
+    public void SmallSupplierTransitionContinuesThrough2027()
+    {
+        var decision = GermanEInvoicePolicy.Evaluate(DomesticB2B(new DateOnly(2027, 8, 1), 800_000m));
+        Assert.Equal(EInvoiceRequirement.TransitionalAlternativeAllowed, decision.Requirement);
+    }
+
+    [Fact]
+    public void LargeSupplierRequiresStructuredInvoiceIn2027()
+    {
+        var invoice = ValidB2BInvoice();
+        invoice.SetValue("e_invoice_format", null);
+
+        var result = new BusinessDocumentService().ValidateForFinalization(
+            invoice,
+            DomesticB2B(new DateOnly(2027, 8, 1), 800_000.01m));
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Issues, x => x.Code == "invoice.einvoice_format_missing");
+        Assert.Contains(result.Issues, x => x.Code == "invoice.einvoice_required");
+    }
+
+    [Fact]
+    public void StructuredInvoiceIsRequiredFrom2028ForDomesticB2B()
+    {
+        var invoice = ValidB2BInvoice();
+        invoice.SetValue("e_invoice_format", null);
+
+        var result = new BusinessDocumentService().ValidateForFinalization(
+            invoice,
+            DomesticB2B(new DateOnly(2028, 1, 1), 10_000m));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, x => x.Code == "invoice.einvoice_required");
     }
 
     [Fact]
@@ -67,16 +121,31 @@ public class BusinessDocumentServiceTests
     }
 
     [Fact]
-    public void CorrectionLinksOriginalAndMarksItCorrected()
+    public void DraftCorrectionDoesNotChangeOriginalUntilCorrectionFinalizes()
     {
         var invoice = ValidB2BInvoice();
         var service = new BusinessDocumentService();
-        service.Finalize(invoice, "owner");
+        var context = DomesticB2B(new DateOnly(2026, 10, 17), 100_000m);
+        service.Finalize(invoice, "owner", context);
 
         var correction = service.CreateCorrection(invoice, "RK-2026-0001", "owner", "Preisberichtigung");
+        correction.SetValue("gross_amount", "-119.00");
+
+        Assert.Equal(BusinessDocumentStatus.Finalized, invoice.Status);
+        Assert.Equal(BusinessDocumentStatus.Draft, correction.Status);
+        Assert.Contains(correction.Links, x => x.TargetDocumentId == invoice.Id && x.Relation == "corrects");
+
+        service.FinalizeCorrection(invoice, correction, "owner", context);
 
         Assert.Equal(BusinessDocumentStatus.Corrected, invoice.Status);
-        Assert.Contains(correction.Links, x => x.TargetDocumentId == invoice.Id && x.Relation == "corrects");
+        Assert.Equal(BusinessDocumentStatus.Finalized, correction.Status);
+    }
+
+    [Fact]
+    public void NumberFormatterProducesStableNumber()
+    {
+        var number = DocumentNumberFormatter.Format(new("invoice", "RE", 2026, 6), 42);
+        Assert.Equal("RE-2026-000042", number);
     }
 
     private static BusinessDocument ValidB2BInvoice()
@@ -94,6 +163,9 @@ public class BusinessDocumentServiceTests
         invoice.SetValue("e_invoice_format", "xrechnung");
         return invoice;
     }
+
+    private static InvoiceComplianceContext DomesticB2B(DateOnly supplyDate, decimal priorYearTurnover) =>
+        new(supplyDate, true, true, priorYearTurnover, true);
 
     private static void FillBase(BusinessDocument document)
     {
