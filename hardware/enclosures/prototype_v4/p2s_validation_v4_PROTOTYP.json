@@ -1,0 +1,110 @@
+{
+  "ok": true,
+  "failures": [],
+  "plates": [
+    {
+      "file": "GrowCentral_Hub_EXT_P2S_V4_PROTOTYP.3mf",
+      "ok": true,
+      "objects": [
+        "GrowCentral_XIAO_Hub_EXT_Branding_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Hub_EXT_Lid_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Hub_EXT_Base_V4_PROTOTYP.stl"
+      ],
+      "object_count": 3,
+      "expected": 3,
+      "carrier_count": 0,
+      "p2s_config": true,
+      "lid_brand_aligned": true,
+      "prototype_names": true,
+      "extruders": {
+        "6": "2",
+        "4": "1",
+        "2": "1"
+      }
+    },
+    {
+      "file": "GrowCentral_Hub_FPC_P2S_V4_PROTOTYP.3mf",
+      "ok": true,
+      "objects": [
+        "GrowCentral_XIAO_Hub_FPC_Branding_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Hub_FPC_AntennaCarrier_PRINT_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Hub_FPC_Lid_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Hub_FPC_Base_V4_PROTOTYP.stl"
+      ],
+      "object_count": 4,
+      "expected": 4,
+      "carrier_count": 1,
+      "p2s_config": true,
+      "lid_brand_aligned": true,
+      "prototype_names": true,
+      "extruders": {
+        "6": "2",
+        "8": "1",
+        "4": "1",
+        "2": "1"
+      }
+    },
+    {
+      "file": "GrowCentral_Node_EXT_P2S_V4_PROTOTYP.3mf",
+      "ok": true,
+      "objects": [
+        "GrowCentral_XIAO_Node_EXT_Lid_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Node_EXT_Branding_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Node_EXT_Base_V4_PROTOTYP.stl"
+      ],
+      "object_count": 3,
+      "expected": 3,
+      "carrier_count": 0,
+      "p2s_config": true,
+      "lid_brand_aligned": true,
+      "prototype_names": true,
+      "extruders": {
+        "4": "1",
+        "6": "2",
+        "2": "1"
+      }
+    },
+    {
+      "file": "GrowCentral_Node_FPC_P2S_V4_PROTOTYP.3mf",
+      "ok": true,
+      "objects": [
+        "GrowCentral_XIAO_Node_FPC_AntennaCarrier_PRINT_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Node_FPC_Base_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Node_FPC_Lid_V4_PROTOTYP.stl",
+        "GrowCentral_XIAO_Node_FPC_Branding_V4_PROTOTYP.stl"
+      ],
+      "object_count": 4,
+      "expected": 4,
+      "carrier_count": 1,
+      "p2s_config": true,
+      "lid_brand_aligned": true,
+      "prototype_names": true,
+      "extruders": {
+        "6": "1",
+        "2": "1",
+        "4": "1",
+        "8": "2"
+      }
+    },
+    {
+      "file": "GrowCentral_Pi4_P2S_V4_PROTOTYP.3mf",
+      "ok": true,
+      "objects": [
+        "GrowCentral_Pi4_Lid_V4_PROTOTYP.stl",
+        "GrowCentral_Pi4_Branding_V4_PROTOTYP.stl",
+        "GrowCentral_Pi4_Base_V4_PROTOTYP.stl"
+      ],
+      "object_count": 3,
+      "expected": 3,
+      "carrier_count": 0,
+      "p2s_config": true,
+      "lid_brand_aligned": true,
+      "prototype_names": true,
+      "extruders": {
+        "4": "1",
+        "6": "2",
+        "2": "1"
+      }
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "ok": true,
+  "failures": [],
+  "cases": [
+    {
+      "case": "Pi4",
+      "base_valid": true,
+      "base_solids": 1,
+      "base_bbox": [
+        106.0,
+        70.0,
+        31.5
+      ],
+      "lid_valid": true,
+      "lid_solids": 1,
+      "lid_bbox": [
+        101.0,
+        70.0,
+        5.8
+      ],
+      "branding_valid": true,
+      "branding_solids": 15,
+      "branding_bbox": [
+        81.26,
+        13.65,
+        0.9
+      ],
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0
+    },
+    {
+      "case": "Node_FPC",
+      "base_valid": true,
+      "base_solids": 1,
+      "base_bbox": [
+        55.5,
+        37.6,
+        25.0
+      ],
+      "lid_valid": true,
+      "lid_solids": 1,
+      "lid_bbox": [
+        48.0,
+        34.0,
+        5.4
+      ],
+      "branding_valid": true,
+      "branding_solids": 11,
+      "branding_bbox": [
+        36.76,
+        25.27,
+        0.9
+      ],
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "mount_refs": 4,
+      "lying_mounts": 2,
+      "standing_mounts": 2,
+      "REF_M4_LYING_1_blocked_mm3": 0.0,
+      "REF_M4_LYING_2_blocked_mm3": 0.0,
+      "REF_M4_STANDING_1_blocked_mm3": 0.0,
+      "REF_M4_STANDING_2_blocked_mm3": 0.0,
+      "m4_hole_diameter_mm": 4.3,
+      "lying_min_wall_mm": 3.35,
+      "standing_radial_wall_mm": 3.05,
+      "carrier_valid": true,
+      "carrier_base_overlap_mm3": 0.0,
+      "carrier_lid_overlap_mm3": 0.0,
+      "carrier_hw_overlap_mm3": 0.0,
+      "fpc_size_mm": [
+        40.0,
+        0.35,
+        20.0
+      ],
+      "fpc_carrier_distance_mm": 0.0
+    },
+    {
+      "case": "Node_EXT",
+      "base_valid": true,
+      "base_solids": 1,
+      "base_bbox": [
+        50.5,
+        34.0,
+        25.0
+      ],
+      "lid_valid": true,
+      "lid_solids": 1,
+      "lid_bbox": [
+        43.0,
+        34.0,
+        5.4
+      ],
+      "branding_valid": true,
+      "branding_solids": 14,
+      "branding_bbox": [
+        31.76,
+        24.66,
+        0.9
+      ],
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "mount_refs": 4,
+      "lying_mounts": 2,
+      "standing_mounts": 2,
+      "REF_M4_LYING_1_blocked_mm3": 0.0,
+      "REF_M4_LYING_2_blocked_mm3": 0.0,
+      "REF_M4_STANDING_1_blocked_mm3": 0.0,
+      "REF_M4_STANDING_2_blocked_mm3": 0.0,
+      "m4_hole_diameter_mm": 4.3,
+      "lying_min_wall_mm": 3.35,
+      "standing_radial_wall_mm": 3.05,
+      "sma_base_collision_mm3": 0.0,
+      "sma_center_z_mm": 12.5
+    },
+    {
+      "case": "Hub_FPC",
+      "base_valid": true,
+      "base_solids": 1,
+      "base_bbox": [
+        73.5,
+        51.6,
+        28.0
+      ],
+      "lid_valid": true,
+      "lid_solids": 1,
+      "lid_bbox": [
+        66.0,
+        48.0,
+        5.4
+      ],
+      "branding_valid": true,
+      "branding_solids": 9,
+      "branding_bbox": [
+        55.36,
+        39.88,
+        0.9
+      ],
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "mount_refs": 4,
+      "lying_mounts": 2,
+      "standing_mounts": 2,
+      "REF_M4_LYING_1_blocked_mm3": 0.0,
+      "REF_M4_LYING_2_blocked_mm3": 0.0,
+      "REF_M4_STANDING_1_blocked_mm3": 0.0,
+      "REF_M4_STANDING_2_blocked_mm3": 0.0,
+      "m4_hole_diameter_mm": 4.3,
+      "lying_min_wall_mm": 3.35,
+      "standing_radial_wall_mm": 3.05,
+      "carrier_valid": true,
+      "carrier_base_overlap_mm3": 0.0,
+      "carrier_lid_overlap_mm3": 0.0,
+      "carrier_hw_overlap_mm3": 0.0,
+      "fpc_size_mm": [
+        40.0,
+        0.35,
+        20.0
+      ],
+      "fpc_carrier_distance_mm": 0.0
+    },
+    {
+      "case": "Hub_EXT",
+      "base_valid": true,
+      "base_solids": 1,
+      "base_bbox": [
+        73.5,
+        48.0,
+        28.0
+      ],
+      "lid_valid": true,
+      "lid_solids": 1,
+      "lid_bbox": [
+        66.0,
+        48.0,
+        5.4
+      ],
+      "branding_valid": true,
+      "branding_solids": 12,
+      "branding_bbox": [
+        55.36,
+        39.37,
+        0.9
+      ],
+      "hw_base_collision_mm3": 0.0,
+      "hw_lid_collision_mm3": 0.0,
+      "base_lid_collision_mm3": 0.0,
+      "branding_lid_overlap_mm3": 0.0,
+      "mount_refs": 4,
+      "lying_mounts": 2,
+      "standing_mounts": 2,
+      "REF_M4_LYING_1_blocked_mm3": 0.0,
+      "REF_M4_LYING_2_blocked_mm3": 0.0,
+      "REF_M4_STANDING_1_blocked_mm3": 0.0,
+      "REF_M4_STANDING_2_blocked_mm3": 0.0,
+      "m4_hole_diameter_mm": 4.3,
+      "lying_min_wall_mm": 3.35,
+      "standing_radial_wall_mm": 3.05,
+      "sma_base_collision_mm3": 0.0,
+      "sma_center_z_mm": 14.0
+    }
+  ]
+}
