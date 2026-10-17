@@ -32,7 +32,7 @@ app.MapGet("/api/backoffice/health", async (HttpRequest request, PostgresBackoff
     {
         ok = dbOk,
         service = "GrowCentral Backoffice API",
-        version = "0.1.0",
+        version = "0.2.0",
         database_configured = store.IsConfigured,
         database_reachable = dbOk,
         auth_mode = "bootstrap-admin-token",
@@ -54,6 +54,7 @@ app.MapGet("/api/backoffice/document-types", (HttpRequest request) =>
         x.AccountingRelevant,
         x.ImmutableAfterFinalization,
         x.LegalReference,
+        number_sequence = BusinessDocumentSequenceCatalog.Get(x.Code),
         fields = x.Fields
     }));
 });
@@ -61,8 +62,7 @@ app.MapGet("/api/backoffice/document-types", (HttpRequest request) =>
 app.MapPost("/api/backoffice/invoice-compliance", (HttpRequest request, InvoiceComplianceRequest payload) =>
 {
     if (!IsAuthorized(request)) return Results.Unauthorized();
-    var decision = GermanEInvoicePolicy.Evaluate(payload.ToDomain());
-    return Results.Ok(decision);
+    return Results.Ok(GermanEInvoicePolicy.Evaluate(payload.ToDomain()));
 });
 
 app.MapPost("/api/backoffice/documents/validate", (
@@ -74,8 +74,7 @@ app.MapPost("/api/backoffice/documents/validate", (
     try
     {
         var document = payload.ToDomain(actorId);
-        var result = service.ValidateForFinalization(document, payload.InvoiceCompliance?.ToDomain());
-        return Results.Ok(result);
+        return Results.Ok(service.ValidateForFinalization(document, payload.InvoiceCompliance?.ToDomain()));
     }
     catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or InvalidOperationException)
     {
@@ -95,13 +94,15 @@ app.MapPost("/api/backoffice/documents", async (
     try
     {
         _ = BusinessDocumentCatalog.Get(payload.TemplateCode);
+        var sequence = BusinessDocumentSequenceCatalog.Get(payload.TemplateCode);
         if (!Enum.TryParse<PartyType>(payload.PartyType, true, out var partyType))
             return Results.BadRequest(new { error = "Ungültiger party_type." });
-        if (string.IsNullOrWhiteSpace(payload.SequenceKey) || string.IsNullOrWhiteSpace(payload.Prefix))
-            return Results.BadRequest(new { error = "Nummernkreis und Präfix fehlen." });
 
-        var year = payload.Year ?? DateTime.UtcNow.Year;
-        var number = await store.NextDocumentNumberAsync(payload.SequenceKey, year, payload.Prefix, payload.Padding, ct);
+        var year = payload.DocumentYear ?? DateTime.UtcNow.Year;
+        if (year is < 2000 or > 2200)
+            return Results.BadRequest(new { error = "Ungültiges Dokumentjahr." });
+
+        var number = await store.NextDocumentNumberAsync(sequence.SequenceKey, year, sequence.Prefix, sequence.Padding, ct);
         var idempotencyKey = request.Headers["Idempotency-Key"].FirstOrDefault();
         var stored = await store.CreateDraftAsync(
             payload.TemplateCode,
@@ -151,38 +152,38 @@ app.MapPost("/api/backoffice/documents/{id:guid}/finalize", async (
         if (stored.Status is not (BusinessDocumentStatus.Draft or BusinessDocumentStatus.Approved))
             return Results.Conflict(new { error = $"Dokumentstatus {stored.Status} ist nicht finalisierbar." });
 
-        var document = new BusinessDocument
-        {
-            Id = stored.Id,
-            TemplateCode = stored.TemplateCode,
-            Number = stored.Number,
-            PartyType = stored.PartyType,
-            CreatedBy = stored.CreatedBy,
-            CreatedAtUtc = stored.CreatedAtUtc
-        };
-        foreach (var pair in stored.Values)
-            document.SetValue(pair.Key, pair.Value);
+        var document = Rehydrate(stored);
         if (stored.Status == BusinessDocumentStatus.Approved)
             document.Approve();
 
         service.Finalize(document, actorId, payload.InvoiceCompliance?.ToDomain());
-        var rendered = renderer.Render(document, payload.GlobalValues);
-        if (rendered.MissingValues.Count > 0)
-            return Results.BadRequest(new { error = "Textmaster enthält ungelöste Pflicht-/Ausgabewerte.", missing = rendered.MissingValues });
+        var output = BusinessDocumentOutputPolicy.Prepare(document, renderer.Render(document, payload.GlobalValues));
+        if (output.BlockingMissingValues.Count > 0)
+            return Results.BadRequest(new
+            {
+                error = "Textmaster enthält ungelöste Pflichtwerte.",
+                missing = output.BlockingMissingValues
+            });
 
-        stored.Values.TryGetValue("e_invoice_format", out var format);
+        document.Values.TryGetValue("e_invoice_format", out var format);
         var idempotencyKey = request.Headers["Idempotency-Key"].FirstOrDefault();
         await store.FinalizeAsync(
             stored,
             document,
             actorId,
-            rendered.LegalTextVersion,
-            rendered.Subject,
-            rendered.Body,
+            output.LegalTextVersion,
+            output.Subject,
+            output.Body,
             format,
             idempotencyKey,
             ct);
-        return Results.Ok(new { id, status = "Finalized", document_number = stored.Number });
+        return Results.Ok(new
+        {
+            id,
+            status = "Finalized",
+            document_number = stored.Number,
+            optional_empty_fields = output.OptionalMissingValues
+        });
     }
     catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or InvalidOperationException)
     {
@@ -191,6 +192,22 @@ app.MapPost("/api/backoffice/documents/{id:guid}/finalize", async (
 });
 
 app.Run();
+
+static BusinessDocument Rehydrate(StoredBusinessDocument stored)
+{
+    var document = new BusinessDocument
+    {
+        Id = stored.Id,
+        TemplateCode = stored.TemplateCode,
+        Number = stored.Number,
+        PartyType = stored.PartyType,
+        CreatedBy = stored.CreatedBy,
+        CreatedAtUtc = stored.CreatedAtUtc
+    };
+    foreach (var pair in stored.Values)
+        document.SetValue(pair.Key, pair.Value);
+    return document;
+}
 
 public sealed record InvoiceComplianceRequest(
     DateOnly SupplyDate,
@@ -243,10 +260,7 @@ public sealed record CreateDocumentRequest(
     string TemplateCode,
     string PartyType,
     Guid? PartyId,
-    string SequenceKey,
-    string Prefix,
-    int? Year,
-    int Padding,
+    int? DocumentYear,
     Dictionary<string, string?> Values);
 
 public sealed record FinalizeDocumentRequest(
