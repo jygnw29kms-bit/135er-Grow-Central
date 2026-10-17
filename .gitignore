@@ -21,3 +21,7 @@ local/cloud_link/.env
 # Generated sensor firmware bundled by image CI
 firmware/gc-soil-node/.pio/
 firmware/gc-soil-node/dist/
+
+# FreeCAD local backups
+*.FCBak
+__pycache__/
