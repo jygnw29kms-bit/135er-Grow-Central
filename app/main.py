@@ -28,6 +28,7 @@ from app.provisioning.ble import router as ble_provisioning_router
 from app.network import router as network_router
 from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
 from app.system_info import router as system_router
+from app.profiles import router as profiles_router
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
 WRITE_UUID = os.getenv("DF100M_WRITE_UUID", "f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d")
@@ -51,6 +52,7 @@ app.include_router(usb_router)
 app.include_router(ble_provisioning_router)
 app.include_router(diagnostics_router)
 app.include_router(system_router)
+app.include_router(profiles_router)
 
 client: BleakClient | None = None
 current_address: str | None = None

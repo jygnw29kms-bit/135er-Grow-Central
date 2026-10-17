@@ -1,6 +1,6 @@
 """GrowCentral product edition and capability model.
 
-Local grow control stays available in every edition. Paid editions only add
+Local growing control stays available in every edition. Paid editions only add
 online/comfort capabilities. Production entitlements must be enforced by the
 cloud service; the local test override exists solely for validation on a test Pi.
 """

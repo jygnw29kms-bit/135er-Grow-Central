@@ -117,6 +117,34 @@ def _cpu_percent() -> float | None:
         return None
 
 
+def _power_health() -> dict[str, Any]:
+    """Return Raspberry Pi firmware power/throttle flags when available."""
+    try:
+        result = subprocess.run(["vcgencmd", "get_throttled"], capture_output=True, text=True, timeout=2, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return {"available": False, "status": "unknown"}
+    raw = (result.stdout or "").strip()
+    if result.returncode != 0 or "=" not in raw:
+        return {"available": False, "status": "unknown"}
+    try:
+        value = int(raw.split("=", 1)[1], 16)
+    except ValueError:
+        return {"available": False, "status": "unknown", "raw": raw}
+    flags = {
+        "under_voltage_now": bool(value & (1 << 0)),
+        "frequency_capped_now": bool(value & (1 << 1)),
+        "throttled_now": bool(value & (1 << 2)),
+        "soft_temperature_limit_now": bool(value & (1 << 3)),
+        "under_voltage_occurred": bool(value & (1 << 16)),
+        "frequency_capped_occurred": bool(value & (1 << 17)),
+        "throttled_occurred": bool(value & (1 << 18)),
+        "soft_temperature_limit_occurred": bool(value & (1 << 19)),
+    }
+    current_problem = flags["under_voltage_now"] or flags["throttled_now"] or flags["soft_temperature_limit_now"]
+    historical_problem = any(flags[key] for key in flags if key.endswith("_occurred"))
+    status = "critical" if current_problem else ("warning" if historical_problem else "ok")
+    return {"available": True, "status": status, "raw": raw, "value": value, "flags": flags}
+
 def _resources() -> dict[str, Any]:
     mem_total, mem_used = _memory()
     try:
@@ -169,6 +197,7 @@ def system_identity() -> dict[str, Any]:
         "addresses": usable,
         "uptime": _uptime(),
         "resources": _resources(),
+        "power": _power_health(),
     }
 
 

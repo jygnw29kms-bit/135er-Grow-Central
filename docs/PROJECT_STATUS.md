@@ -3,7 +3,7 @@
 - **Stand:** 16. Oktober 2026
 - **Version:** `alpha-0.7.5`
 - **Hauptbranch:** `master`
-- **Veröffentlichter Pi-Candidate:** **Build 431**; enthält Firmware 0.4.1 und aktuelle Korrekturen
+- **Veröffentlichter Pi-Candidate:** **Build 431**; enthält Firmware 0.5.2 und aktuelle Korrekturen
 - **Aktuelle Sensor-Firmware im Git-Quellstand:** **0.5.2**
 - **Status:** `CANDIDATE` – reale Teilprüfung auf Pi 4 bestätigt, vollständige Hardwarevalidierung offen
 - **Entwicklungsmodus:** Open Source
@@ -43,6 +43,6 @@ Lokale Automationen sind gespeicherte Definitionen. Die Darstellung „hinterleg
 - serielle Kalibrierung aus dem Browser und ein belastbares Substratkalibrierungsmodell; Anleitung und per-Sensor-Diagnose sind unter `/rooms` implementiert;
 - BLE-Provisionierung und weitere Sensorhardware für Temperatur, pH oder EC;
 - Ende-zu-Ende-Tests der Sprachassistenten und optionalen Cloud;
-- vollständiger Realtest des neu veröffentlichten Image-Candidates 375.
+- vollständiger Realtest des veröffentlichten Image-Candidates 431.
 
 Anleitungen: [Bodensensor](de/SOIL_SENSOR_GUIDE.md), [Hardwarebefund](de/SENSOR_HARDWARE_TEST_2026-10-14.md), [Known Limitations](KNOWN_LIMITATIONS.md).

@@ -112,7 +112,7 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
                 async for request in node.messages:
                     sequence+=1
                     nonce=json.loads(request.payload)['nonce']
-                    await node.publish(f'growcentral/v1/devices/{ID}/proof',signed(key,'proof',sequence,{'nonce':nonce,'hardware_uid':HARDWARE_UID,'calibration':announce()['calibration'],'state':{'soil_moisture':42.5,'meta':{'raw':2710,'sensor_ok':True,'quality':'EXCELLENT','firmware':'0.3.0'}}}),qos=1,retain=False)
+                    await node.publish(f'growcentral/v1/devices/{ID}/proof',signed(key,'proof',sequence,{'nonce':nonce,'hardware_uid':HARDWARE_UID,'calibration':announce()['calibration'],'state':{'soil_moisture':42.5,'meta':{'raw':2710,'filtered_raw':2710.0,'sensor_ok':True,'quality':'EXCELLENT','firmware':'0.3.0'}}}),qos=1,retain=False)
             task=asyncio.create_task(respond())
             try:
                 app=FastAPI();app.include_router(gc_pairing.router);app.dependency_overrides[require_write_auth]=lambda:None
@@ -121,7 +121,12 @@ def test_real_tls_broker_acl_and_manual_sensor_acceptance(tmp_path,monkeypatch):
                     r=await api.post(f'/api/devices/trust/{ID}/accept',json={'name':'Pot left','room_id':'room1','fingerprint_confirmation':row['fingerprint'][-16:]})
                     assert r.status_code==200,r.text
                 state=await provider.state(ID)
-                assert state['soil_moisture']==42.5 and state['meta']['sensor_ok'] is True
+                assert state['soil_moisture']==pytest.approx(43.02,abs=.001) and state['meta']['sensor_ok'] is True
+                assert state['soil_substrate_reference_percent']==pytest.approx(51.567,abs=.001)
+                assert state['soil_substrate_index_percent']==pytest.approx(83.425,abs=.001)
+                assert state['soil_substrate_state']=='below_reference'
+                assert state['meta']['calculation_source']=='server_three_point_reference'
+                assert state['meta']['sensor_reported_soil_moisture']==42.5
                 assert rooms.load_state()['assignments'][f'growcentral_esp32:{ID}']=='room1'
                 TrustStore().transition(ID,'REVOKED')
                 with pytest.raises(PermissionError):await provider.state(ID)

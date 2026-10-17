@@ -19,7 +19,7 @@ Der veröffentlichte Candidate **Build 431** enthält Firmware 0.5.2 und den int
 5. Gerätename und Raum zuweisen; Aufnahme ausdrücklich bestätigen. Die frische signierte Identität bleibt Pflicht.
 6. Raum > Sensordaten > **MESSWERTE JETZT**. Bodenfeuchte wird getrennt von Luftfeuchte angezeigt. Standardmäßig werden Raumwerte alle fünf Minuten erfasst; mehrere zugeordnete Bodenfühler werden zum Raum-Mittelwert zusammengefasst.
 
-## Zweipunkt-Referenzkalibrierung per USB
+## Dreipunkt-Referenzkalibrierung per USB
 
 Die Firmware unterstützt folgende serielle Befehle bei **115200 Baud**. Den USB-Einrichtungsdialog schließen und keine parallelen seriellen Werkzeuge verwenden.
 
@@ -27,10 +27,11 @@ Die Firmware unterstützt folgende serielle Befehle bei **115200 Baud**. Den USB
 |---|---|
 | `CAL AIR` | Messsonde reinigen, vollständig trocknen, frei in die Luft halten und ruhig halten. Trockenreferenz speichern. |
 | `CAL WATER` | Nur den dafür vorgesehenen Messbereich ins Wasser halten und stabilisieren lassen. Elektronik, Anschlüsse und USB bleiben trocken. Nassreferenz speichern. |
-| `INFO` | Gespeicherte Werte `air_raw` und `water_raw` prüfen. |
+| `CAL SUBSTRATE` | Nach AIR und WATER die Sonde in repräsentatives frisches Substrat bei definierter Einstecktiefe setzen und die Substratreferenz speichern. |
+| `INFO` | Gespeicherte Werte `air_raw`, `water_raw` und `substrate_raw` sowie den Kalibrierstatus prüfen. |
 | `RESET CAL` | Auf vorläufige Werkreferenzen zurücksetzen. |
 
-Die Werte werden dauerhaft auf dem Sensor gespeichert. Ein komfortabler Kalibrierungsdialog ist noch nicht implementiert. Bei nicht eindeutig abgegrenztem oder ungeschütztem Messbereich die Sonde nicht eintauchen; zuvor die konkrete Hardwareausführung prüfen.
+Die drei Werte werden dauerhaft auf dem Sensor gespeichert und im integrierten USB-Einrichtungsdialog Schritt für Schritt erfasst. AIR und WATER definieren den elektrischen 0–100-%-Bereich; FRESH SUBSTRATE ist eine agronomische Referenz und keine erfundene Feldkapazität. Bei nicht eindeutig abgegrenztem oder ungeschütztem Messbereich die Sonde nicht eintauchen; zuvor die konkrete Hardwareausführung prüfen.
 
 ## Grenzwerte im verwendeten Substrat
 
@@ -38,6 +39,6 @@ Nach der Referenzkalibrierung dieselbe Einstecktiefe und Position verwenden. Den
 
 ## Vorhandene Diagnosewerte
 
-Die signierte Telemetrie liefert Roh-/Median-/Filterwerte, Min/Max, Streuung, Qualität, Messzustand, Trocken-/Nassreferenz, WLAN-Signalstärke, Laufzeit und Firmware. Die Raumhistorie zeigt aktuell den Feuchte-Mittelwert; eine separate Diagnoseansicht ist noch nicht implementiert.
+Die signierte Telemetrie liefert Roh-/Median-/Filterwerte, Min/Max, Streuung, Qualität, Messzustand, Trocken-/Nassreferenz, WLAN-Signalstärke, Laufzeit und Firmware. Die Raumhistorie zeigt den Feuchte-Mittelwert. Die Raumansicht enthält zusätzlich eine separate Live-Diagnose für angenommene Grow-Central-Sensoren mit Rohwert, Median, gefiltertem ADC, Min/Max, Streuung, Signalqualität, Messzustand, Kalibrierreferenzen, WLAN-Signal, Laufzeit und Firmware.
 
-Bei MQTT-Problemen `NET INFO` lesen: `wifi_status=3`, eine IP und `mqtt_connected=yes` zeigen eine bestehende Verbindung. Firmware 0.4.1 meldet zusätzlich UTC-Epoch, `ca_bytes` und bei Fehlern `tls_error`. Ein `OK broker CA stored` allein garantiert bei alter Firmware keinen vollständigen Transfer. Keine Zertifikatsprüfung abschalten; [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md) beachten.
+Bei MQTT-Problemen `NET INFO` lesen: `wifi_status=3`, eine IP und `mqtt_connected=yes` zeigen eine bestehende Verbindung. Firmware 0.5.2 meldet UTC-Epoch, `ca_bytes` und bei Fehlern `tls_error`. Ein `OK broker CA stored` allein garantiert bei alter Firmware keinen vollständigen Transfer. Keine Zertifikatsprüfung abschalten; [Hardwarebefund](SENSOR_HARDWARE_TEST_2026-10-14.md) beachten.

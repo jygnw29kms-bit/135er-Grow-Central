@@ -260,7 +260,7 @@ Strategische Marketingregel:
 
 - Home Assistant / Nabu Casa: Open-Source-/Local-Core plus optionaler Remote-/Backup-Dienst.
 - Pulse Grow: Free + bezahlte Historie, Multi-User, Exporte und Multi-Location.
-- klassische Grow-Controller: Hardware-first, oft herstellerspezifischer und teurer.
+- klassische Anbau-Controller: Hardware-first, oft herstellerspezifischer und teurer.
 
 ### Stärken von Grow-Central
 

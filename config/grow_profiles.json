@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "library": "Grow-Central Official Profiles",
+  "profiles": [
+    {
+      "id": "tomato",
+      "name": "Tomate",
+      "scientific_name": "Solanum lycopersicum",
+      "category": "Gemüse / Fruchtgemüse",
+      "difficulty": "mittel",
+      "light_need": "hoch",
+      "systems": ["Erde", "Topf", "Gewächshaus", "Hydroponik", "Indoor-Anzucht"],
+      "summary": "Universelles Basisprofil für Aussaat, Anzucht, Wachstum, Blüte, Fruchtbildung und Ernte von Tomaten.",
+      "phases": [
+        {"id":"preparation","title":"Vorbereitung","todos":["Saatgut und Sorte auswählen","Aussaaterde und Anzuchtgefäße vorbereiten","Hellen Standort oder Anzuchtlicht einplanen"],"targets":{}},
+        {"id":"germination","title":"Keimen","todos":["Samen in feuchtes Anzuchtsubstrat säen","Substrat gleichmäßig feucht halten","Keimtemperatur überwachen"],"targets":{"temperature_c":"18–21","moisture":"gleichmäßig feucht, nicht nass"}},
+        {"id":"seedling","title":"Sämling","todos":["Nach dem Auflaufen sehr hell stellen","Bei ersten echten Blättern pikieren","Auf stabile, kompakte Entwicklung achten"],"targets":{"light_hours":"14–16 möglich"}},
+        {"id":"growth","title":"Anbau & Wachstum","todos":["Endstandort vorbereiten","Pflanze nach Frostgefahr oder geschützt auspflanzen","Stütze oder Schnur vorsehen","Regelmäßig und gleichmäßig bewässern"],"targets":{"day_temperature_c":"20–26","night_temperature_c":"16–18","substrate_ph":"6.0–6.8"}},
+        {"id":"fruiting","title":"Blüte & Fruchtbildung","todos":["Nährstoffversorgung anpassen","Luftzirkulation sicherstellen","Fruchtansatz und Pflanzenzustand kontrollieren"],"targets":{}},
+        {"id":"harvest","title":"Ernte","todos":["Voll ausgefärbte Früchte ernten","Reife Früchte regelmäßig abnehmen","Ernte und Beobachtungen im Growtagebuch dokumentieren"],"targets":{}}
+      ],
+      "sources": [
+        {"label":"Royal Horticultural Society – Tomatoes","url":"https://www.rhs.org.uk/vegetables/tomatoes/grow-your-own"}
+      ]
+    },
+    {
+      "id": "basil",
+      "name": "Basilikum",
+      "scientific_name": "Ocimum basilicum",
+      "category": "Kräuter",
+      "difficulty": "leicht bis mittel",
+      "light_need": "hoch",
+      "systems": ["Topf", "Fensterbank", "Beet", "Gewächshaus", "Hydroponik"],
+      "summary": "Basisprofil für Basilikum von der Aussaat bis zur laufenden Blatt- und Triebernte.",
+      "phases": [
+        {"id":"preparation","title":"Vorbereitung","todos":["Aussaaterde und kleine Töpfe vorbereiten","Warmen, hellen Standort wählen","Saatgut für gestaffelte Aussaat bereithalten"],"targets":{}},
+        {"id":"germination","title":"Keimen","todos":["Samen fein aussäen","Gleichmäßig feucht halten","Keimtemperatur kontrollieren"],"targets":{"temperature_c":"ca. 20","moisture":"feucht, keine Staunässe"}},
+        {"id":"seedling","title":"Sämling","todos":["Sämlinge warm und hell stellen","Bei mehreren Blättern vereinzeln oder umtopfen","Vor Kälte und Zugluft schützen"],"targets":{}},
+        {"id":"growth","title":"Anbau & Pflege","todos":["Sehr hellen bis sonnigen Standort nutzen","Regelmäßig gießen","Triebspitzen ernten oder pinzieren","Blütenbildung beobachten"],"targets":{"day_temperature_c":"20–28","night_temperature_c":"15–18","substrate_ph":"6.0–7.0"}},
+        {"id":"harvest","title":"Ernte","todos":["Junge Triebe und Blätter laufend schneiden","Nicht die gesamte Pflanze auf einmal abernten","Ernte im Growtagebuch dokumentieren"],"targets":{}}
+      ],
+      "sources": [
+        {"label":"Royal Horticultural Society – Basil","url":"https://www.rhs.org.uk/herbs/basil/grow-your-own"}
+      ]
+    },
+    {
+      "id": "chili",
+      "name": "Chili",
+      "scientific_name": "Capsicum spp.",
+      "category": "Gemüse / Fruchtgemüse",
+      "difficulty": "mittel",
+      "light_need": "hoch",
+      "systems": ["Topf", "Beet", "Gewächshaus", "Indoor-Anzucht", "Hydroponik"],
+      "summary": "Basisprofil für Chili und Peperoni mit früher Anzucht und langem Kulturzeitraum.",
+      "phases": [
+        {"id":"preparation","title":"Vorbereitung","todos":["Sorte auswählen","Anzuchtsubstrat und Töpfe vorbereiten","Langen Kulturzeitraum und ausreichend Licht einplanen"],"targets":{}},
+        {"id":"germination","title":"Keimen","todos":["Samen warm aussäen","Gleichmäßig feucht halten","Keimung regelmäßig kontrollieren"],"targets":{"temperature_c":"ca. 21"}},
+        {"id":"seedling","title":"Sämling","todos":["Nach dem Auflaufen sehr hell stellen","Bei echten Blättern pikieren","Warm und gleichmäßig feucht kultivieren"],"targets":{}},
+        {"id":"growth","title":"Anbau & Wachstum","todos":["Warmen, geschützten Standort wählen","Nach Frostgefahr dauerhaft nach draußen stellen","Gleichmäßig gießen und moderat düngen","Bei Bedarf stützen"],"targets":{"day_temperature_c":"22–28","night_temperature_c":"18–20","substrate_ph":"6.0–6.8"}},
+        {"id":"harvest","title":"Frucht & Ernte","todos":["Fruchtentwicklung beobachten","Grüne oder voll ausgefärbte Früchte sortenabhängig ernten","Ernte dokumentieren"],"targets":{}}
+      ],
+      "sources": [
+        {"label":"Royal Horticultural Society – Chilli peppers","url":"https://www.rhs.org.uk/vegetables/chilli-pepper/grow-your-own"}
+      ]
+    },
+    {
+      "id": "lettuce",
+      "name": "Salat",
+      "scientific_name": "Lactuca sativa",
+      "category": "Blattgemüse",
+      "difficulty": "leicht",
+      "light_need": "mittel bis hoch",
+      "systems": ["Beet", "Hochbeet", "Topf", "Gewächshaus", "Hydroponik"],
+      "summary": "Schnelles Basisprofil für Kopf- und Blattsalate mit Möglichkeit zur gestaffelten Aussaat.",
+      "phases": [
+        {"id":"preparation","title":"Vorbereitung","todos":["Feines Saatbett oder Anzuchtgefäße vorbereiten","Sorte und Ernteform auswählen","Folgesaaten für laufende Ernte planen"],"targets":{}},
+        {"id":"germination","title":"Keimen","todos":["Samen sehr flach aussäen","Gleichmäßig feucht halten","Übermäßige Hitze vermeiden"],"targets":{"climate":"eher kühl"}},
+        {"id":"seedling","title":"Sämling","todos":["Hell ohne starke Hitze stellen","Jungpflanzen rechtzeitig vereinzeln","Gleichmäßig feucht halten"],"targets":{}},
+        {"id":"growth","title":"Anbau & Pflege","todos":["Ausreichenden Pflanzabstand herstellen","Regelmäßig bewässern","Auf Schnecken und Hitzestress achten","Folgesaaten nachziehen"],"targets":{"day_temperature_c":"12–22","night_temperature_c":"8–15","substrate_ph":"6.0–7.0"}},
+        {"id":"harvest","title":"Ernte","todos":["Blattsalate laufend pflücken oder Köpfe vollständig ernten","Erntezeitpunkt dokumentieren","Bei Bedarf Folgesatz aktivieren"],"targets":{}}
+      ],
+      "sources": [
+        {"label":"Royal Horticultural Society – Lettuces","url":"https://www.rhs.org.uk/vegetables/lettuce/grow-your-own"}
+      ]
+    },
+    {
+      "id": "cannabis",
+      "name": "Cannabis",
+      "scientific_name": "Cannabis sativa L.",
+      "category": "Nutz- und Spezialkultur",
+      "difficulty": "mittel bis anspruchsvoll",
+      "light_need": "hoch",
+      "systems": ["Erde", "Coco", "Gewächshaus", "Controlled Environment", "Hydroponik"],
+      "summary": "Vollständiges Kulturprofil für Cannabis als eine von vielen Grow-Central-Kulturen. Nicht als Hauptzweck der Plattform positioniert.",
+      "phases": [
+        {"id":"preparation","title":"Vorbereitung","todos":["Genetik und rechtliche Rahmenbedingungen prüfen","Anbausystem und Substrat festlegen","Klima-, Licht- und Sicherheitskonzept vorbereiten"],"targets":{}},
+        {"id":"germination","title":"Keimung","todos":["Sauberes Anzuchtmedium vorbereiten","Feuchtigkeit stabil halten","Keimlinge nach dem Auflaufen in geeignete Beleuchtung überführen"],"targets":{}},
+        {"id":"seedling","title":"Sämling / Jungpflanze","todos":["Jungpflanzen auf gleichmäßige Entwicklung prüfen","Überwässerung vermeiden","Licht und Klima schrittweise anpassen"],"targets":{}},
+        {"id":"vegetative","title":"Vegetative Phase","todos":["Pflanzenentwicklung und Wurzelraum prüfen","Bewässerung und Nährstoffversorgung an Pflanzenzustand anpassen","VPD und Luftzirkulation überwachen"],"targets":{"day_temperature_c":"24–26","night_temperature_c":"20–22","vpd_kpa":"0.9–1.2","photoperiod_h":"18"}},
+        {"id":"flowering","title":"Blüte","todos":["Blütenentwicklung regelmäßig kontrollieren","Luftbewegung und Feuchterisiko überwachen","Bewässerung und Nährstoffversorgung nach Pflanzenreaktion anpassen"],"targets":{"vpd_kpa":"1.2–1.5","photoperiod_h":"12"}},
+        {"id":"harvest","title":"Ernte","todos":["Reife anhand der gewählten Sorte und des Nutzungsziels bewerten","Ernte sauber dokumentieren","Pflanzen- und Umgebungsdaten für den nächsten Durchlauf sichern"],"targets":{}},
+        {"id":"postharvest","title":"Nachernte","todos":["Erntegut entsprechend Nutzungszweck nachbehandeln","Trocknung beziehungsweise weitere Verarbeitung dokumentieren","Grow abschließen und Erkenntnisse ins Profil übernehmen"],"targets":{}}
+      ],
+      "sources": [
+        {"label":"Horticulturae 2026 – Controlled-environment Cannabis cultivation","url":"https://www.mdpi.com/2311-7524/12/5/619"},
+        {"label":"Plants 2024 – Integrated Management of Pathogens and Microbes in Cannabis","url":"https://www.mdpi.com/2223-7747/13/6/786"}
+      ]
+    }
+  ]
+}

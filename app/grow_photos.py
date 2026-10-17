@@ -106,14 +106,23 @@ def _store_photo(raw: bytes, photo_id: str, ext: str) -> Path:
     target = PHOTO_DIR / f"{photo_id}.{ext}"
     fd, temp_name = tempfile.mkstemp(prefix=f".{photo_id}-", dir=PHOTO_DIR)
     try:
-        os.fchmod(fd, 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o600)
+        else:
+            os.chmod(temp_name, 0o600)
         with os.fdopen(fd, "wb") as handle:
+            fd = -1
             handle.write(raw)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp_name, target)
         return target
     finally:
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         Path(temp_name).unlink(missing_ok=True)
 
 

@@ -21,3 +21,4 @@ local/cloud_link/.env
 # Generated sensor firmware bundled by image CI
 firmware/gc-soil-node/.pio/
 firmware/gc-soil-node/dist/
+.pytest-*/

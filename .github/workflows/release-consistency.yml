@@ -3,7 +3,17 @@ name: Validate GrowCentral Release Consistency
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ master, "feature/**" ]
+    paths:
+      - 'RELEASE_STATE.md'
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'website/**'
+      - 'mobile/**'
+      - 'shared/hardware_profile.py'
+      - '.github/workflows/release-consistency.yml'
+  pull_request:
     paths:
       - 'RELEASE_STATE.md'
       - 'README.md'
@@ -29,9 +39,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
-          grep -Fq 'Build 375' RELEASE_STATE.md
-          grep -Fq 'pi-universal-alpha-0.7.5-375' RELEASE_STATE.md
-          grep -Fq 'f3837eb86028654becec96cd94488ba4d6a5e0cb' RELEASE_STATE.md
+          grep -Fq 'Build 431' RELEASE_STATE.md
+          grep -Fq 'pi-universal-alpha-0.7.5-431' RELEASE_STATE.md
+          grep -Fq 'b51c19109db669832a2e009b239cc358fcd12428' RELEASE_STATE.md
           grep -Fq 'CANDIDATE' RELEASE_STATE.md
           grep -Fq 'OPEN SOURCE' RELEASE_STATE.md
 

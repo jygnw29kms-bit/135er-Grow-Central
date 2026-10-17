@@ -1,6 +1,7 @@
 name: Native soil sensor firmware
 on:
   push:
+    branches: [master, "feature/**"]
     paths:
       - 'firmware/gc-soil-node/**'
       - '.github/workflows/gc-soil-firmware.yml'
