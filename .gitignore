@@ -25,3 +25,7 @@ firmware/gc-soil-node/dist/
 # FreeCAD local backups
 *.FCBak
 __pycache__/
+
+# Local third-party CAD references
+hardware/enclosures/freecad_v2/references/
+hardware/enclosures/freecad_v2/patch_*.py
