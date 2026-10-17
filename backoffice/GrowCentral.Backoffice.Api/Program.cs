@@ -23,6 +23,7 @@ catch (InvalidOperationException)
 builder.Services.AddSingleton(new PostgresBackofficeStore(connectionString));
 builder.Services.AddSingleton(new PostgresBackofficeWorkflowStore(connectionString));
 builder.Services.AddSingleton(new PostgresAuthStore(connectionString));
+builder.Services.AddSingleton(new PostgresOperatorConfigStore(connectionString));
 builder.Services.AddSingleton<BusinessDocumentService>();
 builder.Services.AddSingleton<BusinessDocumentRenderer>();
 builder.Services.AddRateLimiter(options =>
@@ -68,7 +69,7 @@ app.MapGet("/api/backoffice/health", async (PostgresBackofficeStore store, Postg
     {
         ok = dbOk,
         service = "GrowCentral Backoffice API",
-        version = "0.4.0",
+        version = "0.5.0",
         database_configured = store.IsConfigured,
         database_reachable = dbOk,
         owner_initialized = hasUsers,
@@ -163,6 +164,39 @@ app.MapPost("/api/backoffice/users", async (HttpRequest request, CreateUserReque
         });
     }
     catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+app.MapPost("/api/backoffice/operator-config/validate", async (HttpRequest request, OperatorConfig payload, PostgresAuthStore auth, CancellationToken ct) =>
+{
+    var actor = await ActorAsync(request, auth, ct);
+    if (actor is null || !BackofficeRoles.CanRead(actor.Role)) return Results.Unauthorized();
+    return Results.Ok(OperatorConfigPolicy.Validate(payload));
+});
+
+app.MapGet("/api/backoffice/operator-config", async (HttpRequest request, PostgresAuthStore auth, PostgresOperatorConfigStore store, CancellationToken ct) =>
+{
+    var actor = await ActorAsync(request, auth, ct);
+    if (actor is null || !BackofficeRoles.CanRead(actor.Role)) return Results.Unauthorized();
+    var config = await store.GetAsync(ct);
+    return config is null ? Results.NotFound(new { error = "Betreiber-/Steuerkonfiguration wurde noch nicht angelegt." }) : Results.Ok(new { config, validation = OperatorConfigPolicy.Validate(config) });
+});
+
+app.MapPut("/api/backoffice/operator-config", async (HttpRequest request, OperatorConfig payload, PostgresAuthStore auth, PostgresOperatorConfigStore store, CancellationToken ct) =>
+{
+    var actor = await ActorAsync(request, auth, ct);
+    if (actor is null) return Results.Unauthorized();
+    if (!BackofficeRoles.CanConfigure(actor.Role)) return Results.Forbid();
+    var validation = OperatorConfigPolicy.Validate(payload);
+    if (!validation.IsValid) return Results.BadRequest(validation);
+    try
+    {
+        await store.SaveAsync(payload with { LegalForm = "sole_proprietor" }, actor.UserId, ct);
+        return Results.Ok(new { saved = true, validation });
+    }
+    catch (ArgumentException ex)
     {
         return Results.BadRequest(new { error = ex.Message });
     }
