@@ -14,6 +14,17 @@ public class BusinessDocumentServiceTests
     }
 
     [Fact]
+    public void EveryTemplateHasServerSideNumberSequence()
+    {
+        foreach (var code in BusinessDocumentCatalog.All.Keys)
+        {
+            var policy = BusinessDocumentSequenceCatalog.Get(code);
+            Assert.False(string.IsNullOrWhiteSpace(policy.SequenceKey));
+            Assert.False(string.IsNullOrWhiteSpace(policy.Prefix));
+        }
+    }
+
+    [Fact]
     public void FinalizedInvoiceCannotBeSilentlyChanged()
     {
         var invoice = ValidB2BInvoice();
@@ -139,6 +150,29 @@ public class BusinessDocumentServiceTests
 
         Assert.Equal(BusinessDocumentStatus.Corrected, invoice.Status);
         Assert.Equal(BusinessDocumentStatus.Finalized, correction.Status);
+    }
+
+    [Fact]
+    public void OptionalTemplatePlaceholdersDoNotBlockFinalOutput()
+    {
+        var invoice = ValidB2BInvoice();
+        var rendered = new BusinessDocumentRenderer().Render(invoice);
+        var output = BusinessDocumentOutputPolicy.Prepare(invoice, rendered);
+
+        Assert.Empty(output.BlockingMissingValues);
+        Assert.Contains("bank_details", output.OptionalMissingValues);
+        Assert.DoesNotContain("[bank_details]", output.Body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RequiredTemplatePlaceholderStillBlocksFinalOutput()
+    {
+        var invoice = ValidB2BInvoice();
+        invoice.SetValue("invoice_number", null);
+        var rendered = new BusinessDocumentRenderer().Render(invoice);
+        var output = BusinessDocumentOutputPolicy.Prepare(invoice, rendered);
+
+        Assert.Contains("invoice_number", output.BlockingMissingValues);
     }
 
     [Fact]
