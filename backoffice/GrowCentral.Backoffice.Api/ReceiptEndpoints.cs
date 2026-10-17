@@ -4,7 +4,11 @@ public static class ReceiptEndpoints
 {
     public static void MapReceiptEndpoints(this WebApplication app)
     {
-        app.MapPost("/api/backoffice/receipts/original", async (HttpRequest request, PostgresAuthStore auth, PostgresReceiptStore receipts, CancellationToken ct) =>
+        var connectionString = Environment.GetEnvironmentVariable("GC_BACKOFFICE_DB") ?? string.Empty;
+        var storageRoot = Environment.GetEnvironmentVariable("GC_BACKOFFICE_STORAGE_ROOT") ?? string.Empty;
+        var receipts = new PostgresReceiptStore(connectionString, storageRoot);
+
+        app.MapPost("/api/backoffice/receipts/original", async (HttpRequest request, PostgresAuthStore auth, CancellationToken ct) =>
         {
             var actor = await AuthenticateAsync(request, auth, ct);
             if (actor is null) return Results.Unauthorized();
@@ -29,7 +33,7 @@ public static class ReceiptEndpoints
             }
         });
 
-        app.MapGet("/api/backoffice/receipts/{id:guid}", async (Guid id, HttpRequest request, PostgresAuthStore auth, PostgresReceiptStore receipts, CancellationToken ct) =>
+        app.MapGet("/api/backoffice/receipts/{id:guid}", async (Guid id, HttpRequest request, PostgresAuthStore auth, CancellationToken ct) =>
         {
             var actor = await AuthenticateAsync(request, auth, ct);
             if (actor is null || !BackofficeRoles.CanRead(actor.Role)) return Results.Unauthorized();
@@ -37,7 +41,7 @@ public static class ReceiptEndpoints
             return receipt is null ? Results.NotFound() : Results.Ok(receipt);
         });
 
-        app.MapGet("/api/backoffice/receipts/{id:guid}/original", async (Guid id, HttpRequest request, PostgresAuthStore auth, PostgresReceiptStore receipts, CancellationToken ct) =>
+        app.MapGet("/api/backoffice/receipts/{id:guid}/original", async (Guid id, HttpRequest request, PostgresAuthStore auth, CancellationToken ct) =>
         {
             var actor = await AuthenticateAsync(request, auth, ct);
             if (actor is null || !BackofficeRoles.CanRead(actor.Role)) return Results.Unauthorized();
