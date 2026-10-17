@@ -76,27 +76,27 @@ public sealed class PostgresBackofficeStore(string connectionString)
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            await using var reservation = new NpgsqlCommand(
-                """INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
-                   VALUES(@key,'document.create',@hash,NOW(),NOW()+INTERVAL '24 hours')
-                   ON CONFLICT (idempotency_key) DO NOTHING""", connection, tx);
+            const string sql = @"INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
+VALUES(@key,'document.create',@hash,NOW(),NOW()+INTERVAL '24 hours')
+ON CONFLICT (idempotency_key) DO NOTHING";
+            await using var reservation = new NpgsqlCommand(sql, connection, tx);
             reservation.Parameters.AddWithValue("key", idempotencyKey);
             reservation.Parameters.AddWithValue("hash", payloadHash);
             if (await reservation.ExecuteNonQueryAsync(cancellationToken) == 0)
                 throw new InvalidOperationException("Idempotency-Key wurde bereits verwendet.");
         }
 
-        await using (var insert = new NpgsqlCommand(
-            """INSERT INTO backoffice_documents
-               (id,template_code,document_number,party_type,party_id,status,version,created_at,created_by,current_values,content_hash)
-               VALUES(@id,@template,@number,@party_type,@party_id,'Draft',1,@created_at,@created_by,@values::jsonb,@hash)""", connection, tx))
+        const string insertSql = @"INSERT INTO backoffice_documents
+(id,template_code,document_number,party_type,party_id,status,version,created_at,created_by,current_values,content_hash)
+VALUES(@id,@template,@number,@party_type,@party_id,'Draft',1,@created_at,@created_by,@values::jsonb,@hash)";
+        await using (var insert = new NpgsqlCommand(insertSql, connection, tx))
         {
             insert.Parameters.AddWithValue("id", id);
             insert.Parameters.AddWithValue("template", templateCode);
             insert.Parameters.AddWithValue("number", number);
             insert.Parameters.AddWithValue("party_type", partyType.ToString().ToLowerInvariant());
             insert.Parameters.AddWithValue("party_id", partyId.HasValue ? partyId.Value : DBNull.Value);
-            insert.Parameters.AddWithValue("created_at", now);
+            insert.Parameters.AddWithValue("created_at", now.UtcDateTime);
             insert.Parameters.AddWithValue("created_by", actor);
             insert.Parameters.AddWithValue("values", valuesJson);
             insert.Parameters.AddWithValue("hash", payloadHash);
@@ -114,15 +114,16 @@ public sealed class PostgresBackofficeStore(string connectionString)
         EnsureConfigured();
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(
-            """SELECT id,template_code,document_number,party_type,status,version,created_by,created_at,current_values::text
-               FROM backoffice_documents WHERE id=@id""", connection);
+        const string sql = @"SELECT id,template_code,document_number,party_type,status,version,created_by,created_at,current_values::text
+FROM backoffice_documents WHERE id=@id";
+        await using var command = new NpgsqlCommand(sql, connection);
         command.Parameters.AddWithValue("id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken)) return null;
 
         var values = JsonSerializer.Deserialize<Dictionary<string, string?>>(reader.GetString(8))
             ?? new Dictionary<string, string?>();
+        var createdAtUtc = DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc);
         return new(
             reader.GetGuid(0),
             reader.GetString(1),
@@ -131,7 +132,7 @@ public sealed class PostgresBackofficeStore(string connectionString)
             Enum.Parse<BusinessDocumentStatus>(reader.GetString(4), true),
             reader.GetInt32(5),
             reader.GetString(6),
-            reader.GetFieldValue<DateTimeOffset>(7),
+            new DateTimeOffset(createdAtUtc),
             values);
     }
 
@@ -158,21 +159,21 @@ public sealed class PostgresBackofficeStore(string connectionString)
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            await using var reservation = new NpgsqlCommand(
-                """INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
-                   VALUES(@key,'document.finalize',@hash,NOW(),NOW()+INTERVAL '24 hours')
-                   ON CONFLICT (idempotency_key) DO NOTHING""", connection, tx);
+            const string sql = @"INSERT INTO backoffice_idempotency(idempotency_key,operation,request_hash,created_at,expires_at)
+VALUES(@key,'document.finalize',@hash,NOW(),NOW()+INTERVAL '24 hours')
+ON CONFLICT (idempotency_key) DO NOTHING";
+            await using var reservation = new NpgsqlCommand(sql, connection, tx);
             reservation.Parameters.AddWithValue("key", idempotencyKey);
             reservation.Parameters.AddWithValue("hash", contentHash);
             if (await reservation.ExecuteNonQueryAsync(cancellationToken) == 0)
                 throw new InvalidOperationException("Idempotency-Key wurde bereits verwendet.");
         }
 
-        await using (var update = new NpgsqlCommand(
-            """UPDATE backoffice_documents
-               SET status='Finalized', version=@new_version, finalized_at=NOW(), finalized_by=@actor,
-                   current_values=@values::jsonb, content_hash=@hash
-               WHERE id=@id AND version=@expected_version AND status IN ('Draft','Approved')""", connection, tx))
+        const string updateSql = @"UPDATE backoffice_documents
+SET status='Finalized', version=@new_version, finalized_at=NOW(), finalized_by=@actor,
+    current_values=@values::jsonb, content_hash=@hash
+WHERE id=@id AND version=@expected_version AND status IN ('Draft','Approved')";
+        await using (var update = new NpgsqlCommand(updateSql, connection, tx))
         {
             update.Parameters.AddWithValue("new_version", newVersion);
             update.Parameters.AddWithValue("actor", actor);
@@ -184,10 +185,10 @@ public sealed class PostgresBackofficeStore(string connectionString)
                 throw new InvalidOperationException("Dokument wurde parallel geändert oder ist nicht mehr finalisierbar.");
         }
 
-        await using (var revision = new NpgsqlCommand(
-            """INSERT INTO backoffice_document_revisions
-               (id,document_id,document_version,status,values_json,links_json,text_template_version,rendered_subject,rendered_body,structured_invoice_format,content_hash,created_by)
-               VALUES(@revision_id,@document_id,@version,'Finalized',@values::jsonb,'[]'::jsonb,@text_version,@subject,@body,@format,@hash,@actor)""", connection, tx))
+        const string revisionSql = @"INSERT INTO backoffice_document_revisions
+(id,document_id,document_version,status,values_json,links_json,text_template_version,rendered_subject,rendered_body,structured_invoice_format,content_hash,created_by)
+VALUES(@revision_id,@document_id,@version,'Finalized',@values::jsonb,'[]'::jsonb,@text_version,@subject,@body,@format,@hash,@actor)";
+        await using (var revision = new NpgsqlCommand(revisionSql, connection, tx))
         {
             revision.Parameters.AddWithValue("revision_id", Guid.NewGuid());
             revision.Parameters.AddWithValue("document_id", stored.Id);
@@ -218,10 +219,10 @@ public sealed class PostgresBackofficeStore(string connectionString)
         string payloadHash,
         CancellationToken cancellationToken)
     {
-        await using var audit = new NpgsqlCommand(
-            """INSERT INTO backoffice_audit_events
-               (id,occurred_at,actor_id,action,entity_type,entity_id,entity_version,reason,idempotency_key,payload_hash)
-               VALUES(@id,NOW(),@actor,@action,'BusinessDocument',@entity_id,@version,@reason,@idempotency,@hash)""", connection, tx);
+        const string sql = @"INSERT INTO backoffice_audit_events
+(id,occurred_at,actor_id,action,entity_type,entity_id,entity_version,reason,idempotency_key,payload_hash)
+VALUES(@id,NOW(),@actor,@action,'BusinessDocument',@entity_id,@version,@reason,@idempotency,@hash)";
+        await using var audit = new NpgsqlCommand(sql, connection, tx);
         audit.Parameters.AddWithValue("id", Guid.NewGuid());
         audit.Parameters.AddWithValue("actor", actor);
         audit.Parameters.AddWithValue("action", action.ToString());
