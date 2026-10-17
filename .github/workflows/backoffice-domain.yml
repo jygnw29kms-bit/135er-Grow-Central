@@ -1,27 +1,41 @@
-name: Backoffice Domain
+name: Backoffice Domain and API
 
 on:
   pull_request:
     paths:
       - 'backoffice/**'
+      - 'database/backoffice_schema.sql'
+      - 'docker-compose.cloud.yml'
       - '.github/workflows/backoffice-domain.yml'
   push:
     branches: [ master ]
     paths:
       - 'backoffice/**'
+      - 'database/backoffice_schema.sql'
+      - 'docker-compose.cloud.yml'
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: windows-latest
+  test-and-build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Restore
+          cache: true
+          cache-dependency-path: |
+            backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
+            backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
+      - name: Restore tests
         run: dotnet restore backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj
-      - name: Test
+      - name: Test domain
         run: dotnet test backoffice/GrowCentral.Backoffice.Domain.Tests/GrowCentral.Backoffice.Domain.Tests.csproj --configuration Release --no-restore
+      - name: Restore API
+        run: dotnet restore backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj
+      - name: Build API
+        run: dotnet build backoffice/GrowCentral.Backoffice.Api/GrowCentral.Backoffice.Api.csproj --configuration Release --no-restore
+      - name: Validate compose
+        run: docker compose -f docker-compose.cloud.yml config --quiet
