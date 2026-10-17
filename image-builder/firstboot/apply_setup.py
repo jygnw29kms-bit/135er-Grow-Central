@@ -39,6 +39,7 @@ AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
 GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
+SUPPORTED_LOCALES = {"de", "en"}
 HOSTS_FILE = Path("/etc/hosts")
 PBKDF2_ITERATIONS = 240_000
 
@@ -71,6 +72,8 @@ def validate(config: dict[str, str]) -> None:
         raise ValueError("invalid hostname")
     if config.get("timezone") not in TIMEZONES:
         raise ValueError("invalid timezone")
+    if config.get("locale", "en") not in SUPPORTED_LOCALES:
+        raise ValueError("invalid locale")
     ssh_enabled = config.get("ssh_enabled") == "1"
     if ssh_enabled and len(config.get("new_password", "")) < 12:
         raise ValueError("invalid system password")
@@ -108,6 +111,7 @@ def persist_runtime_settings(config: dict[str, str]) -> None:
     existing = APP_ENV.read_text(encoding="utf-8").splitlines() if APP_ENV.exists() else []
     values = {
         "GC_GUI_USERNAME": config["gui_username"].strip(),
+        "GC_LOCALE": config.get("locale", "en"),
         "GC_GUI_PASSWORD_HASH": _gui_hash(config["gui_password"]),
         "GC_SMARTHOME_ENABLED": "true",
         "GC_FRITZ_HOST": config.get("fritz_host", "").strip() if config.get("fritz_enabled") == "1" else "",

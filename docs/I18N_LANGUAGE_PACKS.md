@@ -245,3 +245,8 @@ Do not attempt an unsafe global search/replace. Migration is incremental and mus
 `GrowCentral` is never translated.
 
 Technical device/vendor names are not translated unless a localized vendor name is officially provided. Translation packs control descriptive UI wording, not hardware identity, API identifiers, database keys or protocol values.
+
+
+## First-Boot-Regel
+
+Die Sprache ist der **erste interaktive Schritt** des First-Boot. GrowCentral liest `navigator.languages` / `navigator.language` und markiert `de` oder `en` nur als Vorschlag. Der Benutzer bestätigt die Auswahl ausdrücklich. Erst danach werden Netzwerk, Zeitzone und Zugangsdaten gezeigt. Die bestätigte Locale wird als `GC_LOCALE` in die Runtime-Konfiguration übernommen. Kleine Flaggen dienen nur als visuelle Hilfe; maßgeblich sind Sprachname und Locale-Code.

@@ -20,6 +20,7 @@ WARNING_FILE = STATE_DIR / "setup-last-warning"
 FIXED_HOSTNAME = "135er-grow-central"
 GUI_USER_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
 TIMEZONES = {"Europe/Berlin", "UTC", "Europe/Vienna", "Europe/Zurich"}
+SUPPORTED_LOCALES = {"de", "en"}
 
 router = APIRouter(prefix="/api/setup", tags=["firstboot"])
 
@@ -27,6 +28,7 @@ router = APIRouter(prefix="/api/setup", tags=["firstboot"])
 class SetupBody(BaseModel):
     mode: str
     timezone: str
+    locale: str = "en"
     ssid: str = ""
     wifi_password: SecretStr = SecretStr("")
     gui_username: str
@@ -163,6 +165,8 @@ async def apply(body: SetupBody):
         raise HTTPException(422, "Ungültiger Netzwerkmodus")
     if body.timezone not in TIMEZONES:
         raise HTTPException(422, "Zeitzone ungültig")
+    if body.locale not in SUPPORTED_LOCALES:
+        raise HTTPException(422, "Sprache ungültig")
     if not GUI_USER_RE.fullmatch(body.gui_username) or len(body.gui_password.get_secret_value()) < 12:
         raise HTTPException(422, "GUI-Benutzer ungültig oder GUI-Passwort kürzer als 12 Zeichen")
     if body.ssh_enabled and len(body.new_password.get_secret_value()) < 12:
@@ -181,6 +185,7 @@ async def apply(body: SetupBody):
         "mode": body.mode,
         "hostname": FIXED_HOSTNAME,
         "timezone": body.timezone,
+        "locale": body.locale,
         "ssid": body.ssid,
         "wifi_password": body.wifi_password.get_secret_value(),
         "gui_username": body.gui_username,
