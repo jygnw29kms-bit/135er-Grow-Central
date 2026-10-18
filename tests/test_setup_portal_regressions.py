@@ -39,7 +39,7 @@ def test_unprovisioned_appliance_exposes_setup_not_normal_runtime_routes():
 
 def test_firstboot_portal_creates_gui_login_and_keeps_ssh_opt_in():
     source = PORTAL.read_text(encoding="utf-8")
-    assert "kein bekanntes Benutzer- oder Gerätepasswort" in source
+    assert "kein werkseitiges Standardpasswort" in source
     assert 'id="guiPassword2"' in source
     assert 'id="sshEnabled" type="checkbox"' in source
     assert "SSH aktivieren" in source

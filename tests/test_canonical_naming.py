@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGACY = re.compile("grow" + r"[\s_-]*" + "control", re.IGNORECASE)
+LEGACY = re.compile("(?:135er" + r"[\s_-]*" + ")?" + "grow" + "control" + r"\b" + "|" + "135er" + r"[\s_-]+" + "grow" + r"[\s_-]+" + "control" + r"\b", re.IGNORECASE)
 TEXT_SUFFIXES = {
     "", ".cfg", ".conf", ".css", ".env", ".example", ".html", ".ini", ".js",
     ".json", ".md", ".py", ".service", ".sh", ".socket", ".sql", ".svg",
