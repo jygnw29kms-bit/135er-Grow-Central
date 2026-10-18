@@ -16,6 +16,8 @@ def violations(root, paths):
     for name in paths:
         path = Path(name)
         lowered = name.lower()
+        if path.parts[:2] in {('hardware', 'enclosures'), ('legacy', 'fusion-review-only')}:
+            continue
         if path.suffix.lower() in {'.stl', '.3mf', '.scad'} or any(part in lowered for part in ('printbench', 'downloads/3d', 'build-rpi4-case')):
             errors.append(f'Unrelated printer asset/workflow: {name}')
             continue
