@@ -201,3 +201,33 @@ def test_homekit_soil_service_name_is_not_duplicated():
     soil_block=source[source.index("class SoilAccessory"):source.index("class SwitchAccessory")]
     assert 'soil.configure_char("Name", value=self.display_name)' in soil_block
     assert 'self.display_name} Bodenfeuchte' not in soil_block
+
+
+def test_homekit_metadata_contract_and_real_soil_serial(monkeypatch):
+    import app.rooms as rooms
+    state={
+        "rooms":[{"id":"garage","name":"Garage"}],
+        "assignments":{"growcentral_esp32:gc-soil-0af6e8":"garage"},
+        "sensor_history":[{
+            "room_id":"garage","timestamp":ts(),"soil_moisture_percent":42.0,"soil_calibration_status":"valid"
+        }],
+    }
+    monkeypatch.setattr(rooms,"load_state",lambda:state)
+    row=homekit._latest_room_values(now=NOW)[0]
+    assert row["native_sensor_ids"] == ("gc-soil-0af6e8",)
+    assert homekit.HOMEKIT_MANUFACTURER == "JL1976 / Grow-Central"
+    assert homekit.HOMEKIT_BRIDGE_MODEL == "Grow-Central Bridge"
+    assert homekit.HOMEKIT_SOIL_MODEL == "Grow-Central Soil Sensor"
+    assert homekit._stable_serial("GC-SOIL", "garage") == homekit._stable_serial("GC-SOIL", "garage")
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    assert "set_info_service(" in source
+    assert "sensor_serial=sensor_serial" in source
+    assert 'native_sensor_ids[0] if len(native_sensor_ids) == 1' in source
+
+
+def test_homekit_firmware_metadata_uses_project_version():
+    assert homekit._firmware_version() == "0.7.5"
+    source=Path("app/homekit_bridge.py").read_text(encoding="utf-8")
+    assert "firmware_revision=_firmware_version()" in source
+    assert "manufacturer=HOMEKIT_MANUFACTURER" in source
+    assert "serial_number=serial_number" in source

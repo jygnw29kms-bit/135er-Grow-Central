@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import platform
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,46 @@ STATUS_FILE = STATE_DIR / "status.json"
 QR_FILE = STATE_DIR / "pairing.svg"
 PERSIST_FILE = STATE_DIR / "accessory.state"
 router = APIRouter(prefix="/api/v1/homekit", tags=["homekit"])
+
+HOMEKIT_MANUFACTURER = "JL1976 / Grow-Central"
+HOMEKIT_BRIDGE_MODEL = "Grow-Central Bridge"
+HOMEKIT_ROOM_MODEL = "Grow-Central Room Sensor"
+HOMEKIT_SOIL_MODEL = "Grow-Central Soil Sensor"
+HOMEKIT_SWITCH_MODEL = "Grow-Central Switch"
+
+
+def _firmware_version() -> str:
+    version_file = Path(__file__).resolve().parents[1] / "VERSION"
+    try:
+        value = version_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        value = ""
+    return value.removeprefix("alpha-") or "unknown"
+
+
+def _stable_serial(prefix: str, identifier: str) -> str:
+    digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()[:12].upper()
+    return f"{prefix}-{digest}"
+
+
+def _bridge_serial() -> str:
+    configured = os.getenv("GC_DEVICE_ID", "").strip()
+    if configured:
+        return _stable_serial("GC-BRIDGE", configured)
+    try:
+        machine_id = Path("/etc/machine-id").read_text(encoding="utf-8").strip()
+    except OSError:
+        machine_id = ""
+    return _stable_serial("GC-BRIDGE", machine_id or platform.node() or "grow-central")
+
+
+def _set_accessory_info(accessory, *, model: str, serial_number: str) -> None:
+    accessory.set_info_service(
+        firmware_revision=_firmware_version(),
+        manufacturer=HOMEKIT_MANUFACTURER,
+        model=model,
+        serial_number=serial_number,
+    )
 
 
 def _status() -> dict[str, Any]:
@@ -134,7 +175,18 @@ def _latest_room_values(*, now: datetime | None = None) -> list[dict[str, Any]]:
         services = _room_services(snapshot)
         if not services:
             continue
-        result.append({"id": room.get("id"), "name": room.get("name") or room.get("id"), "latest": snapshot, "services": services})
+        native_sensor_ids = tuple(sorted(
+            device_id.split(":", 1)[1]
+            for device_id, assigned_room_id in state.get("assignments", {}).items()
+            if assigned_room_id == room.get("id") and str(device_id).startswith("growcentral_esp32:")
+        ))
+        result.append({
+            "id": room.get("id"),
+            "name": room.get("name") or room.get("id"),
+            "latest": snapshot,
+            "services": services,
+            "native_sensor_ids": native_sensor_ids,
+        })
     return sorted(result, key=lambda row: str(row.get("id") or ""))
 
 
@@ -199,6 +251,7 @@ def run_bridge() -> None:
         def __init__(self, *args, room_id: str, initial_latest: dict[str, Any], services: tuple[str, ...], **kwargs):
             super().__init__(*args, **kwargs)
             self.room_id = room_id
+            _set_accessory_info(self, model=HOMEKIT_ROOM_MODEL, serial_number=_stable_serial("GC-ROOM", room_id))
             self.temperature_char = None
             self.humidity_char = None
             if "temperature" in services:
@@ -231,9 +284,10 @@ def run_bridge() -> None:
     class SoilAccessory(Accessory):
         category = 10
 
-        def __init__(self, *args, room_id: str, initial_latest: dict[str, Any], **kwargs):
+        def __init__(self, *args, room_id: str, initial_latest: dict[str, Any], sensor_serial: str, **kwargs):
             super().__init__(*args, **kwargs)
             self.room_id = room_id
+            _set_accessory_info(self, model=HOMEKIT_SOIL_MODEL, serial_number=sensor_serial)
             soil = self.add_preload_service("HumiditySensor", chars=["Name"])
             soil.configure_char("Name", value=self.display_name)
             self.soil_char = soil.configure_char(
@@ -263,6 +317,7 @@ def run_bridge() -> None:
         def __init__(self, *args, device, **kwargs):
             super().__init__(*args, **kwargs)
             self.device = device
+            _set_accessory_info(self, model=HOMEKIT_SWITCH_MODEL, serial_number=_stable_serial("GC-SWITCH", str(device.id)))
             service = self.add_preload_service("Switch")
             self.on_char = service.configure_char("On", value=False, setter_callback=self._request)
 
@@ -292,6 +347,7 @@ def run_bridge() -> None:
     class GrowCentralBridge(Bridge):
         def __init__(self, *args, topology_signature, export_diagnostics, **kwargs):
             super().__init__(*args, **kwargs)
+            _set_accessory_info(self, model=HOMEKIT_BRIDGE_MODEL, serial_number=_bridge_serial())
             self.topology_signature = topology_signature
             self.export_diagnostics = export_diagnostics
 
@@ -346,9 +402,11 @@ def run_bridge() -> None:
                     room_id=row["id"], initial_latest=row["latest"], services=room_services,
                 ))
             if "soil_moisture" in tuple(row["services"]):
+                native_sensor_ids = tuple(row.get("native_sensor_ids") or ())
+                sensor_serial = native_sensor_ids[0] if len(native_sensor_ids) == 1 else _stable_serial("GC-SOIL", str(row["id"]))
                 bridge.add_accessory(SoilAccessory(
                     driver, f"{row['name']} Bodenfeuchte", aid=aids[("soil", str(row["id"]))],
-                    room_id=row["id"], initial_latest=row["latest"],
+                    room_id=row["id"], initial_latest=row["latest"], sensor_serial=sensor_serial,
                 ))
         except Exception:
             continue
