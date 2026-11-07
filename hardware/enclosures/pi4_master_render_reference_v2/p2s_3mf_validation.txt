@@ -1,0 +1,12 @@
+FILE: C:\Users\dezen\Desktop\JL1976\Grow-Central\Pi4-FinalMaster\GrowCentral_Pi4_P2S_FinalMaster_Plate.3mf
+Size: 2721918 bytes
+ZIP OK, resources 7, build objects 7
+Plate extents mm min=[15.3 15.3 -0. ] max=[242.   182.76  29.07]
+15040 faces, watertight=True, box=[[16.0, 16.0, 0.0], [121.0, 99.0, 28.55]]
+1056 faces, watertight=True, box=[[15.3, 15.3, 28.35], [121.7, 91.7, 29.07]]
+19158 faces, watertight=True, box=[[137.0, 16.0, -0.0], [242.0, 91.0, 9.7]]
+496 faces, watertight=True, box=[[141.1, 28.0, 4.85], [237.9, 79.0, 5.7]]
+234820 faces, watertight=True, box=[[153.6, 49.0, 9.7], [225.4, 58.34, 10.7]]
+28 faces, watertight=True, box=[[182.5, 64.0, 9.7], [199.5, 72.0, 10.55]]
+400 faces, watertight=True, box=[[132.2, 124.23, 0.0], [218.8, 182.76, 2.6]]
+Bambu P2S: geometry prepared for 256x256 bed. Set printer P2S / PETG / 0.4 mm nozzle / AMS material assignments in Bambu Studio. Slice and inspect supports BEFORE printing.
