@@ -33,6 +33,15 @@
 - Bambu Studio: **P2S**, **0,4-mm-Düse**, **PETG**, Schwarz/Grün per AMS zuordnen, Stützen für Deckelüberhang kontrollieren und **vor dem Druck slicen**. Diese Datei enthält kein freigegebenes Bambu-Druckprofil und keinen G-Code.
 - Die ZIP-/3MF-Struktur wurde wieder eingelesen und auf 7 Objekte, geometrisch gültige/wasserdichte Druckmesh-Körper sowie Plattenbegrenzung überprüft (`p2s_3mf_validation.txt`).
 
+## Bambu Studio P2S Native Projekt (korrigierte Version)
+
+- **`GrowCentral_Pi4_P2S_Bambu_Native_PETG_Bicolor.3mf`** ist die aktualisierte Bambu/Orca-kompatible Projektdatei aus dem auf Jens-PC erzeugten Orca-Projektformat, nicht nur eine generische 3MF.
+- Drucker: Bambu Lab P2S / Düse 0,4 mm / Textured PEI / Profil 0,20 mm Standard.
+- Filamente: zwei `Generic PETG @BBL P2S`-Slots, 1 Schwarz (#191C1E), 2 Grün (#45C83B).
+- 7 benannte Objekte (kein zusammengeworfenes Geometriemodell), Beschriftung und Grünteile den jeweiligen Slots zugewiesen, Original-CAD-Koordinaten für die Farbdetails beibehalten, Boden/Deckel und Fußteile auf einer 256-mm-Platte angeordnet.
+- Maschine/Filament/Objekt-Zuordnung ist in der ZIP-internen Projektkonfiguration vorhanden und geprüft. **Eine echte visuelle Öffnungsprüfung in Bambu Studio und ein erfolgreicher Slice sind noch nicht nachgewiesen.** Vor Druck Stützen, AMS-Slots und Kollisionen im Slicer prüfen.
+- Der ältere `GrowCentral_Pi4_P2S_FinalMaster_Plate.3mf` bleibt als generische Geometrie-3MF erhalten, nicht die empfohlene Projektdatei.
+
 ## Vor Freigabe
 Die Render-Vorlage ist perspektivisch, zeigt Anschlüsse teils auf unmoeglichen Seiten und enthält keine technische Bemaßung. Damit ist eine hundertprozentig pixel- und maßgetreue Umsetzung aus dem Bild allein geometrisch nicht belegbar. Die CAD-Form ist deshalb ein **Bild-Master-Konstruktionsstand, noch keine mechanische Fertigungsfreigabe**.
 Offen: reale Pi4-Platinen-Passprobe, genaue Steckerkonturen/Höhen, Verschraubung/Heat-Set, Deckelauflage/Klemmen, real funktionale GPIO-Klappe, Druckprobe (P2S / 0.4 mm / PETG), Farbe / AMS, optischer Side-by-Side Vergleich mit Render.
