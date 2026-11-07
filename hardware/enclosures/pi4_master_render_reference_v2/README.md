@@ -24,6 +24,8 @@
 - Rahmenwand etwa 2.8 mm, Boden 3 mm.
 - Alle 9 exportierten Formen `isValid=True`, Hauptkoerper je genau ein Solid.
 - **Boden/Deckel-Kollisionsvolumen laut FreeCAD 0.0 mm³.**
+- Realer Raspberry-Pi-4-STEP-Referenzkörper aus `prototype_v5/references`: **0.0 mm³ Kollision mit Boden und Deckel**, nach lokaler 0.65-mm-Freistellung am hinteren rechten Montagepfosten. Prüfbelege `validate_pi4_fit.FCMacro`, `pi4_fit.log` und `GrowCentral_Pi4_Master_V2_WithHardware.FCStd`.
+- `GrowCentral_Pi4_ActualCAD_Studio.png` und `GrowCentral_Pi4_ActualCAD_Exploded.png` wurden in Blender direkt aus den exportierten STL-Dateien gerendert. Die bearbeitbare Render-Szene liegt als `.blend` bei.
 
 ## Vor Freigabe
 Die Render-Vorlage ist perspektivisch, zeigt Anschlüsse teils auf unmoeglichen Seiten und enthält keine technische Bemaßung. Damit ist eine hundertprozentig pixel- und maßgetreue Umsetzung aus dem Bild allein geometrisch nicht belegbar. Die CAD-Form ist deshalb ein **Bild-Master-Konstruktionsstand, noch keine mechanische Fertigungsfreigabe**.

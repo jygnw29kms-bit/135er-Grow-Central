@@ -1,0 +1,27 @@
+import FreeCAD as A,Part,os,traceback
+from FreeCAD import Vector as V
+P=r"C:\Users\dezen\Desktop\JL1976\Grow-Central\Pi4-FinalMaster"
+R=r"C:\Users\dezen\Desktop\JL1976\Grow-Central\135er-Grow-Central\hardware\enclosures\prototype_v5\references\RaspberryPi4_PartCAD_rpi4b_PROTOTYP.step"
+log=open(os.path.join(P,"pi4_fit.log"),"w")
+try:
+ D=A.openDocument(os.path.join(P,"GrowCentral_Pi4_Master_V2.FCStd"))
+ ref=Part.read(R);b=ref.BoundBox
+ log.write("ORIGINAL BB "+str((b.XMin,b.YMin,b.ZMin,b.XLength,b.YLength,b.ZLength))+"\n")
+ ref.translate(V(11.5-b.XMin,10.5-b.YMin,7.0-b.ZMin))
+ b=ref.BoundBox
+ log.write("PLACED BB "+str((b.XMin,b.YMin,b.ZMin,b.XLength,b.YLength,b.ZLength))+"\n")
+ bot=next(x for x in D.Objects if x.Label.startswith("01_Case_Base") or x.Name.endswith("01_Case_Base"))
+ top=next(x for x in D.Objects if x.Label.startswith("02_Sculpted_Bevelled_Lid") or x.Name.endswith("02_Sculpted_Bevelled_Lid"))
+ hit=ref.common(bot.Shape)
+ log.write("BASE collision mm3 "+str(hit.Volume)+"\n")
+ log.write("BASE hit BB "+str((hit.BoundBox.XMin,hit.BoundBox.YMin,hit.BoundBox.ZMin,hit.BoundBox.XLength,hit.BoundBox.YLength,hit.BoundBox.ZLength))+"\n")
+ log.write("LID collision mm3 "+str(ref.common(top.Shape).Volume)+"\n")
+ o=D.addObject("PartDesign::Feature","REFERENCE_RPi4_STEP_RealHardware")
+ o.Shape=ref;o.ViewObject.ShapeColor=(.13,.58,.20);o.ViewObject.Transparency=25
+ D.recompute();D.saveAs(os.path.join(P,"GrowCentral_Pi4_Master_V2_WithHardware.FCStd"))
+ Gui.activeDocument().activeView().viewAxonometric()
+ Gui.activeDocument().activeView().fitAll()
+ Gui.activeDocument().activeView().saveImage(os.path.join(P,"GrowCentral_Pi4_Hardware_Fit.png"),1800,1100,"White")
+ log.write("DONE\n")
+except Exception:log.write(traceback.format_exc())
+log.close()

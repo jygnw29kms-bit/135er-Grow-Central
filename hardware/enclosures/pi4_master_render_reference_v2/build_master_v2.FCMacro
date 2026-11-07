@@ -10,6 +10,16 @@ def rr(w,d,h,r,x=0,y=0,z=0):
  s=Part.makeBox(w,d,h,V(x,y,z))
  ev=[e for e in s.Edges if len(e.Vertexes)==2 and abs(e.Vertexes[0].Point.z-e.Vertexes[1].Point.z)>h-.001]
  return s.makeFillet(r,ev)
+def roundedport(x,y,z,dx,dy,dz,r,axis):
+ sh=Part.makeBox(dx,dy,dz,V(x,y,z))
+ axislen=dy if axis=="Y" else dx
+ edges=[]
+ for e in sh.Edges:
+  v=e.Vertexes
+  if len(v)==2:
+   delta=abs(v[0].Point.y-v[1].Point.y) if axis=="Y" else abs(v[0].Point.x-v[1].Point.x)
+   if delta>axislen-.001:edges.append(e)
+ return sh.makeFillet(r,edges)
 def roundedwire(w,d,r,x,y,z):
  q=math.sqrt(.5)
  a=lambda X,Y:V(X,Y,z)
@@ -42,10 +52,10 @@ try:
  base=base.cut(rr(W-2*wall,D-2*wall,29,4.3,wall,wall,floor))
  # front physical Pi4 connectors: USB-C, HDMI0, HDMI1, audio
  for x,wi,z,ht in [(11,11,8.0,6.5),(28,11,7.6,6.5),(44,11,7.6,6.5),(63,8,8,8)]:
-  base=base.cut(Part.makeBox(wi,wall+3,ht,V(x,-1.0,z)))
+  base=base.cut(roundedport(x,-1.0,z,wi,wall+3,ht,1.7,"Y"))
  # side connectors: USB2 pair, USB3 pair, RJ45
  for y,wi,z,ht in [(14.5,15,6.5,16.5),(33,15,6.5,16.5),(52,18,6,18)]:
-  base=base.cut(Part.makeBox(wall+3,wi,ht,V(W-wall-1,y,z)))
+  base=base.cut(roundedport(W-wall-1,y,z,wall+3,wi,ht,1.7,"X"))
  # ventilation slots on left side and back
  for i in range(8):
   base=base.cut(Part.makeBox(5,2.9,12,V(-1,11+i*6.7,10)))
@@ -66,6 +76,18 @@ try:
   tab=rr(14,12,4.2,3.4,x-7,71,0)
   tab=tab.cut(Part.makeCylinder(2.2,6,V(x,79,-1)))
   base=base.fuse(tab)
+ # Actual Pi4 STEP interference check and localized relief of rear-right connector keeper
+ try:
+  rp=r"C:\Users\dezen\Desktop\JL1976\Grow-Central\135er-Grow-Central\hardware\enclosures\prototype_v5\references\RaspberryPi4_PartCAD_rpi4b_PROTOTYP.step"
+  hw=Part.read(rp); hb=hw.BoundBox;hw.translate(V(11.5-hb.XMin,10.5-hb.YMin,7.0-hb.ZMin))
+  collision=base.common(hw)
+  log("PRE_RELIEF_HW_COLLISION_MM3="+str(round(collision.Volume,5)))
+  if collision.Volume>.0001:
+   cb=collision.BoundBox;clearance=.65
+   relief=Part.makeBox(cb.XLength+2*clearance,cb.YLength+2*clearance,cb.ZLength+2*clearance,V(cb.XMin-clearance,cb.YMin-clearance,cb.ZMin-clearance))
+   base=base.cut(relief)
+  log("POST_RELIEF_HW_COLLISION_MM3="+str(round(base.common(hw).Volume,5)))
+ except Exception as hardware_error:log("HW_CHECK_FAILED "+str(hardware_error))
  baseobj=o("01_Case_Base",base,dark)
  log("BASE_READY")
  # lid: rugged rim lower layer, raised bevelled centre top, all fused into one body
