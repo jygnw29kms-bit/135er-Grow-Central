@@ -1,0 +1,172 @@
+# GrowCentral Pi4 Final Master V2 - geometrically modelled after binding product render
+import FreeCAD as App, Part, Mesh, os, math, traceback
+from FreeCAD import Vector as V
+P=r"C:\Users\dezen\Desktop\JL1976\Grow-Central\Pi4-FinalMaster"
+LOG=os.path.join(P,"final_master_v2.log")
+open(LOG,"w",encoding="utf8").write("START Final Master V2\n")
+def log(s):
+ with open(LOG,"a",encoding="utf8") as f:f.write(str(s)+"\n")
+def rr(w,d,h,r,x=0,y=0,z=0):
+ s=Part.makeBox(w,d,h,V(x,y,z))
+ ev=[e for e in s.Edges if len(e.Vertexes)==2 and abs(e.Vertexes[0].Point.z-e.Vertexes[1].Point.z)>h-.001]
+ return s.makeFillet(r,ev)
+def roundedwire(w,d,r,x,y,z):
+ q=math.sqrt(.5)
+ a=lambda X,Y:V(X,Y,z)
+ edges=[
+ Part.makeLine(a(x+r,y),a(x+w-r,y)),
+ Part.Arc(a(x+w-r,y),a(x+w-r+r*q,y+r-r*q),a(x+w,y+r)).toShape(),
+ Part.makeLine(a(x+w,y+r),a(x+w,y+d-r)),
+ Part.Arc(a(x+w,y+d-r),a(x+w-r+r*q,y+d-r+r*q),a(x+w-r,y+d)).toShape(),
+ Part.makeLine(a(x+w-r,y+d),a(x+r,y+d)),
+ Part.Arc(a(x+r,y+d),a(x+r-r*q,y+d-r+r*q),a(x,y+d-r)).toShape(),
+ Part.makeLine(a(x,y+d-r),a(x,y+r)),
+ Part.Arc(a(x,y+r),a(x+r-r*q,y+r-r*q),a(x+r,y)).toShape()]
+ return Part.Wire(edges)
+def o(name,sh,color):
+ ob=doc.addObject("PartDesign::Feature",name);ob.Shape=sh
+ ob.ViewObject.ShapeColor=color;ob.ViewObject.LineColor=(.035,.042,.045)
+ return ob
+def cutslot(shape,cx,cy,length,width,z0,h,ang=0):
+ cutter=rr(length,width,h,min(width/2-.06,1.5),cx-length/2,cy-width/2,z0)
+ cutter.rotate(V(cx,cy,0),V(0,0,1),ang)
+ return shape.cut(cutter)
+def export(ob,stem):
+ Mesh.export([ob],os.path.join(P,stem+".stl"))
+ Part.export([ob],os.path.join(P,stem+".step"))
+try:
+ doc=App.newDocument("GrowCentral_Pi4_Master_V2")
+ dark=(.085,.092,.100);green=(.18,.79,.24);black=(.065,.072,.08)
+ W=105.;D=75.;floor=3.0;wall=2.8
+ base=rr(W,D,28.55,7)
+ base=base.cut(rr(W-2*wall,D-2*wall,29,4.3,wall,wall,floor))
+ # front physical Pi4 connectors: USB-C, HDMI0, HDMI1, audio
+ for x,wi,z,ht in [(11,11,8.0,6.5),(28,11,7.6,6.5),(44,11,7.6,6.5),(63,8,8,8)]:
+  base=base.cut(Part.makeBox(wi,wall+3,ht,V(x,-1.0,z)))
+ # side connectors: USB2 pair, USB3 pair, RJ45
+ for y,wi,z,ht in [(14.5,15,6.5,16.5),(33,15,6.5,16.5),(52,18,6,18)]:
+  base=base.cut(Part.makeBox(wall+3,wi,ht,V(W-wall-1,y,z)))
+ # ventilation slots on left side and back
+ for i in range(8):
+  base=base.cut(Part.makeBox(5,2.9,12,V(-1,11+i*6.7,10)))
+ for i in range(7):
+  base=base.cut(Part.makeBox(3,5,11,V(17+i*10,D-wall-1,9)))
+ # Pi 4 85 x 56 board, mounting centers 58 x 49
+ for x in (15.5,73.5):
+  for y in (13.5,62.5):
+   base=base.fuse(Part.makeCylinder(3.3,4.0,V(x,y,floor)))
+   base=base.cut(Part.makeCylinder(1.4,5,V(x,y,2.8)))
+ # Corner screw pillars moved away from PCB keepout
+ for x in (6,99):
+  for y in (6,69):
+   base=base.fuse(Part.makeCylinder(4.25,21.35,V(x,y,6.9)))
+   base=base.cut(Part.makeCylinder(1.4,16,V(x,y,16)))
+ # reinforced wall mounting tabs, two rear
+ for x in (16,89):
+  tab=rr(14,12,4.2,3.4,x-7,71,0)
+  tab=tab.cut(Part.makeCylinder(2.2,6,V(x,79,-1)))
+  base=base.fuse(tab)
+ baseobj=o("01_Case_Base",base,dark)
+ log("BASE_READY")
+ # lid: rugged rim lower layer, raised bevelled centre top, all fused into one body
+ lid=rr(W,D,3.7,7,0,0,28.8)
+ innerlip=rr(W-7.2,D-7.2,2.1,3.8,3.6,3.6,26.8).cut(rr(W-12,D-12,2.7,2.2,6,6,26.6))
+ for px in (6,99):
+  for py in (6,69):
+   innerlip=innerlip.cut(Part.makeCylinder(5.2,4.0,V(px,py,26.0)))
+ lid=lid.fuse(innerlip)
+ # Raised shoulders as drafted loft with smooth rounded corners
+ lower=roundedwire(96,66,6,4.5,4.5,32.1)
+ upper=roundedwire(85.5,55.5,4.2,9.75,9.75,35.65)
+ ridge=Part.makeLoft([lower,upper],True,False)
+ lid=lid.fuse(ridge)
+ # top flat face, bevel perimeter flanking long side
+ cap=Part.Face(upper).extrude(V(0,0,.85))
+ lid=lid.fuse(cap)
+ # concentric shallow fascia groove
+ outer=rr(80,50,.65,4.0,12.5,12.5,35.9)
+ inn=rr(76,46,1,3.2,14.5,14.5,35.7)
+ lid=lid.cut(outer.cut(inn))
+ # angular beveled corner panel grooves x+ and x- on main surface
+ for x in (15,74):
+  for y in (22,45):
+   lid=cutslot(lid,x+7,y,15,1.8,35.7,1.5,0)
+ # ventilation across two bands, diagonal as in hero GFX
+ for i in range(9):
+  xx=20.5+i*7.7
+  lid=cutslot(lid,xx,56.2,14.3,3,31.0,7,28)
+  lid=cutslot(lid,xx,18.5,13.8,3,31.0,7,28)
+ # corner countersink: black retaining screws go in these
+ for x in (6,99):
+  for y in (6,69):
+   lid=lid.cut(Part.makeCylinder(1.72,10,V(x,y,26.4)))
+   lid=lid.cut(Part.makeCylinder(3.0,1.6,V(x,y,30.9)))
+ lidobj=o("02_Sculpted_Bevelled_Lid",lid,dark)
+ log("LID_READY")
+ # bright seam stripe recessed between base and lid, ring in XY
+ stripe=rr(W+1.4,D+1.4,.72,7.15,-.7,-.7,28.35)
+ stripe=stripe.cut(rr(W-.5,D-.5,1.25,6.2,.25,.25,28.1))
+ seamobj=o("03_Continuous_Green_Seam",stripe,green)
+ # raised corner colored inset bars (not flood filling screw pocket)
+ cor=None
+ for x in (4.1,97.4):
+  for y in (12,57):
+   q=rr(3.5,6,.85,1.3,x,y,31.65)
+   cor=q if cor is None else cor.fuse(q)
+ corobj=o("04_Green_Corner_Bumpers",cor,green)
+ # visually dark embossed wordmark as in reference image
+ try:
+  import Draft
+  font=r"C:\Windows\Fonts\bahnschrift.ttf"
+  if not os.path.isfile(font):font=r"C:\Windows\Fonts\arialbd.ttf"
+  label=Draft.make_shapestring(String="GrowCentral",FontFile=font,Size=9.15,Tracking=0)
+  doc.recompute()
+  letters=label.Shape.extrude(V(0,0,1.0))
+  bb=letters.BoundBox
+  letters.translate(V((W-bb.XLength)*.5-bb.XMin,33.0-bb.YMin,36.50-bb.ZMin))
+  doc.removeObject(label.Name)
+  branding=o("05_Embossed_GrowCentral_Wordmark",letters,black)
+ except Exception as ex:log("FONT_ERROR "+str(ex))
+ # green curved leaf mark, drawn as upper and lower organic contours
+ pts=[(45.5,48),(47.0,51.5),(51,54.5),(57.5,56.0),(62.5,55.2),(58.0,51.1),(53.3,49.0),(48.4,48.3)]
+ leafpoly=Part.makePolygon([V(x,y,36.5) for x,y in pts]+[V(pts[0][0],pts[0][1],36.5)])
+ leafshape=Part.Face(leafpoly).extrude(V(0,0,.85))
+ leafobj=o("06_Green_Leaf_Logo",leafshape,green)
+ # accessory lid hatch with real through slots for GPIO access variant; separate object visible in FCStd
+ hatch=rr(48,17,2.7,3.0,0,0,0)
+ for i in range(5):hatch=cutslot(hatch,7+i*8.3,8.5,11.0,2.6,-.5,4,50)
+ hatchobj=o("07_GPIO_Access_Hatch_Optional",hatch,dark)
+ # Green four low-profile feet visible along bottom on the hero rendering
+ feet=None
+ for fx in (14.0,91.0):
+  for fy in (13.0,62.0):
+   one=Part.makeCylinder(4.8,2.6,V(fx,fy,-2.6))
+   feet=one if feet is None else feet.fuse(one)
+ feetobj=o("08_Green_FDM_Feet",feet,green)
+ # Screw hardware references in their real recesses; not joined to FDM polymer shell
+ hardware=None
+ for sx in (6,99):
+  for sy in (6,69):
+   head=Part.makeCylinder(2.56,1.1,V(sx,sy,31.0))
+   head=head.cut(Part.makeBox(3.7,.53,.4,V(sx-1.85,sy-.265,31.75)))
+   head=head.cut(Part.makeBox(.53,3.7,.4,V(sx-.265,sy-1.85,31.75)))
+   shank=Part.makeCylinder(1.3,9.0,V(sx,sy,22.0))
+   bolt=head.fuse(shank)
+   hardware=bolt if hardware is None else hardware.fuse(bolt)
+ hardwareobj=o("09_Assembly_Screws_Reference",hardware,(.16,.17,.18))
+ doc.recompute()
+ # hiding optional hatch during body visualization
+ hatchobj.ViewObject.Visibility=False
+ for ob in doc.Objects:
+  if ob.TypeId=="PartDesign::Feature":
+   log(ob.Name+" valid="+str(ob.Shape.isValid())+" vol="+str(round(ob.Shape.Volume,2))+" solids="+str(len(ob.Shape.Solids)))
+ doc.recompute()
+ doc.saveAs(os.path.join(P,"GrowCentral_Pi4_Master_V2.FCStd"))
+ for ob in doc.Objects:
+  if ob.TypeId=="PartDesign::Feature":export(ob,ob.Name)
+ Gui.activeDocument().activeView().viewAxonometric()
+ Gui.activeDocument().activeView().fitAll()
+ Gui.activeDocument().activeView().saveImage(os.path.join(P,"GrowCentral_Pi4_Master_V2_Preview.png"),1800,1100,"White")
+ log("BASE_LID_INTERSECTION_MM3="+str(round(base.common(lid).Volume,4)))
+ log("DONE")
+except Exception as e:log("FAILED "+traceback.format_exc())

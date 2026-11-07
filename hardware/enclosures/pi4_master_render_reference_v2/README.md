@@ -1,0 +1,31 @@
+# GrowCentral Pi 4 | Bild-Master CAD V2
+
+**Verbindliche optische Referenz:** das vom Benutzer freigegebene, dunkel-anthrazit/gruene Produkt-Rendering des GrowCentral Pi4-Gehäuses. Dieses Verzeichnis ist die auf Jens-PC mit FreeCAD 1.1 erstellte CAD-Nachkonstruktion, kein anderes Design.
+
+## Umgesetzte, sichtbar verbindliche Merkmale
+- anthrazitfarbenes, deutlich abgerundetes und abgeschraegtes Gehäuse
+- zweistufiger skulpturierter Deckel mit erhoehtem Mittelfeld und umlaufender Vertiefung
+- zwei diagonale Oberseiten-Lueftungsgruppen und seitliche Ventilation
+- eingelassene vier Eckverschraubungen, Schraubenkopf-Referenzen
+- gruen umlaufendes Fugenband, grüne Eckakzente und vier grüne Standfuesse
+- erhabener GrowCentral-Schriftzug und eigenstaendiges grünes Blattmotiv
+- Pi4-Anschlussaussparungen auf den tatsaechlichen zwei Portseiten, interne Gewindevorbereitung/Montagebohrungen
+- optionale separate GPIO-Klappe als eigenstaendiges CAD-Teil, **noch nicht als funktionierender Ausschnitt in den Deckel integriert**
+
+## Dateien
+- `GrowCentral_Pi4_Master_V2.FCStd` bearbeitbares FreeCAD Hauptmodell
+- `build_master_v2.FCMacro` generiert den Stand reproduzierbar
+- `_01_*.stl` bis `_09_*.stl` getrennte Bauteile und Hardware-Referenz
+- STEP zur Weiterkonstruktion, Vorschaubild PNG
+
+## Konstruktion / Prüfungen
+- Umriss 105 x 75 mm, Gehäuse-Unterteil ca. 28.55 mm hoch, dazu modellierter Deckel.
+- PCBA-Referenz Raspberry Pi 4: 85 x 56 mm, Mount-Lochbild 58 x 49 mm (Modell-Sollwerte).
+- Rahmenwand etwa 2.8 mm, Boden 3 mm.
+- Alle 9 exportierten Formen `isValid=True`, Hauptkoerper je genau ein Solid.
+- **Boden/Deckel-Kollisionsvolumen laut FreeCAD 0.0 mm³.**
+
+## Vor Freigabe
+Die Render-Vorlage ist perspektivisch, zeigt Anschlüsse teils auf unmoeglichen Seiten und enthält keine technische Bemaßung. Damit ist eine hundertprozentig pixel- und maßgetreue Umsetzung aus dem Bild allein geometrisch nicht belegbar. Die CAD-Form ist deshalb ein **Bild-Master-Konstruktionsstand, noch keine mechanische Fertigungsfreigabe**.
+Offen: reale Pi4-Platinen-Passprobe, genaue Steckerkonturen/Höhen, Verschraubung/Heat-Set, Deckelauflage/Klemmen, real funktionale GPIO-Klappe, Druckprobe (P2S / 0.4 mm / PETG), Farbe / AMS, optischer Side-by-Side Vergleich mit Render.
+Hardware-Schrauben sind **nur Referenzkoerper, keine FDM-Teile**.
