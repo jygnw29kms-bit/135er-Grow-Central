@@ -42,6 +42,14 @@
 - Maschine/Filament/Objekt-Zuordnung ist in der ZIP-internen Projektkonfiguration vorhanden und geprüft. **Eine echte visuelle Öffnungsprüfung in Bambu Studio und ein erfolgreicher Slice sind noch nicht nachgewiesen.** Vor Druck Stützen, AMS-Slots und Kollisionen im Slicer prüfen.
 - Der ältere `GrowCentral_Pi4_P2S_FinalMaster_Plate.3mf` bleibt als generische Geometrie-3MF erhalten, nicht die empfohlene Projektdatei.
 
+## Neu: Bambu-Studio-geslictes P2S PETG Schwarz/Grün Projekt (2026-11-08)
+
+**Empfohlene Datei:** `GrowCentral_Pi4_P2S_PETG_BICOLOR_SLICED.3mf`. Die älteren Dateien `GrowCentral_Pi4_P2S_FinalMaster_Plate.3mf` und `GrowCentral_Pi4_P2S_Bambu_Native_PETG_Bicolor.3mf` sind **durch diesen Stand ersetzt**, weil der erste nur Geometrie speicherte und die zweite nicht korrekt als Projekt eingelesen wurde.
+
+Diese neue Datei wurde von Bambu Studio 02.09.01.70 **erfolgreich geslict**, inklusive `Metadata/plate_1.gcode`. Enthalten sind 3 native Mehrteil-Baugruppen mit insgesamt 7 CAD-Teilen: Gehäuseboden + grüne Naht, Deckel + Branding + grüne Eckakzente, vier grüne Füße. Vollständiges P2S-Projekt mit 0,4-mm-Düse, 0,20-mm-Schichten, strukturierter PEI-Platte, zwei PETG-Filamentslots Schwarz/Grün und Materialzuordnung auf Bauteilebene. ZIP-/3MF-Integrität, Druckbettgrenzen, G-Code-Farbwechsel T0/T1, Materialdichten und 70-°C-PETG-Bettprofile wurden geprüft. Bericht `GrowCentral_Pi4_P2S_PETG_BICOLOR_VALIDATION.txt`.
+
+**Wichtig:** Die elektrische/mechanische Passprobe des echten Pi4, die Praxisqualität des FDM-Drucks und die Eignung aller Support-/Brückenstrukturen sind noch nicht durch einen realen P2S-Test bestätigt. Der Dateiname bezeichnet ein erfolgreiches Slicergebnis, **keine Abnahme des Gehäuses als Produkt**.
+
 ## Vor Freigabe
 Die Render-Vorlage ist perspektivisch, zeigt Anschlüsse teils auf unmoeglichen Seiten und enthält keine technische Bemaßung. Damit ist eine hundertprozentig pixel- und maßgetreue Umsetzung aus dem Bild allein geometrisch nicht belegbar. Die CAD-Form ist deshalb ein **Bild-Master-Konstruktionsstand, noch keine mechanische Fertigungsfreigabe**.
 Offen: reale Pi4-Platinen-Passprobe, genaue Steckerkonturen/Höhen, Verschraubung/Heat-Set, Deckelauflage/Klemmen, real funktionale GPIO-Klappe, Druckprobe (P2S / 0.4 mm / PETG), Farbe / AMS, optischer Side-by-Side Vergleich mit Render.

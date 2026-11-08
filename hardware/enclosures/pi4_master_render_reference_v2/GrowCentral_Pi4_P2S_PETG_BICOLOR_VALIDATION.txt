@@ -1,0 +1,18 @@
+Bambu Studio P2S FINAL FILE / automated slice verification
+Source: C:\Users\dezen\Desktop\JL1976\Grow-Central\Pi4-FinalMaster\SLICE_TEST\bambu_grouped_slice_PETG_v2.3mf
+Bytes: 3843201
+SHA256: 0baece37a8b78b3fe47c9e4c7def9207c4c0de42b5854303572128abb49a1cae
+Build objects: 3
+Component meshes: 7
+Printer: Bambu Lab P2S 0.4 mm
+Material slots 1/2: PETG, PETG
+PETG density slots 1/2: ['1.27', '1.27']
+Textured PEI bed temperature slots 1/2: ['70', '70']
+Filament colours: ['#16191C', '#45C83B']
+G-code bytes: 6249469
+G-code distinct filament numbers: 1,2
+Tool commands T0: 12, T1: 13
+G-code layers: ['; total layer number: 145']
+Slicer plate bounds: [19.99999, 23.99999, 240.4, 186.76499]
+Slicing success: output from Bambu Studio with embedded plate_1.gcode
+WARNING: physical fit, print, supports and surface quality still require real P2S test
