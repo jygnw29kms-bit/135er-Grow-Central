@@ -1,0 +1,79 @@
+name: Ete Root SSH read-only preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-readonly:
+    name: Verify Ete Root SSH shell without changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify existing secret configuration
+        env:
+          SSH_HOST: ${{ secrets.SFTP_HOST }}
+          SSH_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SSH_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY" || { echo "::error::Existing SSH_PRIVATE_KEY secret is unavailable"; exit 2; }
+          test -n "$SSH_HOST" || { echo "::error::SFTP_HOST secret unavailable"; exit 2; }
+          test -n "$SSH_USERNAME" || { echo "::error::SFTP_USERNAME secret unavailable"; exit 2; }
+          test -n "$SSH_PORT" || { echo "::error::SFTP_PORT secret unavailable"; exit 2; }
+          # A public key pinned through a reviewed repo secret is required; no ssh-keyscan TOFU.
+          test -n "$SSH_KNOWN_HOSTS" || {
+            echo "::error::SSH_KNOWN_HOSTS (verified server host key) is not configured. Refusing unverified host."
+            exit 3
+          }
+          install -d -m 700 ~/.ssh
+          trap 'rm -f ~/.ssh/ete_key ~/.ssh/known_hosts' EXIT
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/ete_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/ete_key ~/.ssh/known_hosts
+
+          echo "Checking remote shell access with the existing deploy key"
+          ssh -p "$SSH_PORT" -i ~/.ssh/ete_key \
+            -o BatchMode=yes \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ConnectTimeout=12 \
+            -o ServerAliveInterval=5 \
+            -o ServerAliveCountMax=2 \
+            -- "$SSH_USERNAME@$SSH_HOST" 'sh -s' <<'REMOTE'
+          set -eu
+          printf 'REMOTE_SHELL_OK\n'
+          printf 'hostname='
+          hostname
+          printf 'user='
+          id -un
+          printf 'kernel='
+          uname -sr
+          printf 'os='
+          if [ -r /etc/os-release ]; then
+            sed -n 's/^PRETTY_NAME=//p' /etc/os-release | head -1
+          else
+            echo unknown
+          fi
+          if command -v docker >/dev/null 2>&1; then
+            docker --version || true
+            docker compose version || true
+          else
+            echo docker_missing
+          fi
+          echo 'listen_ports_80_443_8080_8443:'
+          if command -v ss >/dev/null 2>&1; then
+            ss -ltn | grep -E '(:80 |:443 |:8080 |:8443 )' || true
+          else
+            echo ss_unavailable
+          fi
+          printf 'disk_root='
+          df -h / | tail -1
+          printf 'SHELL_READ_ONLY_CHECK_DONE\n'
+          REMOTE
