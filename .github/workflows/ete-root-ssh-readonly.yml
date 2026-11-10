@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Verify existing secret configuration
         env:
-          SSH_HOST: ${{ secrets.SFTP_HOST }}
+          SSH_HOST: 87.106.119.187
           SSH_USERNAME: ${{ secrets.SFTP_USERNAME }}
           SSH_PORT: ${{ secrets.SFTP_PORT }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -22,9 +22,10 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$SSH_PRIVATE_KEY" || { echo "::error::Existing SSH_PRIVATE_KEY secret is unavailable"; exit 2; }
-          test -n "$SSH_HOST" || { echo "::error::SFTP_HOST secret unavailable"; exit 2; }
+          test "$SSH_HOST" = "87.106.119.187" || { echo "::error::Unexpected SSH target"; exit 2; }
           test -n "$SSH_USERNAME" || { echo "::error::SFTP_USERNAME secret unavailable"; exit 2; }
-          test -n "$SSH_PORT" || { echo "::error::SFTP_PORT secret unavailable"; exit 2; }
+          SSH_PORT="${SSH_PORT:-22}"
+          case "$SSH_PORT" in *[!0-9]*|"") echo "::error::Invalid SSH port"; exit 2;; esac
           # A public key pinned through a reviewed repo secret is required; no ssh-keyscan TOFU.
           test -n "$SSH_KNOWN_HOSTS" || {
             echo "::error::SSH_KNOWN_HOSTS (verified server host key) is not configured. Refusing unverified host."
@@ -35,9 +36,13 @@ jobs:
           umask 077
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/ete_key
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -F "$SSH_HOST" -f ~/.ssh/known_hosts >/dev/null || {
+            echo "::error::Pinned known_hosts is missing the Ete Root host-key entry for 87.106.119.187"
+            exit 3
+          }
           chmod 600 ~/.ssh/ete_key ~/.ssh/known_hosts
 
-          echo "Checking remote shell access with the existing deploy key"
+          echo "Checking remote shell on the exact Ete Root address; no writes"
           ssh -p "$SSH_PORT" -i ~/.ssh/ete_key \
             -o BatchMode=yes \
             -o PasswordAuthentication=no \
