@@ -58,6 +58,22 @@ def _candidate(candidate_id: str) -> str:
     return row[0]
 
 
+def _transport_error(exc: Exception, stage: str) -> str:
+    """Present a bounded, non-secret diagnostic instead of a generic HTTP 502."""
+    error_type = type(exc).__name__
+    # BlueZ frequently reports disconnects as BleakDBusError or EOFError.
+    if error_type in {"BleakDBusError", "EOFError", "BleakDeviceNotFoundError"}:
+        reason = "BlueZ-Verbindung während " + stage + " getrennt oder nicht mehr vorhanden."
+    elif isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
+        reason = "Zeitüberschreitung bei " + stage + "."
+    else:
+        reason = "GATT-Kommunikation bei " + stage + " fehlgeschlagen."
+    return (
+        f"{reason} ({error_type}). Gerät eingeschaltet lassen, andere "
+        "Bluetooth-Verbindungen zum Gerät beenden und erneut suchen."
+    )
+
+
 def _payload(data: bytes) -> dict[str, Any]:
     sample = bytes(data[:_MAX_PAYLOAD])
     result: dict[str, Any] = {
@@ -266,11 +282,22 @@ async def observe(body: ObserveRequest):
                     if len(events) < 80:
                         events.append({"index": len(events) + 1, "elapsed_s": round(time.monotonic() - started, 3), "value": _payload(data)})
                 started = time.monotonic()
-                await client.start_notify(uuid, capture)
+                stage = "Notify-Start"
+                subscribed = False
                 try:
+                    await asyncio.wait_for(client.start_notify(uuid, capture), timeout=6.0)
+                    subscribed = True
+                    stage = "Notify-Beobachtung"
                     await asyncio.sleep(body.seconds)
+                except Exception as exc:
+                    logger.warning("Mars BLE observe stage=%s failure=%s", stage, type(exc).__name__)
+                    raise HTTPException(502, _transport_error(exc, stage)) from exc
                 finally:
-                    await client.stop_notify(uuid)
+                    if subscribed and client.is_connected:
+                        try:
+                            await asyncio.wait_for(client.stop_notify(uuid), timeout=3.0)
+                        except Exception as exc:
+                            logger.warning("Mars BLE notify cleanup failure=%s", type(exc).__name__)
                 return {
                     "candidate_id": body.candidate_id,
                     "uuid": uuid,
@@ -284,13 +311,7 @@ async def observe(body: ObserveRequest):
             raise
         except Exception as exc:
             logger.warning("Mars BLE observe failed: %s", type(exc).__name__)
-            error_type = type(exc).__name__
-            raise HTTPException(
-                502,
-                f"BLE-Notify fehlgeschlagen ({error_type}). GATT-Verbindung getrennt oder "
-                "Gerät akzeptiert das Abonnement nicht. Hersteller-App trennen, "
-                "Gerät erneut suchen und zunächst nur die Dienste auslesen."
-            ) from exc
+            raise HTTPException(502, _transport_error(exc, "Verbindungsaufbau oder Service-Erkennung")) from exc
 
 
 @router.post("/control-test")
