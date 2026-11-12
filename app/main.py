@@ -27,7 +27,7 @@ from app.provisioning.usb import router as usb_router
 from app.provisioning.ble import router as ble_provisioning_router
 from app.network import router as network_router
 from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
-from app.mars_hydro_ble import router as mars_hydro_ble_router
+from app.mars_hydro_ble import router as mars_hydro_ble_router, adapter_diagnostics
 from app.system_info import router as system_router
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
@@ -199,7 +199,20 @@ def _ble_identity(name: str, service_uuids: list[str], manufacturer_ids: list[in
 @app.get("/api/discover", dependencies=[Depends(require_write_auth)])
 async def discover(timeout: float = 7.0):
     timeout = min(max(timeout, 1.0), 15.0)
-    found = await BleakScanner.discover(timeout=timeout, return_adv=True)
+    adapter = adapter_diagnostics()
+    found = {}
+    attempts = 0
+    try:
+        # Keep the legacy device browser compatible while reporting actionable
+        # BlueZ diagnostics and retrying intermittently advertising peripherals.
+        for _ in range(2):
+            attempts += 1
+            found.update(await BleakScanner.discover(timeout=timeout, return_adv=True))
+            if found:
+                break
+    except Exception as exc:
+        logger.warning("BLE device discovery failed: %s", type(exc).__name__)
+        raise HTTPException(503, f"BLE-Suche fehlgeschlagen ({type(exc).__name__}). {adapter['hint']}") from exc
     rows = []
     for address, pair in found.items():
         dev, adv = pair
@@ -217,7 +230,11 @@ async def discover(timeout: float = 7.0):
             "integration_role": "experimental_ble_diagnostics_fallback" if classification == "df100m_candidate" else "generic_ble",
         })
     rows.sort(key=lambda item: (not item["preferred"], -(item["rssi"] or -999)))
-    return {"devices": rows}
+    message = f"{len(rows)} BLE-Geräte erkannt." if rows else (
+        "Keine BLE-Werbesignale empfangen. " + adapter["hint"]
+    )
+    return {"devices": rows, "adapter": adapter, "attempts": attempts,
+            "scan_seconds": timeout * attempts, "message": message}
 
 
 async def _connect(address: str):
