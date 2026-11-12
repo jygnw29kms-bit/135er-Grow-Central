@@ -24,12 +24,12 @@ small{color:#a5b8b7}.device{display:flex;flex-direction:column;gap:6px;margin:8p
 <div class="grid"><section><h2>GATT-Dienste und lesbare Werte</h2><div class="row"><button id="inspect" disabled>Ausgewähltes Gerät auslesen</button></div><pre id="gatt">Noch keine Gerätedaten.</pre></section>
 <section><h2>Benachrichtigungen aufnehmen</h2><p>Eine notifizierbare Characteristic auswählen. Während der kurzen Aufnahme kannst du am Herstellerregler oder in der App einen bekannten Wert ändern und die Rückmeldung beobachten.</p>
 <label for="uuid">Notify-Characteristic</label><select id="uuid" disabled><option value="">Erst Gerät auslesen</option></select>
-<div class="row"><button id="observe" disabled>4 Sekunden aufzeichnen</button></div><pre id="events">Noch keine Rückmeldungen.</pre></section></div>
+<div class="row"><button id="observe" disabled>4 Sekunden aufzeichnen</button><button id="clearEvents">Vergleich zurücksetzen</button></div><pre id="events">Noch keine Rückmeldungen.</pre></section></div>
 <section><h2>Abnahmestatus</h2><p>Ein Scan beweist Bluetooth-Sichtbarkeit. Erst ein echter Lesevorgang oder eine Notification beweist, dass Daten übertragen werden. Ob ein Byte die Lichtleistung oder die Lüfterdrehzahl bezeichnet, muss anschließend anhand reproduzierbarer Testwerte bestätigt werden.</p><small>Schreibtest gesperrt, bis Protokoll, Geräteidentität und erwartete Antworten dokumentiert und verifiziert sind.</small></section>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-let selected=null,services=[];
+let selected=null,services=[],captures=[];
 function message(s){$('status').textContent=s}
 function pretty(obj){return JSON.stringify(obj,null,2)}
 async function api(path,payload){
@@ -38,7 +38,7 @@ async function api(path,payload){
  if(!res.ok)throw Error(data.detail||('HTTP '+res.status));
  return data;
 }
-function chosen(id){selected=id;$('inspect').disabled=false;$('observe').disabled=true;$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.'}
+function chosen(id){selected=id;$('inspect').disabled=false;$('observe').disabled=true;$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.';captures=[];}
 async function busy(button,work){button.disabled=true;try{await work()}catch(e){message('Fehler: '+e.message)}finally{button.disabled=false}}
 $('scan').onclick=()=>busy($('scan'),async()=>{
  message('Bluetooth-Scan läuft…');let data=await api('scan',{});selected=null;$('inspect').disabled=true;$('observe').disabled=true;$('uuid').disabled=true;
@@ -63,6 +63,7 @@ $('inspect').onclick=()=>busy($('inspect'),async()=>{
 $('observe').onclick=()=>busy($('observe'),async()=>{
  if(!selected||!$('uuid').value)return;message('Empfange vier Sekunden BLE-Notifications…');
  const d=await api('observe',{candidate_id:selected,characteristic_uuid:$('uuid').value,seconds:4});
- $('events').textContent=pretty(d);message(d.event_count+' Notifications empfangen; Bedeutung noch nicht verifiziert.');
+ captures.push({messung:captures.length+1,geraet:selected,uuid:d.uuid,event_count:d.event_count,events:d.events});$('events').textContent=pretty(captures);message(d.event_count+' Notifications empfangen; '+captures.length+' Messungen zum Vergleich.');
 });
+$('clearEvents').onclick=()=>{captures=[];$('events').textContent='Noch keine Rückmeldungen.';message('Vergleich zurückgesetzt.');};
 </script></body></html>
