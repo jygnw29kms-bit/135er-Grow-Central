@@ -73,6 +73,7 @@ def client(monkeypatch):
     FakeClient.calls = []
     monkeypatch.setattr(mh, "BleakScanner", FakeScanner)
     monkeypatch.setattr(mh, "BleakClient", FakeClient)
+    monkeypatch.setattr(mh, "adapter_diagnostics", lambda: {"state": "ready", "hint": "Adapter bereit"})
     app = FastAPI()
     app.include_router(mh.router)
     app.dependency_overrides[mh.require_write_auth] = lambda: None
