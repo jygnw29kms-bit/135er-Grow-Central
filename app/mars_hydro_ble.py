@@ -10,6 +10,7 @@ import asyncio
 import hashlib
 import logging
 import re
+import subprocess
 import time
 from typing import Any
 
@@ -95,12 +96,51 @@ def _characteristic(services: list[dict[str, Any]], uuid: str, property_name: st
     raise HTTPException(422, f"Characteristic unbekannt oder nicht '{property_name}'-fähig.")
 
 
+def _command(*args: str) -> tuple[int, str]:
+    """Bounded read-only BlueZ diagnostics, with no shell or state changes."""
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=4, check=False)
+        return result.returncode, (result.stdout + "\n" + result.stderr)[:3000]
+    except (OSError, subprocess.TimeoutExpired):
+        return -1, ""
+
+
+def adapter_diagnostics() -> dict[str, Any]:
+    rc, show = _command("bluetoothctl", "show")
+    rc_rf, rfkill = _command("rfkill", "list", "bluetooth")
+    controller = bool(re.search(r"^\s*Controller\s+", show, re.M))
+    powered = bool(re.search(r"^\s*Powered:\s+yes\s*$", show, re.M | re.I))
+    blocked = bool(re.search(r"^\s*(Soft|Hard) blocked:\s+yes\s*$", rfkill, re.M | re.I))
+    if rc != 0 or not controller:
+        state = "adapter_unavailable"
+        hint = "Kein Bluetooth-Controller über BlueZ verfügbar. Pi-Adapter und bluetooth.service prüfen."
+    elif blocked:
+        state = "radio_blocked"
+        hint = "Bluetooth ist durch rfkill gesperrt. Funkfreigabe am Pi prüfen."
+    elif not powered:
+        state = "adapter_off"
+        hint = "Bluetooth-Adapter ist ausgeschaltet. BlueZ und Bluetooth-Initialisierung prüfen."
+    else:
+        state = "ready"
+        hint = "Adapter bereit. BLE-Geräte müssen eingeschaltet und in Funkreichweite sein."
+    return {
+        "state": state,
+        "controller_present": controller,
+        "powered": powered,
+        "rfkill_blocked": blocked,
+        "bluez_accessible": rc == 0,
+        "rfkill_available": rc_rf == 0,
+        "hint": hint,
+    }
+
+
 @router.get("/status")
 def status():
     return {
         "transport": "bluetooth",
         "models": ["FC3000", "DF150-M"],
-        "discovery": "available",
+        "discovery": "available_if_adapter_ready",
+        "adapter": adapter_diagnostics(),
         "gatt_read": "available_when_characteristic_supports_read",
         "notifications": "available_when_characteristic_supports_notify",
         "control": "blocked_pending_model_specific_validation",
@@ -112,13 +152,30 @@ def status():
 
 
 @router.post("/scan")
-async def scan(seconds: float = 5.0):
-    timeout = min(max(seconds, 1.0), 12.0)
+async def scan(seconds: float = 8.0):
+    timeout = min(max(seconds, 3.0), 15.0)
+    if _capture_lock.locked():
+        raise HTTPException(409, "Eine BLE-Diagnose läuft bereits. Bitte danach erneut suchen.")
+    adapter = adapter_diagnostics()
+    if adapter["state"] != "ready":
+        return {"devices": [], "found": 0, "read_only": True,
+                "adapter": adapter, "scan_seconds": 0, "attempts": 0,
+                "message": adapter["hint"]}
+    results: dict[str, Any] = {}
+    attempts = 0
     try:
-        results = await BleakScanner.discover(timeout=timeout, return_adv=True)
+        # First scan runs the full requested dwell. A second active scan helps
+        # with intermittently advertising BLE peripherals (e.g. C260), but
+        # cannot discover devices that are not advertising.
+        for attempt in range(2):
+            attempts += 1
+            seen = await BleakScanner.discover(timeout=timeout, return_adv=True)
+            results.update(seen)
+            if results:
+                break
     except Exception as exc:
         logger.warning("Mars BLE scan failed: %s", type(exc).__name__)
-        raise HTTPException(503, "Bluetooth-Scan fehlgeschlagen; Pi-Funk und BlueZ prüfen.") from exc
+        raise HTTPException(503, f"BLE-Scan fehlgeschlagen ({type(exc).__name__}). BlueZ und Adapterstatus prüfen.") from exc
     now = time.monotonic()
     rows = []
     for address, (device, adv) in results.items():
@@ -140,7 +197,15 @@ async def scan(seconds: float = 5.0):
         if now - row[2] > _CANDIDATE_TTL:
             _candidates.pop(key, None)
     rows.sort(key=lambda x: (not x["mars_hydro_hint"], -(x["rssi"] or -999)))
-    return {"devices": rows, "read_only": True, "found": len(rows)}
+    message = (
+        f"{len(rows)} BLE-Geräte erkannt."
+        if rows else
+        "Bluetooth-Adapter bereit, aber keine BLE-Werbesignale empfangen. "
+        "C260/FC3000 und Lüfter einschalten, Hersteller-App trennen und erneut suchen."
+    )
+    return {"devices": rows, "read_only": True, "found": len(rows),
+            "adapter": adapter, "attempts": attempts,
+            "scan_seconds": timeout * attempts, "message": message}
 
 
 @router.post("/inspect")
