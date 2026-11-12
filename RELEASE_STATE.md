@@ -1,36 +1,42 @@
 # 135er-Grow Central · Canonical Release State
 
-- **Stand:** 16. Oktober 2026
+- **Stand:** 12. November 2026
 - **Repository-Version:** `alpha-0.7.5`
 - **Branch:** `master`
-- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 431**
-- **Candidate-Tag:** `pi-universal-alpha-0.7.5-431`
-- **Candidate-Commit:** `b51c19109db669832a2e009b239cc358fcd12428`
+- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 461**
+- **Candidate-Tag:** `pi-universal-alpha-0.7.5-461`
+- **Candidate-Commit:** `5af7a97ee632a4ccaf32893c3c02735ac75bfadd`
 - **Status:** `CANDIDATE` – automatisierte Image-Gates bestanden; vollständige reale Prüfung dieses Images offen
 - **Entwicklungsmodus:** `OPEN SOURCE` – öffentliches Repository und veröffentlichbare Artefakte
 
 > Diese Datei ist die kanonische Referenz für README, Dokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien definieren nicht den aktuellen Candidate.
 
-## Aktueller Candidate: Build 431
+## Aktueller Candidate: Build 461
 
 | Merkmal | Wert |
 |---|---|
-| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-431.img.xz` |
-| Gr??e | 1.179.289.124 Byte |
-| SHA-256 | `1095a6a9f66b8d67ce2536d20b32215c016d7d6654a0765a937cf949b6a3cf9b` |
-| Quellstand | `b51c19109db669832a2e009b239cc358fcd12428` |
+| Image | `135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-461.img.xz` |
+| Gr??e | 1.169.921.272 Byte |
+| SHA-256 | `8ad6e9e9f14e275d10502df898d694dd4faa96d4426fe92aa07932b568860b16` |
+| Quellstand | `5af7a97ee632a4ccaf32893c3c02735ac75bfadd` |
 | Basis | Raspberry Pi OS Lite 64-bit, Universal-Image |
-| Sensor-Firmware | `0.5.2` |
-| Veröffentlichung | 16. Oktober 2026 |
+| Sensor-Firmware | `0.5.3` |
+| Veröffentlichung | 12. November 2026 |
 | Hardwarestatus | `CANDIDATE`; dieses vollständige Image noch nicht real validiert |
 
-[Release und Downloads](https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-431). Firmware-Build, Userspace-Boot/Reboot, Pristine-Prüfung, Komprimierung und Veröffentlichung bestanden. Die veröffentlichte Image-Prüfsumme stimmt mit dem GitHub-Asset-Digest überein. Begleitpakete wurden auf SHA256, ZIP-Integrität, Quellstand und Firmwaremanifest geprüft.
+[Release und Downloads](https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-461). Firmware-Build, Userspace-Boot/Reboot, Pristine-Prüfung, Komprimierung und Veröffentlichung bestanden. Die veröffentlichte Image-Prüfsumme stimmt mit dem GitHub-Asset-Digest überein. Begleitpakete wurden auf SHA256, ZIP-Integrität, Quellstand und Firmwaremanifest geprüft.
 
-Build 431 enthält den aktuellen USB-Sensorpfad, individuelle MQTT-TLS-Zugänge, Zertifikatskompatibilität, vollständige CA-Übertragung, Sensor-Firmware 0.5.2, HomeKit-Integration sowie die aktuellen Diagnose- und Bodenfeuchtefunktionen.
+Build 461 enthält den aktuellen USB-Sensorpfad, individuelle MQTT-TLS-Zugänge, Zertifikatskompatibilität, vollständige CA-Übertragung, Sensor-Firmware 0.5.3, HomeKit-Integration sowie die aktuellen Diagnose- und Bodenfeuchtefunktionen.
 
 Der reale Pi-4-Sensortest vom 14. Oktober bleibt als historischer Hardwarebefund dokumentiert. Seine Erkenntnisse sind in den aktuellen Quellstand eingeflossen; separate Build-369-Hotfix-Installer geh?ren nicht mehr zum aktiven Produktpfad. [Hardwarebefund](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md), [Kalibrierung](docs/de/SOIL_SENSOR_GUIDE.md).
 
-Der `master`-Branch kann neuere Quellcode?nderungen als Build 431 enthalten. Ein neuer Image-Candidate wird erst durch den vollst?ndigen Image-Workflow erzeugt und erh?lt einen eigenen reproduzierbaren Quellstand.
+Der `master`-Branch kann neuere Quellcodeänderungen als Build 461 enthalten. Ein neuer Image-Candidate wird erst durch den vollst?ndigen Image-Workflow erzeugt und erh?lt einen eigenen reproduzierbaren Quellstand.
+
+## Neu für die nächste Pi-4-Hardwareabnahme
+
+- FC3000 und DF150-M jeweils als eigenständige Bluetooth-/2,4-GHz-WLAN-Hardwareprofile erfasst; reale BLE-/WLAN-Verbindungen und Schreibprotokolle **noch nicht validiert**.
+- First-Boot-Dialog erklärt die 2,4-GHz-Anforderung. Bestehendes SSH ist bei Normal-Images opt-in, manuell erzeugte Wartungstest-Images haben einen separaten schlüsselgebundenen Pfad.
+- Verbindlicher Ablauf: [Pi 4 vom Flash bis zur Geräteabnahme](docs/de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
 
 ## Verbindliche Hardwarestrategie
 
@@ -80,7 +86,7 @@ Projektfremde Anwendungen sind keine funktionalen Bestandteile von Grow Central 
 
 ## Validierung des aktuellen Kandidaten
 
-- 321 Python-Tests, Firmware-Build, Sicherheits-/Projektgrenzen-/Domain-/Release-Prüfungen bestanden im geprüften Sensorstand.
+- Python-Tests, Firmware-Build, Image-Anpassung, Userspace-Boot-/Neustartprüfung, Integritätsprüfungen und Release-Veröffentlichung für Build 461 erfolgreich; reale Hardwaretests stehen weiterhin aus.
 - Home-Assistant-Komponente in CI gegen HA 2025.1.4 und 2026.10.1 geprüft; reale Sprachassistentenprüfung offen.
-- Pi-4-Sensortest mit Hotfixes bestätigt; vollständiger Realtest von Build 431, Neustart-/Dauerbetrieb, Kalibrierung und andere Pi-Klassen offen.
+- Historischer Pi-4-Sensortest mit Hotfixes bestätigt; vollständiger Realtest von Build 461, Neustart-/Dauerbetrieb, Kalibrierung und andere Pi-Klassen offen.
 - Status bleibt `CANDIDATE`.
