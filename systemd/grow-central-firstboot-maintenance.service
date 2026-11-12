@@ -1,0 +1,14 @@
+[Unit]
+Description=Provision individually authorized Grow Central maintenance key
+After=local-fs.target network.target
+ConditionPathExists=/boot/firmware/gc-maintenance.pub
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/gc-firstboot-maintenance-provision
+TimeoutStartSec=90s
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target
