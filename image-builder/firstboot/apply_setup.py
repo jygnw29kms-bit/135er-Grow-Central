@@ -314,6 +314,28 @@ def configure_wifi(config: dict[str, str]) -> None:
         raise RuntimeError("Das gewählte WLAN konnte nicht verbunden werden.")
 
 
+def ensure_ethernet() -> str:
+    """Activate an existing wired link without modifying user-managed LAN profiles."""
+    device = ethernet_interface()
+    if not device:
+        raise RuntimeError("Keine Ethernet-Schnittstelle erkannt. LAN-Kabel und Port prüfen.")
+    try:
+        active_ipv4(device)
+        return device
+    except RuntimeError:
+        pass
+    result = run("nmcli", "--wait", "35", "device", "connect", device, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"LAN-Verbindung über {device} konnte nicht aktiviert werden.")
+    for _ in range(15):
+        try:
+            active_ipv4(device)
+            return device
+        except RuntimeError:
+            time.sleep(1)
+    raise RuntimeError(f"LAN {device} hat keine IPv4-Adresse erhalten (DHCP/Verkabelung prüfen).")
+
+
 def active_ipv4(device: str) -> str:
     result = run("ip", "-4", "-o", "address", "show", "dev", device, "scope", "global", check=False)
     if result.returncode != 0 or not result.stdout.strip():
@@ -393,7 +415,7 @@ def main() -> int:
         disable_local_ssh()
         if config["mode"] == "wifi":
             configure_wifi(config)
-        network_device = wifi_interface() if config["mode"] == "wifi" else ethernet_interface()
+        network_device = wifi_interface() if config["mode"] == "wifi" else ensure_ethernet()
         if not network_device:
             raise RuntimeError("Die gewählte Netzwerkschnittstelle wurde nicht erkannt.")
         network_address = verify_network(network_device)
