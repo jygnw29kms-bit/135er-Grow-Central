@@ -97,6 +97,19 @@ mounted_boot=1
 [[ -f "$root/opt/135er-grow-central/scripts/install-gc-maintenance-agent.sh" ]] || {
   echo "Image does not contain expected maintenance installer; use updated build" >&2; exit 4;
 }
+# Fail closed for old images: a current operator base must include its immutable source SHA.
+source_file="$root/opt/135er-grow-central/SOURCE_COMMIT"
+distribution_file="$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
+[[ -f "$source_file" && -f "$distribution_file" ]] || {
+  echo "This image predates current operator source tracking; rebuild from master" >&2; exit 4;
+}
+source_sha="$(tr -d '\r\n' < "$source_file")"
+[[ "$source_sha" =~ ^[a-f0-9]{40}$ ]] || {
+  echo "Invalid embedded source SHA" >&2; exit 4;
+}
+grep -Fxq 'OPERATOR_ONLY' "$distribution_file" || {
+  echo "Expected operator-only image base" >&2; exit 4;
+}
 for unit in grow-central-firstboot-maintenance.service grow-central-mesh-agent.service; do
   [[ -f "$root/etc/systemd/system/$unit" ]] || {
     echo "Image missing $unit; use updated build" >&2; exit 4;
@@ -151,6 +164,7 @@ losetup -d "$loop"; loop=""
 chmod 0600 "$output"
 completed=1
 echo "PRIVATE_OWNER_IMAGE_READY=$output"
+echo "SOURCE_COMMIT=$source_sha"
 echo "SHA256=$(sha256sum "$output" | awk '{print $1}')"
 echo "SECURITY: keep this image private; revoke device enrollment if leaked."
 echo "VALIDATION: real boot, SSH sudo and MeshCentral online check still required."
