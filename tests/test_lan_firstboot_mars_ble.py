@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_lan_status_is_independent_of_the_system_language():
     def fake_command(*args, **kwargs):
         assert args[-1] == "eth0"
-        return SimpleNamespace(returncode=0, stdout="GENERAL.STATE:100 (verbunden)\\nIP4.ADDRESS[1]:192.168.178.98/24\\n")
+        return SimpleNamespace(returncode=0, stdout="GENERAL.STATE:100 (verbunden)\nIP4.ADDRESS[1]:192.168.178.98/24\n")
     with patch.object(firstboot, "_command", fake_command):
         state = firstboot._device_state("eth0")
     assert state["connected"] is True
