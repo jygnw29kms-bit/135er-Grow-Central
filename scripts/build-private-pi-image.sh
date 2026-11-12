@@ -39,7 +39,7 @@ done
 [[ "$input" != "$output" ]] || { echo "Input and output must differ" >&2; exit 2; }
 [[ ! -e "$output" ]] || { echo "Refusing to overwrite output" >&2; exit 2; }
 [[ "$output" == *.img ]] || { echo "Uncompressed .img output required" >&2; exit 2; }
-for cmd in losetup mount umount cp install ssh-keygen blkid sync sha256sum; do
+for cmd in losetup mount umount cp install ssh-keygen blkid sync sha256sum openssl sed; do
   command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }
 done
 [[ "$(stat -c %s "$pubkey")" -le 512 ]] || { echo "Public key file too large" >&2; exit 2; }
@@ -108,6 +108,29 @@ done
 [[ ! -e "$root/opt/grow-central/mesh-agent/meshagent" ]] || {
   echo "Image already has MeshCentral enrollment" >&2; exit 4;
 }
+# Replace the image-building placeholders with per-image secrets, before
+# first boot. Existing tokens must never be cloned across operator devices.
+appenv="$root/opt/135er-grow-central/.env"
+cloudenv="$root/opt/135er-grow-central/local/cloud_link/.env"
+[[ -f "$appenv" && -f "$cloudenv" ]] || {
+  echo "Expected runtime environment files not present" >&2; exit 4;
+}
+for item in "GC_API_TOKEN=test" "GC_LOCAL_API_TOKEN=test"; do
+  grep -Fxq "$item" "$appenv" || {
+    echo "Unrecognized runtime placeholder for ${item%%=*}; refusing to duplicate credentials" >&2; exit 4;
+  }
+done
+grep -Fxq 'GC_LOCAL_API_TOKEN=test' "$cloudenv" || {
+  echo "Unexpected cloud-link token placeholder" >&2; exit 4;
+}
+operator_token="$(openssl rand -hex 32)"
+sed -i "s/^GC_API_TOKEN=test$/GC_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$cloudenv"
+unset operator_token
+printf 'OPERATOR_PROVISIONED\n' > "$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
+chmod 0600 "$appenv" "$cloudenv"
+# No static password is ever embedded in the operator image.
 # One public key is applied by the firstboot systemd service.
 install -m 0600 "$pubkey" "$boot/gc-maintenance.pub"
 # Device-bound config is private: never add this directory to Git or artifacts.
