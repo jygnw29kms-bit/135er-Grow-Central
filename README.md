@@ -26,7 +26,8 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Aktueller Pi-Candidate | **Build 461** |
 | Release-Tag | `pi-universal-alpha-0.7.5-461` |
 | Quellstand des Candidates | `5af7a97ee632a4ccaf32893c3c02735ac75bfadd` |
-| Veröffentlichung | 12. November 2026 |
+| Historischer Kandidat | 12. November 2026 |
+| Aktuelle Image-Verteilung | **Ausschließlich Betreiber-Images, keine neuen öffentlichen Downloads** |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
 | Entwicklungsmodus | **Open Source / öffentlich** |
 
@@ -42,7 +43,7 @@ Der ver?ffentlichte Pi-Candidate **Build 461** enth?lt die aktuelle Sensor-Firmw
 
 Der HW-390 misst einen kapazitiven Feuchte-Referenzwert. Temperatur, pH und EC erfordern zusätzliche Hardware. Der erfolgreiche Sensortest ist keine vollständige Validierung des Universal-Images oder anderer Hardwareklassen.
 
-**Neues Testimage:** [Build 461 herunterladen](https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-461). Die Hardwareabnahme für Raspberry Pi 4, First Boot, FC3000 und DF150-M erfolgt nach [End-to-End-Testplan](docs/de/PI4_END_TO_END_ABNAHME_2026-11-12.md). Die zwei Mars-Hydro-Geräte sind getrennt mit Bluetooth und 2,4-GHz-WLAN erfasst, aber Steuerung/Verbindung wurden noch nicht am echten Gerät validiert.
+**Betreiber-Images ausschließlich privat:** Öffentliche Image-Downloads sind bis zur vollständigen Abnahme ausgesetzt. Der historische Build-461-Kandidat dient nur als Versionsreferenz. Die Hardwareabnahme für Raspberry Pi 4, First Boot, FC3000 und DF150-M erfolgt nach [End-to-End-Testplan](docs/de/PI4_END_TO_END_ABNAHME_2026-11-12.md). Die zwei Mars-Hydro-Geräte sind getrennt mit Bluetooth und 2,4-GHz-WLAN erfasst, aber Steuerung/Verbindung wurden noch nicht am echten Gerät validiert.
 
 ## Produktprinzipien
 
@@ -107,7 +108,7 @@ Separate Images entstehen nur, wenn unterschiedliche Kernel-, Paket- oder Servic
 1. `master` und die kanonische Dokumentation bilden den neuesten bekannten Quellstand ab.
 2. Ein erfolgreicher CI-Lauf oder Image-Build erhält zunächst den Status `CANDIDATE`.
 3. `VALIDATED` wird erst nach dokumentiertem Test auf realer Zielhardware vergeben.
-4. Öffentliche Builds, Images, App-Pakete und Installationsskripte werden – sofern technisch und rechtlich veröffentlichbar – über die Open-Source-Projektkanäle dokumentiert und bereitgestellt.
+4. **Bis zur vollständigen Abnahme keine öffentlichen Pi-Images oder Image-Artefakte.** Betreiber-Images bleiben privat; Quellcode und nicht-sensitive Dokumentation bleiben Open Source.
 5. Die öffentliche Projektseite unter [grow-central.de](https://grow-central.de/) dient als Einstiegspunkt und verweist auf Repository, Dokumentation und veröffentlichte Releases.
 6. Zugangsdaten, Tokens, private Schlüssel, lokale Adressen, Diagnosepakete mit personenbezogenen Daten und sonstige Geheimnisse werden niemals veröffentlicht.
 7. Projektfremde Komponenten geh?ren nicht in dieses Repository. Gemeinsame Infrastruktur darf nur ?ber klar getrennte Schnittstellen, Secrets, Releases und Dokumentation genutzt werden.
@@ -128,4 +129,4 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 
 ## English summary
 
-135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 461 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 461 is a historical `alpha-0.7.5` hardware-test candidate; until hardware validation is complete, new Pi images are owner-only and are never published as public releases or artifacts.
