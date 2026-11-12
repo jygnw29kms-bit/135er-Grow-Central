@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GrowCentral · Mars Hydro Bluetooth Diagnose</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#11181b;color:#eff4f3}
+*{box-sizing:border-box}body{margin:0;padding:max(20px,env(safe-area-inset-top)) 16px 45px;max-width:1120px;margin:auto}
+h1{font-size:clamp(1.5rem,3vw,2.4rem);margin:.25rem 0}h2{font-size:1.05rem}
+p{line-height:1.5;color:#a9b9b8}.sub{color:#95d6a7;font-size:.85rem;letter-spacing:.1em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+section{background:#1a2528;padding:18px;border:1px solid #344447;border-radius:16px;margin:16px 0}
+button,select{font:inherit;background:#27383a;color:#eff4f3;border:1px solid #57706b;border-radius:8px;padding:11px 12px}
+button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.primary{background:#286747;border-color:#4dab76}
+label{display:block;margin:12px 0;font-size:.9rem}select{width:100%;max-width:650px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:430px;overflow:auto;background:#10191b;padding:12px;border-radius:9px;font-size:.78rem}
+.banner{border-left:3px solid #d4ad60;padding:12px 14px;background:#332d21;color:#f2e3bc;border-radius:4px}
+.status{min-height:22px;color:#a9e2c3}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+small{color:#a5b8b7}.device{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:12px;border:1px solid #415553;border-radius:9px}
+</style></head><body>
+<div class="sub">GROWCENTRAL / LOKALE GERÄTEDIAGNOSE</div>
+<h1>Mars Hydro · Bluetooth</h1>
+<p>FC3000 Beleuchtung und DF150-M Abluft. Der Raspberry Pi prüft Geräte direkt per Bluetooth. WLAN und Mars-Hydro-Cloud sind für diese Diagnose nicht erforderlich.</p>
+<div class="banner">Nur Diagnose: Die Geräteidentität, die Bedeutung der Rohwerte und die Steuerbefehle sind noch nicht validiert. Dieses Werkzeug sendet <strong>keine</strong> GATT-Steuerbefehle.</div>
+<section><div class="row"><button class="primary" id="scan">Bluetooth-Geräte suchen</button><span id="status" class="status" role="status">Bereit</span></div><div id="devices"></div></section>
+<div class="grid"><section><h2>GATT-Dienste und lesbare Werte</h2><div class="row"><button id="inspect" disabled>Ausgewähltes Gerät auslesen</button></div><pre id="gatt">Noch keine Gerätedaten.</pre></section>
+<section><h2>Benachrichtigungen aufnehmen</h2><p>Eine notifizierbare Characteristic auswählen. Während der kurzen Aufnahme kannst du am Herstellerregler oder in der App einen bekannten Wert ändern und die Rückmeldung beobachten.</p>
+<label for="uuid">Notify-Characteristic</label><select id="uuid" disabled><option value="">Erst Gerät auslesen</option></select>
+<div class="row"><button id="observe" disabled>4 Sekunden aufzeichnen</button></div><pre id="events">Noch keine Rückmeldungen.</pre></section></div>
+<section><h2>Abnahmestatus</h2><p>Ein Scan beweist Bluetooth-Sichtbarkeit. Erst ein echter Lesevorgang oder eine Notification beweist, dass Daten übertragen werden. Ob ein Byte die Lichtleistung oder die Lüfterdrehzahl bezeichnet, muss anschließend anhand reproduzierbarer Testwerte bestätigt werden.</p><small>Schreibtest gesperrt, bis Protokoll, Geräteidentität und erwartete Antworten dokumentiert und verifiziert sind.</small></section>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let selected=null,services=[];
+function message(s){$('status').textContent=s}
+function pretty(obj){return JSON.stringify(obj,null,2)}
+async function api(path,payload){
+ const res=await fetch('/api/mars-hydro/ble/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+ let data;try{data=await res.json()}catch{throw Error('Server antwortet nicht mit gültigem JSON ('+res.status+')')}
+ if(!res.ok)throw Error(data.detail||('HTTP '+res.status));
+ return data;
+}
+function chosen(id){selected=id;$('inspect').disabled=false;$('observe').disabled=true;$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.'}
+async function busy(button,work){button.disabled=true;try{await work()}catch(e){message('Fehler: '+e.message)}finally{button.disabled=false}}
+$('scan').onclick=()=>busy($('scan'),async()=>{
+ message('Bluetooth-Scan läuft…');let data=await api('scan',{});selected=null;$('inspect').disabled=true;$('observe').disabled=true;$('uuid').disabled=true;
+ $('devices').replaceChildren();
+ data.devices.forEach(item=>{
+  const card=document.createElement('div');card.className='device';
+  const title=document.createElement('strong');title.textContent=item.name+(item.mars_hydro_hint?' · Mars-Hydro-Kandidat':'');
+  const desc=document.createElement('small');desc.textContent='RSSI '+(item.rssi??'?')+' dBm · ID '+item.candidate_id+' · Identität noch nicht bestätigt';
+  const button=document.createElement('button');button.textContent='Auswählen';button.onclick=()=>chosen(item.candidate_id);
+  card.append(title,desc,button);$('devices').append(card);
+ });
+ if(!data.devices.length){$('devices').textContent='Keine Bluetooth-Geräte gefunden. Geräte einschalten und Hersteller-App ggf. trennen.'}
+ message(data.found+' Geräte erkannt, bitte FC3000 und DF150-M jeweils einzeln zuordnen.');
+});
+$('inspect').onclick=()=>busy($('inspect'),async()=>{
+ if(!selected)return;message('GATT-Dienste und read-fähige Werte werden ausgelesen…');
+ const d=await api('inspect',{candidate_id:selected});$('gatt').textContent=pretty(d);
+ services=d.services||[];const u=$('uuid');u.replaceChildren(new Option('Characteristic auswählen',''));
+ for(const service of services)for(const c of service.characteristics)if(c.properties.includes('notify'))u.add(new Option(c.uuid+' ('+service.uuid+')',c.uuid));
+ u.disabled=u.options.length===1;$('observe').disabled=u.disabled;message('Auslesen beendet. Werte sind Rohdaten, keine validierten Messgrößen.');
+});
+$('observe').onclick=()=>busy($('observe'),async()=>{
+ if(!selected||!$('uuid').value)return;message('Empfange vier Sekunden BLE-Notifications…');
+ const d=await api('observe',{candidate_id:selected,characteristic_uuid:$('uuid').value,seconds:4});
+ $('events').textContent=pretty(d);message(d.event_count+' Notifications empfangen; Bedeutung noch nicht verifiziert.');
+});
+</script></body></html>
