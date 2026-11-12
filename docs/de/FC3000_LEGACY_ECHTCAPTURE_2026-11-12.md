@@ -65,3 +65,16 @@ Der Nutzer meldete einen zweiten Durchlauf mit ungefähr drei Sekunden Pause. Di
 Die Nutzdaten folgen erneut dem Format `<type>|0|<session_or_token>|<device_id>|<value>`; das bestätigt die Bedeutung der Typen `1` (Ein/Aus) und `2` (Helligkeitswert) als **starke beobachtete Korrelation** in zwei Bedienfolgen. 76 statt 75 ist als tatsächlich übertragener Reglerwert zu behandeln, nicht zu 75 umzudichten. Die Abstände im Capture sind etwa 5,8 s / 7,1 s / 7,6 s / 3,9 s; user-genannte drei Sekunden sind keine präzisen Paketzeitstempel.
 
 **Weiterhin offen:** Verhalten des gerätespezifischen Session-/Authentifizierungsfelds, Status-/ACK-Parsing, Reconnect, Live-Write von Grow Central; keine willkürlichen Writes und keine öffentliche Veröffentlichung des Rohcaptures.
+
+
+## Dritte Auswertung: Sitzungskennungen und Notifications (2026-11-12)
+
+Aus der finalen privaten PCAP (3.930.276 Bytes) wurden **12** FC3000-Aktionen und **410** BLE-Notifications auf dem bestätigten Notify-Handle 0x002A ermittelt. Die **12 Steuer-Nutzdaten enthalten dieselbe fünfstellige Sitzungskennung** (nur Gleichheit geprüft, weder Klartextkennung noch Hash im öffentlichen Git speichern). Beide Bedienfolgen stammen aus *derselben* BLE-Verbindung; daraus lässt sich **keine** Neuanmeldung oder Authentifizierungslogik ableiten.
+
+Die BLE-Notifications wurden in einem Beobachtungsfenster von 0–2 Sekunden nach jeder Bedienaktion gruppiert, begrenzt durch eine eventuelle nächste Bedienaktion. Ergebnis: Bei **10 von 12** Schreibvorgängen liegen jeweils **2 Notifications** innerhalb des Fensters, bei den beiden anderen keine. Die Gesamterfassung enthält **410 Notifications**. Deren Auftreten im Zeitfenster ist **kein ACK-Beweis**; der Controller sendet auch periodische Telemetrie.
+
+Werte der zweiten Bedienfolge: Einschalten (1), Helligkeit 76, 50, 25, Ausschalten (0). Dass 76 statt 75 übertragen wurde, ist aus dem echten Mitschnitt belegt; kein stilles Aufrunden.
+
+**Neue Werkzeuge:** `scripts/fc3000_legacy_notify_audit.py` erzeugt ausschließlich einen anonymisierten Zeit-/Längenbericht, die echten Payloadbytes bleiben privat. `tests/test_fc3000_legacy_notify_audit.py` testet die Zeitfenster und den Ausschluss unbegründeter ACK-Aussagen. Die Auswertung der Originalaufnahme wurde auf Jens-PC ausgeführt: 12 Kommandos und 410 Notifications. Kein GATT-Schreibzugriff aus Grow Central.
+
+**Offen:** Statusdatenformat, UUID-/Handle-Zuordnung nach *neuem* Connect, Format/Herkunft der Sitzungskennung, tatsächliche Wirkung der späteren eigenen Grow-Central-Befehle. Test gegen Hardware ausdrücklich noch nicht freigegeben.
