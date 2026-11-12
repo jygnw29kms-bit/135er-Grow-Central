@@ -110,9 +110,19 @@ find "$root/etc/ssh" -maxdepth 1 -name 'ssh_host_*_key*' -type f -delete
 : > "$root/etc/machine-id"
 rm -f "$root/var/lib/dbus/machine-id"
 
-systemctl --root="$root" enable ssh.service grow-central-firstboot-maintenance.service \
-  grow-central-remote-watchdog.timer grow-central-mesh-agent.service >/dev/null
-systemctl --root="$root" disable ssh.socket >/dev/null 2>&1 || :
+# Offline enable by writing only target-image systemd symlinks.
+# Do NOT call systemctl --root enable ssh: Debian's SysV compatibility
+# calls ARM64 update-rc.d via chroot, which cannot execute on x86 builders.
+[[ -f "$root/usr/lib/systemd/system/ssh.service" || -f "$root/lib/systemd/system/ssh.service" ]] || {
+  echo "SSH systemd unit missing from Raspberry Pi base" >&2; exit 4;
+}
+install -d "$root/etc/systemd/system/multi-user.target.wants" "$root/etc/systemd/system/timers.target.wants"
+ln -sfn /usr/lib/systemd/system/ssh.service "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
+for unit in grow-central-firstboot-maintenance.service grow-central-mesh-agent.service; do
+  ln -sfn "/etc/systemd/system/$unit" "$root/etc/systemd/system/multi-user.target.wants/$unit"
+done
+ln -sfn /etc/systemd/system/grow-central-remote-watchdog.timer "$root/etc/systemd/system/timers.target.wants/grow-central-remote-watchdog.timer"
+rm -f "$root/etc/systemd/system/sockets.target.wants/ssh.socket" "$root/etc/systemd/system/multi-user.target.wants/ssh.socket"
 test -s "$app/app/mars_legacy_telemetry.py"
 test -s "$app/app/mars_hydro_ble.py"
 test -x "$root/usr/local/sbin/gc-operator-image-check"
