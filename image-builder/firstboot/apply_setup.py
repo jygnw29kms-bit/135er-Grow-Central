@@ -34,6 +34,7 @@ WARNING_FILE = STATE_DIR / "setup-last-warning"
 APP_ENV = Path("/opt/135er-grow-central/.env")
 SETUP_AP_SCRIPT = APP_ROOT / "image-builder/firstboot/setup-ap.sh"
 SSH_DROPIN = Path("/etc/ssh/sshd_config.d/99-grow-central-access.conf")
+MAINTENANCE_MARKER = Path("/etc/135er-grow-central/test-maintenance-enabled")
 FIXED_HOSTNAME = "135er-grow-central"
 AP_CONNECTION = "grow-central-setup-ap"
 TARGET_CONNECTION = "grow-central-uplink"
@@ -184,19 +185,26 @@ def install_runtime_policy() -> None:
 
 
 def disable_local_ssh() -> None:
-    """Fail closed: no password login, no local SSH listener and no firewall hole."""
+    """Lock the normal OS account without disabling ALPHA key-only maintenance."""
+    maintenance = MAINTENANCE_MARKER.is_file()
     SSH_DROPIN.parent.mkdir(parents=True, exist_ok=True)
     SSH_DROPIN.write_text(
         "PasswordAuthentication no\n"
         "KbdInteractiveAuthentication no\n"
-        "PermitRootLogin no\n",
+        "PermitRootLogin no\n"
+        + ("AllowUsers gcmaint\n" if maintenance else ""),
         encoding="utf-8",
     )
     os.chmod(SSH_DROPIN, 0o644)
     run("passwd", "--lock", "GrowCentral", check=False)
-    for unit in ("ssh.socket", "ssh.service", "sshd.service"):
-        run("systemctl", "disable", "--now", unit, check=False)
-    run("ufw", "--force", "delete", "allow", "22/tcp", check=False)
+    if maintenance:
+        # The key-only account is independent of the captive-portal state.
+        run("ssh-keygen", "-A")
+        run("systemctl", "enable", "--now", "ssh.service")
+    else:
+        for unit in ("ssh.socket", "ssh.service", "sshd.service"):
+            run("systemctl", "disable", "--now", unit, check=False)
+        run("ufw", "--force", "delete", "allow", "22/tcp", check=False)
 
 
 def configure_local_ssh(enabled: bool, password: str = "") -> None:
@@ -210,7 +218,7 @@ def configure_local_ssh(enabled: bool, password: str = "") -> None:
         "PasswordAuthentication yes\n"
         "KbdInteractiveAuthentication no\n"
         "PermitRootLogin no\n"
-        "AllowUsers GrowCentral\n",
+        "AllowUsers GrowCentral gcmaint\n" if MAINTENANCE_MARKER.is_file() else "AllowUsers GrowCentral\n",
         encoding="utf-8",
     )
     os.chmod(SSH_DROPIN, 0o644)
