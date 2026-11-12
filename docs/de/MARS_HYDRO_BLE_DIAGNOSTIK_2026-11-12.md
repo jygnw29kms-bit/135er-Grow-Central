@@ -53,6 +53,17 @@ erfolgreich ausgeführt.
   **C260 war bei diesem Lauf nicht sichtbar**, wurde bei früheren
   BlueZ-Scans aber als `MZ_MARS_0_…C260` empfangen.
 
+**Passiver Notify-Test (12.11.2026):** Das Abonnement auf die
+`6f588463-f8f1-44f8-bdae-a1272a1b0f6e`-Characteristic wurde
+auf dem echten Pi mit dem sichtbaren MZF002-Kandidaten versucht.
+Der Verbindungsaufbau bzw. Notify-Start schlug mit `EOFError` fehl;
+GrowCentral lieferte `HTTP 502`. **Keine Notifications erfolgreich
+empfangen, keine Hersteller-Schreibbefehle gesendet.** Mögliche
+Ursachen (noch nicht bestätigt): exklusive Verbindung durch die
+Hersteller-App, Trennung beim Subscribe, gerätespezifische
+Initialisierung oder BlueZ/Bleak-Verbindungszustand. Nicht durch
+erfundene Initialisierungsbytes umgehen.
+
 **Nächste Abnahme:** Passiv die Notify-Characteristic beobachten, die
 rohen Antworten reproduzierbar erfassen und die Gerätezuordnung separat
 bestätigen. Ohne bestätigte Befehlsfamilie keine Steuerfunktion freigeben.
