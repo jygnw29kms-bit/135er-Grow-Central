@@ -1,5 +1,6 @@
 """Bluetooth discovery diagnostics do not claim pairing or hardware control."""
 from unittest.mock import patch
+import asyncio
 import pytest
 from app import mars_hydro_ble as ble
 
@@ -25,8 +26,7 @@ def test_blocked_radio_not_treated_as_empty_scan():
     assert state["state"] == "radio_blocked"
 
 
-@pytest.mark.asyncio
-async def test_zero_devices_retries_and_reports_advertisement_absence():
+def test_zero_devices_retries_and_reports_advertisement_absence():
     class Scanner:
         calls = 0
         @staticmethod
@@ -36,7 +36,7 @@ async def test_zero_devices_retries_and_reports_advertisement_absence():
             return {}
     with patch.object(ble, "adapter_diagnostics", return_value={"state": "ready", "hint": "Bereit"}), \
          patch.object(ble, "BleakScanner", Scanner):
-        result = await ble.scan(seconds=3)
+        result = asyncio.run(ble.scan(seconds=3))
     assert result["found"] == 0
     assert result["attempts"] == 2
     assert result["scan_seconds"] == 6
@@ -44,9 +44,8 @@ async def test_zero_devices_retries_and_reports_advertisement_absence():
     assert "keine BLE-Werbesignale" in result["message"]
 
 
-@pytest.mark.asyncio
-async def test_blocked_adapter_does_not_start_scan():
+def test_blocked_adapter_does_not_start_scan():
     with patch.object(ble, "adapter_diagnostics", return_value={"state": "radio_blocked", "hint": "Funk gesperrt"}):
-        result = await ble.scan()
+        result = asyncio.run(ble.scan())
     assert result["attempts"] == 0
     assert result["adapter"]["state"] == "radio_blocked"
