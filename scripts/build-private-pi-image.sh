@@ -129,7 +129,9 @@ sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$appen
 sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$cloudenv"
 unset operator_token
 printf 'OPERATOR_PROVISIONED\n' > "$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
-chmod 0600 "$appenv" "$cloudenv"
+# Runtime services run as growcentral and need group-read of EnvironmentFile.
+chown root:growcentral "$appenv" "$cloudenv"
+chmod 0640 "$appenv" "$cloudenv"
 # No static password is ever embedded in the operator image.
 # One public key is applied by the firstboot systemd service.
 install -m 0600 "$pubkey" "$boot/gc-maintenance.pub"
