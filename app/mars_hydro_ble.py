@@ -33,7 +33,7 @@ _capture_lock = asyncio.Lock()
 _CANDIDATE_TTL = 180.0
 _MAX_PAYLOAD = 128
 _UUID = re.compile(r"^(?:[0-9a-fA-F]{4}|[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")
-MARS_HINTS = ("mars", "mh-", "mzf", "ifresh", "iconnect", "fc3000", "df150")
+MARS_HINTS = ("mars", "mh-", "mzf", "ifresh", "iconnect", "fc3000", "df150", "c260")
 
 
 class InspectRequest(BaseModel):
