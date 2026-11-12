@@ -19,7 +19,7 @@ fi
 # MeshCentral enrollment is explicitly device-specific and optional.
 # Starting is safe ONLY when both agent executable AND enrollment data exist.
 if [[ -x /opt/grow-central/mesh-agent/meshagent &&
-      -s /etc/grow-central/mesh-agent/meshagent.msh ]]; then
+      -s /opt/grow-central/mesh-agent/meshagent.msh ]]; then
   if ! systemctl is-active --quiet grow-central-mesh-agent.service; then
     log "Authorized MeshCentral agent inactive, starting service"
     systemctl start grow-central-mesh-agent.service
