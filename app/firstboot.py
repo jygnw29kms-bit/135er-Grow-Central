@@ -71,8 +71,11 @@ def _command(*arguments: str, timeout: int = 15) -> subprocess.CompletedProcess[
 
 def _device_state(device: str) -> dict[str, object]:
     result = _command("nmcli", "-t", "-f", "GENERAL.STATE,IP4.ADDRESS", "device", "show", device)
+    # NM 100 means activated; do not match translated labels such as
+    # "(connected)" or "(verbunden)" on German Raspberry Pi OS.
     connected = result.returncode == 0 and any(
-        line.startswith("GENERAL.STATE:") and "(connected)" in line for line in result.stdout.splitlines()
+        re.match(r"^GENERAL\.STATE:100(?:\s|$)", line)
+        for line in result.stdout.splitlines()
     )
     addresses = [line.split(":", 1)[1] for line in result.stdout.splitlines() if line.startswith("IP4.ADDRESS")]
     return {"connected": connected, "addresses": addresses}
