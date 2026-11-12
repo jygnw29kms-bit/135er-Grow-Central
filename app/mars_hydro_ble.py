@@ -293,7 +293,7 @@ async def observe(body: ObserveRequest):
                     logger.warning("Mars BLE observe stage=%s failure=%s", stage, type(exc).__name__)
                     raise HTTPException(502, _transport_error(exc, stage)) from exc
                 finally:
-                    if subscribed and client.is_connected:
+                    if subscribed and getattr(client, "is_connected", True):
                         try:
                             await asyncio.wait_for(client.stop_notify(uuid), timeout=3.0)
                         except Exception as exc:
