@@ -21,6 +21,8 @@ on:
       - 'requirements.txt'
       - 'image-builder/brand/**'
       - 'image-builder/firstboot/**'
+      - 'systemd/grow-central-remote-watchdog.*'
+      - 'systemd/grow-central-mesh-agent.service'
 
 permissions:
   contents: write
@@ -490,8 +492,10 @@ jobs:
           ufw allow 8080/tcp
           ufw allow 5353/udp
           ufw allow 51827/tcp
-          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
-            # Test-image maintenance SSH is LAN-only and key-only.
+          # Public image ships SSH transport on LAN, without a factory password.
+          # Only explicitly provisioned public keys grant interactive access.
+          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]] || true; then
+            # LAN-only key-only SSH. Do not expose port 22 to the Internet.
             ufw allow from 10.0.0.0/8 to any port 22 proto tcp
             ufw allow from 172.16.0.0/12 to any port 22 proto tcp
             ufw allow from 192.168.0.0/16 to any port 22 proto tcp
@@ -677,8 +681,13 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/gc-remote-watchdog.sh /usr/local/sbin/gc-remote-watchdog
+          install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-remote-watchdog.service /etc/systemd/system/grow-central-remote-watchdog.service
+          install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-remote-watchdog.timer /etc/systemd/system/grow-central-remote-watchdog.timer
+          install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-mesh-agent.service /etc/systemd/system/grow-central-mesh-agent.service
+          systemctl enable ssh.service grow-central-remote-watchdog.timer grow-central-mesh-agent.service
           systemctl enable NetworkManager.service avahi-daemon.service mosquitto.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-homekit.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
-          systemctl disable ssh.service ssh.socket 2>/dev/null || true
+          systemctl disable ssh.socket 2>/dev/null || true
           systemctl enable unattended-upgrades.service || true
 
           id GrowCentral
@@ -691,7 +700,10 @@ jobs:
           test "$(systemctl is-enabled grow-central-apply-setup.path)" = enabled
           test "$(systemctl is-enabled grow-central-firstboot-debug.service)" = enabled
           test "$(systemctl is-enabled grow-central-support-bundle.path)" = enabled
-          test "$(systemctl is-enabled ssh.service 2>/dev/null || true)" != enabled
+          test "$(systemctl is-enabled ssh.service 2>/dev/null || true)" = enabled
+          test "$(systemctl is-enabled grow-central-remote-watchdog.timer)" = enabled
+          test "$(systemctl is-enabled grow-central-mesh-agent.service)" = enabled
+          test -x /usr/local/sbin/gc-remote-watchdog
           if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
             id gcmaint
             test "$(passwd --status gcmaint | awk '{print $2}')" = P
@@ -760,7 +772,7 @@ jobs:
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'ufw allow 51827/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q '^ufw allow 22/tcp$' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          grep -q 'test-maintenance-enabled' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q 'LAN-only key-only SSH' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 22 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
