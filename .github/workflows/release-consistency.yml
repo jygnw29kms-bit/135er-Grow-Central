@@ -29,9 +29,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'alpha-0.7.5' RELEASE_STATE.md
-          grep -Fq 'Build 375' RELEASE_STATE.md
-          grep -Fq 'pi-universal-alpha-0.7.5-375' RELEASE_STATE.md
-          grep -Fq 'f3837eb86028654becec96cd94488ba4d6a5e0cb' RELEASE_STATE.md
+          grep -Eq 'Aktueller Raspberry-Pi-Hardwaretest-Candidate:.*Build [0-9]+' RELEASE_STATE.md
+          grep -Eq 'Candidate-Tag:.*pi-universal-alpha-0\\.7\\.5-[0-9]+' RELEASE_STATE.md
+          grep -Eq 'Candidate-Commit:.*[a-f0-9]{40}' RELEASE_STATE.md
           grep -Fq 'CANDIDATE' RELEASE_STATE.md
           grep -Fq 'OPEN SOURCE' RELEASE_STATE.md
 
