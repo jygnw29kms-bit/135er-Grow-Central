@@ -52,8 +52,9 @@ if [ -e "${STATE_DIR}/.provisioned" ]; then
   exit 0
 fi
 
-# Unprovisioned appliances have no usable local OS credential. SSH can only be
-# enabled later by apply_setup.py after explicit opt-in and password creation.
+# The default GrowCentral OS account remains locked until SSH opt-in.
+# Alpha test images have an independent owner-key-only gcmaint account.
+# First Boot must NEVER stop that access while Wi-Fi/LAN setup is pending.
 passwd --lock GrowCentral >/dev/null 2>&1 || true
 mkdir -p /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-grow-central-access.conf <<'EOF'
@@ -62,9 +63,14 @@ KbdInteractiveAuthentication no
 PermitRootLogin no
 EOF
 chmod 0644 /etc/ssh/sshd_config.d/99-grow-central-access.conf
-for unit in ssh.socket ssh.service sshd.service; do
-  systemctl disable --now "$unit" >/dev/null 2>&1 || true
-done
+if [ -e /etc/135er-grow-central/test-maintenance-enabled ]; then
+  ssh-keygen -A >/dev/null 2>&1 || true
+  systemctl enable --now ssh.service >/dev/null 2>&1 || true
+else
+  for unit in ssh.socket ssh.service sshd.service; do
+    systemctl disable --now "$unit" >/dev/null 2>&1 || true
+  done
+fi
 
 # NetworkManager's IPv4 shared mode uses dnsmasq and explicitly supports
 # additional snippets from dnsmasq-shared.d. During first boot every DNS name
