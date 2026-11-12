@@ -1,0 +1,10 @@
+[Unit]
+Description=Grow Central authenticated remote agent availability check
+After=network.target ssh.service
+Wants=ssh.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/gc-remote-watchdog
+NoNewPrivileges=yes
