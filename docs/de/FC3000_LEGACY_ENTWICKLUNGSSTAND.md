@@ -31,3 +31,14 @@ Alle `device`-Werte müssen `lamp` lauten; jede `session` braucht eine eigene Ke
 Eine Steuerfunktion darf erst freigeschaltet werden, nachdem das exakt verwendete Lampenmodell mitsamt Firmware identifiziert, die zugehörige BLE-Characteristic tatsächlich am Lampengerät gelesen, die Befehlsfolge in mehreren unabhängigen Sitzungen aufgezeichnet und ihre physische Wirkung überprüft wurde. Keine unbestätigten Raw-Hex-Write-Endpunkte.
 
 **Bekannte Einschränkung:** Das Offline-Skript importiert bereits dekodierte ATT-Nachrichten. Es beschafft weder BLE-Pairing-Schlüssel noch entschlüsselt es fremde Funkverbindungen. Die eigentliche Original-App-Aufzeichnung steht noch aus.
+
+## Bestätigung durch Mars-Legacy-iPhone-Screenshots (2026-11-12, 18:05 lokal)
+
+- **FC 3000** wird in Mars Legacy mit Geräte-ID **`FCB467AEC260`** angezeigt.
+- Auf der Geräteseite steht **Firmware V3.4**.
+- Der Anwender bestätigt, mit der **FC 3000** erfolgreich per iPhone verbunden zu sein und sie steuern zu können.
+- Der auf dem Pi früher beobachtete Advertising-Kandidat `MZ_MARS_...C260` besitzt dasselbe Endsuffix `C260`: sehr starker Identitätshinweis; vollständige lokale GATT-Identitätsprüfung weiterhin ausstehend.
+- Ein zweiter Screenshot zeigt **`MZ_MZF002_0_A0A3B35EFDC8`**, offensichtlich die Ventilator-Seite. Er gehört **nicht** zur FC 3000 und ist kein Ziel dieses Arbeitsschritts.
+- Die Screenshots beweisen weder die BLE-GATT-Characteristic-UUIDs der Lampe noch ihre Steuercodes. Die UUIDs des MZF002 nicht auf C260 übertragen.
+
+**Nächster Schritt:** iPhone-seitigen HCI-Mitschnitt der nachweislich funktionierenden Mars-Legacy-Lichtsteuerung erfassen (Schreibvorgang mit physischem Effekt), dabei keine zweite aktive Verbindung zur FC 3000 versuchen.
