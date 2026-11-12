@@ -48,3 +48,15 @@ Die iPhone-ATT-Notifications korrelieren zeitlich mit allen Stufenwechseln:
 **Wichtig:** In diesem Capture wurden trotz Stufenwechseln **0 ATT Write Requests/Commands** erkannt. Die Lüfter-Sollwertänderungen wurden also zuverlässig in den Notifications sichtbar, der eigentliche Befehlsweg ist **weiterhin ungeklärt**. Es darf **nicht** angenommen werden, dass die für FC 3000 identifizierten On/Off-/Dim-Payloads für den Lüfter gelten. Potenzielle andere Nachrichtentypen, Richtungen und GATT-/API-Pfade benötigen eine gesonderte Analyse.
 
 `scripts/mars_legacy_mzf002_telemetry.py` liest die bislang identifizierten MZF002-Statusfelder offline. Dieser Stand ist noch **keine Grow-Central-Liveanbindung**, insbesondere keine Schreibsteuerung. Roh-Captures bleiben lokal; Git enthält nur anonymisierte Befunde.
+
+## Grow-Central-Backendintegration (2026-11-12)
+
+Die reale MZF002-Statusstruktur ist im App-Code verfügbar:
+
+- `app/mars_legacy_telemetry.py`: begrenzter, gerätefamiliengeprüfter Parser; nimmt ausschließlich vollständige MZF002-Nachrichten an; gibt Ein/Aus, Sollwert %, Ist-RPM, Temperatur °C und relative Feuchte aus. Sitzungstoken und Geräte-ID werden nicht ausgegeben.
+- `app/mars_hydro_ble.py`: neuer authentifizierter `POST /api/mars-hydro/ble/observe-fan-telemetry`-Endpunkt für einen zuvor vom Pi erkannten MZF002-Kandidaten. Maximal 5 Sekunden passive Notify-Beobachtung nach lokalem GATT-Connect, maximal zwölf dekodierte Samples, keine BLE-Schreibbefehle.
+- `tests/test_mars_legacy_telemetry.py`: drei synthetische Tests inklusive Offline-/Setpoint-Verhalten, Grenzwerten und Redaction; auf Jens-PC ausgeführt, **3/3 erfolgreich**. Backenddateien außerdem ohne Syntaxfehler kompiliert.
+
+**Wichtige Betriebseinschränkung:** Die App auf dem iPhone kann gleichzeitig die einzige BLE-Verbindung zum Gerät belegen. Der neue Endpunkt ist als Implementierung im Git verifiziert, **nicht als erfolgreich auf dem Grow-Pi live getestete Verbindung**. Für einen realen Pi-Lesetest muss die Hersteller-App die BLE-Verbindung zum Lüfter freigeben; keine automatische Trennung oder eigenmächtige Steuerung. Die öffentliche Statusanzeige darf Offline-/Nicht-Erreichbar-Zustände nicht als Echtzeit-Messwerte ausgeben.
+
+CFM und Pa bleiben `null`, bis ihre Herkunft und Semantik nachgewiesen sind. Die Firmware-Daten sind keine Freigabe für beliebige Setpoint-Writes.
