@@ -11,6 +11,18 @@
 
 > Diese Datei ist die kanonische Referenz für README, Dokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien definieren nicht den aktuellen Candidate.
 
+## Nächster privater Betreiber-Test (geplant: 13. November 2026)
+
+- **Ziel:** nächstes privates Universal-Image aus dem jeweils aktuellen GitHub-`master`, kein Rückgriff auf den historischen Build 461
+- **Image-Typ:** `OPERATOR_ONLY` mit individuell provisioniertem `gc-maint`-Public-Key und MeshCentral-Geräte-Enrollment
+- **Fernwartung:** SSH-Start, Erstboot-Schlüsselprovisionierung, MeshCentral-Systemdienst und Watchdog integriert
+- **Protokolle:** aktuelle FC3000-/MZF002-BLE-Erkennung, ausschließlich bestätigte Lese-/Statuspfade; kein unvalidiertes Schreiben
+- **Weitere Bestandteile:** aktuelle USB-Sensorprovisionierung, Kalibrierung, HomeKit, Final-Master-PWA und Diagnose
+- **Versionsnachweis:** `/opt/135er-grow-central/SOURCE_COMMIT`, `BUILD`, `IMAGE_DISTRIBUTION` im Image
+- **Sicherheit:** Betreiber-Build ersetzt statische Test-API-Token durch individuelle Zufallswerte, keine Passwörter oder Roh-Captures aus Chats im Image
+- **Abnahme:** [verbindliche Testcheckliste](docs/de/OPERATOR_IMAGE_TEST_2026-11-13.md)
+- **Stand:** Quellstand, Build-Gates und Dokumentation vorbereitet; **kein fertiges privates Flash-Image und keine Pi-Hardwareabnahme bestätigt**.
+
 ## Verbindlicher Veröffentlichungsstopp für Pi-Images (ab 2026-11-12)
 
 **BIS ZUR FERTIGSTELLUNG: NUR BETREIBER-IMAGES.** Es dürfen keine neuen Pi-Images in öffentlichen GitHub Releases, öffentlichen GitHub Actions-Artefakten oder auf öffentlichen Websites erscheinen. Der Quellcode bleibt Open Source. Die bisherigen Build-/Release-Kennungen sind historische Angaben und **keine aktuelle Downloadempfehlung**.
