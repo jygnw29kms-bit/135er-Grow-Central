@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
+from app.mars_legacy_telemetry import mzf002_telemetry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -378,6 +379,60 @@ async def observe(body: ObserveRequest):
         except Exception as exc:
             logger.warning("Mars BLE observe failed: %s", type(exc).__name__)
             raise HTTPException(502, _transport_error(exc, "Verbindungsaufbau oder Service-Erkennung")) from exc
+
+
+@router.post("/observe-fan-telemetry")
+async def observe_fan_telemetry(body: InspectRequest):
+    """Opt-in read-only MZF002 observation; no raw identifiers are returned.
+
+    The iPhone's exclusive BLE connection must be disconnected before running
+    this endpoint from the Pi. A successful connection proves neither device
+    identity nor permission to issue commands.
+    """
+    address = _candidate(body.candidate_id)
+    row = _candidates.get(body.candidate_id)
+    if not row or device_family(row[1], [])["target_role"] != "fan":
+        raise HTTPException(422, "Nur ein erneut gesuchter MZF002-Luefterkandidat ist erlaubt.")
+    if _capture_lock.locked():
+        raise HTTPException(409, "Eine andere BLE-Diagnose laeuft bereits.")
+    async with _capture_lock:
+        samples: list[dict[str, Any]] = []
+        try:
+            async with BleakClient(address, timeout=12.0) as client:
+                services = _services(client)
+                _characteristic(services, MZF002_NOTIFY, "notify")
+                def capture(_sender: Any, data: bytearray):
+                    if len(samples) >= 12:
+                        return
+                    value = mzf002_telemetry(bytes(data))
+                    if value is not None:
+                        samples.append(value)
+                subscribed = False
+                try:
+                    await asyncio.wait_for(client.start_notify(MZF002_NOTIFY, capture), timeout=6.0)
+                    subscribed = True
+                    await asyncio.sleep(5.0)
+                finally:
+                    if subscribed and getattr(client, "is_connected", True):
+                        try:
+                            await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY), timeout=3.0)
+                        except Exception as exc:
+                            logger.warning("MZF002 unsubscribe: %s", type(exc).__name__)
+            return {
+                "candidate_id": body.candidate_id,
+                "device_family": "MZF002",
+                "status": "decoded" if samples else "no_matching_telemetry",
+                "latest": samples[-1] if samples else None,
+                "sample_count": len(samples),
+                "identity_verified": False,
+                "control_enabled": False,
+                "raw_payload_returned": False,
+            }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("MZF002 telemetry observe failed: %s", type(exc).__name__)
+            raise HTTPException(502, _transport_error(exc, "MZF002-Statusbeobachtung")) from exc
 
 
 @router.post("/control-test")
