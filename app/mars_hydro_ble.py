@@ -32,7 +32,7 @@ _candidates: dict[str, tuple[str, str, float]] = {}
 _capture_lock = asyncio.Lock()
 _CANDIDATE_TTL = 180.0
 _MAX_PAYLOAD = 128
-_UUID = re.compile(r"^[0-9a-fA-F]{4,8}(?:-[0-9a-fA-F]{4}){0,4}$")
+_UUID = re.compile(r"^(?:[0-9a-fA-F]{4}|[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")
 MARS_HINTS = ("mars", "mh-", "mzf", "ifresh", "iconnect", "fc3000", "df150")
 
 
