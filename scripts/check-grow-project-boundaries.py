@@ -16,7 +16,18 @@ def violations(root, paths):
     for name in paths:
         path = Path(name)
         lowered = name.lower()
-        if path.suffix.lower() in {'.stl', '.3mf', '.scad'} or any(part in lowered for part in ('printbench', 'downloads/3d', 'build-rpi4-case')):
+        # GrowCentral's own case and sensor-node enclosures belong to this
+        # repository, but their CAD/print assets must not enter the Pi image.
+        approved_cad = path.parts[:2] in {
+            ('hardware', 'enclosures'),
+            ('legacy', 'fusion-review-only'),
+        }
+        if path.suffix.lower() in {'.stl', '.3mf', '.scad'}:
+            if approved_cad:
+                continue
+            errors.append(f'Unrelated printer asset/workflow: {name}')
+            continue
+        if any(part in lowered for part in ('printbench', 'downloads/3d', 'build-rpi4-case')):
             errors.append(f'Unrelated printer asset/workflow: {name}')
             continue
         active = path.parts[0] in RUNTIME_ROOTS or path.parts[:2] == ('.github', 'workflows')
