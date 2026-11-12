@@ -143,6 +143,47 @@
     } catch (_) {} finally { document.dispatchEvent(new Event('gc:climate-loaded')); }
   }
 
+  // Real Pi/BlueZ scan. Found advertisements are candidates only; never
+  // grant trust or write access as a side effect of discovery.
+  async function scanLocalBluetooth() {
+    const btn=$('bleDiscoverBtn'), status=$('bleDiscoveryStatus'), list=$('bleDiscoveryResults');
+    if(!btn||!status||!list)return;
+    btn.disabled=true;btn.textContent='BLE-Suche läuft…';
+    status.textContent='Bluetooth-Adapter prüfen und BLE-Werbesignale erfassen…';
+    try {
+      const result=await api('/api/mars-hydro/ble/scan',{method:'POST'});
+      const devices=result.devices||[], adapter=result.adapter||{};
+      const adapterText=adapter.state==='ready'?'Bluetooth bereit':(adapter.hint||'Adapter nicht bereit');
+      status.textContent=adapterText+' · '+(result.message||devices.length+' Geräte erkannt')+' · '+(result.scan_seconds||0)+' Sekunden';
+      list.replaceChildren();
+      if(!devices.length){const empty=document.createElement('div');empty.className='empty';empty.textContent=result.message||'Keine BLE-Geräte gefunden.';list.append(empty);}
+      for(const device of devices){
+        const row=document.createElement('div');row.className='device-row';
+        const details=document.createElement('div');
+        const name=document.createElement('strong');name.textContent=device.name||'Unbekanntes BLE-Gerät';
+        const note=document.createElement('small');note.textContent=(device.mars_hydro_hint?'Mars-Hydro-Kandidat · ':'Andere/unklare Marke · ')+(device.rssi==null?'RSSI unbekannt':device.rssi+' dBm')+' · Herstellerkennungen: '+(device.manufacturer_ids||[]).join(', ')+' · ungeprüft';
+        details.append(name,note);
+        const inspectBtn=document.createElement('button');inspectBtn.className='secondary';inspectBtn.type='button';inspectBtn.textContent='GATT auslesen';
+        inspectBtn.addEventListener('click',()=>inspectLocalBluetooth(device.candidate_id,name.textContent,inspectBtn));
+        row.append(details,inspectBtn);list.append(row);
+      }
+    }catch(error){status.textContent='Bluetooth-Suche fehlgeschlagen: '+error.message;list.textContent='Die erweiterten Bluetooth-Diagnosen enthalten den Adapterstatus.';}
+    finally{btn.disabled=false;btn.textContent='Bluetooth suchen';}
+  }
+
+  async function inspectLocalBluetooth(candidateId,deviceName,button) {
+    const output=$('bleGattDetails');if(!output)return;
+    button.disabled=true;output.hidden=false;output.textContent=deviceName+': GATT-Dienste werden schreibgeschützt ausgelesen…';
+    try {
+      const data=await api('/api/mars-hydro/ble/inspect',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({candidate_id:candidateId})
+      });
+      output.textContent=JSON.stringify(data,null,2);
+    }catch(error){output.textContent='GATT-Auslesen fehlgeschlagen: '+error.message+'\nHersteller-App trennen und Gerät erneut suchen.';}
+    finally{button.disabled=false;}
+  }
+
   async function universalDiscover() {
     const button=$('discoverBtn'); button.disabled=true; button.textContent='Suche läuft…';
     try { const result=await api('/api/devices/discover?timeout=5'); state.discovered=result.devices||[]; document.dispatchEvent(new Event("gc:sensors-discovered")); renderDeviceTable(); const errors=result.errors||[]; toast(`${state.discovered.length} Gerät(e) erkannt${errors.length?` · ${errors.length} Provider mit Hinweis`:''}`,errors.length?'':'success'); }
@@ -170,6 +211,6 @@
   document.querySelectorAll('#mainNav [data-view],[data-open]').forEach((node)=>node.addEventListener('click',()=>openView(node.dataset.view||node.dataset.open)));
   document.querySelectorAll('.filterbar [data-filter]').forEach((node)=>node.addEventListener('click',()=>{document.querySelectorAll('.filterbar [data-filter]').forEach((x)=>x.classList.remove('active'));node.classList.add('active');state.filter=node.dataset.filter;renderDeviceTable();}));
   $('simpleMode').addEventListener('click',()=>setMode('simple')); $('advancedMode').addEventListener('click',()=>setMode('advanced'));
-  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('cameraRefreshMaster')?.addEventListener('click',loadCamera); $('discoverBtn').addEventListener('click',universalDiscover);
+  $('refreshBtn').addEventListener('click',()=>refreshAll(true)); $('systemRefresh')?.addEventListener('click',loadSystem); $('cameraRefreshMaster')?.addEventListener('click',loadCamera); $('discoverBtn').addEventListener('click',universalDiscover); $('bleDiscoverBtn')?.addEventListener('click',scanLocalBluetooth);
   setMode(state.mode); refreshAll(false); setInterval(()=>refreshAll(false),60000);
 })();
