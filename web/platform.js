@@ -161,8 +161,12 @@
         const row=document.createElement('div');row.className='device-row';
         const details=document.createElement('div');
         const name=document.createElement('strong');name.textContent=device.name||'Unbekanntes BLE-Gerät';
-        const note=document.createElement('small');note.textContent=(device.mars_hydro_hint?'Mars-Hydro-Kandidat · ':'Andere/unklare Marke · ')+(device.rssi==null?'RSSI unbekannt':device.rssi+' dBm')+' · Herstellerkennungen: '+(device.manufacturer_ids||[]).join(', ')+' · ungeprüft';
-        details.append(name,note);
+        const profile=device.profile||{};
+        const role=document.createElement('small');
+        role.textContent=(profile.label||'BLE-Gerät')+' · Erkennung '+(device.mars_hydro_hint?'plausibel':'ungeklärt');
+        const note=document.createElement('small');
+        note.textContent=(device.rssi==null?'RSSI unbekannt':device.rssi+' dBm')+' · Herstellerkennungen: '+(device.manufacturer_ids||[]).join(', ')+' · Identität/Steuerung unbestätigt';
+        details.append(name,role,note);
         const inspectBtn=document.createElement('button');inspectBtn.className='secondary';inspectBtn.type='button';inspectBtn.textContent='GATT auslesen';
         inspectBtn.addEventListener('click',()=>inspectLocalBluetooth(device.candidate_id,name.textContent,inspectBtn));
         row.append(details,inspectBtn);list.append(row);
@@ -179,7 +183,20 @@
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({candidate_id:candidateId})
       });
-      output.textContent=JSON.stringify(data,null,2);
+      const cap=data.capabilities||{};
+      const summary=[
+        'Gerät: '+(data.name||deviceName),
+        'GATT-Verbindung: '+(data.connected?'erfolgreich':'nicht verbunden'),
+        'MZF002-Transport: '+(cap.mzf002_transport_confirmed?'UUIDs bestätigt':'nicht bestätigt'),
+        'Lesbare Characteristics: '+(cap.readable_count??'?'),
+        'Notify-Characteristics: '+(cap.notifiable_count??'?'),
+        'Lichtsteuerung / Lüftersteuerung: NICHT freigegeben',
+        'Temperatur, Feuchte, Drehzahl: bislang KEINE bestätigten Messwerte',
+        '',
+        'Technische Rohdaten (keine dekodierten Sensorwerte):',
+        JSON.stringify(data,null,2)
+      ];
+      output.textContent=summary.join('\n');
     }catch(error){output.textContent='GATT-Auslesen fehlgeschlagen: '+error.message+'\nHersteller-App trennen und Gerät erneut suchen.';}
     finally{button.disabled=false;}
   }
