@@ -6,7 +6,7 @@ on:
       enable_test_maintenance:
         description: Enable restricted Test-Pi maintenance access for this manually started image
         required: false
-        default: true
+        default: false
         type: boolean
   push:
     branches: [ master ]
@@ -23,6 +23,8 @@ on:
       - 'image-builder/firstboot/**'
       - 'systemd/grow-central-remote-watchdog.*'
       - 'systemd/grow-central-mesh-agent.service'
+      - 'systemd/grow-central-firstboot-maintenance.service'
+      - 'scripts/install-gc-maintenance-agent.sh'
 
 permissions:
   contents: write
@@ -59,7 +61,7 @@ jobs:
       BASE_URL: https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2026-06-19/2026-06-18-raspios-trixie-arm64-lite.img.xz
       BASE_SHA256: acff736ca7945e3b305f07cda4abdb870910e12634991da69783611756e381b3
       IMAGE_NAME: 135er_Grow_Central_RPi3Plus_Universal
-      GC_TEST_MAINTENANCE_ENABLED: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.enable_test_maintenance == true) }}
+      GC_TEST_MAINTENANCE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_test_maintenance == true && secrets.GC_TEST_PI_MAINTENANCE_PUBKEY != '' }}
       GC_TEST_MAINTENANCE_PUBKEY: ${{ secrets.GC_TEST_PI_MAINTENANCE_PUBKEY }}
     steps:
       - name: Checkout 135er-Grow Central
@@ -129,12 +131,11 @@ jobs:
           # This must be removed from final production images.
           set +x
           if [[ "$GC_TEST_MAINTENANCE_ENABLED" == "true" ]]; then
-            # Always authorize the owner-controlled Jens-PC maintenance key.
-            # An optional CI secret may add another authorized *public* key.
-            sudo install -m 0600 image-builder/firstboot/test-maintenance.pub "$ROOT/run/gc-test-maintenance.pub"
-            if [[ -n "$GC_TEST_MAINTENANCE_PUBKEY" ]]; then
-              printf '%s\n' "$GC_TEST_MAINTENANCE_PUBKEY" | tr -d '\r' | head -n1 | sudo tee -a "$ROOT/run/gc-test-maintenance.pub" >/dev/null
-            fi
+            # Only a separately authorized per-build public key from CI secret.
+            # Never place a repository-shared owner key in public images.
+            [[ -n "$GC_TEST_MAINTENANCE_PUBKEY" ]]
+            printf '%s\n' "$GC_TEST_MAINTENANCE_PUBKEY" | tr -d '\r' | head -n1 | sudo tee "$ROOT/run/gc-test-maintenance.pub" >/dev/null
+            sudo chmod 0600 "$ROOT/run/gc-test-maintenance.pub"
             sudo grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' "$ROOT/run/gc-test-maintenance.pub"
             sudo touch "$ROOT/run/gc-test-maintenance-enabled"
           fi
