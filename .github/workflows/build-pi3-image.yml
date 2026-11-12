@@ -427,6 +427,9 @@ jobs:
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
           if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
+            # Pristine images have no baked-in SSH host private keys.
+            # Each Pi regenerates its own host keys before exposing SSH.
+            ssh-keygen -A >/dev/null
             systemctl enable --now ssh.service >/dev/null 2>&1 || systemctl start ssh.service
           else
             for unit in ssh.socket ssh.service sshd.service; do systemctl disable --now "$unit" >/dev/null 2>&1 || true; done
