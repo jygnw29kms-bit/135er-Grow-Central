@@ -58,7 +58,10 @@ def att_records(blob: bytes):
 
 
 def summarize(rows):
-    from scripts.fc3000_legacy_pcap_decode import decode_mars_legacy
+    try:
+        from scripts.fc3000_legacy_pcap_decode import decode_mars_legacy
+    except ModuleNotFoundError:
+        from fc3000_legacy_pcap_decode import decode_mars_legacy
     writes = [(ts, decode_mars_legacy(payload))
               for ts, op, _, payload in rows if op == 0x12]
     writes = [(ts, item) for ts, item in writes if item is not None]
