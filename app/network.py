@@ -69,8 +69,10 @@ def _scan_sync() -> dict[str, Any]:
     if not wlan:
         return {"ok": False, "error": "wifi-unavailable", "message": "Keine WLAN-Schnittstelle erkannt.", "networks": []}
     try:
-        _run(["nmcli", "device", "wifi", "rescan", "ifname", wlan], timeout=20)
-        result = _run(["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"], timeout=20)
+        # A separate rescan followed by --rescan auto can race the radio,
+        # especially when a Pi 3B is simultaneously running its setup AP.
+        # Query cached APs once; NetworkManager may refresh the cache as needed.
+        result = _run(["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"], timeout=25)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout", "message": "WLAN-Suche hat das Zeitlimit überschritten.", "networks": []}
     except OSError:
@@ -91,7 +93,9 @@ def _scan_sync() -> dict[str, Any]:
         if previous is None or row["signal"] > previous["signal"]:
             found[ssid] = row
     rows = sorted(found.values(), key=lambda item: (not item["connected"], -item["signal"], item["ssid"].lower()))
-    return {"ok": True, "count": len(rows), "networks": rows}
+    # An empty scan is a valid result, not a reason to block first boot.
+    return {"ok": True, "count": len(rows), "networks": rows,
+            "message": "Keine WLANs gefunden. SSID kann manuell eingetragen werden." if not rows else ""}
 
 
 def _join_sync(request: WifiJoinRequest) -> dict[str, Any]:
