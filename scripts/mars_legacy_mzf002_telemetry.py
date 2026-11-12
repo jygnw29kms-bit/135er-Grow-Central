@@ -31,17 +31,21 @@ def decode_fan_notification(payload: bytes) -> dict | None:
         return None
     if len(fields) != 23 or fields[3] != "MZF002":
         return None
-    if not _NUMBER.fullmatch(fields[19]) or not _NUMBER.fullmatch(fields[20]):
+    if not _NUMBER.fullmatch(fields[19]) or not _NUMBER.fullmatch(fields[20]) or not fields[21].isdigit():
         return None
     temperature = float(fields[19].replace(",", "."))
     humidity = float(fields[20].replace(",", "."))
-    if not (-40 <= temperature <= 85 and 0 <= humidity <= 100):
+    rpm = int(fields[21])
+    state_candidate = int(fields[12]) if fields[12] in ("0", "1") else None
+    if not (-40 <= temperature <= 85 and 0 <= humidity <= 100 and 0 <= rpm <= 10000):
         return None
     return {
         "device_family": "MZF002",
         "temperature_c_candidate": temperature,
         "humidity_rh_candidate": humidity,
-        "field_indices": {"temperature": 19, "humidity": 20},
+        "fan_rpm_candidate": rpm,
+        "state_field12_candidate": state_candidate,
+        "field_indices": {"temperature": 19, "humidity": 20, "rpm": 21, "state_candidate": 12},
         "unverified_fields_omitted": True,
         "fan_power_state_verified": False,
         "firmware_identity_verified": False,
@@ -65,6 +69,10 @@ def summarize(rows: list[tuple[float, int, int, bytes]]) -> dict:
         "temperature_max_c": max((x["temperature_c_candidate"] for x in events), default=None),
         "humidity_min_rh": min((x["humidity_rh_candidate"] for x in events), default=None),
         "humidity_max_rh": max((x["humidity_rh_candidate"] for x in events), default=None),
+        "rpm_min": min((x["fan_rpm_candidate"] for x in events), default=None),
+        "rpm_max": max((x["fan_rpm_candidate"] for x in events), default=None),
+        "airflow_cfm": None,
+        "pressure_pa": None,
         "events": events,
         "control_enabled": False,
         "note": "Observed read-only candidate fields; not validated live Grow Central integration.",
