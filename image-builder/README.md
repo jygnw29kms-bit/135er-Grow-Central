@@ -94,3 +94,20 @@ The private operator image contains permanent key-only SSH and a device-specific
 **Caveat:** Previously published releases are not automatically unpublished by disabling workflows. Existing image assets must be withdrawn in a separately authorized cleanup operation. Never describe older public releases as private or removed until their actual visibility has been verified.
 
 The existing Pi at `192.168.178.98` is NOT changed by a GitHub pipeline update.
+
+
+### Alte öffentliche Images gezielt zurückziehen
+
+Bei der Prüfung am 12.11.2026 wurden allein unter den 100 neuesten GitHub-Releases **99 öffentlich zugängliche Pi-Image-Releases** festgestellt. Weitere ältere Releases sind möglich. Änderungen an neuen Workflows beseitigen diese Altbestände nicht.
+
+Das Skript `scripts/withdraw-public-pi-releases.sh` ist absichtlich **read-only im Standardlauf**. Es prüft sämtliche Release-Seiten, wählt ausschließlich Veröffentlichungen mit `pi-universal-alpha-...`-Tag und passendem `.img[.xz]`-Asset und listet sie auf. Nach Anmeldung einer autorisierten GitHub-CLI-Sitzung mit Repository-Schreibrechten:
+
+```bash
+gh auth status
+bash scripts/withdraw-public-pi-releases.sh
+bash scripts/withdraw-public-pi-releases.sh --apply
+```
+
+`--apply` stellt nur die passenden Releases auf **Draft** und kontrolliert danach einzeln, dass die Draft-Einstellung bestätigt wird. Die bisherigen Release-Daten und Assets bleiben erhalten, sind aber nicht mehr als normale öffentliche Downloads verfügbar. Keine anderen Releases werden verändert. Danach Release-Index und direkte Asset-URLs als nicht angemeldeter Benutzer prüfen; ein automatischer API-Erfolg allein ist noch kein vollständiger öffentlicher Abruf-Test.
+
+**Aktueller Bearbeitungsstatus:** Die GitHub-CLI auf dem Jens-PC war beim Kontrollversuch nicht angemeldet. Das Skript wurde erstellt, aber nicht gegen GitHub mit `--apply` ausgeführt. Die Alt-Releases sind also weiterhin als öffentlich zu betrachten, bis der Vorgang mit einem autorisierten Zugriff abgeschlossen ist.
