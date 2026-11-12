@@ -58,6 +58,61 @@ def _candidate(candidate_id: str) -> str:
     return row[0]
 
 
+# Model-family suggestions are advertising-name hints, not verified identities.
+# The observed MZF002 GATT service is an exact hardware match; the physical
+# model and sensor payload format remain unverified.
+MZF002_SERVICE = "83677baa-3eb8-4866-b6b6-96e5ed5cc48d"
+MZF002_NOTIFY = "6f588463-f8f1-44f8-bdae-a1272a1b0f6e"
+MZF002_WRITE = "f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d"
+
+
+def device_family(name: str, manufacturer_ids: list[int]) -> dict[str, Any]:
+    lowered = name.lower()
+    if "mz_mars_" in lowered or "c260" in lowered:
+        return {
+            "family": "mars_hydro_lighting_candidate",
+            "label": "Mars Hydro Licht (C260-Kandidat)",
+            "target_role": "light",
+            "identity_verified": False,
+            "control_validated": False,
+        }
+    if "mzf002" in lowered or "df150" in lowered:
+        return {
+            "family": "mars_hydro_ventilation_candidate",
+            "label": "Mars Hydro Lüfter (MZF002-Kandidat)",
+            "target_role": "fan",
+            "identity_verified": False,
+            "control_validated": False,
+        }
+    return {
+        "family": "unclassified_ble",
+        "label": "Unbekanntes Bluetooth-Gerät",
+        "target_role": "unknown",
+        "identity_verified": False,
+        "control_validated": False,
+    }
+
+
+def summarize_gatt_services(services: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report proven GATT capabilities, never guessed fan or lamp measurements."""
+    service_uuids = {service["uuid"] for service in services}
+    chars = {char["uuid"]: set(char["properties"])
+             for service in services for char in service["characteristics"]}
+    confirmed = MZF002_SERVICE in service_uuids and (
+        "notify" in chars.get(MZF002_NOTIFY, set())
+        and "write" in chars.get(MZF002_WRITE, set())
+    )
+    return {
+        "mzf002_transport_confirmed": confirmed,
+        "notify_uuid": MZF002_NOTIFY if confirmed else None,
+        "write_uuid": MZF002_WRITE if confirmed else None,
+        "readable_count": sum("read" in props for props in chars.values()),
+        "notifiable_count": sum("notify" in props for props in chars.values()),
+        "control_validated": False,
+        "sensor_values_decoded": False,
+    }
+
+
 def _transport_error(exc: Exception, stage: str) -> str:
     """Present a bounded, non-secret diagnostic instead of a generic HTTP 502."""
     error_type = type(exc).__name__
@@ -214,6 +269,7 @@ async def scan(seconds: float = 8.0):
             "service_uuids": service_uuids,
             "manufacturer_ids": manufacturer_ids,
             "mars_hydro_hint": any(hint in name.lower() for hint in MARS_HINTS),
+            "profile": device_family(name, manufacturer_ids),
             "identity_verified": False,
         })
     for key, row in list(_candidates.items()):
@@ -263,6 +319,7 @@ async def inspect(body: InspectRequest):
                     "identity_verified": False,
                     "protocol_validated": False,
                     "services": services[:40],
+                    "capabilities": summarize_gatt_services(services),
                     "reads": values,
                     "write_attempted": False,
                 }
