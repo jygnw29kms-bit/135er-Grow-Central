@@ -45,6 +45,12 @@ Der HW-390 misst einen kapazitiven Feuchte-Referenzwert. Temperatur, pH und EC e
 
 **Betreiber-Images ausschließlich privat:** Öffentliche Image-Downloads sind bis zur vollständigen Abnahme ausgesetzt. Der historische Build-461-Kandidat dient nur als Versionsreferenz. Die Hardwareabnahme für Raspberry Pi 4, First Boot, FC3000 und DF150-M erfolgt nach [End-to-End-Testplan](docs/de/PI4_END_TO_END_ABNAHME_2026-11-12.md). Die zwei Mars-Hydro-Geräte sind getrennt mit Bluetooth und 2,4-GHz-WLAN erfasst, aber Steuerung/Verbindung wurden noch nicht am echten Gerät validiert.
 
+## Nächster privater Hardwaretest · 13. November 2026
+
+Der komplette aktuelle GitHub-`master` bildet die Quellbasis für das nächste **private Betreiber-Testimage**. Die Image-Pipeline bindet die Mars-Hydro-BLE-Lesepfade, Sensor-/USB-Firmware, HomeKit, Final-Master-Weboberfläche und automatisch startende Wartungsdienste ein. Der Betreiber-Build provisioniert individuell autorisierten SSH- und MeshCentral-Zugriff sowie eindeutige API-Tokens.
+
+**Abnahme und Fortschritt:** [Betreiber-Image-Testplan für den 13. November](docs/de/OPERATOR_IMAGE_TEST_2026-11-13.md) und [Release-Status](RELEASE_STATE.md). Die Quell-/Build-Gates wurden geprüft, ein **flashbares neues Betreiber-Image wurde noch nicht erstellt**, sodass derzeit keine neue Image-Datei als Download angeboten wird.
+
 ## Produktprinzipien
 
 - **Local First:** Steuerung, Messwerte und Automationen bleiben grundsätzlich vor Ort verfügbar.
