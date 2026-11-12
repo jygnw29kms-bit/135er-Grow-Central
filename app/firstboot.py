@@ -1,6 +1,7 @@
 """First-boot setup served by the always-on main application."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -11,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, SecretStr
 
 from app.hardware import ethernet_interface, wifi_interface
+from app.network import _scan_sync
 
 STATE_DIR = Path("/var/lib/135er-grow-central")
 PENDING_FILE = STATE_DIR / "setup-pending.json"
@@ -118,32 +120,23 @@ async def networks():
     wlan = wifi_interface()
     if not wlan:
         raise HTTPException(503, "Keine von NetworkManager verwaltete WLAN-Schnittstelle erkannt")
-    result = subprocess.run(
-        ["nmcli", "-t", "-e", "yes", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "ifname", wlan, "--rescan", "auto"],
-        capture_output=True,
-        text=True,
-        timeout=25,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise HTTPException(503, (result.stderr or "WLAN-Suche fehlgeschlagen").strip()[:180])
-    rows = []
-    for line in result.stdout.splitlines():
-        fields = re.split(r"(?<!\\):", line)
-        if len(fields) == 3 and fields[0] and not fields[0].startswith("135er-GrowCentral-Setup-"):
-            rows.append({"ssid": fields[0].replace(r"\:", ":"), "signal": fields[1], "security": fields[2]})
+    scanned = await asyncio.to_thread(_scan_sync)
     active = _command("nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active")
     setup_ap_active = f"grow-central-setup-ap:{wlan}" in active.stdout.splitlines()
+    if not scanned["ok"] and not setup_ap_active:
+        raise HTTPException(503, scanned.get("message") or "WLAN-Suche fehlgeschlagen")
+    rows = scanned.get("networks", [])
     return {
         "networks": rows,
         "setup_ap_active": setup_ap_active,
         "wifi_interface": wlan,
-        "manual_ssid_required": setup_ap_active and not rows,
+        "manual_ssid_required": not rows,
         "message": (
-            "Der Raspberry Pi 3B kann während des aktiven Setup-APs keine anderen WLANs zuverlässig anzeigen. "
-            "Bitte die SSID manuell eintragen."
+            "Der aktive Setup-Hotspot kann auf einem Raspberry Pi mit nur einem "
+            "WLAN-Funkmodul die Suche blockieren. SSID manuell eintragen "
+            "oder Einrichtung über LAN abschließen."
             if setup_ap_active and not rows
-            else ""
+            else scanned.get("message", "")
         ),
     }
 
