@@ -111,6 +111,7 @@ jobs:
           sudo mkdir -p "$ROOT/opt/135er-grow-central"
           sudo rsync -a --delete \
             --exclude='.git' --exclude='.github' \
+            --exclude='hardware/enclosures/' --exclude='legacy/fusion-review-only/' \
             --exclude='base.img*' --exclude='work.img*' \
             --exclude='*.img' --exclude='*.img.xz' \
             ./ "$ROOT/opt/135er-grow-central/"
