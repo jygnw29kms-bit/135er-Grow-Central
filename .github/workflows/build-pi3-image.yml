@@ -431,14 +431,11 @@ jobs:
           chage --expiredate -1 --inactive -1 GrowCentral
           rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
           rm -f /etc/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
-          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
-            # Pristine images have no baked-in SSH host private keys.
-            # Each Pi regenerates its own host keys before exposing SSH.
-            ssh-keygen -A >/dev/null
-            systemctl enable --now ssh.service >/dev/null 2>&1 || systemctl start ssh.service
-          else
-            for unit in ssh.socket ssh.service sshd.service; do systemctl disable --now "$unit" >/dev/null 2>&1 || true; done
-          fi
+          # Every image keeps the key-only SSH transport available.
+          # Host private keys are generated on the device, never embedded.
+          ssh-keygen -A >/dev/null
+          /usr/sbin/sshd -t
+          systemctl enable --now ssh.service >/dev/null 2>&1 || systemctl start ssh.service
           touch /var/lib/135er-grow-central/.headless-firstboot-ready
           EOF
           chmod 0755 /usr/local/sbin/grow-central-headless-firstboot.sh
@@ -494,12 +491,10 @@ jobs:
           ufw allow 51827/tcp
           # Public image ships SSH transport on LAN, without a factory password.
           # Only explicitly provisioned public keys grant interactive access.
-          if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]] || true; then
-            # LAN-only key-only SSH. Do not expose port 22 to the Internet.
-            ufw allow from 10.0.0.0/8 to any port 22 proto tcp
-            ufw allow from 172.16.0.0/12 to any port 22 proto tcp
-            ufw allow from 192.168.0.0/16 to any port 22 proto tcp
-          fi
+          # LAN-only SSH transport. Remote login still needs a provisioned key.
+          ufw allow from 10.0.0.0/8 to any port 22 proto tcp
+          ufw allow from 172.16.0.0/12 to any port 22 proto tcp
+          ufw allow from 192.168.0.0/16 to any port 22 proto tcp
           # Native Grow-Central ESP32 MQTT: private LAN only.
           ufw allow from 10.0.0.0/8 to any port 8883 proto tcp
           ufw allow from 172.16.0.0/12 to any port 8883 proto tcp
@@ -772,7 +767,7 @@ jobs:
           grep -q 'ufw allow 80/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'ufw allow 51827/tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           ! grep -q '^ufw allow 22/tcp$' /usr/local/sbin/grow-central-firstboot-firewall.sh
-          grep -q 'LAN-only key-only SSH' /usr/local/sbin/grow-central-firstboot-firewall.sh
+          grep -q 'LAN-only SSH transport' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 22 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q 'port 67 proto udp' /usr/local/sbin/grow-central-firstboot-firewall.sh
           grep -q '192.168.0.0/16 to any port 8883 proto tcp' /usr/local/sbin/grow-central-firstboot-firewall.sh
