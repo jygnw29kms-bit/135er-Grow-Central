@@ -1,0 +1,20 @@
+[Unit]
+Description=Grow Central MeshCentral device agent (requires authorized enrollment)
+Wants=network-online.target
+After=network-online.target
+ConditionPathIsExecutable=/opt/grow-central/mesh-agent/meshagent
+ConditionPathExists=/etc/grow-central/mesh-agent/meshagent.msh
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/grow-central/mesh-agent
+ExecStart=/opt/grow-central/mesh-agent/meshagent
+Restart=on-failure
+RestartSec=15s
+StartLimitIntervalSec=5min
+StartLimitBurst=10
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target
