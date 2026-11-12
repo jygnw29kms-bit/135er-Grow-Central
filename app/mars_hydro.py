@@ -22,6 +22,8 @@ AUTHORITATIVE_HARDWARE: tuple[dict[str, Any], ...] = (
         "integration": "iconnect_target",
         "physical_hardware_confirmed": True,
         "bluetooth_reported": True,
+        "ble_observed_aliases": ["C260"],
+        "ble_alias_status": "reported_in_vendor_app_not_identity_verified",
         "wifi_supported": True,
         "wifi_band_ghz": [2.4],
         "wifi_5ghz_supported": False,
@@ -84,4 +86,4 @@ def public_hardware_profile() -> dict[str, Any]:
 def is_mars_hydro_ble_candidate(name: str, name_hint: str = "MZ_MZF002") -> bool:
     """Conservatively classify BLE advertisements used by the diagnostics path."""
     lowered = (name or "").lower()
-    return any(token in lowered for token in (name_hint.lower(), "mzf", "mars", "df100m", "ifresh"))
+    return any(token in lowered for token in (name_hint.lower(), "mzf", "mars", "df100m", "ifresh", "c260", "fc3000", "df150"))
