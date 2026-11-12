@@ -49,3 +49,55 @@ def test_blocked_adapter_does_not_start_scan():
         result = asyncio.run(ble.scan())
     assert result["attempts"] == 0
     assert result["adapter"]["state"] == "radio_blocked"
+
+
+def test_scan_retries_when_only_mzf002_seen_and_merges_c260():
+    from types import SimpleNamespace
+
+    def result(name, address):
+        dev = SimpleNamespace(name=name)
+        adv = SimpleNamespace(local_name=name, rssi=-60, service_uuids=[], manufacturer_data={11825: b"1"})
+        return {address: (dev, adv)}
+
+    class Scanner:
+        calls = 0
+
+        @staticmethod
+        async def discover(**kwargs):
+            Scanner.calls += 1
+            if Scanner.calls == 1:
+                return result("MZ_MZF002_68756_A0A3B35EFDC8", "A0:A3:B3:5E:FD:CA")
+            return result("MZ_MARS_0_FCB467AEC260", "FC:B4:67:AE:C2:62")
+
+    with patch.object(ble, "adapter_diagnostics", return_value={"state": "ready", "hint": "Bereit"}), \
+         patch.object(ble, "BleakScanner", Scanner):
+        data = asyncio.run(ble.scan(seconds=3))
+    assert data["attempts"] == 2
+    assert data["found"] == 2
+    assert data["mars_candidate_count"] == 2
+    assert {r["name"] for r in data["devices"]} == {
+        "MZ_MZF002_68756_A0A3B35EFDC8", "MZ_MARS_0_FCB467AEC260"
+    }
+
+
+def test_scan_stops_early_if_both_mars_devices_visible():
+    from types import SimpleNamespace
+    dev1 = SimpleNamespace(name="MZ_MZF002_68756_A0A3B35EFDC8")
+    adv1 = SimpleNamespace(local_name=dev1.name, rssi=-67, service_uuids=[], manufacturer_data={})
+    dev2 = SimpleNamespace(name="MZ_MARS_0_FCB467AEC260")
+    adv2 = SimpleNamespace(local_name=dev2.name, rssi=-57, service_uuids=[], manufacturer_data={})
+
+    class Scanner:
+        calls = 0
+
+        @staticmethod
+        async def discover(**kwargs):
+            Scanner.calls += 1
+            return {"AA:11": (dev1, adv1), "BB:22": (dev2, adv2)}
+
+    with patch.object(ble, "adapter_diagnostics", return_value={"state": "ready", "hint": "Bereit"}), \
+         patch.object(ble, "BleakScanner", Scanner):
+        data = asyncio.run(ble.scan(seconds=3))
+    assert data["attempts"] == 1
+    assert Scanner.calls == 1
+    assert data["mars_candidate_count"] == 2
