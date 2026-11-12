@@ -32,7 +32,7 @@ from app.system_info import router as system_router
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
 WRITE_UUID = os.getenv("DF100M_WRITE_UUID", "f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d")
-NOTIFY_UUID = os.getenv("DF100M_NOTIFY_UUID", "83677baa-3eb8-4866-b6b6-96e5ed5cc48d")
+NOTIFY_UUID = os.getenv("DF100M_NOTIFY_UUID", "6f588463-f8f1-44f8-bdae-a1272a1b0f6e")
 SPEED_MODE = os.getenv("DF100M_SPEED_MODE", "byte")
 ALLOW_WRITES = os.getenv("DF100M_ALLOW_WRITES", "false").lower() == "true"
 ALLOW_RAW_WRITES = os.getenv("DF100M_ALLOW_RAW_WRITES", "false").lower() == "true"
