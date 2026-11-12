@@ -58,3 +58,34 @@ Ein `btmon`-Log auf dem Pi zeichnet HCI-Verkehr **des Pi-Adapters** auf, nicht a
 ## Abnahme
 
 Erst wenn reale Captures der Legacy-App und mindestens drei reproduzierbare Aktionen an der **gleichen Geräte-/Firmwarekombination** vorliegen, wird der passende Decoder implementiert. Bis dahin bleiben die Steuerwrites deaktiviert.
+
+
+## Offline-Werkzeuge für echte Legacy-Sitzungen
+
+Der Windows-/Linux-Rechner, auf dem Wireshark oder ein BLE-Sniffer läuft, exportiert **bereits entschlüsselte und korrekt zugeordnete ATT-Nutzdaten** in eine private CSV. Ein RF-PCAP mit verschlüsseltem ATT kann von den Skripten nicht automatisch entschlüsselt werden. Die Zuordnung ATT-Handle zu Characteristic-UUID muss für **jede Sitzung** stimmen.
+
+`capture.csv` (Kopfzeile, Platzhalterbeispiel ohne reale Befehlsbytes):
+
+```csv
+time_epoch,device,session,direction,characteristic_uuid,payload_hex
+1794500000.0,lamp,session01,write,f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d,0000
+```
+
+`windows.csv`:
+
+```csv
+start_epoch,end_epoch,device,session,action
+1794500000.0,1794500005.0,lamp,session01,dim_50
+```
+
+Die Platzhalterbytes `0000` sind **kein** Herstellerbefehl.
+
+```bash
+python3 scripts/mars_legacy_windows.py capture.csv windows.csv labelled.jsonl
+python3 scripts/mars_legacy_capture_analyze.py labelled.jsonl --output candidate_report.json
+python3 -m unittest discover -s tests -p 'test_mars_legacy*.py'
+```
+
+Die Zeitfenster sind halboffen (`start <= frame < end`) und werden pro Gerät und Sitzung geprüft. Nicht zugeordnete Daten sind `idle`, nicht automatisch Steuerbefehle. Es findet **keine** Funkverbindung, kein Pairing und kein Hersteller-Write statt. Die Analyse zeigt nur Korrelationen; ein `candidate_only`-Treffer ist keine Freigabe für die Live-Steuerung.
+
+**Datenschutz:** `capture.csv`, `windows.csv`, `labelled.jsonl` und `candidate_report.json` bleiben lokal und privat. Keine rohen Pairing-Schlüssel, Adressen oder unbekannten Nutzdaten ins öffentliche Git.
