@@ -29,6 +29,13 @@ jobs:
             local/cloud_link/requirements.txt
       - name: MQTT TLS integration prerequisites
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends mosquitto
+      - name: Prepare isolated native Mosquitto test executable
+        run: |
+          # Ubuntu's system Mosquitto AppArmor policy may prohibit reading
+          # pytest's temporary configuration paths. Test an isolated copy of
+          # the same native binary without modifying host/production profiles.
+          install -m 0755 "$(command -v mosquitto)" "$RUNNER_TEMP/gc-mosquitto-test"
+          echo "GC_TEST_MOSQUITTO=$RUNNER_TEMP/gc-mosquitto-test" >> "$GITHUB_ENV"
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt pytest flask
       - run: python -m pip check
