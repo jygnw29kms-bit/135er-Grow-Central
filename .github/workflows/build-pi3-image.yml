@@ -25,6 +25,8 @@ on:
       - 'systemd/grow-central-mesh-agent.service'
       - 'systemd/grow-central-firstboot-maintenance.service'
       - 'scripts/install-gc-maintenance-agent.sh'
+      - 'scripts/enroll-gc-meshcentral-agent.sh'
+      - 'systemd/grow-central-ssh-hostkeys.conf'
 
 permissions:
   contents: write
