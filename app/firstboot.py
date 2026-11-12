@@ -132,7 +132,7 @@ async def networks():
         "wifi_interface": wlan,
         "manual_ssid_required": not rows,
         "message": (
-            "Der aktive Setup-Hotspot kann auf einem Raspberry Pi mit nur einem "
+            "Der Raspberry Pi kann während des aktiven Setup-APs mit nur einem "
             "WLAN-Funkmodul die Suche blockieren. SSID manuell eintragen "
             "oder Einrichtung über LAN abschließen."
             if setup_ap_active and not rows
