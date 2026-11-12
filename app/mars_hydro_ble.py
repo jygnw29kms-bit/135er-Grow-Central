@@ -180,14 +180,21 @@ async def scan(seconds: float = 8.0):
     results: dict[str, Any] = {}
     attempts = 0
     try:
-        # First scan runs the full requested dwell. A second active scan helps
-        # with intermittently advertising BLE peripherals (e.g. C260), but
-        # cannot discover devices that are not advertising.
+        # A generic iPhone or sensor almost always advertises immediately.
+        # Stopping after *any* device made the C260 lamp disappear from
+        # scans even while MZF002 was reliably visible. Use both passes unless
+        # we have evidence of both Mars families, and merge across passes.
         for attempt in range(2):
             attempts += 1
             seen = await BleakScanner.discover(timeout=timeout, return_adv=True)
             results.update(seen)
-            if results:
+            names = [
+                str(adv.local_name or dev.name or "").lower()
+                for dev, adv in results.values()
+            ]
+            lamp = any("c260" in name or "mz_mars_" in name for name in names)
+            fan = any("mzf002" in name or "df150" in name for name in names)
+            if lamp and fan:
                 break
     except Exception as exc:
         logger.warning("Mars BLE scan failed: %s", type(exc).__name__)
@@ -213,15 +220,17 @@ async def scan(seconds: float = 8.0):
         if now - row[2] > _CANDIDATE_TTL:
             _candidates.pop(key, None)
     rows.sort(key=lambda x: (not x["mars_hydro_hint"], -(x["rssi"] or -999)))
+    mars_count = sum(bool(row["mars_hydro_hint"]) for row in rows)
     message = (
-        f"{len(rows)} BLE-Geräte erkannt."
+        f"{len(rows)} BLE-Geräte erkannt, davon {mars_count} Mars-Hydro-Kandidaten."
         if rows else
         "Bluetooth-Adapter bereit, aber keine BLE-Werbesignale empfangen. "
         "C260/FC3000 und Lüfter einschalten, Hersteller-App trennen und erneut suchen."
     )
     return {"devices": rows, "read_only": True, "found": len(rows),
             "adapter": adapter, "attempts": attempts,
-            "scan_seconds": timeout * attempts, "message": message}
+            "scan_seconds": timeout * attempts, "mars_candidate_count": mars_count,
+            "message": message}
 
 
 @router.post("/inspect")
