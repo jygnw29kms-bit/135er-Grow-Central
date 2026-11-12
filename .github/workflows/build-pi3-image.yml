@@ -133,7 +133,7 @@ jobs:
             if [[ -n "$GC_TEST_MAINTENANCE_PUBKEY" ]]; then
               printf '%s\n' "$GC_TEST_MAINTENANCE_PUBKEY" | tr -d '\r' | head -n1 | sudo tee -a "$ROOT/run/gc-test-maintenance.pub" >/dev/null
             fi
-            grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' "$ROOT/run/gc-test-maintenance.pub"
+            sudo grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' "$ROOT/run/gc-test-maintenance.pub"
             sudo touch "$ROOT/run/gc-test-maintenance-enabled"
           fi
           set -x
