@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Grow Central maintenance services regularly
+
+[Timer]
+OnBootSec=40s
+OnUnitInactiveSec=60s
+AccuracySec=15s
+Persistent=true
+Unit=grow-central-remote-watchdog.service
+
+[Install]
+WantedBy=timers.target
