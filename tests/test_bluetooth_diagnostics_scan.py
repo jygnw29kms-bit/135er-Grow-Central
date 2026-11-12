@@ -101,3 +101,32 @@ def test_scan_stops_early_if_both_mars_devices_visible():
     assert data["attempts"] == 1
     assert Scanner.calls == 1
     assert data["mars_candidate_count"] == 2
+
+
+def test_mars_families_are_candidates_not_verified():
+    lamp = ble.device_family("MZ_MARS_0_FCB467AEC260", [11827])
+    fan = ble.device_family("MZ_MZF002_68756_A0A3B35EFDC8", [11825])
+    assert lamp["target_role"] == "light"
+    assert fan["target_role"] == "fan"
+    assert not lamp["identity_verified"] and not lamp["control_validated"]
+    assert not fan["identity_verified"] and not fan["control_validated"]
+
+
+def test_known_mzf002_gatt_structure_does_not_validate_control_or_telemetry():
+    service = {
+        "uuid": ble.MZF002_SERVICE,
+        "characteristics": [
+            {"uuid": ble.MZF002_NOTIFY, "properties": ["notify"]},
+            {"uuid": ble.MZF002_WRITE, "properties": ["write"]},
+        ],
+    }
+    cap = ble.summarize_gatt_services([service])
+    assert cap["mzf002_transport_confirmed"] is True
+    assert cap["sensor_values_decoded"] is False
+    assert cap["control_validated"] is False
+    unknown = ble.summarize_gatt_services([{
+        "uuid": ble.MZF002_SERVICE, "characteristics": [
+            {"uuid": ble.MZF002_NOTIFY, "properties": ["read"]}
+        ]
+    }])
+    assert unknown["mzf002_transport_confirmed"] is False
