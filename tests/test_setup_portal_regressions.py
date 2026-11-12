@@ -78,3 +78,16 @@ def test_cloud_status_checks_real_health_endpoint_and_service():
     assert 'f"{origin}/api/health"' in source
     assert '"connected": connected' in source
     assert '"host": host' in source
+
+
+def test_firstboot_completion_shows_two_minute_countdown_and_home_redirect():
+    source = PORTAL.read_text(encoding="utf-8")
+    assert 'id="completePanel"' in source
+    assert 'id="completeCountdown"' in source
+    assert "const GROWCENTRAL_URL='http://135er-grow-central.local/'" in source
+    assert "120-Math.floor((Date.now()-started)/1000)" in source
+    assert "window.location.assign(GROWCENTRAL_URL)" in source
+    assert "showCompletion(true)" in source
+    assert "showCompletion(false)" in source
+    assert "Verlasse jetzt das Setup-WLAN" in source
+    assert "completeIpLink" in source
