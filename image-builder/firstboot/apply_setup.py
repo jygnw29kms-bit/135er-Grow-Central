@@ -381,21 +381,27 @@ def verify_runtime(address: str) -> None:
     if pending:
         targets = ", ".join(f"{target}:8080" for target in sorted(pending))
         raise RuntimeError(f"Die Grow-Central-Oberfläche wurde innerhalb von 60 Sekunden nicht über {targets} erreichbar.")
+    # Avahi may publish a stale setup-AP address while LAN becomes authoritative.
+    # A healthy HTTP service on the selected LAN IP is the success gate; mDNS is
+    # discovery convenience, not a reason to roll back a working first boot.
     avahi = run("systemctl", "is-active", "avahi-daemon.service", check=False)
-    if avahi.returncode != 0:
-        raise RuntimeError("Die Erreichbarkeit über den lokalen Hostnamen konnte nicht aktiviert werden.")
     mdns_name = f"{FIXED_HOSTNAME}.local"
     resolved_ok = False
-    for _ in range(15):
-        resolved = run("avahi-resolve-host-name", "-4", mdns_name, check=False)
-        if resolved.returncode == 0:
-            addresses = {row.split()[-1] for row in resolved.stdout.splitlines() if row.split()}
-            if address in addresses:
-                resolved_ok = True
-                break
-        time.sleep(1)
+    if avahi.returncode == 0:
+        for _ in range(15):
+            resolved = run("avahi-resolve-host-name", "-4", mdns_name, check=False)
+            if resolved.returncode == 0:
+                addresses = {row.split()[-1] for row in resolved.stdout.splitlines() if row.split()}
+                if address in addresses:
+                    resolved_ok = True
+                    break
+            time.sleep(1)
     if not resolved_ok:
-        raise RuntimeError(f"Der lokale Hostname {mdns_name} zeigt nicht auf die aktuelle Pi-Adresse {address}.")
+        write_warning(
+            f"LAN und Weboberfläche unter http://{address}/ sind bereit, "
+            f"aber mDNS {mdns_name} ist noch nicht auf {address} bestätigt. "
+            "Avahi später erneut prüfen; First Boot bleibt abgeschlossen."
+        )
 
 
 def main() -> int:
