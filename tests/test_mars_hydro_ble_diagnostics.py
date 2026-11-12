@@ -140,3 +140,17 @@ def test_payload_is_bounded_and_not_interpreted_as_power_or_speed():
     assert result["length"] == 300
     assert "speed" not in result and "brightness" not in result
     assert len(result["text"]) == 128
+
+
+def test_legacy_ble_notify_default_is_gatt_characteristic_not_service_uuid():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    main_source = (root / "app/main.py").read_text(encoding="utf-8")
+    workflow_source = (root / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    env_source = (root / ".env.example").read_text(encoding="utf-8")
+    notify_uuid = "6f588463-f8f1-44f8-bdae-a1272a1b0f6e"
+    service_uuid = "83677baa-3eb8-4866-b6b6-96e5ed5cc48d"
+    assert f'DF100M_NOTIFY_UUID", "{notify_uuid}"' in main_source
+    for source in (workflow_source, env_source):
+        assert f"DF100M_NOTIFY_UUID={notify_uuid}" in source
+        assert f"DF100M_NOTIFY_UUID={service_uuid}" not in source
