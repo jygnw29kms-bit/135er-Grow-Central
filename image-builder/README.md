@@ -63,7 +63,7 @@ The setup AP is restored automatically if the selected WLAN cannot be reached.
 
 ## Automatic build
 
-`.github/workflows/build-pi3-image.yml` produces the universal ARM64 image, verifies the base checksum, installs GrowCentral and dependencies, performs boot/reboot and consistency checks, compresses the result and publishes an Actions artifact plus prerelease assets.
+`.github/workflows/build-pi3-image.yml` produces the universal ARM64 image, verifies the base checksum, installs GrowCentral and dependencies, performs boot/reboot and consistency checks, compresses and validates the result without publishing image artifacts or GitHub releases. Operator images are assembled and stored privately.
 
 The workflow name is historical; its output is the project-wide **universal image**, not a Pi-3-only image.
 
@@ -82,3 +82,15 @@ To authorize the device owner to use `gc-maint` with full administrative rights 
 For MeshCentral-backed MCP remote control, only an individually enrolled device agent can connect to the owner's MeshCentral server. The standard image **preinstalls and enables** the corresponding unit and watchdog. Provide a Linux MeshCentral `meshagent` binary and its matching private `meshagent.msh` from your authenticated MeshCentral server, then run `scripts/enroll-gc-meshcentral-agent.sh` on the Pi. The unit starts automatically on every subsequent boot and restarts after transient failures. Neither server tokens nor private enrollment material are ever distributed in public images.
 
 **The MCP server/ChatGPT connector is hosted separately**; a MeshCentral agent on the Pi is the endpoint it manages. Installing the image does not magically authorize an unrelated MCP account. These defaults apply to **new builds** only. An existing Pi needs a separately verified in-place migration; do not assume that updating GitHub modifies running hardware.
+
+## Operator-only image distribution policy (effective 2026-11-12)
+
+Until full Grow Central hardware validation and completion, **no new Raspberry Pi image may be published publicly**. Source code remains open source. The public GitHub image workflow is **manual only** and performs build validation without releasing/downloading image artifacts; the two legacy force/forward workflows cannot dispatch or publish images.
+
+Private operator media are produced with `scripts/build-private-pi-image.sh` **on a trusted Linux machine with the base image and individually enrolled MeshCentral agent files**. The generated `.img` is private, contains sensitive registration details and must never be uploaded to GitHub Releases, GitHub Actions artifacts, a public website, or a shared file service.
+
+The private operator image contains permanent key-only SSH and a device-specific registered MeshCentral agent, with service auto-start and watchdog. All authorization information is operator-supplied. A separate SSH host key is created on the first boot.
+
+**Caveat:** Previously published releases are not automatically unpublished by disabling workflows. Existing image assets must be withdrawn in a separately authorized cleanup operation. Never describe older public releases as private or removed until their actual visibility has been verified.
+
+The existing Pi at `192.168.178.98` is NOT changed by a GitHub pipeline update.
