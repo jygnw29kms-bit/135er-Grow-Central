@@ -127,9 +127,12 @@ jobs:
           # This must be removed from final production images.
           set +x
           if [[ "$GC_TEST_MAINTENANCE_ENABLED" == "true" ]]; then
-            PUBKEY="$GC_TEST_MAINTENANCE_PUBKEY"
-            if [[ -z "$PUBKEY" ]]; then PUBKEY="$(cat image-builder/firstboot/test-maintenance.pub)"; fi
-            printf '%s\n' "$PUBKEY" | tr -d '\r' | head -n1 | sudo tee "$ROOT/run/gc-test-maintenance.pub" >/dev/null
+            # Always authorize the owner-controlled Jens-PC maintenance key.
+            # An optional CI secret may add another authorized *public* key.
+            sudo install -m 0600 image-builder/firstboot/test-maintenance.pub "$ROOT/run/gc-test-maintenance.pub"
+            if [[ -n "$GC_TEST_MAINTENANCE_PUBKEY" ]]; then
+              printf '%s\n' "$GC_TEST_MAINTENANCE_PUBKEY" | tr -d '\r' | head -n1 | sudo tee -a "$ROOT/run/gc-test-maintenance.pub" >/dev/null
+            fi
             grep -Eq '^ssh-ed25519 [A-Za-z0-9+/=]{40,120}( [^[:cntrl:]]{1,100})?$' "$ROOT/run/gc-test-maintenance.pub"
             sudo touch "$ROOT/run/gc-test-maintenance-enabled"
           fi
