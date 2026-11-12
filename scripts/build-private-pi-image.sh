@@ -32,9 +32,10 @@ while (($#)); do
     *) usage ;;
   esac
 done
-for v in input output pubkey agent config; do
+for v in input pubkey agent config; do
   [[ -n "${!v}" && -f "${!v}" && ! -L "${!v}" ]] || usage
 done
+[[ -n "$output" ]] || usage
 [[ "$input" != "$output" ]] || { echo "Input and output must differ" >&2; exit 2; }
 [[ ! -e "$output" ]] || { echo "Refusing to overwrite output" >&2; exit 2; }
 [[ "$output" == *.img ]] || { echo "Uncompressed .img output required" >&2; exit 2; }
