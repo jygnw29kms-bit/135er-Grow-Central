@@ -40,3 +40,25 @@ Der Rückbau entfernt Timer, Dienst und sudo-Sonderregel. Benutzer und Public-Ke
 ## Pi-Update
 
 Das Upgrade auf den **aktuellen** Grow-Central-master ist bis zur Feststellung der laufenden Versions-SHA und einem getesteten Backup-Restore **nicht ausgeführt**. Der bestehende Build-461-Image-Candidate ist kein Beweis für den Live-Code auf der .98. Vor einer Aktualisierung sind Git-Stand, Datenverzeichnis, aktueller Service und Migrationsbedarf auf dem Pi zu verifizieren. Danach Änderungen mit Test, Health-Check und automatischem Rollback ausrollen; Sensorschnittstellen und HomeKit müssen intakt bleiben.
+
+
+## Integration im Standard-Image (Quellstand ab 2026-11-12)
+
+Der Image-Workflow `.github/workflows/build-pi3-image.yml` ist angepasst. Neue Universal-Images liefern standardmäßig diese **aktivierten** systemd-Units:
+
+| Einheit | Funktion |
+|---|---|
+| `ssh.service` | automatisch startender, nur über autorisierte Schlüssel nutzbarer SSH-Dienst |
+| `grow-central-firstboot-maintenance.service` | verarbeitet einmalig einen vom Gerätebesitzer hinterlegten öffentlichen SSH-Schlüssel |
+| `grow-central-remote-watchdog.timer` | kontrolliert SSH und einen erfolgreich registrierten MeshCentral-Agenten |
+| `grow-central-mesh-agent.service` | startet den individuell registrierten MeshCentral-Client nach jedem Boot; ohne Enrollment bleibt er inaktiv |
+
+Der aktuelle Standard hat **keinen gemeinsamen Wartungs-Login-Schlüssel**. Ein bisher im Testimage-Workflow aus dem Repository übernommener Public-Key wird nicht mehr automatisch eingebaut. Individuelle Test-Images können nur bei ausdrücklich manuell gestarteter Build-Option und separat bereitgestelltem CI-Public-Key freigeschaltet werden. SSH-Hostschlüssel werden auf dem Ziel-Pi erzeugt, nicht im Image veröffentlicht.
+
+### Zugang bereits beim ersten Boot vorbereiten
+
+Vor dem ersten Start auf der FAT-Bootpartition der frisch geflashten SD-Karte eine Textdatei `gc-maintenance.pub` mit genau **einem** autorisierten OpenSSH-Public-Key ablegen. Im laufenden Pi entspricht das `/boot/firmware/gc-maintenance.pub`. Beim Start installiert `grow-central-firstboot-maintenance.service` den Benutzer `gc-maint` mit Schlüsselanmeldung und vollem sudo, und entfernt die übernommene Datei erst nach erfolgreicher Installation. Wenn keine Datei vorhanden ist, startet SSH weiterhin, bietet aber **keinen vorinstallierten Fernwartungslogin**. Wichtig: Ein Schlüssel verliert seine Berechtigung nicht dadurch, dass die ursprüngliche Public-Key-Datei auf der Bootpartition gelöscht wird. Der entsprechende private Schlüssel bleibt ausschließlich beim autorisierten Administrator.
+
+Für MeshCentral benötigt jedes Gerät seine eigene Registrierung. Ein von deinem authentifizierten MeshCentral-Server bezogenes Linux-ARM-Agentprogramm und dessen zugehörige private Konfiguration werden mit `scripts/enroll-gc-meshcentral-agent.sh` lokal provisioniert. Erst dann startet der bereits aktivierte systemd-Dienst automatisch. Die MCP-Anbindung von ChatGPT läuft über den separaten MeshCentral-MCP-Server, nicht durch einen im Image eingebauten universellen MCP-Zugang.
+
+**Wichtig:** Dieser Stand beschreibt **Quellcode und kommende Image-Builds**, nicht das bereits laufende Pi auf `192.168.178.98`. Vor produktiver Freigabe bleiben Image-CI, echter First-Boot-Test, Wartungslogin und MeshCentral-Registrierung zu verifizieren. Die bestehende Pi-Installation wurde in dieser Entwicklungsrunde nicht verändert.
