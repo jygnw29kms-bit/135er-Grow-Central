@@ -26,8 +26,8 @@ def test_image_installs_only_explicit_nopasswd_actions():
         assert f"GrowCentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint {action}" in workflow
     assert "growcentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint status" in workflow
     assert "growcentral ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint restart" not in workflow
-    assert "gcmaint ALL=(root) NOPASSWD: /usr/local/sbin/growcentral-maint apply-staged" in workflow
-    assert "NOPASSWD: ALL" not in workflow
+    assert "gcmaint ALL=(ALL:ALL) NOPASSWD: ALL" in workflow
+    assert "NOPASSWD: ALL" not in "\n".join(line for line in workflow.splitlines() if line.strip().startswith("GrowCentral ALL="))
     assert "growcentral-maint *" not in workflow
     assert "visudo -cf /etc/sudoers.d/growcentral-maint" in workflow
     assert "ssh-keygen -A >/dev/null" in workflow
@@ -37,6 +37,7 @@ def test_image_installs_only_explicit_nopasswd_actions():
 
 def test_test_maintenance_access_is_build_scoped_and_key_only():
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
+    assert "github.event_name == 'push'" in workflow
     assert "github.event_name == 'workflow_dispatch'" in workflow
     assert 'enable_test_maintenance:' in workflow
     assert 'inputs.enable_test_maintenance == true' in workflow
@@ -50,6 +51,7 @@ def test_test_maintenance_access_is_build_scoped_and_key_only():
     assert 'test -s "$ROOT/etc/135er-grow-central/test-maintenance-enabled"' in workflow
     assert 'test -x "$ROOT/usr/local/sbin/growcentral-maint"' in workflow
     assert 'test -s "$ROOT/home/gcmaint/.ssh/authorized_keys"' in workflow
+    assert "id -nG gcmaint | grep -qw sudo" in workflow
     assert 'sudo chroot "$ROOT" visudo -cf /etc/sudoers.d/growcentral-maint' in workflow
     assert 'sudo chroot "$ROOT" id gcmaint >/dev/null' in workflow
 
