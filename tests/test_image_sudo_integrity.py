@@ -19,7 +19,7 @@ def test_published_pristine_image_rechecks_sudo_integrity():
 
 
 def test_release_notes_match_current_sensor_commissioning():
-    assert 'bundled firmware 0.5.2' in WORKFLOW
+    assert 'bundled firmware 0.5.3' in WORKFLOW
     assert 'FRESH_SUBSTRATE_CC' in WORKFLOW
     assert 'BLE remains a secure Recovery/Service path' in WORKFLOW
     assert 'firmware 0.4.1' not in WORKFLOW
