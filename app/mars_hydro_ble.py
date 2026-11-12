@@ -284,7 +284,13 @@ async def observe(body: ObserveRequest):
             raise
         except Exception as exc:
             logger.warning("Mars BLE observe failed: %s", type(exc).__name__)
-            raise HTTPException(502, "Bluetooth-Benachrichtigungen konnten nicht gelesen werden.") from exc
+            error_type = type(exc).__name__
+            raise HTTPException(
+                502,
+                f"BLE-Notify fehlgeschlagen ({error_type}). GATT-Verbindung getrennt oder "
+                "Gerät akzeptiert das Abonnement nicht. Hersteller-App trennen, "
+                "Gerät erneut suchen und zunächst nur die Dienste auslesen."
+            ) from exc
 
 
 @router.post("/control-test")
