@@ -1,4 +1,4 @@
-name: Build 135er-Grow Central Universal Raspberry Pi Image
+name: Private-operator Pi image validation (no public output)
 
 on:
   workflow_dispatch:
@@ -8,28 +8,9 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [ master ]
-    paths:
-      - '.github/workflows/build-pi3-image.yml'
-      - 'app/**'
-      - 'shared/**'
-      - 'local/**'
-      - 'cloud/**'
-      - 'deploy/**'
-      - 'web/**'
-      - 'requirements.txt'
-      - 'image-builder/brand/**'
-      - 'image-builder/firstboot/**'
-      - 'systemd/grow-central-remote-watchdog.*'
-      - 'systemd/grow-central-mesh-agent.service'
-      - 'systemd/grow-central-firstboot-maintenance.service'
-      - 'scripts/install-gc-maintenance-agent.sh'
-      - 'scripts/enroll-gc-meshcentral-agent.sh'
-      - 'systemd/grow-central-ssh-hostkeys.conf'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: grow-central-pi3-image
@@ -996,24 +977,11 @@ jobs:
           Cloud test: sudo /usr/local/sbin/grow-central-cloud-smoke-test
           EOF
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: 135er-Grow-Central-RPi3Plus-Universal-Image-build-${{ github.run_number }}
-          path: |
-            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz
-            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*.img.xz.sha256
-            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-CREDENTIALS.txt
-            135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-*-SOURCE.txt
-            grow-central-homeassistant-*.zip
-            gc-soil-node-*-test.zip
-            COMPANIONS.sha256
-          compression-level: 0
-          retention-days: 14
-
-      - name: Publish GitHub prerelease
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # OPERATOR-ONLY POLICY: Never publish an image, image artifact, or prerelease
+      # from this PUBLIC repository. The build output remains ephemeral on runner.
+      # Build an operator image privately using scripts/build-private-pi-image.sh
+      # with owner-controlled enrollment files on an authorized private machine.
+      - name: Verify no public image is published
         run: |
-          TAG="pi-universal-alpha-0.7.5-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz.sha256 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-CREDENTIALS.txt 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}-SOURCE.txt grow-central-homeassistant-*.zip gc-soil-node-*-test.zip COMPANIONS.sha256 --target "$GITHUB_SHA" --title "135er-Grow Central Raspberry Pi 3+ Universal Image alpha-0.7.5 build ${GITHUB_RUN_NUMBER}" --notes "Test image from commit ${GITHUB_SHA}. Raspberry Pi OS Lite 64-bit for Pi 3B/3B+, 4B/400, 5 and compatible Compute Modules. Includes USB-first XIAO ESP32-C3 / HW-390 commissioning with hardware-bound P-256 identity, server-side Calibration Record, mandatory AIR_DRY / WATER_SATURATED / FRESH_SUBSTRATE_CC three-point calibration, TLS-MQTT provisioning, explicit room assignment and bundled firmware 0.5.3. BLE remains a secure Recovery/Service path, not the primary first-onboarding path. Home Assistant export remains opt-in. First boot ships without factory passwords. ALPHA test images have a persistent LAN-only, public-key-only gcmaint sudo account; final production builds must remove this access. Regular GrowCentral SSH is opt-in. The image build verifies root ownership and setuid integrity of sudo plus visudo syntax before publication." --prerelease
+          echo "PRIVATE_OPERATOR_ONLY: No image upload or public release."
+          test -f 135er_Grow_Central_RPi3Plus_Universal_alpha-0.7.5-build-${GITHUB_RUN_NUMBER}.img.xz
