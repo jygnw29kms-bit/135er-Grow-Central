@@ -37,6 +37,9 @@ def decode_fan_notification(payload: bytes) -> dict | None:
     humidity = float(fields[20].replace(",", "."))
     rpm = int(fields[21])
     state_candidate = int(fields[12]) if fields[12] in ("0", "1") else None
+    setpoint_candidate = int(fields[13]) if fields[13].isdigit() else None
+    if setpoint_candidate is not None and not 0 <= setpoint_candidate <= 100:
+        setpoint_candidate = None
     if not (-40 <= temperature <= 85 and 0 <= humidity <= 100 and 0 <= rpm <= 10000):
         return None
     return {
@@ -45,7 +48,8 @@ def decode_fan_notification(payload: bytes) -> dict | None:
         "humidity_rh_candidate": humidity,
         "fan_rpm_candidate": rpm,
         "state_field12_candidate": state_candidate,
-        "field_indices": {"temperature": 19, "humidity": 20, "rpm": 21, "state_candidate": 12},
+        "setpoint_percent_candidate": setpoint_candidate,
+        "field_indices": {"temperature": 19, "humidity": 20, "rpm": 21, "state_candidate": 12, "setpoint_percent": 13},
         "unverified_fields_omitted": True,
         "fan_power_state_verified": False,
         "firmware_identity_verified": False,
@@ -71,6 +75,8 @@ def summarize(rows: list[tuple[float, int, int, bytes]]) -> dict:
         "humidity_max_rh": max((x["humidity_rh_candidate"] for x in events), default=None),
         "rpm_min": min((x["fan_rpm_candidate"] for x in events), default=None),
         "rpm_max": max((x["fan_rpm_candidate"] for x in events), default=None),
+        "power_state_last": events[-1]["state_field12_candidate"] if events else None,
+        "setpoint_percent_last": events[-1]["setpoint_percent_candidate"] if events else None,
         "airflow_cfm": None,
         "pressure_pa": None,
         "events": events,
