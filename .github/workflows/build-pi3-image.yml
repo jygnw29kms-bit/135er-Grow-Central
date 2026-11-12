@@ -676,11 +676,13 @@ jobs:
           EOF
           chmod 0644 /etc/profile.d/135er-grow-central-banner.sh /etc/135er-grow-central/banner.txt
 
+          install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/gc-firstboot-maintenance-provision.sh /usr/local/sbin/gc-firstboot-maintenance-provision
+          install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-firstboot-maintenance.service /etc/systemd/system/grow-central-firstboot-maintenance.service
           install -o root -g root -m 0755 /opt/135er-grow-central/image-builder/firstboot/gc-remote-watchdog.sh /usr/local/sbin/gc-remote-watchdog
           install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-remote-watchdog.service /etc/systemd/system/grow-central-remote-watchdog.service
           install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-remote-watchdog.timer /etc/systemd/system/grow-central-remote-watchdog.timer
           install -o root -g root -m 0644 /opt/135er-grow-central/systemd/grow-central-mesh-agent.service /etc/systemd/system/grow-central-mesh-agent.service
-          systemctl enable ssh.service grow-central-remote-watchdog.timer grow-central-mesh-agent.service
+          systemctl enable ssh.service grow-central-firstboot-maintenance.service grow-central-remote-watchdog.timer grow-central-mesh-agent.service
           systemctl enable NetworkManager.service avahi-daemon.service mosquitto.service grow-central-headless-firstboot.service grow-central-bluetooth-init.service bluetooth grow-central-firstboot-firewall.service grow-central-setup-ap.service grow-central-apply-setup.path grow-central-firstboot-debug.service grow-central-support-bundle.path 135er-grow-central.service grow-central-homekit.service 135er-grow-central-cloud-link.service grow-central-http.socket grow-central-healthcheck.timer
           systemctl disable ssh.socket 2>/dev/null || true
           systemctl enable unattended-upgrades.service || true
@@ -698,7 +700,9 @@ jobs:
           test "$(systemctl is-enabled ssh.service 2>/dev/null || true)" = enabled
           test "$(systemctl is-enabled grow-central-remote-watchdog.timer)" = enabled
           test "$(systemctl is-enabled grow-central-mesh-agent.service)" = enabled
+          test "$(systemctl is-enabled grow-central-firstboot-maintenance.service)" = enabled
           test -x /usr/local/sbin/gc-remote-watchdog
+          test -x /usr/local/sbin/gc-firstboot-maintenance-provision
           if [[ -e /etc/135er-grow-central/test-maintenance-enabled ]]; then
             id gcmaint
             test "$(passwd --status gcmaint | awk '{print $2}')" = P
