@@ -21,3 +21,30 @@ Für den nächsten praktischen Test zuerst ausschließlich das Ventilator-Gerät
 - Ein zentraler Connection Manager begrenzt aktive Verbindungsversuche, respektiert exklusive Mars-Legacy-BLE-Verbindung und vermeidet automatische Reconnect-Stürme.
 - Keine öffentliche Veröffentlichung von Roh-HCI-PCAPs oder Tokens; keine aktive Grow-Central-Steuerung bis gerätespezifischer Validierung.
 - Die belegten FC3000-Steuerbefehle niemals automatisch an den Ventilator senden.
+
+
+## Reale Lüfter-Stufenmessung über iPhone (2026-11-12, Abschluss)
+
+Der Anwender hat nach dem Einschalten des MZF002 die Lüfterstufen 25 % → 50 % → 75 % → 100 % → Aus in Mars Legacy bedient. Die HCI-Aufzeichnung wurde auf Jens-PC beendet und die vollständig geschriebenen PCAP-Daten unter `JL1976/Grow-Central/FC3000-BLE/mars_legacy_lamp_fan_20261112.pcap` privat belassen. **2.729.859 Bytes**, **32.373 Pakete**, **266** identifizierte `MZF002`-Notifications.
+
+Die iPhone-ATT-Notifications korrelieren zeitlich mit allen Stufenwechseln:
+
+| Zeit (aus PCAP, UTC) | Feld 12 Status | Feld 13 Sollwert | Feld 21 Drehzahl (U/min) | Beobachtung |
+|---|---:|---:|---:|---|
+| 18:36:27 | 0 | 25 | 0 | Ausgangszustand |
+| 18:37:45 | 1 | 25 | 0 | eingeschaltet, Motor läuft an |
+| 18:37:57 | 1 | 25 | 820 | 25 % stabil |
+| 18:41:57 | 1 | 50 | 820 | Sollwert auf 50 % |
+| 18:42:06 | 1 | 50 | 2100 | 50 % |
+| 18:42:09 | 1 | 75 | 2160 | Sollwert auf 75 % |
+| 18:42:12 | 1 | 75 | 2660 | 75 % |
+| 18:42:15 | 1 | 100 | 2660 | Sollwert auf 100 % |
+| 18:42:21 | 1 | 100 | 3020 | 100 %, höchste beobachtete Drehzahl |
+| 18:42:27 | 0 | 100 | 2980 | ausgeschaltet, Motor läuft noch aus |
+| 18:42:30 | 0 | 100 | 0 | Motor steht |
+
+**Feldzuordnung:** Index 12 = Ein/Aus-Status, Index 13 = Sollwert in Prozent, Index 19 = Temperatur °C, Index 20 = relative Feuchte %, Index 21 = reale Motordrehzahl. Nutzerseitige Referenz bei laufendem Gerät: 820 U/min, 17,1 °C, 52,4 % rF, 114,0 CFM, 50,0 Pa. Die ersten drei Werte wurden passend in Notifications beobachtet. **114,0 CFM und 50,0 Pa bleiben ohne belegte Payload-Feldzuordnung.** Nicht als gemessene BLE-Sensordaten ausgeben.
+
+**Wichtig:** In diesem Capture wurden trotz Stufenwechseln **0 ATT Write Requests/Commands** erkannt. Die Lüfter-Sollwertänderungen wurden also zuverlässig in den Notifications sichtbar, der eigentliche Befehlsweg ist **weiterhin ungeklärt**. Es darf **nicht** angenommen werden, dass die für FC 3000 identifizierten On/Off-/Dim-Payloads für den Lüfter gelten. Potenzielle andere Nachrichtentypen, Richtungen und GATT-/API-Pfade benötigen eine gesonderte Analyse.
+
+`scripts/mars_legacy_mzf002_telemetry.py` liest die bislang identifizierten MZF002-Statusfelder offline. Dieser Stand ist noch **keine Grow-Central-Liveanbindung**, insbesondere keine Schreibsteuerung. Roh-Captures bleiben lokal; Git enthält nur anonymisierte Befunde.
