@@ -11,6 +11,14 @@
 
 > Diese Datei ist die kanonische Referenz für README, Dokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien definieren nicht den aktuellen Candidate.
 
+## Verbindlicher Veröffentlichungsstopp für Pi-Images (ab 2026-11-12)
+
+**BIS ZUR FERTIGSTELLUNG: NUR BETREIBER-IMAGES.** Es dürfen keine neuen Pi-Images in öffentlichen GitHub Releases, öffentlichen GitHub Actions-Artefakten oder auf öffentlichen Websites erscheinen. Der Quellcode bleibt Open Source. Die bisherigen Build-/Release-Kennungen sind historische Angaben und **keine aktuelle Downloadempfehlung**.
+
+Die Image-Build-Pipeline ist manuell und ohne öffentliche Veröffentlichungs-/Artefakt-Schritte konfiguriert. Der Betreiber erstellt personalisierte Images ausschließlich auf einem autorisierten privaten Builder und behandelt das installierte MeshCentral-Enrollment sowie die resultierende Image-Datei als vertraulich.
+
+**Altbestand:** Vor Inkrafttreten dieser Regel veröffentlichte Release-Assets sind nicht automatisch verschwunden. Sie müssen gesondert als öffentliche Downloads zurückgezogen werden. Bis eine Prüfung ihre Entfernung belegt, ist der komplette Rückzug älterer Images **OFFEN**.
+
 ## Aktueller Candidate: Build 461
 
 | Merkmal | Wert |
