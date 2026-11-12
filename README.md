@@ -23,10 +23,10 @@ Grow Central wird **vollständig als Open-Source-Projekt** entwickelt. Das Repos
 | Bereich | Stand |
 |---|---|
 | Version | `alpha-0.7.5` |
-| Aktueller Pi-Candidate | **Build 431** |
-| Release-Tag | `pi-universal-alpha-0.7.5-431` |
-| Quellstand des Candidates | `b51c19109db669832a2e009b239cc358fcd12428` |
-| Veröffentlichung | 14. Oktober 2026 |
+| Aktueller Pi-Candidate | **Build 461** |
+| Release-Tag | `pi-universal-alpha-0.7.5-461` |
+| Quellstand des Candidates | `5af7a97ee632a4ccaf32893c3c02735ac75bfadd` |
+| Veröffentlichung | 12. November 2026 |
 | Status | `CANDIDATE` – automatisierte Gates bestanden, reale Hardwarevalidierung je Hardwareklasse offen |
 | Entwicklungsmodus | **Open Source / öffentlich** |
 
@@ -34,13 +34,15 @@ Verbindliche Detailquelle ist [`RELEASE_STATE.md`](RELEASE_STATE.md). Historisch
 
 ## Bestätigter Sensor-Teststand · 14. Oktober 2026
 
-Der ver?ffentlichte Pi-Candidate **Build 431** enth?lt die aktuelle Sensor-Firmware **0.5.2** und den zusammengef?hrten USB-/MQTT-TLS-/Bodenfeuchte-Pfad. Der reale Pi-4-Sensortest vom 14. Oktober bleibt als historischer Hardwarebefund erhalten; aktuelle Installationen verwenden keine separaten In-place-Hotfix-Skripte mehr.
+Der ver?ffentlichte Pi-Candidate **Build 461** enth?lt die aktuelle Sensor-Firmware **0.5.3** und den zusammengef?hrten USB-/MQTT-TLS-/Bodenfeuchte-Pfad. Der reale Pi-4-Sensortest vom 14. Oktober bleibt als historischer Hardwarebefund erhalten; aktuelle Installationen verwenden keine separaten In-place-Hotfix-Skripte mehr.
 
 - [Sensor einrichten und kalibrieren](docs/de/SOIL_SENSOR_GUIDE.md)
 - [Hardwarebefund und offene Prüfungen](docs/de/SENSOR_HARDWARE_TEST_2026-10-14.md)
 - [Aktueller Projektstatus](docs/PROJECT_STATUS.md)
 
 Der HW-390 misst einen kapazitiven Feuchte-Referenzwert. Temperatur, pH und EC erfordern zusätzliche Hardware. Der erfolgreiche Sensortest ist keine vollständige Validierung des Universal-Images oder anderer Hardwareklassen.
+
+**Neues Testimage:** [Build 461 herunterladen](https://github.com/jygnw29kms-bit/135er-Grow-Central/releases/tag/pi-universal-alpha-0.7.5-461). Die Hardwareabnahme für Raspberry Pi 4, First Boot, FC3000 und DF150-M erfolgt nach [End-to-End-Testplan](docs/de/PI4_END_TO_END_ABNAHME_2026-11-12.md). Die zwei Mars-Hydro-Geräte sind getrennt mit Bluetooth und 2,4-GHz-WLAN erfasst, aber Steuerung/Verbindung wurden noch nicht am echten Gerät validiert.
 
 ## Produktprinzipien
 
@@ -120,4 +122,4 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 
 ## English summary
 
-135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 431 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
+135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 461 is the current `alpha-0.7.5` hardware-test candidate; automated build/release gates passed and physical validation is still required per hardware class.
