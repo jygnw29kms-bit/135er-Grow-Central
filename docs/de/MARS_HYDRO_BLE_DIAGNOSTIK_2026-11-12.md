@@ -30,6 +30,33 @@ Scan-Ergebnisse enthalten eine **zeitlich beschränkte Kandidaten-ID** und Herst
 
 **Hinweis:** Subscriben auf Notifications ist eine BLE-GATT-Operation und aktiviert einen Kommunikationskanal. Sie ist kein dokumentierter Gerätesteuerbefehl und bewirkt nicht zwangsläufig, dass ein Controller Statusmeldungen sendet. Falls keine Nachrichten eingehen, muss der notwendige sichere Status-Request über echte App-Beobachtung ermittelt werden.
 
+## Realer Pi-4-Nachweis vom 12.11.2026
+
+Auf dem GrowCentral-Pi (Build 495) wurde der BLE-Scan mit BlueZ/Bleak und
+anschließendem **schreibgeschützten GATT-Inspect** über den Wartungszugang
+erfolgreich ausgeführt.
+
+- **MZ_MZF002** war erreichbar; RSSI im geprüften Lauf etwa -65 dBm.
+  Die genaue Zuordnung zum DF150-M bleibt bis zur hardwareseitigen
+  Identitätsprüfung offen.
+- Proprietärer GATT-Service: `83677baa-3eb8-4866-b6b6-96e5ed5cc48d`.
+- Characteristic **notify**: `6f588463-f8f1-44f8-bdae-a1272a1b0f6e`.
+- Characteristic **write**: `f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d`.
+  **Die Existenz dieser Characteristic erlaubt keine Schreibtests.**
+- Standarddienste `1800` und `1801`; drei lesbare Standard-Characteristics
+  `2aa6`, `2a01` und `2a00` erfolgreich gelesen.
+- Keine GATT-Schreibbefehle gesendet, Identität/Protokoll **nicht** validiert.
+- Im Webjournal: erster Inspect um 16:14 mit BleakDBusError/HTTP 502,
+  zweiter um 16:14 mit HTTP 200. Fehlerbehandlung bei konkurrierenden
+  Verbindungen beziehungsweise kurzzeitigem Verbindungsabbruch verbessern.
+- Ein weiterer BLE-Scan fand 20 Geräte, davon MZF002 als Mars-Hydro-Kandidat.
+  **C260 war bei diesem Lauf nicht sichtbar**, wurde bei früheren
+  BlueZ-Scans aber als `MZ_MARS_0_…C260` empfangen.
+
+**Nächste Abnahme:** Passiv die Notify-Characteristic beobachten, die
+rohen Antworten reproduzierbar erfassen und die Gerätezuordnung separat
+bestätigen. Ohne bestätigte Befehlsfamilie keine Steuerfunktion freigeben.
+
 ## Technische Grenzen
 
 - Die Implementierung umfasst derzeit **Scan → GATT Read → Notify → Vergleich**, aber keine bestätigte FC3000-/DF150-M-Befehlsfamilie.
