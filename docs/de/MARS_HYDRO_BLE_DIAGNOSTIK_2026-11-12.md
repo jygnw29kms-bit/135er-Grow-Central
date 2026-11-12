@@ -68,6 +68,46 @@ erfundene Initialisierungsbytes umgehen.
 rohen Antworten reproduzierbar erfassen und die Gerätezuordnung separat
 bestätigen. Ohne bestätigte Befehlsfamilie keine Steuerfunktion freigeben.
 
+## GitHub-Protokollabgleich: 12.11.2026
+
+**Exakter Treffer für den GATT-Transport (nicht für Steuerbefehle):**
+Im ESP32-Arduino-Issue
+[espressif/arduino-esp32#7894](https://github.com/espressif/arduino-esp32/issues/7894)
+steht ein Beispiel mit einem `MZ_MZL-FC-E-…`-Gerätenamen und exakt den
+am MZF002 gemessenen UUIDs. Dort sind die drei Rollen ausdrücklich
+zugeordnet: Service `83677baa-3eb8-4866-b6b6-96e5ed5cc48d`,
+RX/Write `f5d2b3fe-e6b5-49b5-aa5f-a00bb4156d1d` und
+TX/Notify `6f588463-f8f1-44f8-bdae-a1272a1b0f6e`.
+Das bestätigt eine UART-artige GATT-Transportstruktur. Das Beispiel
+implementiert **keinen** Mars-Hydro-Steuer- oder Sensordaten-Decoder.
+
+**Konkreter Bugfix:** Der bisherige Default `DF100M_NOTIFY_UUID`
+in `app/main.py`, `.env.example` und der Image-Konfiguration
+verwendete irrtümlich die **Service-UUID**. Default nun auf die
+bestätigte Notify-Characteristic umgestellt; auf dem Test-Pi wurde der
+Wert ebenfalls mit Sicherung der `.env` korrigiert.
+Dieser Konfigurationsfehler erklärt nicht zwangsläufig alle
+beobachteten `EOFError`-/BlueZ-Abbrüche.
+
+**Andere geprüfte Projekte und ihre Grenzen:**
+
+- [suppqt/hass_mars_hydro](https://github.com/suppqt/hass_mars_hydro):
+  Cloud-Anbindung für FC3000, Lichtdimmung, Lüftergeschwindigkeit und
+  Lüfter-Temperatur/-Feuchte; **kein direkter BLE-Payload-Beleg**.
+  Repository seit Dezember 2025 archiviert.
+- [davosje/marshydro_esp](https://github.com/davosje/marshydro_esp):
+  lokale ESPHome-Steuerung über modifizierten Original-Dongle/PWM.
+  Erfordert Hardware-/Firmware-Eingriff; nicht gleichzusetzen mit
+  originaler Bluetooth-Steuerung der vorhandenen Geräte.
+- [iClint/MarsHydroAPIDocs](https://github.com/iClint/MarsHydroAPIDocs):
+  REST-/MQTT-Kommandos und Sensordaten für andere, konkret geprüfte
+  Mars-Pro-Controller; **keine bestätigte BLE-Kommandotabelle für
+  MZF002 oder C260**.
+
+**Verbindliche Trennung:** `GATT-UUIDs bestätigt` ≠
+`Befehlsformat bestätigt` ≠ `physische Wirkung bestätigt`.
+Steuerbefehle erst nach protokoll- und modellbezogener Validierung.
+
 ## Technische Grenzen
 
 - Die Implementierung umfasst derzeit **Scan → GATT Read → Notify → Vergleich**, aber keine bestätigte FC3000-/DF150-M-Befehlsfamilie.
