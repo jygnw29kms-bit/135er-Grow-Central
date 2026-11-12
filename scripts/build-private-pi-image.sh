@@ -130,11 +130,13 @@ sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$cloud
 unset operator_token
 printf 'OPERATOR_PROVISIONED\n' > "$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
 # Runtime services run as growcentral and need group-read of EnvironmentFile.
-chown root:growcentral "$appenv" "$cloudenv"
+image_gid="$(awk -F: '$1 == "growcentral" {print $3; exit}' "$root/etc/group")"
+[[ "$image_gid" =~ ^[0-9]+$ ]] || { echo "Grow Central group missing in image" >&2; exit 4; }
+chown 0:"$image_gid" "$appenv" "$cloudenv"
 chmod 0640 "$appenv" "$cloudenv"
 # No static password is ever embedded in the operator image.
 # One public key is applied by the firstboot systemd service.
-install -m 0600 "$pubkey" "$boot/gc-maintenance.pub"
+cp -- "$pubkey" "$boot/gc-maintenance.pub"
 # Device-bound config is private: never add this directory to Git or artifacts.
 install -d -m 0700 "$root/opt/grow-central/mesh-agent"
 install -m 0700 "$agent" "$root/opt/grow-central/mesh-agent/meshagent"
