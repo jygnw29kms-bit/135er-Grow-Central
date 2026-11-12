@@ -20,7 +20,7 @@ small{color:#a5b8b7}.device{display:flex;flex-direction:column;gap:6px;margin:8p
 <h1>Mars Hydro · Bluetooth</h1>
 <p>FC3000 Beleuchtung und DF150-M Abluft. Der Raspberry Pi prüft Geräte direkt per Bluetooth. WLAN und Mars-Hydro-Cloud sind für diese Diagnose nicht erforderlich.</p>
 <div class="banner">Nur Diagnose: Die Geräteidentität, die Bedeutung der Rohwerte und die Steuerbefehle sind noch nicht validiert. Dieses Werkzeug sendet <strong>keine</strong> GATT-Steuerbefehle.</div>
-<section><div class="row"><button class="primary" id="scan">Bluetooth-Geräte suchen</button><span id="status" class="status" role="status">Bereit</span></div><div id="devices"></div></section>
+<section><div class="row"><button class="primary" id="scan">Bluetooth-Geräte suchen</button><span id="status" class="status" role="status">Adapter wird geprüft…</span></div><p id="adapter" role="status">Bluetooth-Adapterstatus wird geladen.</p><p>Gesucht werden alle sichtbaren BLE-Geräte, auch anderer Hersteller. C260 ist ein möglicher FC3000-Kandidat, keine bestätigte Kopplung.</p><div id="devices"></div></section>
 <div class="grid"><section><h2>GATT-Dienste und lesbare Werte</h2><div class="row"><button id="inspect" disabled>Ausgewähltes Gerät auslesen</button></div><pre id="gatt">Noch keine Gerätedaten.</pre></section>
 <section><h2>Benachrichtigungen aufnehmen</h2><p>Eine notifizierbare Characteristic auswählen. Während der kurzen Aufnahme kannst du am Herstellerregler oder in der App einen bekannten Wert ändern und die Rückmeldung beobachten.</p>
 <label for="uuid">Notify-Characteristic</label><select id="uuid" disabled><option value="">Erst Gerät auslesen</option></select>
@@ -32,6 +32,8 @@ const $=id=>document.getElementById(id);
 let selected=null,services=[],captures=[];
 function message(s){$('status').textContent=s}
 function pretty(obj){return JSON.stringify(obj,null,2)}
+function adapterInfo(a){if(!a)return;const status=a.state==='ready'?'Bereit':a.state==='adapter_off'?'Adapter ausgeschaltet':a.state==='radio_blocked'?'Funk gesperrt':'Adapter nicht verfügbar';$('adapter').textContent='Pi-Bluetooth: '+status+' · '+(a.hint||'');}
+async function adapterStatus(){try{const r=await fetch('/api/mars-hydro/ble/status',{credentials:'same-origin',cache:'no-store'});const x=await r.json();if(r.ok)adapterInfo(x.adapter);else $('adapter').textContent='Adapterstatus: HTTP '+r.status;}catch(e){$('adapter').textContent='Adapterstatus nicht erreichbar: '+e.message;}}
 async function api(path,payload){
  const res=await fetch('/api/mars-hydro/ble/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
  let data;try{data=await res.json()}catch{throw Error('Server antwortet nicht mit gültigem JSON ('+res.status+')')}
@@ -41,7 +43,7 @@ async function api(path,payload){
 function chosen(id){selected=id;$('inspect').disabled=false;$('observe').disabled=true;$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.';captures=[];}
 async function busy(button,work){button.disabled=true;try{await work()}catch(e){message('Fehler: '+e.message)}finally{button.disabled=false}}
 $('scan').onclick=()=>busy($('scan'),async()=>{
- message('Bluetooth-Scan läuft…');let data=await api('scan',{});selected=null;$('inspect').disabled=true;$('observe').disabled=true;$('uuid').disabled=true;
+ message('Bluetooth-Scan läuft (bis zu 30 Sekunden)…');let data=await api('scan',{});adapterInfo(data.adapter);selected=null;$('inspect').disabled=true;$('observe').disabled=true;$('uuid').disabled=true;
  $('devices').replaceChildren();
  data.devices.forEach(item=>{
   const card=document.createElement('div');card.className='device';
@@ -50,8 +52,8 @@ $('scan').onclick=()=>busy($('scan'),async()=>{
   const button=document.createElement('button');button.textContent='Auswählen';button.onclick=()=>chosen(item.candidate_id);
   card.append(title,desc,button);$('devices').append(card);
  });
- if(!data.devices.length){$('devices').textContent='Keine Bluetooth-Geräte gefunden. Geräte einschalten und Hersteller-App ggf. trennen.'}
- message(data.found+' Geräte erkannt, bitte FC3000 und DF150-M jeweils einzeln zuordnen.');
+ if(!data.devices.length){$('devices').textContent=data.message||'Keine BLE-Geräte gefunden. Geräte einschalten und Hersteller-App ggf. trennen.'}
+ message((data.message||data.found+' Geräte erkannt.')+' Scan: '+(data.scan_seconds||0)+' s, '+(data.attempts||0)+' Durchläufe.');
 });
 $('inspect').onclick=()=>busy($('inspect'),async()=>{
  if(!selected)return;message('GATT-Dienste und read-fähige Werte werden ausgelesen…');
@@ -65,5 +67,6 @@ $('observe').onclick=()=>busy($('observe'),async()=>{
  const d=await api('observe',{candidate_id:selected,characteristic_uuid:$('uuid').value,seconds:4});
  captures.push({messung:captures.length+1,geraet:selected,uuid:d.uuid,event_count:d.event_count,events:d.events});$('events').textContent=pretty(captures);message(d.event_count+' Notifications empfangen; '+captures.length+' Messungen zum Vergleich.');
 });
+adapterStatus();
 $('clearEvents').onclick=()=>{captures=[];$('events').textContent='Noch keine Rückmeldungen.';message('Vergleich zurückgesetzt.');};
 </script></body></html>
