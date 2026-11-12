@@ -50,8 +50,14 @@ Der HW-390 misst einen kapazitiven Feuchte-Referenzwert. Temperatur, pH und EC e
 - **Headless Appliance:** Der Pi benötigt keinen eigenen Desktop oder Monitor.
 - **Eine Oberfläche pro Gerätetyp:** Desktop- und Mobile-Ansichten sind für ihren jeweiligen Einsatz optimiert.
 - **Herstellerübergreifend:** Geräte werden über eine gemeinsame Plattform eingebunden.
-- **Sichere Standardwerte:** Keine bekannten Factory-Passwörter; SSH wird nur ausdrücklich aktiviert.
+- **Sichere Standardwerte:** Keine bekannten Factory-Passwörter; der SSH-Dienst läuft im neuen Universal-Image mit schlüsselgebundener Wartung und LAN-Firewall, aber ohne vorinstallierten Login-Schlüssel.
 - **Optionale Cloud:** Fernzugriff und Verwaltung können ergänzt werden, die lokale Instanz bleibt maßgeblich.
+
+## Standard-Fernwartung in neuen Pi-Images
+
+Das Universal-Image enthält einen automatisch startenden SSH-Wartungsdienst, First-Boot-Schlüssel-Provisionierung, einen MeshCentral-Agenten-Dienst und einen Watchdog. **Der herunterladbare Build enthält keine gemeinsam verwendbaren Wartungszugänge.** Für die schlüsselgebundene Administration wird beim ersten Boot einmalig ein autorisierter persönlicher Public-Key eingebunden; ein MeshCentral-Agent wird mit einer individuellen Serverregistrierung aktiviert und startet anschließend bei jedem Boot automatisch. Die laufende Hardwareinstallation wird dadurch nicht rückwirkend verändert.
+
+[Details zur Image-Provisionierung](image-builder/README.md) · [Wartungsagent und Installation](docs/de/GC_PI_MAINTENANCE_AGENT.md).
 
 ## Geplanter und implementierter Funktionsumfang
 
