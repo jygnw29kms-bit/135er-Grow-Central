@@ -234,7 +234,10 @@ def configure_local_ssh(enabled: bool, password: str = "") -> None:
     if validation.returncode != 0:
         disable_local_ssh()
         raise RuntimeError("Die SSH-Konfiguration konnte nicht validiert werden.")
-    run("ufw", "allow", "22/tcp")
+    # Keep SSH restricted to private LAN even when the normal user explicitly
+    # opts in to password-based access. Remote MCP uses outbound MeshCentral.
+    for network in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"):
+        run("ufw", "allow", "from", network, "to", "any", "port", "22", "proto", "tcp")
     run("systemctl", "enable", "--now", "ssh.service")
 
 
