@@ -185,7 +185,13 @@ def install_runtime_policy() -> None:
 
 
 def disable_local_ssh() -> None:
-    """Lock the normal OS account without disabling ALPHA key-only maintenance."""
+    """Keep key-only maintenance transport running; lock normal OS password.
+
+    The image always ships an SSH daemon, but never a reusable login secret.
+    This function disables the normal user password, not the maintenance daemon.
+    Per-device authorized_keys must be separately provisioned. Failing to do so
+    leaves no remote administrative login, even though TCP/22 is reachable.
+    """
     maintenance = MAINTENANCE_MARKER.is_file()
     SSH_DROPIN.parent.mkdir(parents=True, exist_ok=True)
     SSH_DROPIN.write_text(
@@ -197,14 +203,12 @@ def disable_local_ssh() -> None:
     )
     os.chmod(SSH_DROPIN, 0o644)
     run("passwd", "--lock", "GrowCentral", check=False)
-    if maintenance:
-        # The key-only account is independent of the captive-portal state.
-        run("ssh-keygen", "-A")
-        run("systemctl", "enable", "--now", "ssh.service")
-    else:
-        for unit in ("ssh.socket", "ssh.service", "sshd.service"):
-            run("systemctl", "disable", "--now", unit, check=False)
-        run("ufw", "--force", "delete", "allow", "22/tcp", check=False)
+    run("ssh-keygen", "-A")
+    run("mkdir", "-p", "/run/sshd")
+    validation = run("/usr/sbin/sshd", "-t", check=False)
+    if validation.returncode != 0:
+        raise RuntimeError("Die schlüsselgebundene SSH-Wartung konnte nicht validiert werden.")
+    run("systemctl", "enable", "--now", "ssh.service")
 
 
 def configure_local_ssh(enabled: bool, password: str = "") -> None:
