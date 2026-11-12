@@ -218,7 +218,7 @@ def configure_local_ssh(enabled: bool, password: str = "") -> None:
         "PasswordAuthentication yes\n"
         "KbdInteractiveAuthentication no\n"
         "PermitRootLogin no\n"
-        "AllowUsers GrowCentral gcmaint\n" if MAINTENANCE_MARKER.is_file() else "AllowUsers GrowCentral\n",
+        + ("AllowUsers GrowCentral gcmaint\n" if MAINTENANCE_MARKER.is_file() else "AllowUsers GrowCentral\n"),
         encoding="utf-8",
     )
     os.chmod(SSH_DROPIN, 0o644)
