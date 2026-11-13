@@ -123,3 +123,16 @@ Netzwerkverwaltung und SSH starten automatisch. Ein vorhandener Ethernet-Uplink 
 Nach dem ersten Hardware-Boot ausführen: `sudo gc-operator-image-check`, einen SSH-Login von einem autorisierten Rechner sowie `sudo -n id -u` **über genau diese SSH-Verbindung** prüfen und den MeshCentral-Befehlskanal mit einem harmlosen Probe-Befehl bestätigen. Bis diese Tests tatsächlich bestanden sind, ist der Zugriff **vorbereitet, aber nicht live verifiziert**.
 
 Die private Image-Datei mit MeshCentral-Enrollment ist vertraulich und darf nicht auf GitHub/öffentliche Release-Seiten hochgeladen werden. Keine gemeinsamen Passwörter, privaten SSH-Schlüssel oder statischen Zugänge im Quellcode.
+
+
+## Verbindlicher Testzugang für private Betreiber-Images (13. November 2026)
+
+Für die laufende Hardware-Testphase gilt: **`gc-maint` ist der feste administrative Wartungsbenutzer**. Er besitzt vollständige `sudo`-Rechte ohne zusätzliche Passwortabfrage. Neben dem persönlichen SSH-Schlüssel ist für Betreiber-Images eine **SSH-Passwortanmeldung ausschließlich für `gc-maint`** vorgesehen.
+
+Die Test-Passphrase wird **bei jedem Betreiber-Build aus derselben privaten Betreiber-Datei** übernommen. Der Build erzeugt daraus einen gesalzenen SHA-512-crypt-Hash, der bis zum ersten Boot im verschlüsselungsbedürftigen privaten Image liegt. Die Klartext-Passphrase darf **nicht** in GitHub, Dokumentation, Build-Protokollen oder öffentlichen Artefakten stehen. Ein Betreiber-Image mit konstantem Passwort ist vertraulich; Verlust einer Kopie bedeutet, dass das Testpasswort auf allen betroffenen Geräten geändert werden muss.
+
+Die private Image-Pipeline erfordert daher `--operator-password-file /private/fixed-test-password.txt` zusammen mit individuellem SSH-Public-Key, AArch64-MeshCentral-Binärprogramm und der zugelassenen `meshagent.msh`. Beim ersten Boot richtet `grow-central-firstboot-maintenance.service` den Benutzer ein, setzt seinen Passwort-Hash, prüft `sshd` sowie den passwortfähigen Login ausschließlich für `gc-maint` und entfernt anschließend den temporären Hash.
+
+`grow-central-mesh-agent.service` enthält die **ausführbare AArch64-Agentdatei** und die registrierte Konfiguration und startet unabhängig von PC-Jens oder PC-Lucas mit dem Pi. `grow-central-remote-watchdog.timer` kontrolliert den SSH- und MeshCentral-Dienst. Die ChatGPT-MCP-Verbindung wird separat durch den vorhandenen MeshCentral-MCP-Server bereitgestellt. Ein MCP-Serverprozess auf dem Raspberry Pi ist dafür nicht erforderlich.
+
+**Abnahmestand:** Das vorher erstellte Image `135er-GrowCentral-Operator-2026-11-12.img.xz` ist noch schlüsselbasiert und erfüllt die neue feste-Passwort-Vorgabe nicht. Es darf bis zur Änderung, erneuter SHA-256-Prüfung und echtem Erstboot-/SSH-/MeshCentral-Test nicht als komplett freigegeben gelten. Für die Offline-Nachrüstung existiert `scripts/patch-private-operator-image-access.sh`; dieser Schritt erfordert Schreibrechte auf dem privaten Betreiber-Image.
