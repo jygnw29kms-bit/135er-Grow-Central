@@ -39,7 +39,7 @@ def configured() -> bool:
         os.getenv("GC_MARS_CLOUD_ENABLE") == "1"
         and bool(os.getenv("GC_MARS_CLOUD_EMAIL", "").strip())
         and bool(os.getenv("GC_MARS_CLOUD_PASSWORD", "").strip())
-        and bool(os.getenv("GC_MARS_CLOUD_FAN_ID", "").strip())
+
     )
 
 
@@ -103,9 +103,9 @@ async def _fan_details(token: str) -> dict[str, Any]:
         raise ValueError("Fan device list unavailable")
     data = result.get("data") or {}
     rows = data.get("list", []) if isinstance(data, dict) else []
-    expected = os.environ["GC_MARS_CLOUD_FAN_ID"].strip()
-    matches = [row for row in rows
-               if isinstance(row, dict) and str(row.get("id")) == expected]
+    expected = os.getenv("GC_MARS_CLOUD_FAN_ID", "").strip()
+    matches = [row for row in rows if isinstance(row, dict)
+               and (str(row.get("id")) == expected if expected else True)]
     if len(matches) != 1:
         raise ValueError("Configured fan not found in authenticated account")
     return matches[0]
@@ -165,7 +165,7 @@ async def fan_control(body: FanControl):
         try:
             token = await _login()
             before = await _fan_details(token)
-            device_id = os.environ["GC_MARS_CLOUD_FAN_ID"].strip()
+            device_id = str(before["id"])
             if body.action == "speed":
                 route, data = "/udm/adjustLight/v1", {
                     "light": body.value, "deviceId": device_id, "groupId": None}
