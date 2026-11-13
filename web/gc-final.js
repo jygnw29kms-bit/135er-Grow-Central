@@ -27,6 +27,7 @@ function page(id){
  if(id==='rooms')loadRooms();
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
+ if(id==='more')api('/api/health').then(x=>text('aboutVersion',x.version||'—')).catch(()=>text('aboutVersion','Nicht verfügbar'));
  if(id==='devices')loadSmart(true);
  window.scrollTo(0,0);
 }
@@ -79,6 +80,7 @@ async function refreshLive(){
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
  const ok=lamp.fresh&&fan.fresh;
+ text('heroConnection',ok?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'KEINE AKTUELLEN WERTE');
  text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');
  $('systemBadge').classList.toggle('good',ok);$('systemBadge').classList.toggle('bad',!ok);
  text('coreStatus','Grow-Pi '+(ok?'verbunden':'erreichbar'));text('coreRow','Online');
@@ -131,6 +133,7 @@ async function loadRooms(){
  try{const d=await api('/api/v1/rooms');const rows=d.rooms||[];
  $('roomData').innerHTML=rows.length?rows.map(r=>'<article class="panel"><h3>'+esc(r.name||'Unbenannter Raum')+'</h3><p class="desc">Grow-Central Raum · '+esc(r.id)+'</p></article>').join(''):'<article class="panel"><p>Keine Räume angelegt.</p></article>';
  text('currentRoom',rows.length?(rows[0].name||'Growzelt'):'Growzelt');
+ text('heroRoom',rows.length?'RAUM: '+(rows[0].name||'Growzelt'):'KEIN RAUM EINGERICHTET');
  }catch(e){text('roomData','Raumliste derzeit nicht erreichbar');}
 }
 async function loadHistory(){
