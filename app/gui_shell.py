@@ -1,46 +1,26 @@
-"""Grow Central GUI routes.
-
-The productive desktop route is the approved GrowCentral Final Master.
-The former console remains available only through the explicit legacy route.
-"""
+"""Grow Central: one approved desktop/mobile/PWA GUI."""
 from pathlib import Path
-
 from fastapi import APIRouter
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
-ROOT = Path(__file__).resolve().parent.parent
-WEB_DIR = ROOT / "web"
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 router = APIRouter(tags=["gui-shell"])
-
 
 @router.get("/ui", include_in_schema=False)
 async def gui_shell():
-    """Serve the approved GrowCentral Final Master desktop UI."""
-    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control": "no-store"})
-
-
-@router.get("/rooms", include_in_schema=False)
-async def room_workspace():
-    """Room management and sensor diagnostics alongside the approved master UI."""
-    return FileResponse(WEB_DIR / "console.html", headers={"Cache-Control": "no-store"})
-
+    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control":"no-store"})
 
 @router.get("/mobile", include_in_schema=False)
 async def mobile_gui():
-    """Dedicated touch-first UI for phones and compact mobile devices."""
-    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control": "no-store"})
+    return RedirectResponse("/ui", status_code=308)
 
-
-@router.get("/legacy", include_in_schema=False)
-async def legacy_gui():
-    """Keep the proven diagnostic/transition console available explicitly."""
-    console = WEB_DIR / "console.html"
-    return FileResponse(console if console.exists() else WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
+@router.get("/rooms", include_in_schema=False)
+async def room_workspace():
+    return RedirectResponse("/ui", status_code=308)
 
 @router.get("/ui-legacy", include_in_schema=False)
-async def gui_legacy_master():
-    """Previous GUI for advanced workflows during migration."""
-    return FileResponse(WEB_DIR / "platform.html", headers={"Cache-Control": "no-store"})
+async def retired_gui():
+    return RedirectResponse("/ui", status_code=308)
 
 @router.get("/gc-worker.js", include_in_schema=False)
 async def gui_pwa_worker():
