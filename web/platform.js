@@ -298,6 +298,67 @@
     if(document.hidden && marsTimer!==null){clearInterval(marsTimer);marsTimer=null;}
   });
 
+  // Optional separate vendor-cloud control for DF150-M. Never log in or
+  // transmit actions until the owner explicitly clicks a control.
+  let cloudFanConfigured=false, cloudFanBusy=false;
+  async function cloudFanStatus(){
+    const state=$('marsCloudFanStatus');
+    if(!state)return;
+    try{
+      const status=await api('/api/mars-hydro/cloud-fan/status');
+      cloudFanConfigured=!!status.configured;
+      state.textContent=cloudFanConfigured
+        ?'Cloud-Zugang eingerichtet · Mars Hydro iPhone-App kann bei Anmeldung abgemeldet werden'
+        :'Cloud-Steuerung nicht eingerichtet. Lokal-Bluetooth-Livewerte funktionieren weiterhin.';
+    }catch(err){
+      cloudFanConfigured=false;
+      state.textContent='Cloud-Adapter: '+err.message;
+    }
+    for(const id of ['marsCloudFanRead','marsCloudFanSet','marsCloudFanOn','marsCloudFanOff','marsCloudFanSpeed']){
+      const item=$(id);if(item)item.disabled=!cloudFanConfigured;
+    }
+  }
+  async function cloudFanRequest(path,data){
+    return api('/api/mars-hydro/cloud-fan/'+path,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data||{}),
+    });
+  }
+  $('marsCloudFanSpeed')?.addEventListener('input',()=>{
+    setText('marsCloudFanSpeedValue',$('marsCloudFanSpeed').value+' %');
+  });
+  $('marsCloudFanPanel')?.addEventListener('toggle',()=>{
+    if($('marsCloudFanPanel').open)cloudFanStatus();
+  });
+  $('marsCloudFanRead')?.addEventListener('click',async()=>{
+    if(cloudFanBusy || !cloudFanConfigured)return;
+    if(!window.confirm('Mars Hydro Cloud anmelden? Dabei kann die Hersteller-App am iPhone abgemeldet werden.'))return;
+    cloudFanBusy=true;
+    try{
+      const r=await cloudFanRequest('fan/read',{});
+      setText('marsCloudFanResult','Cloud: '+r.fan.name+' · Sollwert '+(r.fan.speed_percent??'unbekannt')+' % · Quelle Hersteller-Cloud');
+    }catch(err){setText('marsCloudFanResult','Cloud-Abfrage: '+err.message);}
+    finally{cloudFanBusy=false;}
+  });
+  async function cloudFanControl(action,value){
+    if(cloudFanBusy||!cloudFanConfigured)return;
+    const label=action==='speed'?value+' % Drehzahl':value===1?'Lüfter EIN':'Lüfter AUS';
+    if(!window.confirm('DF150-M über Mars Hydro Cloud auf '+label+' setzen? Es wird genau ein echter Steuerbefehl gesendet.'))return;
+    cloudFanBusy=true;
+    setText('marsCloudFanResult','Sende genau einen Lüfterbefehl und lese Status zurück…');
+    try{
+      const r=await cloudFanRequest('fan/control',{action,value,confirm:true});
+      setText('marsCloudFanResult',r.readback_matches
+        ?'Hersteller-Cloud bestätigt '+label+' · physische Wirkung nicht unabhängig geprüft'
+        :'Befehl vom Anbieter angenommen; Rückmeldung stimmt noch nicht überein. Keine automatische Wiederholung.');
+    }catch(err){setText('marsCloudFanResult','Steuerung: '+err.message);}
+    finally{cloudFanBusy=false;}
+  }
+  $('marsCloudFanSet')?.addEventListener('click',()=>cloudFanControl('speed',Number($('marsCloudFanSpeed').value)));
+  $('marsCloudFanOn')?.addEventListener('click',()=>cloudFanControl('power',1));
+  $('marsCloudFanOff')?.addEventListener('click',()=>cloudFanControl('power',0));
+
   async function scanLocalBluetooth() {
     const btn=$('bleDiscoverBtn'), status=$('bleDiscoveryStatus'), list=$('bleDiscoveryResults');
     if(!btn||!status||!list)return;
