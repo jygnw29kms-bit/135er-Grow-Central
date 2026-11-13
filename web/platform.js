@@ -147,7 +147,7 @@
   // grant trust or write access as a side effect of discovery.
   // Mars Hydro live controls are embedded in the ordinary Devices view.
   // Read-only by design: no GATT writes, no lamp dimming without validation.
-  let marsFanId=null, marsLastScan=0, marsTimer=null, marsBusy=false;
+  let marsFanId=null, marsLampId=null, marsLastScan=0, marsTimer=null, marsBusy=false, marsLampBusy=false;
   const marsHistory=[];
   function marsRecordSample(v){
     const row={time:new Date().toISOString(),temperature_c:Number(v.temperature_c),
@@ -200,6 +200,7 @@
         const fan=(found.devices||[]).find(d=>d.profile?.target_role==='fan' && d.name?.includes('MZF002'));
         const lamp=(found.devices||[]).find(d=>d.profile?.target_role==='light' && d.name?.endsWith('C260'));
         marsFanId=fan?.candidate_id||null;
+        marsLampId=lamp?.candidate_id||null;
         setText('marsLampDetection',lamp?'FC3000 über Bluetooth erkannt · '+lamp.rssi+' dBm':'FC3000 gerade nicht sichtbar · Verbindung über Hersteller-App möglich');
         if(!marsFanId){status.textContent='DF150-M nicht sichtbar. Bitte Bluetooth-Verbindung der Hersteller-App trennen.';return;}
       }
@@ -224,6 +225,42 @@
     }catch(err){status.textContent='Mars Hydro: '+err.message+' · letzte Werte nicht aktuell';marsFanId=null;}
     finally{marsBusy=false;if(btn)btn.disabled=false;}
   }
+  // Direct FC3000 status read from observed 19-field MARS notifications.
+  // NEVER issue device writes. Stale readings are explicitly labelled.
+  async function marsLampRead(forceScan=true){
+    const button=$('marsLampRead');
+    if(marsLampBusy||document.hidden||!document.getElementById('devices')?.classList.contains('active'))return;
+    marsLampBusy=true;if(button)button.disabled=true;
+    try {
+      if(forceScan||!marsLampId||Date.now()-marsLastScan>120000){
+        setText('marsLampUpdated','FC3000 Bluetooth wird gesucht…');
+        const found=await api('/api/mars-hydro/ble/scan',{method:'POST'});
+        marsLastScan=Date.now();
+        const lamp=(found.devices||[]).find(d=>d.profile?.target_role==='light'&&d.name?.endsWith('C260'));
+        marsLampId=lamp?.candidate_id||null;
+        setText('marsLampDetection',lamp?'FC3000 erkannt · '+lamp.rssi+' dBm':'FC3000 nicht sichtbar · Mars Legacy kann die Verbindung belegen');
+        if(!marsLampId){setText('marsLampUpdated','Kein Bluetooth-Kandidat. Lampe eingeschaltet lassen und Mars Legacy schließen.');return;}
+      }
+      setText('marsLampUpdated','Lese FC3000-Status (5 Sekunden)…');
+      const result=await api('/api/mars-hydro/ble/observe-lamp-telemetry',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({candidate_id:marsLampId})
+      });
+      if(result.status!=='decoded'||!result.latest){
+        setText('marsLampUpdated','Keine neue FC3000-Statusmeldung. Vorherige Anzeige ist nicht aktuell.');
+        return;
+      }
+      const v=result.latest;
+      setText('marsLampPower',v.power_on?'Ein':'Aus');
+      setText('marsLampBrightness',v.brightness_percent+' %');
+      setText('marsLampUpdated','Echte BLE-Daten · Firmware '+v.firmware_version+' · '+new Date().toLocaleTimeString('de-DE')+
+        ' · '+result.sample_count+' Meldungen');
+    }catch(err){
+      setText('marsLampUpdated','Verbindungsfehler: '+err.message+' · angezeigte Werte nicht aktuell');
+      marsLampId=null;
+    }finally{marsLampBusy=false;if(button)button.disabled=false;}
+  }
+  $('marsLampRead')?.addEventListener('click',()=>marsLampRead(true));
   $('marsConnectLive')?.addEventListener('click',()=>{
     marsLiveRead(true);
     if(marsTimer===null)marsTimer=setInterval(()=>marsLiveRead(false),30000);
