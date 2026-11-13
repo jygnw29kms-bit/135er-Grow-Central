@@ -2,7 +2,7 @@
 
 The MZF002 field map was observed in iPhone HCI captures on 2026-11-12.
 This module never opens BLE connections or writes to characteristics. The
-unverified CFM/Pa displays in the vendor app are deliberately NOT synthesized.
+CFM/Pa are explicitly labelled SHOW/estimated, never sensor readings.
 """
 from __future__ import annotations
 
@@ -18,6 +18,24 @@ def _number(value: str) -> float | None:
         return None
     x = float(value.replace(",", "."))
     return x if math.isfinite(x) else None
+
+
+def mzf002_display_estimates(power_on: bool, setpoint_percent: int) -> dict[str, Any]:
+    """Optional display-only Mars Legacy-style curve fitted to 25/50/59% snapshots.
+
+    Not actual measured airflow or static pressure. Never feed control loops.
+    """
+    if not power_on or setpoint_percent <= 0:
+        cfm = pa = 0.0
+    else:
+        cfm = max(0.0, round(19.0 + 3.8 * setpoint_percent, 1))
+        pa = max(0.0, round(5.6 * setpoint_percent - 90.0, 1))
+    return {
+        "airflow_cfm": cfm,
+        "pressure_pa": pa,
+        "airflow_pressure_source": "estimated_from_setpoint_show_only",
+        "airflow_pressure_measured": False,
+    }
 
 
 def mzf002_telemetry(data: bytes) -> dict[str, Any] | None:
@@ -52,8 +70,7 @@ def mzf002_telemetry(data: bytes) -> dict[str, Any] | None:
         "temperature_c": temp,
         "humidity_rh": humidity,
         "rpm": rpm,
-        "airflow_cfm": None,
-        "pressure_pa": None,
+        **mzf002_display_estimates(fields[12] == "1", setpoint),
         "decoded_fields": [12, 13, 19, 20, 21],
         "interpretation": "observed_from_mars_legacy_hci",
         "read_only": True,
