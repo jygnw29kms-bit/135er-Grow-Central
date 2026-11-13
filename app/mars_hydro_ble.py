@@ -527,7 +527,7 @@ async def control_lamp_trial(body: LampControlTrialRequest):
 
     address = _candidate(body.candidate_id)
     candidate = _candidates.get(body.candidate_id)
-    if not candidate or candidate[1].upper() != "MZ_MARS_0_" + allowed_id:
+    if not candidate or not re.fullmatch(r"MZ_MARS_(?:0|68756)_" + re.escape(allowed_id), candidate[1].upper()):
         raise HTTPException(403, "Lampenidentität stimmt nicht mit dem Privatgerät überein.")
 
     async with _capture_lock:
