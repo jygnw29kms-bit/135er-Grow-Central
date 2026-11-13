@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
-from app.mars_legacy_telemetry import mzf002_telemetry
+from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -433,6 +433,59 @@ async def observe_fan_telemetry(body: InspectRequest):
         except Exception as exc:
             logger.warning("MZF002 telemetry observe failed: %s", type(exc).__name__)
             raise HTTPException(502, _transport_error(exc, "MZF002-Statusbeobachtung")) from exc
+
+
+@router.post("/observe-lamp-telemetry")
+async def observe_lamp_telemetry(body: InspectRequest):
+    """Read actual FC3000 On/Off and brightness from captured-family BLE notifications.
+
+    Does not authenticate or issue any device control commands. Device identity
+    must still be verified separately before write access can ever be enabled.
+    """
+    address = _candidate(body.candidate_id)
+    row = _candidates.get(body.candidate_id)
+    if not row or device_family(row[1], [])["target_role"] != "light":
+        raise HTTPException(422, "Nur ein erneut erkannter FC3000/C260-Lichtkandidat ist erlaubt.")
+    if _capture_lock.locked():
+        raise HTTPException(409, "Eine andere Bluetooth-Diagnose läuft bereits.")
+    async with _capture_lock:
+        samples: list[dict[str, Any]] = []
+        try:
+            async with BleakClient(address, timeout=12.0) as client:
+                services = _services(client)
+                _characteristic(services, MZF002_NOTIFY, "notify")
+                def capture(_sender: Any, data: bytearray):
+                    if len(samples) >= 12:
+                        return
+                    value = fc3000_telemetry(bytes(data))
+                    if value is not None:
+                        samples.append(value)
+                subscribed = False
+                try:
+                    await asyncio.wait_for(client.start_notify(MZF002_NOTIFY, capture), timeout=6.0)
+                    subscribed = True
+                    await asyncio.sleep(5.0)
+                finally:
+                    if subscribed and getattr(client, "is_connected", True):
+                        try:
+                            await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY), timeout=3.0)
+                        except Exception as exc:
+                            logger.warning("FC3000 notify cleanup failure: %s", type(exc).__name__)
+            return {
+                "candidate_id": body.candidate_id,
+                "device_family": "MARS",
+                "status": "decoded" if samples else "no_matching_telemetry",
+                "latest": samples[-1] if samples else None,
+                "sample_count": len(samples),
+                "identity_verified": False,
+                "control_enabled": False,
+                "raw_payload_returned": False,
+            }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("FC3000 telemetry observe failed: %s", type(exc).__name__)
+            raise HTTPException(502, _transport_error(exc, "FC3000-Statusbeobachtung")) from exc
 
 
 @router.post("/control-test")
