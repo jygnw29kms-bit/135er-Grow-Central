@@ -148,6 +148,33 @@
   // Mars Hydro live controls are embedded in the ordinary Devices view.
   // Read-only by design: no GATT writes, no lamp dimming without validation.
   let marsFanId=null, marsLastScan=0, marsTimer=null, marsBusy=false;
+  const marsHistory=[];
+  function marsRecordSample(v){
+    const row={time:new Date().toISOString(),temperature_c:Number(v.temperature_c),
+      humidity_rh:Number(v.humidity_rh),rpm:Number(v.rpm),
+      power_on:!!v.power_on,setpoint_percent:Number(v.setpoint_percent)};
+    if(![row.temperature_c,row.humidity_rh,row.rpm,row.setpoint_percent].every(Number.isFinite))return;
+    marsHistory.push(row);if(marsHistory.length>120)marsHistory.shift();
+    const el=$('marsHistory');if(el){
+      el.replaceChildren();
+      for(const sample of marsHistory.slice(-8).reverse()){
+        const line=document.createElement('div');line.className='device-row';
+        line.textContent=new Date(sample.time).toLocaleTimeString('de-DE')+' · '+sample.temperature_c.toLocaleString('de-DE')+
+          ' °C · '+sample.humidity_rh.toLocaleString('de-DE')+' % rF · '+sample.rpm+' RPM · '+sample.setpoint_percent+' %';
+        el.appendChild(line);
+      }
+    }
+    const download=$('marsExportCsv');if(download)download.disabled=false;
+  }
+  $('marsExportCsv')?.addEventListener('click',()=>{
+    if(!marsHistory.length)return;
+    const columns=['time','temperature_c','humidity_rh','rpm','power_on','setpoint_percent'];
+    const csv=[columns.join(';'),...marsHistory.map(r=>columns.map(k=>r[k]).join(';'))].join('\\r\\n');
+    const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');link.href=url;link.download='grow-central-mars-df150m-messverlauf.csv';
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  });
   async function marsLiveRead(reconnect=false){
     const status=$('marsLiveStatus');
     if(!status || marsBusy || document.hidden || !document.getElementById('devices')?.classList.contains('active'))return;
@@ -175,6 +202,7 @@
         return;
       }
       const v=result.latest;
+      marsRecordSample(v);
       setText('marsFanTemp',Number(v.temperature_c).toLocaleString('de-DE',{maximumFractionDigits:1})+' °C');
       setText('marsFanHumidity',Number(v.humidity_rh).toLocaleString('de-DE',{maximumFractionDigits:1})+' %');
       setText('marsFanRpm',Number(v.rpm).toLocaleString('de-DE')+' RPM');
