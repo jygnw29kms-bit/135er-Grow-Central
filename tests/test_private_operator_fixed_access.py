@@ -36,6 +36,17 @@ class OperatorAccessTests(unittest.TestCase):
         self.assertIn("gc-firstboot-maintenance-provision.sh",self.patch)
         self.assertIn("sha256sum",self.patch)
 
+    def test_real_sudo_not_just_group_membership(self):
+        installer=(ROOT/"scripts/install-gc-maintenance-agent.sh").read_text()
+        firstboot_unit=(ROOT/"systemd/grow-central-firstboot-maintenance.service").read_text()
+        finalizer=(ROOT/"scripts/finalize-private-operator-image-root.sh").read_text()
+        self.assertIn('runuser -u "$USER_NAME" -- sudo -n /usr/bin/id -u',installer)
+        self.assertIn('[[ "$verified_uid" != 0 ]]',installer)
+        self.assertIn('MAINTENANCE_SUDO_VERIFIED=UID_0',installer)
+        self.assertIn('NoNewPrivileges=no',firstboot_unit)
+        self.assertIn("operator-maint-password.hash",finalizer)
+        self.assertIn("grow-central-mesh-agent.service",finalizer)
+
     def test_no_shared_secret_published(self):
         source="\n".join((self.builder,self.firstboot,self.patch))
         self.assertNotIn("Linus29052020",source)
