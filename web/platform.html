@@ -248,7 +248,19 @@
     <div><span class="gc-app-eyebrow">Grow Intelligence · Langzeitaufzeichnung</span><h3>Deine Pflanzen-Historie</h3><p>Messwerte bleiben auf dem Pi gespeichert, auch nach einem Neustart.</p></div>
     <div class="gc-app-status" id="gcHistoryCount">Prüfe das Archiv…</div>
   </div>
-  <header><h3>Klima im Zeitverlauf</h3><select id="gcHistoryPeriod" class="gc-app-picker" aria-label="Zeitraum wählen">
+  <header><h3>Messwerte im Zeitverlauf</h3><div class="gc-app-actions">
+  <select id="gcHistoryMetric" class="gc-app-picker" aria-label="Messgröße wählen">
+    <option value="temperature_c">Temperatur</option>
+    <option value="humidity_percent">Luftfeuchte</option>
+    <option value="fan_rpm">Lüfterdrehzahl</option>
+    <option value="fan_setpoint_percent">Lüfterstufe</option>
+    <option value="lamp_brightness_percent">Lichtstufe</option>
+    <option value="soil_moisture_percent">Bodenfeuchte</option>
+    <option value="soil_temperature_c">Bodentemperatur</option>
+    <option value="ppfd_umol_m2_s">PPFD</option>
+    <option value="ec_ms_cm">EC</option><option value="ph">pH</option>
+  </select>
+  <select id="gcHistoryPeriod" class="gc-app-picker" aria-label="Zeitraum wählen">
     <option value="1">Letzte 24 Stunden</option><option value="7" selected>7 Tage</option><option value="30">30 Tage</option>
     <option value="365">12 Monate</option><option value="1095">3 Jahre</option>
   </select></header>
@@ -301,5 +313,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=20261113-fan-show-1"></script><script src="/static/gc-app-controls.js?v=20261113-a2"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
+<script src="/static/platform.js?v=20261113-fan-show-1"></script><script src="/static/gc-app-controls.js?v=20261113-a3"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
 </body></html>
