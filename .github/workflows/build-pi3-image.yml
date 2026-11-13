@@ -55,6 +55,23 @@ jobs:
           name: bundled-sensor-firmware
           path: firmware/gc-soil-node/dist/
 
+      - name: Verify private image remote maintenance contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/install-gc-maintenance-agent.sh
+          bash -n scripts/build-private-pi-image.sh
+          bash -n image-builder/firstboot/gc-firstboot-maintenance-provision.sh
+          bash -n image-builder/firstboot/gc-operator-image-check.sh
+          bash -n image-builder/firstboot/gc-remote-watchdog.sh
+          grep -Fq 'MAINTENANCE_SUDO_VERIFIED=UID_0' scripts/install-gc-maintenance-agent.sh
+          grep -Fq 'runuser -u "$USER_NAME" -- sudo -n /usr/bin/id -u' scripts/install-gc-maintenance-agent.sh
+          grep -Fq 'NoNewPrivileges=no' systemd/grow-central-firstboot-maintenance.service
+          grep -Fq 'NoNewPrivileges=no' systemd/grow-central-mesh-agent.service
+          grep -Fq 'NetworkManager.service' scripts/build-private-pi-image.sh
+          grep -Fq 'ssh.service' scripts/build-private-pi-image.sh
+          grep -Fq 'grow-central-remote-watchdog.timer' scripts/build-private-pi-image.sh
+
       - name: Install image build tools
         run: |
           sudo apt-get update
