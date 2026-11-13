@@ -1,6 +1,6 @@
 /* Grow Central PWA: shell only; live measurements and commands always network-only. */
-const CACHE='gc-shell-20261113-hero-02';
-const SHELL=['/ui','/static/gc-final.css?v=20261113-hero-02','/static/gc-final.js?v=20261113-hero-02','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
+const CACHE='gc-shell-20261113-future-05';
+const SHELL=['/static/gc-final.css?v=20261113-future-05','/static/gc-final.js?v=20261113-future-05','/static/mars-fc3000-official.jpg','/static/mars-df150m-official.jpg','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
@@ -10,10 +10,7 @@ self.addEventListener('activate',event=>{
 self.addEventListener('fetch',event=>{
  const req=event.request,url=new URL(req.url);
  if(req.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname==='/gc-worker.js')return;
- if(req.mode==='navigate'){
-  event.respondWith(fetch(req).then(res=>res).catch(()=>caches.match('/ui')));
-  return;
- }
+ if(req.mode==='navigate')return;
  if(url.pathname.startsWith('/static/')){
   event.respondWith(fetch(req).then(res=>{
    if(res.ok){const copy=res.clone();caches.open(CACHE).then(cache=>cache.put(req,copy));}
