@@ -144,7 +144,21 @@
       </div>
       <button class="master-primary" type="button" id="marsLampRead">FC3000 Status lesen</button>
       <small id="marsLampUpdated" style="display:block;margin-top:8px">Noch keine Statusmeldung empfangen.</small>
-      <small>FC3000-Firmware V3.4: Ein/Aus und Helligkeit aus echten Notifications dekodiert. Schreiben bleibt bis zur Sitzungsvalidierung gesperrt.</small>
+      <small>FC3000-Firmware V3.4: Ein/Aus und Helligkeit werden aus echten Notifications dekodiert.</small>
+      <details id="marsLampControlPanel" style="margin-top:12px">
+        <summary>FC3000 · kontrollierter Steuerungstest</summary>
+        <p>Nur nach manueller Bestätigung: exakt ein BLE-Befehl an deine FC3000, keine Wiederholung. Erfordert eine frische Statusmeldung und freie Bluetooth-Verbindung.</p>
+        <label for="marsLampTrialAction">Aktion</label>
+        <select id="marsLampTrialAction">
+          <option value="brightness">Helligkeit setzen</option>
+          <option value="power_on">Licht einschalten</option>
+          <option value="power_off">Licht ausschalten</option>
+        </select>
+        <label for="marsLampTrialLevel">Helligkeit <strong id="marsLampTrialLevelText">50 %</strong></label>
+        <input id="marsLampTrialLevel" type="range" min="10" max="100" value="50" step="1" style="width:100%">
+        <button type="button" class="master-primary" id="marsLampTrialRun">Einmaligen Befehl bestätigen und senden</button>
+        <small id="marsLampTrialMessage" role="status" style="display:block;margin-top:8px">Bis zur Bestätigung wird nichts an die Lampe gesendet.</small>
+      </details>
     </div>
   </div>
 </article><article class="master-panel" id="bleDiscoveryPanel" aria-label="Bluetooth Geräteerkennung"><div class="master-panel-head"><h3>Bluetooth-Geräte in Reichweite</h3><button class="master-primary" id="bleDiscoverBtn" type="button">Bluetooth suchen</button></div><p id="bleDiscoveryStatus" role="status">Pi-Bluetooth: noch nicht geprüft. Es werden alle sichtbaren Hersteller gesucht, ohne Kopplung oder Steuerbefehle.</p><div id="bleDiscoveryResults" class="device-table"><div class="empty">Noch kein Bluetooth-Scan ausgeführt.</div></div><pre id="bleGattDetails" hidden style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto"></pre><p><a href="/static/mars-hydro-ble.html">Erweiterte Bluetooth-Diagnose öffnen</a></p></article><section id="sensorPairing" class="pairing-panel"><h3>Grow-Central Sensoren</h3><p>Erkennung automatisch, Aufnahme nur durch dich. Neue Sensoren erhalten erst nach Identitätsprüfung, Name und Raumzuweisung produktiven Zugriff.</p></section><div class="filterbar"><button class="active" data-filter="all">Alle</button><button data-filter="online">Online</button><button data-filter="sensor">Sensoren</button><button data-filter="light">Licht</button><button data-filter="fan">Lüfter</button><button data-filter="switch">Schalter</button><button class="advanced-only" data-filter="provider">Provider</button></div><article class="master-panel"><div class="table-head"><span>GERÄT</span><span>TYP</span><span>PROVIDER</span><span>STATUS / WERTE</span></div><div id="deviceList" class="device-table"><div class="empty">Geräte werden geladen…</div></div></article><article class="master-panel advanced-only provider-panel"><div class="master-panel-head"><h3>Unterstützte Plattformen</h3><span id="providerCount">—</span></div><div class="provider-grid" id="providerGrid"></div></article><div id="devicePreview" hidden></div></section>
@@ -187,5 +201,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=20261113-fc3000-status1"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
+<script src="/static/platform.js?v=20261113-fc3000-trial1"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
 </body></html>
