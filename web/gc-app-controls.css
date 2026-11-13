@@ -68,3 +68,10 @@
 .gc-quick-card.archive{background:linear-gradient(160deg,#1d302c,#121d27);border-color:#4a695f}
 @media(max-width:1000px){.gc-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.gc-quick{margin:12px}.gc-quick-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;padding-bottom:5px}.gc-quick-card{flex:0 0 145px;min-height:118px;scroll-snap-align:start}.gc-quick-head{display:block}.gc-quick-card strong{font-size:23px}.gc-quick-head .gc-app-caption{display:block;margin-top:7px}}
+
+/* Cohesive native-feeling subviews, retaining Final Master background and nav. */
+.gc-hub{margin:0 0 15px;padding:20px;border-radius:17px;border:1px solid #2c5146;background:linear-gradient(135deg,#142b2a,#0a191e)}
+.gc-hub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gc-hub .gc-app-mini{min-height:105px;display:flex;flex-direction:column;justify-content:center;padding:16px}
+.gc-hub .gc-app-mini b{font-size:25px}
+@media(max-width:700px){.gc-hub{margin:0 12px 14px;padding:16px}.gc-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gc-hub-grid .gc-app-mini:last-child{grid-column:1/-1}}
