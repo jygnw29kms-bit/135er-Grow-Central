@@ -17,6 +17,7 @@ import sqlite3
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from fastapi.responses import Response
 from app.security import require_write_auth
 
@@ -64,7 +65,44 @@ def connect():
     db.execute("CREATE INDEX IF NOT EXISTS idx_points_lookup ON points(metric,recorded_at)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_points_grow ON points(grow_id,recorded_at)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_points_room ON points(room_id,recorded_at)")
+    db.execute("""CREATE TABLE IF NOT EXISTS device_room (
+        device TEXT PRIMARY KEY, room_id TEXT NOT NULL, bound_at TEXT NOT NULL
+    )""")
     return db
+
+def room_for(device: str) -> str|None:
+    with closing(connect()) as db:
+        row=db.execute("SELECT room_id FROM device_room WHERE device=?",(device,)).fetchone()
+    return row["room_id"] if row else None
+
+
+class RoomBind(BaseModel):
+    device: str = Field(pattern=r"^mars-hydro-(?:mzf002|fc3000)$")
+    room_id: str = Field(min_length=1,max_length=100)
+
+
+@router.post("/bind-device")
+def bind_device(body: RoomBind):
+    # Source room must exist. Binding never changes the physical equipment.
+    from app.rooms import load_state
+    state=load_state()
+    if not any(r.get("id")==body.room_id for r in state.get("rooms",[])):
+        raise HTTPException(404,"Raum existiert nicht")
+    now=datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with closing(connect()) as db,db:
+        db.execute("""INSERT INTO device_room(device,room_id,bound_at)
+           VALUES(?,?,?) ON CONFLICT(device) DO UPDATE SET
+           room_id=excluded.room_id,bound_at=excluded.bound_at""",
+           (body.device,body.room_id,now))
+    return {"ok":True,"device":body.device,"room_id":body.room_id}
+
+
+@router.get("/bindings")
+def bindings():
+    with closing(connect()) as db:
+        data=[dict(row) for row in db.execute("SELECT device,room_id,bound_at FROM device_room")]
+    return {"devices":data}
+
 
 def append(device: str, values: dict[str,Any], *, room_id: str|None=None,
            grow_id: str|None=None, plant_id: str|None=None, source: str="") -> int:
