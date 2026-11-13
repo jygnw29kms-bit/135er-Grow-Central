@@ -49,9 +49,24 @@ install -d -m 0700 "$root/etc/135er-grow-central"
 printf '%s\n' "$hash" > "$root/etc/135er-grow-central/operator-maint-password.hash"
 chmod 0600 "$root/etc/135er-grow-central/operator-maint-password.hash"
 unset hash
+installer="$source_root/scripts/install-gc-maintenance-agent.sh"
+[[ -f "$installer" ]] || { echo "Current maintenance installer missing" >&2; exit 4; }
+grep -Fq 'MAINTENANCE_SUDO_VERIFIED=UID_0' "$installer" || {
+  echo "Maintenance installer lacks actual root/sudo verification" >&2; exit 4;
+}
+install -o root -g root -m 0755 "$installer" "$root/opt/135er-grow-central/scripts/install-gc-maintenance-agent.sh"
+[[ -f "$root/etc/systemd/system/grow-central-firstboot-maintenance.service" ]] || exit 4
+grep -Fxq 'User=root' "$root/etc/systemd/system/grow-central-firstboot-maintenance.service" || exit 4
+grep -Fxq 'NoNewPrivileges=no' "$root/etc/systemd/system/grow-central-firstboot-maintenance.service" || exit 4
+# Preserve the base-source SHA and separately record the access-policy patch revision.
+git -C "$source_root" rev-parse HEAD > "$root/opt/135er-grow-central/OPERATOR_ACCESS_PATCH_COMMIT"
+printf '%s\n' 'FIXED_TEST_PASSWORD_SUDO_UID0_MESHCENTRAL' > "$root/opt/135er-grow-central/OPERATOR_ACCESS_POLICY"
 install -o root -g root -m 0755 "$script" "$root/usr/local/sbin/gc-firstboot-maintenance-provision"
 install -o root -g root -m 0755 "$script" "$root/opt/135er-grow-central/image-builder/firstboot/gc-firstboot-maintenance-provision.sh"
 [[ -L "$root/etc/systemd/system/multi-user.target.wants/grow-central-firstboot-maintenance.service" ]] || exit 4
+[[ -L "$root/etc/systemd/system/multi-user.target.wants/grow-central-mesh-agent.service" ]] || exit 4
+[[ -L "$root/etc/systemd/system/multi-user.target.wants/ssh.service" ]] || exit 4
+[[ -L "$root/etc/systemd/system/timers.target.wants/grow-central-remote-watchdog.timer" ]] || exit 4
 sync
 umount "$work/boot"; boot_on=0
 umount "$work/root"; root_on=0
