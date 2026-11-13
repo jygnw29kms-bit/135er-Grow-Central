@@ -1,0 +1,15 @@
+[Unit]
+Description=Create consistent Grow Central long-term history snapshot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=growcentral
+Group=growcentral
+WorkingDirectory=/opt/135er-grow-central
+ExecStart=/opt/135er-grow-central/.venv/bin/python -m scripts.history_backup
+TimeoutStartSec=120
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/135er-grow-central
