@@ -45,7 +45,7 @@
 .gc-app-comparerow{border:1px solid #304b49;background:#10272a;border-radius:13px;padding:14px;min-width:0}
 .gc-app-comparerow b{font-size:15px;display:block;color:#e7f8f5}
 .gc-app-comparerow span{font-size:12px;color:#9ab5b0;margin-top:7px;display:block}
-.gc-app-growform{display:grid;grid-template-columns:1.2fr .9fr .8fr auto;gap:9px;align-items:end;margin-top:16px}
+.gc-app-growform{display:grid;grid-template-columns:1.2fr .85fr .8fr 1fr auto;gap:9px;align-items:end;margin-top:16px}
 .gc-app-field span{display:block;font-size:10px;color:#91b2aa;margin-bottom:7px}
 .gc-app-field input{height:43px;width:100%;border:1px solid #365b52;background:#112328;color:#e9fff2;border-radius:9px;padding:0 10px;font-size:12px}
 .gc-app-technical{margin-top:16px;border-top:1px solid #244038;padding-top:12px}
