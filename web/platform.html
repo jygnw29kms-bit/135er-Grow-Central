@@ -121,11 +121,18 @@
       <div class="master-metric"><small>Betrieb / Sollwert</small><strong id="marsFanState">—</strong></div>
     </div><small id="marsFanUpdated">Noch kein Live-Wert</small>
     <div class="master-metrics" style="margin-top:12px">
-      <div class="master-metric"><small>Luftvolumen · App-Referenz</small><strong>114,0 CFM</strong><small>Screenshot, kein BLE-Live-Wert</small></div>
-      <div class="master-metric"><small>Winddruck · App-Referenz</small><strong>50,0 Pa</strong><small>Screenshot, kein BLE-Live-Wert</small></div>
-      <div class="master-metric"><small>Gerätemodus · App-Referenz</small><strong>cmd</strong><small>Zuletzt in Mars Legacy angezeigt</small></div>
+      <div class="master-metric"><small>Luftvolumen (BLE)</small><strong>—</strong><small>Keine bestätigte Live-Datenquelle</small></div>
+      <div class="master-metric"><small>Winddruck (BLE)</small><strong>—</strong><small>Keine bestätigte Live-Datenquelle</small></div>
+      <div class="master-metric"><small>Gerätemodus</small><strong>cmd</strong><small>Nur Hersteller-App-Screenshot, nicht live</small></div>
       <div class="master-metric"><small>Timer / Einrichten</small><strong>Hersteller-App</strong><small>Lokale Kommandos noch nicht verifiziert</small></div>
     </div>
+    <details style="margin-top:12px"><summary>Abgleich mit der Mars-Hydro-App (Referenzwerte)</summary>
+      <p>Hersteller-App-Screenshots, nicht aus BLE berechnet:</p>
+      <div class="device-row">25 % · 800 RPM · 18,1 °C · 57,1 % rF · 114,0 CFM · 50,0 Pa</div>
+      <div class="device-row">59 % · 2360 RPM · 18,3 °C · 58,4 % rF · 243,2 CFM · 240,4 Pa</div>
+    </details>
+    <div id="marsTrendLabel" class="state-badge" style="margin-top:12px">Drehzahlverlauf: Noch keine Daten</div>
+    <svg id="marsRpmChart" viewBox="0 0 640 120" width="100%" height="120" role="img" aria-label="Echter Drehzahlverlauf des DF150-M" style="display:block;background:#08191c;border-radius:9px;margin-top:8px"><polyline id="marsRpmLine" fill="none" stroke="#67f5b6" stroke-width="3" points=""></polyline></svg>
     <div class="master-panel-head" style="margin-top:12px"><h4>Messverlauf (Browser-Sitzung)</h4><button class="secondary" type="button" id="marsExportCsv" disabled>Messwerte CSV exportieren</button></div>
     <div id="marsHistory" class="device-table" aria-live="polite"><div class="empty">Noch keine Messwerte aufgezeichnet.</div></div>
     </div>
@@ -171,5 +178,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=20261113-marslive2"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
+<script src="/static/platform.js?v=20261113-marslive3"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
 </body></html>
