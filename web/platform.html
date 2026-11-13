@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/platform-master.css?v=20261015-menu2">
 <link rel="stylesheet" href="/static/platform-visual.css?v=20261015-menu2">
 <link rel="stylesheet" href="/static/sensor_pairing.css?v=20261015-live4">
+<link rel="stylesheet" href="/static/gc-app-controls.css?v=20261113-a1">
 </head>
 <body>
 <div class="app-shell master-shell">
@@ -111,7 +112,50 @@
 
 <section id="grow" class="view master-view room-board"><div class="master-section-head"><div><small>ANBAU / RÄUME</small><h2>Räume</h2><p>Alle Growboxen, Sensorwerte, Gerätezuordnungen und Pflanzen in einer gemeinsamen Raumansicht.</p></div><a class="master-primary advanced-only" href="/rooms">Räume verwalten</a></div><div id="growCards" class="cards-grid master-room-grid"><article class="master-panel empty-state"><b>Räume werden geladen…</b></article></div></section>
 
-    <section id="devices" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GERÄTE</small><h2>Geräte</h2><p>Herstellerunabhängige Geräteliste mit sicherer Erkennung, Status und Live-Werten.</p></div><button class="master-primary" id="discoverBtn">Geräte suchen</button></div><article class="master-panel" id="marsLivePanel" aria-label="Mars Hydro Live" style="margin:12px 0;padding:18px;border:1px solid #236b55;border-radius:14px">
+    <section id="devices" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GERÄTE</small><h2>Geräte</h2><p>Herstellerunabhängige Geräteliste mit sicherer Erkennung, Status und Live-Werten.</p></div><button class="master-primary" id="discoverBtn">Geräte suchen</button></div><section class="gc-app" id="gcDeviceApp" aria-label="Mars Hydro Steuerung">
+  <div class="gc-app-head">
+    <div><span class="gc-app-eyebrow">Live Control · Lokal über Bluetooth</span><h3>Deine Grow-Geräte</h3><p>Einfach bedienen. Echte Rückmeldung direkt vom Controller.</p></div>
+    <div><div id="gcDeviceStatus" class="gc-app-status" role="status">Verbinde Geräte…</div><button type="button" class="gc-app-btn secondary" id="gcAppRefresh">↻ Aktualisieren</button></div>
+  </div>
+  <div class="gc-app-grid">
+    <article class="gc-app-card" aria-label="DF150-M Lüfter">
+      <header><div class="gc-app-identity"><div class="gc-app-icon" aria-hidden="true">◉</div>
+        <div><strong>Abluft</strong><small>Mars Hydro DF150-M</small></div></div><span class="gc-app-pill" id="gcFanOnline">Verbinde…</span></header>
+      <div class="gc-app-value"><strong id="gcFanNow">—</strong></div>
+      <div class="gc-app-meta">
+        <div class="gc-app-mini"><small>Motordrehzahl</small><b id="gcFanRpm">—</b><em>Istwert</em></div>
+        <div class="gc-app-mini"><small>Temperatur</small><b id="gcFanTemp">—</b><em>Istwert</em></div>
+        <div class="gc-app-mini"><small>Luftfeuchte</small><b id="gcFanHumidity">—</b><em>Istwert</em></div>
+      </div>
+      <div class="gc-app-meta" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="gc-app-mini"><small>Volumenstrom</small><b><span id="gcFanCfm">—</span> CFM</b><em>Berechneter Showwert</em></div>
+        <div class="gc-app-mini"><small>Winddruck</small><b><span id="gcFanPa">—</span> Pa</b><em>Berechneter Showwert</em></div>
+      </div>
+      <label for="gcFanSlider" class="gc-app-eyebrow">Lüfterstufe · <span id="gcFanTarget">25 %</span></label>
+      <input class="gc-app-range" id="gcFanSlider" type="range" min="25" max="100" step="1" value="25">
+      <div class="gc-app-actions"><button type="button" id="gcFanApply" class="gc-app-btn primary">Lüfterstufe übernehmen</button></div>
+      <p class="gc-app-note">25–100 % hardwaregetestet. Lüfter-Aus gesondert noch nicht validiert.</p>
+    </article>
+    <article class="gc-app-card lamp" aria-label="FC3000 Licht">
+      <header><div class="gc-app-identity"><div class="gc-app-icon" aria-hidden="true">☼</div>
+        <div><strong>Beleuchtung</strong><small>Mars Hydro FC3000</small></div></div><span class="gc-app-pill" id="gcLampOnline">Verbinde…</span></header>
+      <div class="gc-app-value"><strong id="gcLampNow">—</strong><small id="gcLampLevel">—</small></div>
+      <div class="gc-app-meta" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="gc-app-mini"><small>Steuerung</small><b>Bluetooth</b><em>Ohne Hersteller-Cloud</em></div>
+        <div class="gc-app-mini"><small>Messung</small><b>Live-Status</b><em>Controller-Rückmeldung</em></div>
+      </div>
+      <label for="gcLampSlider" class="gc-app-eyebrow">Helligkeit · <span id="gcLampTarget">10 %</span></label>
+      <input class="gc-app-range" id="gcLampSlider" type="range" min="10" max="100" value="10" step="1">
+      <div class="gc-app-actions">
+        <button type="button" id="gcLampApply" class="gc-app-btn primary">Helligkeit übernehmen</button>
+        <button type="button" id="gcLampOn" class="gc-app-btn secondary">Einschalten</button>
+        <button type="button" id="gcLampOff" class="gc-app-btn danger">Ausschalten</button>
+      </div>
+      <p class="gc-app-note">Ein/Aus und Dimmen an echter FC3000 getestet. Jede Änderung wird einzeln bestätigt.</p>
+    </article>
+  </div>
+  <p class="gc-app-caption">Gerätediagnose und Herstellerprotokolle bleiben über den technischen Bereich erreichbar. Keine automatischen Schaltbefehle.</p>
+</section><article class="master-panel gc-app-legacy" id="marsLivePanel" aria-label="Mars Hydro Live" style="margin:12px 0;padding:18px;border:1px solid #236b55;border-radius:14px">
   <div class="master-panel-head"><div><h3>Mars Hydro · Live-Geräte</h3><p id="marsLiveStatus" role="status">FC3000 und DF150-M bereit zur lokalen Bluetooth-Verbindung.</p></div><button class="master-primary" type="button" id="marsConnectLive">Live verbinden</button></div>
   <div class="master-two-col">
     <div class="device-row" style="display:block"><strong>DF150-M · Abluft</strong><div class="master-metrics" style="margin-top:12px">
@@ -199,7 +243,38 @@
 
     <section id="recipes" class="view master-view"><div class="master-section-head"><div><small>ANBAU / REZEPTE</small><h2>Rezepte</h2><p>Wiederverwendbare Grow-Profile für Phasen, Klima-Sollwerte, Lichtzyklen und Arbeitsnotizen.</p></div></div><article class="master-panel progress-page"><span>?</span><h3>Rezepte werden geladen</h3><p>Profile sind deklarativ und schalten keine Aktoren ungeprüft.</p></article></section>
 
-    <section id="growlog" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GROWTAGEBUCH</small><h2>Growtagebuch</h2><p>Chronik des Grows.</p></div></div><article class="master-panel progress-page"><span>▧</span><h3>Growtagebuch</h3><p>Chronik wird geladen…</p></article></section>
+    <section id="growlog" class="view master-view"><div class="master-section-head"><div><small>ANBAU / GROWTAGEBUCH</small><h2>Growtagebuch</h2><p>Chronik des Grows.</p></div></div><section class="gc-app gc-app-history" aria-label="Grow-Historie">
+  <div class="gc-app-head">
+    <div><span class="gc-app-eyebrow">Grow Intelligence · Langzeitaufzeichnung</span><h3>Deine Pflanzen-Historie</h3><p>Messwerte bleiben auf dem Pi gespeichert, auch nach einem Neustart.</p></div>
+    <div class="gc-app-status" id="gcHistoryCount">Prüfe das Archiv…</div>
+  </div>
+  <header><h3>Klima im Zeitverlauf</h3><select id="gcHistoryPeriod" class="gc-app-picker" aria-label="Zeitraum wählen">
+    <option value="1">Letzte 24 Stunden</option><option value="7" selected>7 Tage</option><option value="30">30 Tage</option>
+    <option value="365">12 Monate</option><option value="1095">3 Jahre</option>
+  </select></header>
+  <canvas id="gcHistoryChart" class="gc-app-canvas" role="img" aria-label="Verlauf der echten Lufttemperatur"></canvas>
+  <p id="gcHistoryCaption" class="gc-app-caption">Archivierte Bluetooth-Klimawerte werden geladen…</p>
+  <div class="gc-app-technical">
+    <span class="gc-app-eyebrow">Grow-Durchläufe</span>
+    <h3 style="margin:7px 0">Vergleiche deine Ernten</h3>
+    <p class="gc-app-caption">Lege einen Grow mit Startdatum an. Das Archiv ordnet vorhandene Messungen zeitlich zu.</p>
+    <div class="gc-app-growform">
+      <label class="gc-app-field"><span>Grow-Name</span><input id="gcGrowName" maxlength="90" placeholder="z. B. Tomaten 2026"></label>
+      <label class="gc-app-field"><span>Kultur</span><input id="gcGrowCrop" maxlength="90" placeholder="Tomate, Chili…"></label>
+      <label class="gc-app-field"><span>Beginn</span><input id="gcGrowDate" type="date"></label>
+      <button type="button" id="gcGrowAdd" class="gc-app-btn primary">Grow anlegen</button>
+    </div>
+    <p class="gc-app-caption" id="gcGrowCount">Keine Durchläufe geladen</p>
+    <div class="gc-app-actions" style="margin-top:16px">
+      <select class="gc-app-picker" id="gcGrowA" aria-label="Ersten Grow auswählen"></select>
+      <span class="gc-app-caption">gegen</span>
+      <select class="gc-app-picker" id="gcGrowB" aria-label="Zweiten Grow auswählen"></select>
+      <button id="gcCompareButton" type="button" class="gc-app-btn primary">Vergleichen</button>
+    </div>
+    <div id="gcCompareResult" class="gc-app-compare"></div>
+    <p id="gcGrowFeedback" class="gc-app-caption" role="status">Für einen aussagekräftigen Jahresvergleich braucht es Messungen aus beiden Durchläufen.</p>
+  </div>
+</section></section>
 
 <section id="camera" class="view master-view"><div class="master-section-head"><div><small>KAMERAS / LIVE-ANSICHT</small><h2>Live-Ansicht</h2><p>Lokale UVC-/V4L2-Kameras, Snapshot und Diagnose.</p></div><button class="secondary" id="cameraRefreshMaster">Aktualisieren</button></div><div id="cameraGrid" class="camera-grid master-camera-grid"><div class="empty">Kamera wird geprüft…</div></div></section>
 
@@ -225,5 +300,5 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/static/platform.js?v=20261113-fan-show-1"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
+<script src="/static/platform.js?v=20261113-fan-show-1"></script><script src="/static/gc-app-controls.js?v=20261113-a1"></script><script src="/static/ui-layout-runtime.js?v=20261015-live4"></script><script src="/static/calibration_ui.js?v=20261015-live4"></script><script src="/static/room_views.js?v=20261015-soil3"></script><script src="/static/runtime_status.js?v=20261015-live4"></script><script src="/static/sensor_pairing.js?v=20261015-live4"></script><script src="/static/usb_onboarding.js?v=20261015-usbauto3"></script><script src="/static/menu-live.js?v=20261015-menu4"></script><script src="/static/final-master-live.js?v=20261015-alert1"></script><script src="/static/platform-master.js?v=20261015-menu2"></script>
 </body></html>
