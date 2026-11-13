@@ -46,7 +46,7 @@ def examine(path:Path)->dict:
             try:parts=payload.decode("ascii").split("|")
             except UnicodeDecodeError:continue
             if len(parts)==5 and parts[0] in ("1","2") and parts[3].startswith("FC") and parts[4].isdigit():
-                writes.append((sec+micro/1000000,int(parts[0]),int(parts[4])))
+                writes.append((sec+micro/1000000,int(parts[0]),int(parts[4]),parts[2]))
     if i!=len(b):raise ValueError("truncated file")
     fieldtypes={}
     for width,count in unique.most_common(3):
@@ -60,11 +60,11 @@ def examine(path:Path)->dict:
                 except ValueError:pass
             desc.append({"index":k,"numeric_fraction":round(len(nums)/len(col),3),
                          "distinct_values":len(set(col)),
-                         "min_number":round(min(nums),2) if nums and len(nums)==len(col) else None,
-                         "max_number":round(max(nums),2) if nums and len(nums)==len(col) else None})
+                         "min_number":round(min(nums),2) if nums and len(nums)==len(col) and k in (12,13) else None,
+                         "max_number":round(max(nums),2) if nums and len(nums)==len(col) and k in (12,13) else None})
         fieldtypes[str(width)]=desc
     windows=[]
-    for ts,kind,val in writes:
+    for ts,kind,val,_session in writes:
         within=[values for t,values in notifies if 0<=t-ts<2.5]
         lamp_states=[{"power_flag":a[12],"setpoint":a[13]} for a in within if len(a)==19]
         windows.append({"action_type":kind,"value":val,"notifications":len(within),
@@ -76,7 +76,10 @@ def examine(path:Path)->dict:
             "notify_count":len(notifies),"nonascii_notifications":nonascii,
             "field_count_distribution":dict(unique),"field_profiles":fieldtypes,
             "fc3000_commands":len(writes),"command_windows":windows,
-            "raw_identifiers_exposed":False,"hardware_writes_attempted":False,
+            "write_session_token_equals_lamp_notify_field5":bool(writes) and all(
+                session in {row[5] for _,row in notifies if len(row)==19}
+                for _time,_kind,_value,session in writes),
+        "raw_identifiers_exposed":False,"hardware_writes_attempted":False,
             "note":"Field index correlations are candidates, not proof of a measured output or controller ACK."}
 
 def main()->int:
