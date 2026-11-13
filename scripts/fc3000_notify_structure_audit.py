@@ -66,9 +66,14 @@ def examine(path:Path)->dict:
     windows=[]
     for ts,kind,val in writes:
         within=[values for t,values in notifies if 0<=t-ts<2.5]
+        lamp_states=[{"power_flag":a[12],"setpoint":a[13]} for a in within if len(a)==19]
         windows.append({"action_type":kind,"value":val,"notifications":len(within),
-                        "field_counts":dict(Counter(len(x) for x in within))})
-    return {"notify_count":len(notifies),"nonascii_notifications":nonascii,
+                        "field_counts":dict(Counter(len(x) for x in within)),
+                        "lamp_states":lamp_states})
+    lamp_families=[x[3] for _,x in notifies if len(x)==19]
+    return {"lamp_family_contains_mars":bool(lamp_families) and all("MARS" in x.upper() for x in lamp_families),
+            "lamp_family_value_length":sorted(set(map(len,lamp_families))),
+            "notify_count":len(notifies),"nonascii_notifications":nonascii,
             "field_count_distribution":dict(unique),"field_profiles":fieldtypes,
             "fc3000_commands":len(writes),"command_windows":windows,
             "raw_identifiers_exposed":False,"hardware_writes_attempted":False,
