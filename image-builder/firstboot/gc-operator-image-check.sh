@@ -60,8 +60,30 @@ else
 fi
 if id gc-maint >/dev/null 2>&1; then
   status "Key-only maintenance user" EXISTS
+  if [[ -s /home/gc-maint/.ssh/authorized_keys ]] && runuser -u gc-maint -- sudo -n /usr/bin/id -u 2>/dev/null | grep -qx '0'; then
+    status "Maintenance sudo root access" VERIFIED
+  else
+    status "Maintenance sudo root access" FAILED
+    FAILED=1
+  fi
 else
   status "Key-only maintenance user" NOT_PROVISIONED
+  if [[ "$(cat "$ROOT/IMAGE_DISTRIBUTION" 2>/dev/null)" == "OPERATOR_PROVISIONED" ]]; then
+    status "Private operator provisioning" FAILED
+    FAILED=1
+  fi
+fi
+if systemctl is-active --quiet NetworkManager.service; then
+  status "Boot network manager" RUNNING
+else
+  status "Boot network manager" NOT_RUNNING
+  FAILED=1
+fi
+if ip -4 route show default 2>/dev/null | grep -q '^default '; then
+  status "Outbound IPv4 default route" PRESENT
+else
+  status "Outbound IPv4 default route" MISSING
+  status "Internet access" "NEEDS_NETWORK_SETUP"
 fi
 if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 3 http://127.0.0.1:8080/api/health >/dev/null; then
   status "Grow Central HTTP health" OK
