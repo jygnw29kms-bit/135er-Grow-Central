@@ -12,7 +12,8 @@ Usage: sudo bash scripts/build-private-pi-image.sh \
   --output /private/path/grow-central-owner.img \
   --public-key /private/path/owner.pub \
   --mesh-agent /private/path/meshagent \
-  --mesh-config /private/path/meshagent.msh
+  --mesh-config /private/path/meshagent.msh \
+  --operator-password-file /private/path/fixed-test-password.txt
 
 Output is PRIVATE (contains an enrolled remote-access agent).
 Pass the .img of a new Grow Central build that already includes the units.
@@ -21,7 +22,7 @@ HELP
   exit 2
 }
 [[ $EUID -eq 0 ]] || usage
-input= output= pubkey= agent= config=
+input= output= pubkey= agent= config= password_file=
 while (($#)); do
   case "$1" in
     --input) input="${2:-}"; shift 2 ;;
@@ -29,10 +30,11 @@ while (($#)); do
     --public-key) pubkey="${2:-}"; shift 2 ;;
     --mesh-agent) agent="${2:-}"; shift 2 ;;
     --mesh-config) config="${2:-}"; shift 2 ;;
+    --operator-password-file) password_file="${2:-}"; shift 2 ;;
     *) usage ;;
   esac
 done
-for v in input pubkey agent config; do
+for v in input pubkey agent config password_file; do
   [[ -n "${!v}" && -f "${!v}" && ! -L "${!v}" ]] || usage
 done
 [[ -n "$output" ]] || usage
@@ -65,6 +67,7 @@ input="$(realpath "$input")"
 pubkey="$(realpath "$pubkey")"
 agent="$(realpath "$agent")"
 config="$(realpath "$config")"
+password_file="$(realpath "$password_file")"
 output="$(realpath -m "$output")"
 mkdir -p "$(dirname "$output")"
 install -m 0600 "$input" "$output"
@@ -154,7 +157,19 @@ image_gid="$(awk -F: '$1 == "growcentral" {print $3; exit}' "$root/etc/group")"
 [[ "$image_gid" =~ ^[0-9]+$ ]] || { echo "Grow Central group missing in image" >&2; exit 4; }
 chown 0:"$image_gid" "$appenv" "$cloudenv"
 chmod 0640 "$appenv" "$cloudenv"
-# No static password is ever embedded in the operator image.
+# Password is fixed across test images when the operator supplies the same
+# private password file. Store ONLY a salted SHA512-crypt hash in the image.
+# Never put plaintext, reusable passwords or their hashes in public Git.
+if [[ -L "$password_file" || "$(stat -c %s "$password_file")" -lt 12 || "$(stat -c %s "$password_file")" -gt 256 ]]; then
+  echo "Invalid private operator password file" >&2; exit 4
+fi
+password_hash="$(openssl passwd -6 -stdin < "$password_file")"
+[[ "$password_hash" == \$6\$* ]] || { echo "Password hashing failed" >&2; exit 4; }
+install -d -m 0700 "$root/etc/135er-grow-central"
+printf '%s\n' "$password_hash" > "$root/etc/135er-grow-central/operator-maint-password.hash"
+chmod 0600 "$root/etc/135er-grow-central/operator-maint-password.hash"
+unset password_hash
+# No plaintext password is ever embedded in the operator image.
 # One public key is applied by the firstboot systemd service.
 cp -- "$pubkey" "$boot/gc-maintenance.pub"
 # Device-bound config is private: never add this directory to Git or artifacts.
