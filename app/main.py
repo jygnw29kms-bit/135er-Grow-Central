@@ -28,6 +28,7 @@ from app.provisioning.ble import router as ble_provisioning_router
 from app.network import router as network_router
 from app.mars_hydro import is_mars_hydro_ble_candidate, public_hardware_profile
 from app.mars_hydro_ble import router as mars_hydro_ble_router, adapter_diagnostics
+from app.mars_hydro_cloud_fan import router as mars_hydro_cloud_fan_router
 from app.system_info import router as system_router
 
 NAME_HINT = os.getenv("DF100M_NAME_HINT", "MZ_MZF002")
@@ -51,6 +52,7 @@ app.include_router(homekit_router)
 app.include_router(usb_router)
 app.include_router(ble_provisioning_router)
 app.include_router(mars_hydro_ble_router)
+app.include_router(mars_hydro_cloud_fan_router)
 app.include_router(diagnostics_router)
 app.include_router(system_router)
 
