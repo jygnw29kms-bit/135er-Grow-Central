@@ -16,7 +16,7 @@ def extract(path: Path) -> list[tuple[int, int, str, str, int, int]]:
     data = path.read_bytes()
     if len(data)>MAX_BYTES or len(data)<24:
         raise ValueError("unsupported PCAP size")
-    end = {b"\\xd4\\xc3\\xb2\\xa1":"<",b"\\xa1\\xb2\\xc3\\xd4":">"}.get(data[:4])
+    end = {bytes.fromhex("d4c3b2a1"):"<",bytes.fromhex("a1b2c3d4"):">"}.get(data[:4])
     if end is None or struct.unpack_from(end+"I",data,20)[0]!=201:
         raise ValueError("expected H4-with-direction PCAP linktype 201")
     offset=24; writes=[]
