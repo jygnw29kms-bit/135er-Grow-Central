@@ -61,6 +61,19 @@ if ! visudo -cf "$sudo_file" >/dev/null; then
   echo "sudoers validation failed; privilege file removed" >&2; exit 1
 fi
 
+# A sudoers file alone is not proof that this session can gain privileges.
+# Fail first boot if NoNewPrivileges or a broken sudo policy prevents actual root.
+if ! command -v runuser >/dev/null 2>&1; then
+  echo "runuser is required to verify administrative access" >&2; exit 1
+fi
+verified_uid="$(runuser -u "$USER_NAME" -- sudo -n /usr/bin/id -u 2>/dev/null || true)"
+if [[ "$verified_uid" != 0 ]]; then
+  echo "Maintenance sudo verification failed: expected root UID 0" >&2
+  exit 1
+fi
+printf 'MAINTENANCE_SUDO_VERIFIED=UID_0\\n'
+
+
 # SSH key access requires that existing sshd config already allows key auth.
 # We deliberately do not overwrite sshd_config, firewall, or other services.
 if [[ -x /usr/sbin/sshd ]]; then /usr/sbin/sshd -t; else sshd -t; fi
