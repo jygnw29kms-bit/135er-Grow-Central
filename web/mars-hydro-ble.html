@@ -17,6 +17,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:430px;overflow:auto;b
 small{color:#a5b8b7}.device{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:12px;border:1px solid #415553;border-radius:9px}
 </style></head><body>
 <div class="sub">GROWCENTRAL / LOKALE GERÄTEDIAGNOSE</div>
+<div id="auth-warning" class="banner" hidden>Für die Live-Messung bitte zuerst bei Grow Central anmelden. <a href="/login?next=%2Fstatic%2Fmars-hydro-ble.html" style="color:#9deac0;font-weight:700">Zur Anmeldung</a>. Anschließend öffnet sich diese Seite wieder.</div>
 <h1>Mars Hydro · Bluetooth</h1>
 <p>FC3000 Beleuchtung und DF150-M Abluft. Der Raspberry Pi prüft Geräte direkt per Bluetooth. WLAN und Mars-Hydro-Cloud sind für diese Diagnose nicht erforderlich.</p>
 <div class="banner">Nur Diagnose: Die Geräteidentität, die Bedeutung der Rohwerte und die Steuerbefehle sind noch nicht validiert. Dieses Werkzeug sendet <strong>keine</strong> GATT-Steuerbefehle.</div>
@@ -95,6 +96,9 @@ $('fan-auto').onclick=()=>{
  autoRefreshId=setInterval(()=>{if(document.visibilityState==='visible')readFanLive()},30000);
 };
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')stopAuto()});
+async function verifyLogin(){try{const r=await fetch('/api/auth/status',{credentials:'same-origin',cache:'no-store'});const a=await r.json();if(!a.authenticated){$('auth-warning').hidden=false;$('status').textContent='Nicht angemeldet. Bitte zuerst einloggen.';}}catch(e){$('auth-warning').hidden=false;$('status').textContent='Anmeldung konnte nicht überprüft werden.';}}
+}
+verifyLogin();
 adapterStatus();
 $('clearEvents').onclick=()=>{captures=[];$('events').textContent='Noch keine Rückmeldungen.';message('Vergleich zurückgesetzt.');};
 </script></body></html>
