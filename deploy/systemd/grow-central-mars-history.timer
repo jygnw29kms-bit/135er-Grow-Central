@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect Mars Hydro fan and lamp telemetry every five minutes
+
+[Timer]
+OnBootSec=60sec
+OnUnitInactiveSec=5min
+Persistent=true
+Unit=grow-central-mars-history.service
+
+[Install]
+WantedBy=timers.target
