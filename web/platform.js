@@ -36,6 +36,7 @@
     setText('pageTitle', titles[id] || 'Grow Central');
     if (id === 'devices') {
       renderDeviceTable();
+      marsWifiApRead();
       // Local BLE fan telemetry starts automatically upon opening Devices.
       // No fan commands, vendor cloud logins, or device pairing.
       if (marsTimer===null) {
@@ -373,6 +374,36 @@
   $('marsCloudFanSet')?.addEventListener('click',()=>cloudFanControl('speed',Number($('marsCloudFanSpeed').value)));
   $('marsCloudFanOn')?.addEventListener('click',()=>cloudFanControl('power',1));
   $('marsCloudFanOff')?.addEventListener('click',()=>cloudFanControl('power',0));
+
+  async function marsWifiApRead(){
+    const button=$('marsWifiApRefresh'),status=$('marsWifiApStatus'),list=$('marsWifiApList');
+    if(!button||!status||!list)return;
+    button.disabled=true;status.textContent='Lese vorhandene WLAN-Funkdaten des Pi…';
+    try{
+      const result=await api('/api/mars-hydro/ble/wifi-access-points');
+      list.replaceChildren();
+      if(!result.ok){
+        status.textContent='WLAN-Diagnose nicht verfügbar: '+(result.reason||'unbekannt');return;
+      }
+      const items=result.access_points||[];
+      status.textContent=items.length+' Mars-Hydro-WLAN-Sender erkannt · keine Netzwerkänderung';
+      if(!items.length){
+        const empty=document.createElement('div');empty.className='empty';
+        empty.textContent='Kein MZ-AP-MASTER in der WLAN-Liste des Pi. Kein Beweis für ausgeschaltete Geräte.';
+        list.appendChild(empty);
+      }
+      for(const point of items){
+        const row=document.createElement('div');row.className='device-row';
+        const name=document.createElement('strong');name.textContent=point.device_hint;
+        const detail=document.createElement('small');
+        detail.textContent=point.ssid+' · '+point.bssid+' · Kanal '+point.channel+
+          ' · Signal '+point.signal_percent+' % · '+point.security+' · nicht verbunden';
+        row.appendChild(name);row.appendChild(detail);list.appendChild(row);
+      }
+    }catch(err){status.textContent='WLAN-Diagnose: '+err.message;}
+    finally{button.disabled=false;}
+  }
+  $('marsWifiApRefresh')?.addEventListener('click',marsWifiApRead);
 
   async function scanLocalBluetooth() {
     const btn=$('bleDiscoverBtn'), status=$('bleDiscoveryStatus'), list=$('bleDiscoveryResults');
