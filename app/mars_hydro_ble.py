@@ -9,10 +9,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 import re
 import subprocess
 import time
-from typing import Any
+from typing import Any, Literal
 
 from bleak import BleakClient, BleakScanner
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from app.security import require_write_auth
 from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
+from app.mars_fc3000_trial import context_from_live_status, encode_command
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -40,6 +42,12 @@ MARS_HINTS = ("mars", "mh-", "mzf", "ifresh", "iconnect", "fc3000", "df150", "c2
 
 class InspectRequest(BaseModel):
     candidate_id: str = Field(pattern=r"^[a-f0-9]{20}$")
+
+
+class LampControlTrialRequest(InspectRequest):
+    action: Literal["power", "brightness"]
+    value: int = Field(ge=0, le=100)
+    confirm_physical_change: bool = False
 
 
 class ObserveRequest(InspectRequest):
@@ -486,6 +494,107 @@ async def observe_lamp_telemetry(body: InspectRequest):
         except Exception as exc:
             logger.warning("FC3000 telemetry observe failed: %s", type(exc).__name__)
             raise HTTPException(502, _transport_error(exc, "FC3000-Statusbeobachtung")) from exc
+
+
+@router.post("/control-lamp-trial")
+async def control_lamp_trial(body: LampControlTrialRequest):
+    """Opt-in, single-action owner test for exactly one FC3000 V3.4.
+
+    Never sends a command without a fresh MARS status notification; rejects
+    old tokens, unmatched devices, wrong firmware, parallel BLE operations,
+    unauthenticated requests and unconfirmed physical actions.
+    """
+    allowed_id = os.environ.get("GC_FC3000_ALLOWED_ID", "").strip().upper()
+    if os.environ.get("GC_FC3000_CONTROL_TRIAL") != "1":
+        raise HTTPException(403, "FC3000 Hardware-Test nicht freigeschaltet.")
+    if not re.fullmatch(r"FC[A-F0-9]{10}", allowed_id):
+        raise HTTPException(403, "FC3000-Gerätekennung fehlt.")
+    if not body.confirm_physical_change:
+        raise HTTPException(428, "Explizite Bestätigung der physischen Lichtänderung erforderlich.")
+    if body.action == "power" and body.value not in (0, 1):
+        raise HTTPException(422, "Ein/Aus nur 0 oder 1.")
+    if body.action == "brightness" and not 10 <= body.value <= 100:
+        raise HTTPException(422, "Dimmung nur 10 bis 100 Prozent.")
+    if _capture_lock.locked():
+        raise HTTPException(409, "Bluetooth-Gerät ist bereits belegt.")
+
+    address = _candidate(body.candidate_id)
+    candidate = _candidates.get(body.candidate_id)
+    if not candidate or candidate[1].upper() != "MZ_MARS_0_" + allowed_id:
+        raise HTTPException(403, "Lampenidentität stimmt nicht mit dem Privatgerät überein.")
+
+    async with _capture_lock:
+        entries: list[tuple[str, dict[str, Any]]] = []
+        try:
+            async with BleakClient(address, timeout=12.0) as client:
+                services = _services(client)
+                _characteristic(services, MZF002_NOTIFY, "notify")
+                _characteristic(services, MZF002_WRITE, "write")
+
+                def on_notify(_sender: Any, data: bytearray) -> None:
+                    context = context_from_live_status(bytes(data))
+                    if context is not None and len(entries) < 40:
+                        entries.append(context)
+
+                started = False
+                try:
+                    await asyncio.wait_for(client.start_notify(MZF002_NOTIFY, on_notify), timeout=6)
+                    started = True
+                    # A fresh genuine 19-field MARS notification is mandatory.
+                    for _ in range(30):
+                        if entries:
+                            break
+                        await asyncio.sleep(0.5)
+                    if not entries:
+                        raise HTTPException(409, "Keine frische FC3000-Statusmeldung. Kein Steuerbefehl gesendet.")
+                    code, previous = entries[-1]
+                    packet = encode_command(
+                        code=code, device_id=allowed_id,
+                        action=body.action, value=body.value)
+                    count_before = len(entries)
+                    await asyncio.wait_for(
+                        client.write_gatt_char(MZF002_WRITE, packet, response=True),
+                        timeout=5,
+                    )
+                    # The write is NOT proof of physical effect: wait for a new
+                    # status reflecting the requested value, without retries.
+                    confirmed = False
+                    latest = None
+                    for _ in range(16):
+                        await asyncio.sleep(0.5)
+                        for _, reported in entries[count_before:]:
+                            latest = reported
+                            if (body.action == "power"
+                                and reported["power_on"] == (body.value == 1)):
+                                confirmed = True
+                            if (body.action == "brightness"
+                                and reported["brightness_percent"] == body.value):
+                                confirmed = True
+                        if confirmed:
+                            break
+                    return {
+                        "command_sent": True,
+                        "device_report_confirmed": confirmed,
+                        "action": body.action,
+                        "requested_value": body.value,
+                        "latest": latest,
+                        "retry_attempted": False,
+                        "physical_effect_independently_verified": False,
+                        "message": ("FC3000 meldet den angeforderten Wert."
+                                    if confirmed else
+                                    "Befehl übertragen, Bestätigung fehlt. Nicht blind wiederholen."),
+                    }
+                finally:
+                    if started and getattr(client, "is_connected", True):
+                        try:
+                            await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY), timeout=3)
+                        except Exception:
+                            logger.warning("FC3000 trial notify cleanup error")
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("FC3000 trial stage=%s", type(exc).__name__)
+            raise HTTPException(502, "FC3000-Transaktion fehlgeschlagen; keine automatische Wiederholung.") from exc
 
 
 @router.post("/control-test")
