@@ -28,6 +28,7 @@ from app.security import require_write_auth
 from app.devices.runtime import runtime
 from app.devices.gc_trust import TrustStore
 from app.devices.gc_calibration import classify_soil_substrate_delta
+from app.history_archive import append as history_append
 from app.smarthome.registry import DeviceRegistry
 from app.smarthome.router import device_overview
 
@@ -955,6 +956,17 @@ def append_sensor(state: dict[str, Any], room_id: str, payload: dict[str, Any]) 
     row["vpd_kpa"] = calc_vpd(row.get("temperature_c"), row.get("humidity_percent"))
     state["sensor_history"].append(row)
     state["sensor_history"] = state["sensor_history"][-50000:]
+    # Long-term SQLite archive is independent of the bounded JSON UI cache.
+    # Keep measurements, source and room identity even after browser restarts.
+    try:
+        history_append("room-sensors", {
+            key: value for key, value in row.items()
+            if key in ("temperature_c","humidity_percent","soil_moisture_percent",
+                       "soil_temperature_c","co2_ppm","ppfd_umol_m2_s","ec_ms_cm",
+                       "ph","vpd_kpa","power_w","energy_wh")
+        }, room_id=room_id)
+    except Exception:
+        logger.exception("Permanent sensor history could not be saved")
     return row
 
 
