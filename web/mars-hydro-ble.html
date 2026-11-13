@@ -25,11 +25,12 @@ small{color:#a5b8b7}.device{display:flex;flex-direction:column;gap:6px;margin:8p
 <section><h2>Benachrichtigungen aufnehmen</h2><p>Eine notifizierbare Characteristic auswählen. Während der kurzen Aufnahme kannst du am Herstellerregler oder in der App einen bekannten Wert ändern und die Rückmeldung beobachten.</p>
 <label for="uuid">Notify-Characteristic</label><select id="uuid" disabled><option value="">Erst Gerät auslesen</option></select>
 <div class="row"><button id="observe" disabled>4 Sekunden aufzeichnen</button><button id="clearEvents">Vergleich zurücksetzen</button></div><pre id="events">Noch keine Rückmeldungen.</pre></section></div>
+<section id="live"><h2>Mars Hydro · Live-Messwerte</h2><p>Die FC3000 wird als Bluetooth-Gerät erkannt; ihr Helligkeitswert ist noch nicht dekodiert. Der DF150-M kann bereits Temperatur, Luftfeuchte und Drehzahl über gültige Statusmeldungen liefern.</p><div class="row"><button class="primary" id="fanlive" disabled>Lüfterdaten jetzt lesen</button><span id="liveinfo" class="status" role="status">Erst einen DF150-M auswählen.</span></div><div class="grid"><div class="device"><small>Temperatur</small><strong id="live-temp">Noch keine Daten</strong></div><div class="device"><small>Luftfeuchtigkeit</small><strong id="live-rh">Noch keine Daten</strong></div><div class="device"><small>Lüfterdrehzahl</small><strong id="live-rpm">Noch keine Daten</strong></div><div class="device"><small>Gemeldeter Zustand / Sollwert</small><strong id="live-power">Noch keine Daten</strong></div></div><small>Nur zuletzt tatsächlich empfangene Werte; keine erfundenen CFM-, Druck- oder Lichtmessungen. Keine Steuerbefehle.</small></section>
 <section><h2>Abnahmestatus</h2><p>Ein Scan beweist Bluetooth-Sichtbarkeit. Erst ein echter Lesevorgang oder eine Notification beweist, dass Daten übertragen werden. Ob ein Byte die Lichtleistung oder die Lüfterdrehzahl bezeichnet, muss anschließend anhand reproduzierbarer Testwerte bestätigt werden.</p><small>Schreibtest gesperrt, bis Protokoll, Geräteidentität und erwartete Antworten dokumentiert und verifiziert sind.</small></section>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-let selected=null,services=[],captures=[];
+let selected=null,services=[],captures=[],selectedRole='unknown';
 function message(s){$('status').textContent=s}
 function pretty(obj){return JSON.stringify(obj,null,2)}
 function adapterInfo(a){if(!a)return;const status=a.state==='ready'?'Bereit':a.state==='adapter_off'?'Adapter ausgeschaltet':a.state==='radio_blocked'?'Funk gesperrt':'Adapter nicht verfügbar';$('adapter').textContent='Pi-Bluetooth: '+status+' · '+(a.hint||'');}
@@ -40,16 +41,16 @@ async function api(path,payload){
  if(!res.ok)throw Error(data.detail||('HTTP '+res.status));
  return data;
 }
-function chosen(id){selected=id;$('inspect').disabled=false;$('observe').disabled=true;$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.';captures=[];}
+function chosen(id,role){selected=id;selectedRole=role||'unknown';$('inspect').disabled=false;$('observe').disabled=true;$('fanlive').disabled=selectedRole!=='fan';$('liveinfo').textContent=selectedRole==='fan'?'DF150-M ausgewählt. Messwerte lesen.':selectedRole==='light'?'FC3000 erkannt: Helligkeitswert noch nicht validiert.':'Unbekanntes Gerät.';$('uuid').disabled=true;$('uuid').replaceChildren(new Option('Erst Gerät auslesen',''));$('gatt').textContent='Gerät gewählt. GATT auslesen.';$('events').textContent='Noch keine Rückmeldungen.';captures=[];}
 async function busy(button,work){button.disabled=true;try{await work()}catch(e){message('Fehler: '+e.message)}finally{button.disabled=false}}
 $('scan').onclick=()=>busy($('scan'),async()=>{
- message('Bluetooth-Scan läuft (bis zu 30 Sekunden)…');let data=await api('scan',{});adapterInfo(data.adapter);selected=null;$('inspect').disabled=true;$('observe').disabled=true;$('uuid').disabled=true;
+ message('Bluetooth-Scan läuft (bis zu 30 Sekunden)…');let data=await api('scan',{});adapterInfo(data.adapter);selected=null;selectedRole='unknown';$('inspect').disabled=true;$('observe').disabled=true;$('fanlive').disabled=true;$('uuid').disabled=true;
  $('devices').replaceChildren();
  data.devices.forEach(item=>{
   const card=document.createElement('div');card.className='device';
   const title=document.createElement('strong');title.textContent=item.name+(item.mars_hydro_hint?' · Mars-Hydro-Kandidat':'');
   const desc=document.createElement('small');desc.textContent='RSSI '+(item.rssi??'?')+' dBm · ID '+item.candidate_id+' · Identität noch nicht bestätigt';
-  const button=document.createElement('button');button.textContent='Auswählen';button.onclick=()=>chosen(item.candidate_id);
+  const button=document.createElement('button');button.textContent='Auswählen';button.onclick=()=>chosen(item.candidate_id,item.profile?.target_role);
   card.append(title,desc,button);$('devices').append(card);
  });
  if(!data.devices.length){$('devices').textContent=data.message||'Keine BLE-Geräte gefunden. Geräte einschalten und Hersteller-App ggf. trennen.'}
@@ -66,6 +67,18 @@ $('observe').onclick=()=>busy($('observe'),async()=>{
  if(!selected||!$('uuid').value)return;message('Empfange vier Sekunden BLE-Notifications…');
  const d=await api('observe',{candidate_id:selected,characteristic_uuid:$('uuid').value,seconds:4});
  captures.push({messung:captures.length+1,geraet:selected,uuid:d.uuid,event_count:d.event_count,events:d.events});$('events').textContent=pretty(captures);message(d.event_count+' Notifications empfangen; '+captures.length+' Messungen zum Vergleich.');
+});
+$('fanlive').onclick=()=>busy($('fanlive'),async()=>{
+ if(!selected||selectedRole!=='fan')return;
+ $('liveinfo').textContent='Empfange DF150-M-Telemetrie (5 Sekunden)…';
+ const d=await api('observe-fan-telemetry',{candidate_id:selected});
+ if(d.status!=='decoded'||!d.latest){$('liveinfo').textContent='Keine passende Telemetrie empfangen. Hersteller-App kurz trennen und erneut versuchen.';return;}
+ const v=d.latest;
+ $('live-temp').textContent=Number(v.temperature_c).toLocaleString('de-DE',{maximumFractionDigits:1})+' °C';
+ $('live-rh').textContent=Number(v.humidity_rh).toLocaleString('de-DE',{maximumFractionDigits:1})+' %';
+ $('live-rpm').textContent=Number(v.rpm).toLocaleString('de-DE')+' RPM';
+ $('live-power').textContent=(v.power_on?'Ein':'Aus')+' · '+v.setpoint_percent+' %';
+ $('liveinfo').textContent=d.sample_count+' echte Statusmeldung(en) empfangen · '+new Date().toLocaleTimeString('de-DE')+' · nur lesend';
 });
 adapterStatus();
 $('clearEvents').onclick=()=>{captures=[];$('events').textContent='Noch keine Rückmeldungen.';message('Vergleich zurückgesetzt.');};
