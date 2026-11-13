@@ -111,3 +111,15 @@ bash scripts/withdraw-public-pi-releases.sh --apply
 `--apply` stellt nur die passenden Releases auf **Draft** und kontrolliert danach einzeln, dass die Draft-Einstellung bestätigt wird. Die bisherigen Release-Daten und Assets bleiben erhalten, sind aber nicht mehr als normale öffentliche Downloads verfügbar. Keine anderen Releases werden verändert. Danach Release-Index und direkte Asset-URLs als nicht angemeldeter Benutzer prüfen; ein automatischer API-Erfolg allein ist noch kein vollständiger öffentlicher Abruf-Test.
 
 **Aktueller Bearbeitungsstatus:** Die GitHub-CLI auf dem Jens-PC war beim Kontrollversuch nicht angemeldet. Das Skript wurde erstellt, aber nicht gegen GitHub mit `--apply` ausgeführt. Die Alt-Releases sind also weiterhin als öffentlich zu betrachten, bis der Vorgang mit einem autorisierten Zugriff abgeschlossen ist.
+
+## Betreiber-Testimage: garantierter Wartungs-Boot (ab 2026-11-13)
+
+Die privaten Betreiberimages werden mit `scripts/build-private-pi-image.sh` aus einem **neu gebauten** Universal-Basisimage, einem individuellen SSH-Public-Key und einem für genau diesen Pi registrierten ARM64-MeshCentral-Agenten erzeugt. Der Image-Builder bricht ab, wenn die dafür notwendigen Dienste (`NetworkManager`, `ssh`, `grow-central-firstboot-maintenance`, `grow-central-mesh-agent`, Remote-Watchdog) nicht aktiviert sind oder der Installer die echte `sudo`-Verifikation nicht enthält.
+
+Beim ersten Boot legt der root-geführte Provisionierungsdienst `gc-maint` mit schlüsselbasierter SSH-Anmeldung an und überprüft anschließend **durch tatsächliche Ausführung** `runuser -u gc-maint -- sudo -n /usr/bin/id -u`, dass UID `0` erreicht wird. Scheitert dies etwa wegen `NoNewPrivileges`, gilt die Provisionierung als fehlgeschlagen und der Boot-Public-Key bleibt für die Fehlerbehebung erhalten. Ein erfolgreicher Benutzer-/sudoers-Eintrag allein gilt ausdrücklich **nicht** als Nachweis.
+
+Netzwerkverwaltung und SSH starten automatisch. Ein vorhandener Ethernet-Uplink mit DHCP kann sofort Internet bereitstellen. Bei WLAN ohne gespeicherte Zugangsdaten bleibt die Ersteinrichtung über den Setup-AP nötig; **kein Image kann ohne funktionierende Netzverbindung Internet garantieren**. Der MeshCentral-Agent startet mit seinem gerätespezifischen Enrollment automatisch und wird vom Watchdog überwacht.
+
+Nach dem ersten Hardware-Boot ausführen: `sudo gc-operator-image-check`, einen SSH-Login von einem autorisierten Rechner sowie `sudo -n id -u` **über genau diese SSH-Verbindung** prüfen und den MeshCentral-Befehlskanal mit einem harmlosen Probe-Befehl bestätigen. Bis diese Tests tatsächlich bestanden sind, ist der Zugriff **vorbereitet, aber nicht live verifiziert**.
+
+Die private Image-Datei mit MeshCentral-Enrollment ist vertraulich und darf nicht auf GitHub/öffentliche Release-Seiten hochgeladen werden. Keine gemeinsamen Passwörter, privaten SSH-Schlüssel oder statischen Zugänge im Quellcode.
