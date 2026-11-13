@@ -604,6 +604,97 @@ async def control_lamp_trial(body: LampControlTrialRequest):
             raise HTTPException(502, "FC3000-Transaktion fehlgeschlagen; keine automatische Wiederholung.") from exc
 
 
+
+class FanControlRequest(InspectRequest):
+    percent: int = Field(ge=25, le=100)
+    confirm_physical_change: bool = False
+
+
+@router.post("/control-fan")
+async def control_fan(body: FanControlRequest):
+    """Real-device-validated MZF002 speed transaction, owner-triggered only.
+
+    Exact 2026-11-13 Pi test: 25%/800RPM -> 50%/2060RPM using
+    "2|0|<live five-digit code>|<device serial>|50" on MZF002_WRITE.
+    Other values retain hardware readback checks; no repeat/auto-retry.
+    """
+    allowed = os.environ.get("GC_MZF002_ALLOWED_ID", "").upper().strip()
+    if os.environ.get("GC_MZF002_CONTROL_ENABLED") != "1":
+        raise HTTPException(403, "MZF002-Steuerung nicht freigeschaltet.")
+    if not re.fullmatch(r"[A-F0-9]{12}", allowed):
+        raise HTTPException(403, "MZF002 Gerätekennung fehlt.")
+    if not body.confirm_physical_change:
+        raise HTTPException(428, "Physische Lüfteränderung ausdrücklich bestätigen.")
+    if _capture_lock.locked():
+        raise HTTPException(409, "BLE-Verbindung belegt.")
+    address = _candidate(body.candidate_id)
+    candidate = _candidates.get(body.candidate_id)
+    if not candidate or not candidate[1].upper().endswith("_" + allowed) or "MZF002" not in candidate[1].upper():
+        raise HTTPException(403, "Falscher Lüfter: Identität stimmt nicht.")
+    async with _capture_lock:
+        reports: list[tuple[list[str], dict[str, Any]]] = []
+        try:
+            async with BleakClient(address, timeout=12) as client:
+                services = _services(client)
+                _characteristic(services, MZF002_NOTIFY, "notify")
+                _characteristic(services, MZF002_WRITE, "write")
+                def on_notify(_sender: Any, data: bytearray) -> None:
+                    raw = bytes(data)
+                    status = mzf002_telemetry(raw)
+                    if status is None or len(reports) >= 80:
+                        return
+                    try:
+                        fields = raw.decode("ascii").strip().split("|")
+                    except UnicodeDecodeError:
+                        return
+                    if (len(fields) == 23 and fields[1].upper() == allowed
+                        and fields[2].upper() == allowed
+                        and fields[4] == "1.8"
+                        and re.fullmatch(r"[0-9]{5}", fields[5])):
+                        reports.append((fields, status))
+                started = False
+                try:
+                    await asyncio.wait_for(client.start_notify(MZF002_NOTIFY, on_notify), timeout=6)
+                    started = True
+                    for _ in range(24):
+                        if reports:break
+                        await asyncio.sleep(0.5)
+                    if not reports:
+                        raise HTTPException(409, "Keine frischen, gültigen MZF002-Daten; kein Befehl.")
+                    fields, previous = reports[-1]
+                    if not previous["power_on"]:
+                        raise HTTPException(409, "Lüfter ausgeschaltet; zuerst in Mars Legacy einschalten.")
+                    if previous["setpoint_percent"] == body.percent:
+                        return {"command_sent": False, "device_report_confirmed": True,
+                                "requested_percent": body.percent, "latest": previous,
+                                "message": "Sollwert bereits aktiv; kein Schreibzugriff."}
+                    packet = f"2|0|{fields[5]}|{allowed}|{body.percent}".encode("ascii")
+                    before = len(reports)
+                    await asyncio.wait_for(client.write_gatt_char(MZF002_WRITE,packet,response=True),timeout=6)
+                    confirmed = False
+                    latest = previous
+                    for _ in range(28):
+                        await asyncio.sleep(0.5)
+                        recent = reports[before:]
+                        if recent:latest=recent[-1][1]
+                        if any(s["setpoint_percent"] == body.percent for _,s in recent):
+                            confirmed=True
+                            break
+                    return {"command_sent": True, "device_report_confirmed": confirmed,
+                            "requested_percent": body.percent, "previous": previous,
+                            "latest":latest,"retry_attempted":False,
+                            "message":("MZF002 bestätigt den neuen Sollwert." if confirmed
+                                       else "GATT Write angenommen, aber Sollwert nicht bestätigt.")}
+                finally:
+                    if started and getattr(client,"is_connected",True):
+                        try:await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY),timeout=3)
+                        except Exception:logger.warning("MZF002 control notify cleanup failure")
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("MZF002 control failed: %s", type(exc).__name__)
+            raise HTTPException(502,"MZF002-Steuerung fehlgeschlagen; keine automatische Wiederholung.") from exc
+
 @router.post("/control-test")
 async def control_test():
     # The previous DF100M hypotheses and Mars Pro cloud commands MUST NOT
