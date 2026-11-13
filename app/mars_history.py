@@ -222,16 +222,17 @@ def compare(a:int=Query(ge=1),b:int=Query(ge=1)):
             ROUND(AVG(brightness_percent),2) avg_light_percent
             FROM samples WHERE recorded_at>=? AND recorded_at<=?
             GROUP BY device""",(start,end))
-        room_metrics=rows("""SELECT COUNT(*) AS count,
-            ROUND(AVG(temperature_c),2) avg_room_temp_c,
-            ROUND(AVG(humidity_percent),2) avg_room_humidity_rh,
-            ROUND(AVG(vpd_kpa),3) avg_vpd_kpa,
-            ROUND(AVG(soil_moisture_percent),2) avg_soil_moisture_percent,
-            ROUND(AVG(soil_temperature_c),2) avg_soil_temp_c,
-            ROUND(AVG(ppfd_umol_m2_s),1) avg_ppfd,
-            ROUND(AVG(ec_ms_cm),2) avg_ec,
-            ROUND(AVG(ph),2) avg_ph
-            FROM room_samples WHERE room_id=? AND recorded_at>=? AND recorded_at<=?""",
-            (grow["room_id"],start,end)) if grow["room_id"] else []
+        room_metrics=[]
+        if grow["room_id"]:
+            # Share the permanent, source-labelled room sensor archive.
+            from app.history_archive import connect as connect_archive
+            with connect_archive() as archive:
+                values=archive.execute("""SELECT metric, COUNT(*) AS count,
+                    ROUND(AVG(value),3) AS avg, ROUND(MIN(value),3) AS min,
+                    ROUND(MAX(value),3) AS max
+                    FROM points WHERE room_id=? AND recorded_at>=? AND recorded_at<=?
+                    GROUP BY metric ORDER BY metric""",
+                    (grow["room_id"],start,end)).fetchall()
+                room_metrics=[dict(value) for value in values]
         result.append({"grow":grow,"metrics":metrics,"room_metrics":room_metrics})
     return {"comparisons":result,"note":"BLE- und zugeordnete Raum-Sensormessungen, soweit vorhanden. Bewässerungsereignisse und Ertrag aus dem Pflanzentagebuch ergänzen."}
