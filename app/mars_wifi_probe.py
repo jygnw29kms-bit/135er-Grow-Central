@@ -39,7 +39,7 @@ def wifi_status() -> dict:
         fields=split_nmcli(line)
         if len(fields)!=5:continue
         ssid,bssid,channel,signal,security=fields
-        if not re.fullmatch(r"MZ-AP-MASTER-\\d{3,10}",ssid):continue
+        if not re.fullmatch(r"MZ-AP-MASTER-[0-9]{3,10}",ssid):continue
         if not re.fullmatch(r"(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}",bssid):continue
         try: chan=int(channel);strength=int(signal)
         except ValueError:continue
