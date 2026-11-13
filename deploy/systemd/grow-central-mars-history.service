@@ -1,0 +1,16 @@
+[Unit]
+Description=Grow Central read-only Mars Hydro history sampler
+After=bluetooth.service
+Wants=bluetooth.service
+
+[Service]
+Type=oneshot
+User=growcentral
+Group=growcentral
+WorkingDirectory=/opt/135er-grow-central
+ExecStart=/opt/135er-grow-central/.venv/bin/python -m scripts.mars_history_collect
+TimeoutStartSec=65
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/135er-grow-central
