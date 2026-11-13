@@ -164,7 +164,9 @@
   function marsRecordSample(v){
     const row={time:new Date().toISOString(),temperature_c:Number(v.temperature_c),
       humidity_rh:Number(v.humidity_rh),rpm:Number(v.rpm),
-      power_on:!!v.power_on,setpoint_percent:Number(v.setpoint_percent)};
+      power_on:!!v.power_on,setpoint_percent:Number(v.setpoint_percent),
+      airflow_cfm:Number(v.airflow_cfm),pressure_pa:Number(v.pressure_pa),
+      airflow_pressure_source:v.airflow_pressure_source||""};
     if(![row.temperature_c,row.humidity_rh,row.rpm,row.setpoint_percent].every(Number.isFinite))return;
     marsHistory.push(row);if(marsHistory.length>120)marsHistory.shift();
     const curve=$('marsRpmLine'),title=$('marsTrendLabel');
@@ -192,7 +194,7 @@
   }
   $('marsExportCsv')?.addEventListener('click',()=>{
     if(!marsHistory.length)return;
-    const columns=['time','temperature_c','humidity_rh','rpm','power_on','setpoint_percent'];
+    const columns=['time','temperature_c','humidity_rh','rpm','power_on','setpoint_percent','airflow_cfm','pressure_pa','airflow_pressure_source'];
     const csv=[columns.join(';'),...marsHistory.map(r=>columns.map(k=>r[k]).join(';'))].join('\\r\\n');
     const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
@@ -232,6 +234,8 @@
       setText('marsFanHumidity',Number(v.humidity_rh).toLocaleString('de-DE',{maximumFractionDigits:1})+' %');
       setText('marsFanRpm',Number(v.rpm).toLocaleString('de-DE')+' RPM');
       setText('marsFanState',(v.power_on?'Ein':'Aus')+' · '+v.setpoint_percent+' %');
+      setText('marsFanCfm',v.airflow_pressure_source==='estimated_from_setpoint_show_only'&&Number.isFinite(Number(v.airflow_cfm))?Number(v.airflow_cfm).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' CFM':'—');
+      setText('marsFanPa',v.airflow_pressure_source==='estimated_from_setpoint_show_only'&&Number.isFinite(Number(v.pressure_pa))?Number(v.pressure_pa).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' Pa':'—');
       setText('marsFanUpdated','Letzte Messung: '+new Date().toLocaleTimeString('de-DE')+' · '+result.sample_count+' Meldungen');
       status.textContent='DF150-M verbunden · neue Messwerte alle 30 Sekunden';
     }catch(err){status.textContent='Mars Hydro: '+err.message+' · letzte Werte nicht aktuell';marsFanId=null;}
