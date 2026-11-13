@@ -145,6 +145,53 @@
 
   // Real Pi/BlueZ scan. Found advertisements are candidates only; never
   // grant trust or write access as a side effect of discovery.
+  // Mars Hydro live controls are embedded in the ordinary Devices view.
+  // Read-only by design: no GATT writes, no lamp dimming without validation.
+  let marsFanId=null, marsLastScan=0, marsTimer=null, marsBusy=false;
+  async function marsLiveRead(reconnect=false){
+    const status=$('marsLiveStatus');
+    if(!status || marsBusy || document.hidden || !document.getElementById('devices')?.classList.contains('active'))return;
+    marsBusy=true;
+    const btn=$('marsConnectLive');if(btn)btn.disabled=true;
+    try{
+      if(reconnect || !marsFanId || Date.now()-marsLastScan>120000){
+        status.textContent='Mars Hydro Bluetooth-Geräte werden gesucht…';
+        const found=await api('/api/mars-hydro/ble/scan',{method:'POST'});
+        marsLastScan=Date.now();
+        const fan=(found.devices||[]).find(d=>d.profile?.target_role==='fan' && d.name?.includes('MZF002'));
+        const lamp=(found.devices||[]).find(d=>d.profile?.target_role==='light' && d.name?.endsWith('C260'));
+        marsFanId=fan?.candidate_id||null;
+        setText('marsLampDetection',lamp?'FC3000 über Bluetooth erkannt · '+lamp.rssi+' dBm':'FC3000 gerade nicht sichtbar · Verbindung über Hersteller-App möglich');
+        if(!marsFanId){status.textContent='DF150-M nicht sichtbar. Bitte Bluetooth-Verbindung der Hersteller-App trennen.';return;}
+      }
+      status.textContent='DF150-M sendet Live-Telemetrie…';
+      const result=await api('/api/mars-hydro/ble/observe-fan-telemetry',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({candidate_id:marsFanId})
+      });
+      if(result.status!=='decoded'||!result.latest){
+        status.textContent='Keine neue Meldung. Alte Messwerte werden nicht als Live angezeigt.';
+        setText('marsFanUpdated','Verbindung ohne neue Telemetrie');
+        return;
+      }
+      const v=result.latest;
+      setText('marsFanTemp',Number(v.temperature_c).toLocaleString('de-DE',{maximumFractionDigits:1})+' °C');
+      setText('marsFanHumidity',Number(v.humidity_rh).toLocaleString('de-DE',{maximumFractionDigits:1})+' %');
+      setText('marsFanRpm',Number(v.rpm).toLocaleString('de-DE')+' RPM');
+      setText('marsFanState',(v.power_on?'Ein':'Aus')+' · '+v.setpoint_percent+' %');
+      setText('marsFanUpdated','Letzte Messung: '+new Date().toLocaleTimeString('de-DE')+' · '+result.sample_count+' Meldungen');
+      status.textContent='DF150-M verbunden · neue Messwerte alle 30 Sekunden';
+    }catch(err){status.textContent='Mars Hydro: '+err.message+' · letzte Werte nicht aktuell';marsFanId=null;}
+    finally{marsBusy=false;if(btn)btn.disabled=false;}
+  }
+  $('marsConnectLive')?.addEventListener('click',()=>{
+    marsLiveRead(true);
+    if(marsTimer===null)marsTimer=setInterval(()=>marsLiveRead(false),30000);
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden && marsTimer!==null){clearInterval(marsTimer);marsTimer=null;}
+  });
+
   async function scanLocalBluetooth() {
     const btn=$('bleDiscoverBtn'), status=$('bleDiscoveryStatus'), list=$('bleDiscoveryResults');
     if(!btn||!status||!list)return;
