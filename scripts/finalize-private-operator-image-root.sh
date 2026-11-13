@@ -54,16 +54,23 @@ NEW_IMAGE="${IMAGE%.img}-fixed-maintenance.img"
 
 # Read-only mounted-contents checks performed before final packaging.
 audit_root="$(mktemp -d /tmp/gc-operator-final-audit.XXXXXXXX)"
-loop=""
 audit_cleanup() {
   set +e
   mountpoint -q "$audit_root" && umount "$audit_root"
-  [[ -n "$loop" ]] && losetup -d "$loop"
   rmdir "$audit_root" 2>/dev/null || :
 }
 trap 'cleanup; audit_cleanup' EXIT
-loop="$(losetup --find --show --partscan --read-only "$NEW_IMAGE")"
-mount -o ro "${loop}p2" "$audit_root"
+# Avoid relying on /dev/loopXp2, which some IONOS virtual hosts do not create.
+read -r ROOT_OFFSET ROOT_BYTES < <(
+  sfdisk --json "$NEW_IMAGE" | python3 -c '
+import json,sys
+table=json.load(sys.stdin)["partitiontable"]
+part=table["partitions"][1]
+sector=table.get("sectorsize",512)
+print(part["start"]*sector,part["size"]*sector)
+')
+[[ "${ROOT_OFFSET:-}" =~ ^[0-9]+$ && "${ROOT_BYTES:-}" =~ ^[0-9]+$ ]] || exit 5
+mount -o "ro,loop,offset=$ROOT_OFFSET,sizelimit=$ROOT_BYTES" "$NEW_IMAGE" "$audit_root"
 test -s "$audit_root/etc/135er-grow-central/operator-maint-password.hash"
 test "$(stat -c %a "$audit_root/etc/135er-grow-central/operator-maint-password.hash")" = 600
 test -s "$audit_root/opt/grow-central/mesh-agent/meshagent.msh"
@@ -77,8 +84,6 @@ done
 test -L "$audit_root/etc/systemd/system/timers.target.wants/grow-central-remote-watchdog.timer"
 test ! -e "$audit_root/home/gcmaint/.ssh/authorized_keys"
 umount "$audit_root"
-losetup -d "$loop"
-loop=""
 rmdir "$audit_root"
 echo "OFFLINE_PRIVILEGED_IMAGE_AUDIT=PASS"
 
