@@ -52,8 +52,14 @@ async def observe(device, kind):
     return count
 
 async def run():
-    found=await BleakScanner.discover(timeout=7)
-    devices={x.name:x for x in found if x.name in (FAN_ID,LAMP_ID)}
+    # Mars controllers occasionally advertise only every other scan window.
+    # Merge two bounded passive scans to avoid missing the fan.
+    devices={}
+    for attempt in range(2):
+        found=await BleakScanner.discover(timeout=7)
+        devices.update({x.name:x for x in found if x.name in (FAN_ID,LAMP_ID)})
+        if FAN_ID in devices and LAMP_ID in devices:
+            break
     total=0
     for name,kind in ((FAN_ID,"fan"),(LAMP_ID,"lamp")):
         if name in devices:total+=await observe(devices[name],kind)
