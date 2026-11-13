@@ -15,7 +15,7 @@ def fc3000_sample(*, state="1", brightness="50", firmware="3.4"):
     fields = ["0", "opaque-session", "", "MARS", firmware, "68756",
               "1", "0", "", "", "-1", "", state, brightness, "0", "0",
               "opaque-timestamp", "97496", "0"]
-    return ("|".join(fields) + "\\n").encode("ascii")
+    return ("|".join(fields) + chr(10)).encode("ascii")
 
 class TestMarsLegacyTelemetry(unittest.TestCase):
     def test_valid_redacted_values(self):
