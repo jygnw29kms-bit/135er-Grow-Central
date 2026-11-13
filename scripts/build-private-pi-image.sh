@@ -115,6 +115,132 @@ for unit in grow-central-firstboot-maintenance.service grow-central-mesh-agent.s
     echo "Image missing $unit; use updated build" >&2; exit 4;
   }
 done
+# Operator media must be remotely maintainable from the FIRST boot.
+for unit in ssh.service NetworkManager.service grow-central-firstboot-maintenance.service grow-central-mesh-agent.service grow-central-remote-watchdog.timer; do
+  [[ -L "$root/etc/systemd/system/multi-user.target.wants/$unit" || -L "$root/etc/systemd/system/timers.target.wants/$unit" ]] || {
+    echo "Mandatory first-boot service not enabled: $unit" >&2; exit 4;
+  }
+done
+grep -Eq '^User=root
+[[ ! -e "$boot/gc-maintenance.pub" ]] || {
+  echo "Bootfs already has enrollment key" >&2; exit 4;
+}
+[[ ! -e "$root/opt/grow-central/mesh-agent/meshagent" ]] || {
+  echo "Image already has MeshCentral enrollment" >&2; exit 4;
+}
+# Replace the image-building placeholders with per-image secrets, before
+# first boot. Existing tokens must never be cloned across operator devices.
+appenv="$root/opt/135er-grow-central/.env"
+cloudenv="$root/opt/135er-grow-central/local/cloud_link/.env"
+[[ -f "$appenv" && -f "$cloudenv" ]] || {
+  echo "Expected runtime environment files not present" >&2; exit 4;
+}
+for item in "GC_API_TOKEN=test" "GC_LOCAL_API_TOKEN=test"; do
+  grep -Fxq "$item" "$appenv" || {
+    echo "Unrecognized runtime placeholder for ${item%%=*}; refusing to duplicate credentials" >&2; exit 4;
+  }
+done
+grep -Fxq 'GC_LOCAL_API_TOKEN=test' "$cloudenv" || {
+  echo "Unexpected cloud-link token placeholder" >&2; exit 4;
+}
+operator_token="$(openssl rand -hex 32)"
+sed -i "s/^GC_API_TOKEN=test$/GC_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$cloudenv"
+unset operator_token
+printf 'OPERATOR_PROVISIONED\n' > "$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
+# Runtime services run as growcentral and need group-read of EnvironmentFile.
+image_gid="$(awk -F: '$1 == "growcentral" {print $3; exit}' "$root/etc/group")"
+[[ "$image_gid" =~ ^[0-9]+$ ]] || { echo "Grow Central group missing in image" >&2; exit 4; }
+chown 0:"$image_gid" "$appenv" "$cloudenv"
+chmod 0640 "$appenv" "$cloudenv"
+# No static password is ever embedded in the operator image.
+# One public key is applied by the firstboot systemd service.
+cp -- "$pubkey" "$boot/gc-maintenance.pub"
+# Device-bound config is private: never add this directory to Git or artifacts.
+install -d -m 0700 "$root/opt/grow-central/mesh-agent"
+install -m 0700 "$agent" "$root/opt/grow-central/mesh-agent/meshagent"
+install -m 0600 "$config" "$root/opt/grow-central/mesh-agent/meshagent.msh"
+[[ -L "$root/etc/systemd/system/multi-user.target.wants/grow-central-mesh-agent.service" ]] || {
+  echo "Image has MeshCentral service installed but not enabled" >&2; exit 4;
+}
+sync
+umount "$boot"; mounted_boot=0
+umount "$root"; mounted_root=0
+losetup -d "$loop"; loop=""
+chmod 0600 "$output"
+completed=1
+echo "PRIVATE_OWNER_IMAGE_READY=$output"
+echo "SOURCE_COMMIT=$source_sha"
+echo "SHA256=$(sha256sum "$output" | awk '{print $1}')"
+echo "SECURITY: keep this image private; revoke device enrollment if leaked."
+echo "VALIDATION: real boot, SSH sudo and MeshCentral online check still required."
+ "$root/etc/systemd/system/grow-central-firstboot-maintenance.service" || {
+  echo "First-boot maintenance must run as root" >&2; exit 4;
+}
+grep -Eq '^NoNewPrivileges=no
+[[ ! -e "$boot/gc-maintenance.pub" ]] || {
+  echo "Bootfs already has enrollment key" >&2; exit 4;
+}
+[[ ! -e "$root/opt/grow-central/mesh-agent/meshagent" ]] || {
+  echo "Image already has MeshCentral enrollment" >&2; exit 4;
+}
+# Replace the image-building placeholders with per-image secrets, before
+# first boot. Existing tokens must never be cloned across operator devices.
+appenv="$root/opt/135er-grow-central/.env"
+cloudenv="$root/opt/135er-grow-central/local/cloud_link/.env"
+[[ -f "$appenv" && -f "$cloudenv" ]] || {
+  echo "Expected runtime environment files not present" >&2; exit 4;
+}
+for item in "GC_API_TOKEN=test" "GC_LOCAL_API_TOKEN=test"; do
+  grep -Fxq "$item" "$appenv" || {
+    echo "Unrecognized runtime placeholder for ${item%%=*}; refusing to duplicate credentials" >&2; exit 4;
+  }
+done
+grep -Fxq 'GC_LOCAL_API_TOKEN=test' "$cloudenv" || {
+  echo "Unexpected cloud-link token placeholder" >&2; exit 4;
+}
+operator_token="$(openssl rand -hex 32)"
+sed -i "s/^GC_API_TOKEN=test$/GC_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$appenv"
+sed -i "s/^GC_LOCAL_API_TOKEN=test$/GC_LOCAL_API_TOKEN=$operator_token/" "$cloudenv"
+unset operator_token
+printf 'OPERATOR_PROVISIONED\n' > "$root/opt/135er-grow-central/IMAGE_DISTRIBUTION"
+# Runtime services run as growcentral and need group-read of EnvironmentFile.
+image_gid="$(awk -F: '$1 == "growcentral" {print $3; exit}' "$root/etc/group")"
+[[ "$image_gid" =~ ^[0-9]+$ ]] || { echo "Grow Central group missing in image" >&2; exit 4; }
+chown 0:"$image_gid" "$appenv" "$cloudenv"
+chmod 0640 "$appenv" "$cloudenv"
+# No static password is ever embedded in the operator image.
+# One public key is applied by the firstboot systemd service.
+cp -- "$pubkey" "$boot/gc-maintenance.pub"
+# Device-bound config is private: never add this directory to Git or artifacts.
+install -d -m 0700 "$root/opt/grow-central/mesh-agent"
+install -m 0700 "$agent" "$root/opt/grow-central/mesh-agent/meshagent"
+install -m 0600 "$config" "$root/opt/grow-central/mesh-agent/meshagent.msh"
+[[ -L "$root/etc/systemd/system/multi-user.target.wants/grow-central-mesh-agent.service" ]] || {
+  echo "Image has MeshCentral service installed but not enabled" >&2; exit 4;
+}
+sync
+umount "$boot"; mounted_boot=0
+umount "$root"; mounted_root=0
+losetup -d "$loop"; loop=""
+chmod 0600 "$output"
+completed=1
+echo "PRIVATE_OWNER_IMAGE_READY=$output"
+echo "SOURCE_COMMIT=$source_sha"
+echo "SHA256=$(sha256sum "$output" | awk '{print $1}')"
+echo "SECURITY: keep this image private; revoke device enrollment if leaked."
+echo "VALIDATION: real boot, SSH sudo and MeshCentral online check still required."
+ "$root/etc/systemd/system/grow-central-firstboot-maintenance.service" || {
+  echo "First-boot maintenance would block sudo privileges" >&2; exit 4;
+}
+grep -Fq 'MAINTENANCE_SUDO_VERIFIED=UID_0' "$root/opt/135er-grow-central/scripts/install-gc-maintenance-agent.sh" || {
+  echo "Base image lacks mandatory live sudo verification; rebuild from current master" >&2; exit 4;
+}
+grep -Fq 'gc-maintenance.pub' "$root/usr/local/sbin/gc-firstboot-maintenance-provision" || {
+  echo "First-boot key provisioning unavailable" >&2; exit 4;
+}
 [[ ! -e "$boot/gc-maintenance.pub" ]] || {
   echo "Bootfs already has enrollment key" >&2; exit 4;
 }
