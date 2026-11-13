@@ -72,7 +72,7 @@ def fc3000_telemetry(data: bytes) -> dict[str, Any] | None:
     if not data or len(data) > 512:
         return None
     try:
-        fields = data.decode("ascii").strip("\\r\\n").split("|")
+        fields = data.decode("ascii").strip(chr(13) + chr(10)).split("|")
     except UnicodeDecodeError:
         return None
     if len(fields) != 19 or fields[3] != "MARS":
@@ -83,7 +83,7 @@ def fc3000_telemetry(data: bytes) -> dict[str, Any] | None:
     if brightness < 0 or brightness > 100:
         return None
     version = fields[4]
-    if not re.fullmatch(r"[0-9]{1,3}(?:\\.[0-9]{1,3}){1,2}", version):
+    if not re.fullmatch(r"[0-9]{1,3}(?:[.][0-9]{1,3}){1,2}", version):
         return None
     return {
         "device_family": "MARS",
