@@ -17,6 +17,7 @@ from app.gui_shell import router as gui_shell_router
 from app.ui_layout import router as ui_layout_router
 from app.mdns_alias import install as install_mdns_alias
 from app.rooms import router as rooms_router, install as install_rooms
+from app.history_archive import router as history_archive_router
 from app.mars_history import router as mars_history_router, install as install_mars_history
 from app.cloud_status import router as cloud_status_router
 from app.devices.gc_pairing import install_observer
@@ -53,6 +54,7 @@ app.include_router(recordings_router)
 app.include_router(grow_photos_router)
 app.include_router(firstboot_router)
 app.include_router(rooms_router)
+app.include_router(history_archive_router)
 app.include_router(mars_history_router)
 app.include_router(cloud_status_router)
 app.include_router(runtime_health_router)
