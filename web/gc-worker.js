@@ -1,6 +1,6 @@
 /* Grow Central PWA: shell only; live measurements and commands always network-only. */
-const CACHE='gc-shell-20261113-01';
-const SHELL=['/ui','/static/gc-final.css?v=20261113-01','/static/gc-final.js?v=20261113-01','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
+const CACHE='gc-shell-20261113-hero-02';
+const SHELL=['/ui','/static/gc-final.css?v=20261113-hero-02','/static/gc-final.js?v=20261113-hero-02','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
