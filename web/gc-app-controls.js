@@ -116,49 +116,79 @@
     $('gcLampOff')?.addEventListener('click',()=>command('lamp','power',0));
     $('gcAppRefresh')?.addEventListener('click',refresh);
     $('gcHistoryPeriod')?.addEventListener('change',e=>{S.period=Number(e.target.value);history();});
+    $('gcHistoryMetric')?.addEventListener('change',history);
+    $('gcHistoryRoom')?.addEventListener('change',history);
     $('gcCompareButton')?.addEventListener('click',compare);
     $('gcGrowAdd')?.addEventListener('click',createGrow);
   }
   const plotColor='#39efab';
-  function plot(samples){
-    S.plot=samples;
+  const HISTORY_METRICS={
+    temperature_c:['Temperatur','°C'],
+    humidity_percent:['Luftfeuchte','% rF'],
+    fan_rpm:['Lüfterdrehzahl','RPM'],
+    fan_setpoint_percent:['Lüfter-Sollwert','%'],
+    lamp_brightness_percent:['Licht-Sollwert','%'],
+    soil_moisture_percent:['Bodenfeuchte','%'],
+    soil_temperature_c:['Bodentemperatur','°C'],
+    ppfd_umol_m2_s:['PPFD','µmol/m²/s'],
+    ec_ms_cm:['EC','mS/cm'],
+    ph:['pH','']
+  };
+  function plot(points,metric){
+    S.plot={points,metric};
     const canvas=$('gcHistoryChart');if(!canvas)return;
     const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(240,canvas.clientWidth||300),h=190;
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
     const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
     ctx.font='11px system-ui';ctx.fillStyle='#83aba2';
-    if(samples.length<2){ctx.fillText('Noch nicht genug historische Messwerte. Die Aufzeichnung läuft automatisch.',13,100);return;}
-    const values=samples.filter(x=>Number.isFinite(Number(x.temperature_c))).map(x=>({t:Date.parse(x.recorded_at),v:Number(x.temperature_c)}));
-    if(values.length<2){ctx.fillText('Noch keine Temperatur-Messreihe verfügbar.',13,100);return;}
-    const low=Math.floor(Math.min(...values.map(x=>x.v))-1),high=Math.ceil(Math.max(...values.map(x=>x.v))+1),left=45,right=w-14,top=18,bottom=156;
+    const values=points.filter(x=>x.value!=null&&Number.isFinite(Number(x.value))&&!Number.isNaN(Date.parse(x.recorded_at)))
+      .map(x=>({t:Date.parse(x.recorded_at),v:Number(x.value)}));
+    const label=HISTORY_METRICS[metric]||[metric,''];
+    if(values.length<2){
+      ctx.fillText('Noch keine ausreichende Messreihe für '+label[0]+'.',13,100);
+      writeText('gcHistoryCaption',values.length+' Messpunkte · '+label[0]+' · weitere Werte werden archiviert');
+      return;
+    }
+    let low=Math.min(...values.map(x=>x.v)),high=Math.max(...values.map(x=>x.v));
+    const padding=Math.max(.15,(high-low)*.12);
+    low-=padding;high+=padding;
+    const left=55,right=w-14,top=18,bottom=156;
     for(let i=0;i<4;i++){
-      const y=top+(bottom-top)*i/3;ctx.strokeStyle='#2a4444';ctx.lineWidth=1;
+      const y=top+(bottom-top)*i/3;ctx.strokeStyle='#294644';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
-      ctx.fillStyle='#8ea9a5';ctx.fillText(num(high-i*(high-low)/3,1)+'°',5,y+4);
+      ctx.fillStyle='#9cb9b0';
+      ctx.fillText(num(high-i*(high-low)/3,1),4,y+4);
     }
     const first=values[0].t,last=values[values.length-1].t;
-    ctx.beginPath();ctx.strokeStyle=plotColor;ctx.lineWidth=2;
+    ctx.beginPath();ctx.strokeStyle=plotColor;ctx.lineWidth=2.3;
     values.forEach((p,i)=>{
       const x=left+(right-left)*(last===first?i/(values.length-1):(p.t-first)/(last-first));
       const y=bottom-(p.v-low)/(high-low)*(bottom-top);
       if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     });ctx.stroke();
     ctx.fillStyle='#8ea9a5';
-    ctx.fillText(new Date(first).toLocaleDateString('de-DE'),left,bottom+19);
-    ctx.fillText(new Date(last).toLocaleDateString('de-DE'),Math.max(left,right-85),bottom+19);
-    writeText('gcHistoryCaption',values.length+' echte BLE-Messpunkte · Lufttemperatur in °C · keine erfundenen Daten');
+    ctx.fillText(new Date(first).toLocaleDateString('de-DE'),left,bottom+20);
+    ctx.fillText(new Date(last).toLocaleDateString('de-DE'),Math.max(left,right-85),bottom+20);
+    const measured=['fan_rpm','temperature_c','humidity_percent','soil_moisture_percent',
+      'soil_temperature_c','ppfd_umol_m2_s','ec_ms_cm','ph'].includes(metric);
+    writeText('gcHistoryCaption',values.length+' archivierte Werte · '+label[0]+' ('+label[1]+') · '+
+      (measured?'Messwerte':'gemeldeter Sollwert'));
   }
   async function history(){
-    try {
+    const metric=$('gcHistoryMetric')?.value||'temperature_c';
+    const room=$('gcHistoryRoom')?.value||'';
+    try{
+      const start=new Date(Date.now()-S.period*86400000).toISOString();
+      const params=new URLSearchParams({metric,start,limit:'5000'});
+      if(room)params.set('room_id',room);
       const [summary,series]=await Promise.all([
-        api('/api/mars-history/summary'),api('/api/mars-history/series?device=fan&days='+S.period+'&limit=2500')
+        api('/api/mars-history/summary'),
+        api('/api/v1/history/points?'+params.toString())
       ]);
-      const totals=summary.totals?.find(x=>x.device==='fan');
-      writeText('gcHistoryCount',totals?num(totals.samples)+' Messungen archiviert':'Noch keine Messung');
-      plot(series.samples||[]);
-    }catch(e){
-      writeText('gcHistoryCaption','Verlauf noch nicht verfügbar: '+e.message);
-    }
+      const totals=summary.totals||[];
+      writeText('gcHistoryCount',totals.reduce((n,v)=>n+v.samples,0).toLocaleString('de-DE')+' Geräte-Stichproben archiviert');
+      plot(series.points||[],metric);
+    }catch(e){writeText('gcHistoryCaption','Archiv derzeit nicht erreichbar: '+e.message);}
   }
   async function loadGrows(){
     const [data,roomData]=await Promise.all([
@@ -166,6 +196,17 @@
       api('/api/v1/rooms').catch(()=>({rooms:[]}))
     ]);
     const grows=data.grows||[];
+    const roomChart=$('gcHistoryRoom');
+    if(roomChart){
+      const previous=roomChart.value;roomChart.replaceChildren();
+      const all=document.createElement('option');all.value='';all.textContent='Alle Räume';
+      roomChart.appendChild(all);
+      for(const room of roomData.rooms||[]){
+        const option=document.createElement('option');option.value=room.id;option.textContent=room.name;
+        roomChart.appendChild(option);
+      }
+      if((roomData.rooms||[]).some(r=>r.id===previous))roomChart.value=previous;
+    }
     const roomPicker=$('gcGrowRoom');
     if(roomPicker){
       const previous=roomPicker.value;roomPicker.replaceChildren();
@@ -254,7 +295,7 @@
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden&&S.view==='devices')refresh();
   });
-  window.addEventListener('resize',()=>{if(S.view==='growlog'&&S.plot)plot(S.plot);});
+  window.addEventListener('resize',()=>{if(S.view==='growlog'&&S.plot)plot(S.plot.points,S.plot.metric);});
   controls();
   if($('gcGrowDate'))$('gcGrowDate').value=new Date().toLocaleDateString('en-CA');
 })();
