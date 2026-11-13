@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from app.security import require_write_auth
 from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
 from app.mars_fc3000_trial import context_from_live_status, encode_command
+from app.mars_wifi_probe import wifi_status
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -229,6 +230,12 @@ def status():
         "wifi_required_for_ble": False,
         "note": "GATT-Rohdaten sind keine bestätigten Licht-/Lüfterwerte.",
     }
+
+
+@router.get("/wifi-access-points")
+def mars_wifi_access_points():
+    """Read cached WiFi AP records without connecting, probing or modifying radio state."""
+    return wifi_status()
 
 
 @router.post("/scan")
