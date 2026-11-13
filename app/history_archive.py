@@ -150,27 +150,54 @@ def get_points(metric: str|None=None,room_id: str|None=None,grow_id: str|None=No
 @router.get("/summary")
 def get_summary(room_id: str|None=None,grow_id: str|None=None,
                 start: str|None=None,end: str|None=None):
-    data=rows(room_id=room_id,grow_id=grow_id,start=start,end=end,limit=10000)
-    result={}
-    for name in UNITS:
-        vals=[p["value"] for p in data if p["metric"]==name]
-        if vals:
-            result[name]={"count":len(vals),"min":min(vals),"max":max(vals),
-                          "mean":round(sum(vals)/len(vals),3),"unit":UNITS[name][0],
-                          "source_kind":UNITS[name][1]}
-    return {"samples_evaluated":len(data),"truncated":len(data)==10000,"metrics":result}
+    where=[];args=[]
+    for name,value in (("room_id",room_id),("grow_id",grow_id)):
+        if value is not None:where.append(name+" = ?");args.append(value)
+    if start:where.append("recorded_at >= ?");args.append(start)
+    if end:where.append("recorded_at <= ?");args.append(end)
+    sql="""SELECT metric,count(*) n,min(value) lo,max(value) hi,avg(value) av
+           FROM points"""
+    if where:sql+=" WHERE "+" AND ".join(where)
+    sql+=" GROUP BY metric"
+    result={};count=0
+    with closing(connect()) as db:
+        for item in db.execute(sql,args):
+            metric=item["metric"]
+            if metric not in UNITS:continue
+            n=item["n"];count+=n
+            result[metric]={"count":n,"min":item["lo"],"max":item["hi"],
+                            "mean":round(item["av"],3),"unit":UNITS[metric][0],
+                            "source_kind":UNITS[metric][1]}
+    return {"samples_evaluated":count,"truncated":False,"metrics":result}
 
 @router.get("/export.csv")
 def export_csv(room_id: str|None=None,grow_id: str|None=None,metric: str|None=None,
                start: str|None=None,end: str|None=None):
+    """Stream the complete filtered history without a 50k-row cap."""
+    from fastapi.responses import StreamingResponse
     if metric and metric not in UNITS:raise HTTPException(422,"Unbekannte Messgröße")
-    values=list(reversed(rows(room_id=room_id,grow_id=grow_id,metric=metric,
-                              start=start,end=end,limit=50000)))
-    result=io.StringIO(newline="")
-    cols=["recorded_at","room_id","grow_id","plant_id","device","metric","value","unit","source_kind"]
-    writer=csv.DictWriter(result,fieldnames=cols,delimiter=";")
-    writer.writeheader();writer.writerows(values)
-    return Response(result.getvalue(),media_type="text/csv",headers={
+    where=[];args=[]
+    for col,val in (("room_id",room_id),("grow_id",grow_id),("metric",metric)):
+        if val is not None:where.append(col+" = ?");args.append(val)
+    if start:where.append("recorded_at >= ?");args.append(start)
+    if end:where.append("recorded_at <= ?");args.append(end)
+    cols=["recorded_at","room_id","grow_id","plant_id","device","metric",
+          "value","unit","source_kind"]
+    query="SELECT "+",".join(cols)+" FROM points"
+    if where:query+=" WHERE "+" AND ".join(where)
+    query+=" ORDER BY recorded_at,id"
+    def generate():
+        header=io.StringIO()
+        writer=csv.writer(header,delimiter=";")
+        writer.writerow(cols)
+        yield header.getvalue()
+        with closing(connect()) as db:
+            cursor=db.execute(query,args)
+            for row in cursor:
+                chunk=io.StringIO()
+                csv.writer(chunk,delimiter=";").writerow([row[k] for k in cols])
+                yield chunk.getvalue()
+    return StreamingResponse(generate(),media_type="text/csv; charset=utf-8",headers={
         "Content-Disposition":'attachment; filename="grow-central-history.csv"',
         "Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})
 
