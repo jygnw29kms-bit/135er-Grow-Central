@@ -72,6 +72,24 @@ def save(device: str, row: dict[str,Any]) -> None:
                     row.get("brightness_percent"),row.get("airflow_cfm"),
                     row.get("pressure_pa"),row.get("airflow_pressure_source","")))
         db.commit()
+    # Mirror sensor and setpoint readings into the common Grow Central history
+    # so room/plant history charts and normal Mars charts use one vocabulary.
+    from app.history_archive import append as archive_append
+    if device=="fan":
+        archive_append("mars-hydro-df150m",{
+            "temperature_c":row.get("temperature_c"),
+            "humidity_percent":row.get("humidity_rh"),
+            "fan_rpm":row.get("rpm"),
+            "fan_setpoint_percent":row.get("setpoint_percent"),
+            "fan_power_on":row.get("power_on"),
+            "airflow_cfm":row.get("airflow_cfm"),
+            "pressure_pa":row.get("pressure_pa"),
+        },source="estimated_from_setpoint_show_only")
+    elif device=="lamp":
+        archive_append("mars-hydro-fc3000",{
+            "lamp_brightness_percent":row.get("brightness_percent"),
+            "lamp_power_on":row.get("power_on"),
+        })
 
 def save_room_measurement(room_id: str, sample: dict[str, Any]) -> None:
     """Permanently archive validated room sensor sample, independently of bounded rooms.json."""
