@@ -37,12 +37,8 @@
     if (id === 'devices') {
       renderDeviceTable();
       marsWifiApRead();
-      // Local BLE fan telemetry starts automatically upon opening Devices.
-      // No fan commands, vendor cloud logins, or device pairing.
-      if (marsTimer===null) {
-        marsLiveRead(true);
-        marsTimer=setInterval(()=>marsLiveRead(false),30000);
-      }
+      // Device-app owns a single BLE refresh cycle; never duplicate its scan.
+      // Existing diagnostic functions remain available but not on an auto-timer.
     } else if (marsTimer!==null) {
       clearInterval(marsTimer);
       marsTimer=null;
@@ -312,10 +308,6 @@
   });
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden && marsTimer!==null){clearInterval(marsTimer);marsTimer=null;}
-    else if(!document.hidden && document.getElementById('devices')?.classList.contains('active') && marsTimer===null){
-      marsLiveRead(true);
-      marsTimer=setInterval(()=>marsLiveRead(false),30000);
-    }
   });
 
   // Optional separate vendor-cloud control for DF150-M. Never log in or
