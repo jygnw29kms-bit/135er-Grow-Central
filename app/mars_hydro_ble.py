@@ -24,6 +24,7 @@ from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
 from app.mars_fc3000_trial import context_from_live_status, encode_command
 from app.mars_wifi_probe import wifi_status
 from app.history_archive import append as history_append, room_for as history_room_for
+from app.history_archive import append as history_append, room_for as history_room_for
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -397,6 +398,38 @@ async def observe(body: ObserveRequest):
             raise HTTPException(502, _transport_error(exc, "Verbindungsaufbau oder Service-Erkennung")) from exc
 
 
+def archive_fan_status(latest: dict[str, Any] | None) -> None:
+    """Store the latest verified BLE status read without any device write."""
+    if not latest:
+        return
+    try:
+        history_append("mars-hydro-mzf002",{
+            "temperature_c":latest.get("temperature_c"),
+            "humidity_percent":latest.get("humidity_rh"),
+            "fan_rpm":latest.get("rpm"),
+            "fan_setpoint_percent":latest.get("setpoint_percent"),
+            "fan_power_on":latest.get("power_on"),
+            "airflow_cfm":latest.get("airflow_cfm"),
+            "pressure_pa":latest.get("pressure_pa"),
+        },room_id=history_room_for("mars-hydro-mzf002"),
+           source=latest.get("airflow_pressure_source",""))
+    except Exception:
+        logger.exception("Could not persist MZF002 BLE history")
+
+
+def archive_lamp_status(latest: dict[str, Any] | None) -> None:
+    """Store fresh FC3000 status with its room identity."""
+    if not latest:
+        return
+    try:
+        history_append("mars-hydro-fc3000",{
+            "lamp_brightness_percent":latest.get("brightness_percent"),
+            "lamp_power_on":latest.get("power_on"),
+        },room_id=history_room_for("mars-hydro-fc3000"))
+    except Exception:
+        logger.exception("Could not persist FC3000 BLE history")
+
+
 @router.post("/observe-fan-telemetry")
 async def observe_fan_telemetry(body: InspectRequest):
     """Opt-in read-only MZF002 observation; no raw identifiers are returned.
@@ -449,6 +482,7 @@ async def observe_fan_telemetry(body: InspectRequest):
                        source=v.get("airflow_pressure_source",""))
                 except Exception:
                     logger.exception("MZF002 permanent history append failed")
+            archive_fan_status(samples[-1] if samples else None)
             return {
                 "candidate_id": body.candidate_id,
                 "device_family": "MZF002",
@@ -511,6 +545,7 @@ async def observe_lamp_telemetry(body: InspectRequest):
                     }, room_id=history_room_for("mars-hydro-fc3000"))
                 except Exception:
                     logger.exception("FC3000 permanent history append failed")
+            archive_lamp_status(samples[-1] if samples else None)
             return {
                 "candidate_id": body.candidate_id,
                 "device_family": "MARS",
