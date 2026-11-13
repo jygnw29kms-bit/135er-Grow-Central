@@ -45,6 +45,17 @@ def connect() -> sqlite3.Connection:
         id INTEGER PRIMARY KEY, name TEXT NOT NULL, crop TEXT NOT NULL DEFAULT '',
         started_at TEXT NOT NULL, ended_at TEXT, notes TEXT NOT NULL DEFAULT ''
     )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS room_samples(
+        id INTEGER PRIMARY KEY, recorded_at TEXT NOT NULL, room_id TEXT NOT NULL,
+        temperature_c REAL, humidity_percent REAL, vpd_kpa REAL,
+        soil_moisture_percent REAL, soil_temperature_c REAL, ppfd_umol_m2_s REAL,
+        ec_ms_cm REAL, ph REAL, co2_ppm REAL, power_w REAL,
+        energy_wh REAL, source TEXT NOT NULL DEFAULT ''
+    )""")
+    db.execute("CREATE INDEX IF NOT EXISTS ix_room_sample_time ON room_samples(room_id,recorded_at)")
+    columns={row[1] for row in db.execute("PRAGMA table_info(grows)")}
+    if "room_id" not in columns:
+        db.execute("ALTER TABLE grows ADD COLUMN room_id TEXT NOT NULL DEFAULT ''")
     db.commit()
     return db
 
@@ -61,6 +72,31 @@ def save(device: str, row: dict[str,Any]) -> None:
                     row.get("brightness_percent"),row.get("airflow_cfm"),
                     row.get("pressure_pa"),row.get("airflow_pressure_source","")))
         db.commit()
+
+def save_room_measurement(room_id: str, sample: dict[str, Any]) -> None:
+    """Permanently archive validated room sensor sample, independently of bounded rooms.json."""
+    if not room_id or len(room_id)>120:return
+    fields=("temperature_c","humidity_percent","vpd_kpa","soil_moisture_percent",
+            "soil_temperature_c","ppfd_umol_m2_s","ec_ms_cm","ph","co2_ppm",
+            "power_w","energy_wh")
+    values=[]
+    for field in fields:
+        raw=sample.get(field)
+        try:
+            value=float(raw) if raw is not None and not isinstance(raw,bool) else None
+            if value is not None and (not __import__("math").isfinite(value)):value=None
+        except (TypeError,ValueError,OverflowError):value=None
+        values.append(value)
+    if all(v is None for v in values):return
+    with connect() as db:
+        db.execute("""INSERT INTO room_samples(
+            recorded_at,room_id,temperature_c,humidity_percent,vpd_kpa,soil_moisture_percent,
+            soil_temperature_c,ppfd_umol_m2_s,ec_ms_cm,ph,co2_ppm,power_w,energy_wh,source
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+          (sample.get("timestamp") or datetime.now(timezone.utc).isoformat(),room_id,
+           *values,str(sample.get("source") or "")[:60]))
+        db.commit()
+
 
 async def sample_once() -> dict[str,bool]:
     result={"fan":False,"lamp":False}
@@ -143,6 +179,7 @@ class GrowCreate(BaseModel):
     started_at: datetime
     ended_at: datetime | None = None
     notes: str=Field(default="",max_length=500)
+    room_id: str=Field(default="",max_length=120)
 
 @router.get("/grows")
 def grows():
@@ -154,10 +191,20 @@ def new_grow(body: GrowCreate):
     end=body.ended_at.astimezone(timezone.utc).isoformat() if body.ended_at else None
     if end and end<=start:raise HTTPException(422,"Ende muss nach Start liegen.")
     with connect() as db:
-        cur=db.execute("INSERT INTO grows(name,crop,started_at,ended_at,notes) VALUES (?,?,?,?,?)",
-                       (body.name,body.crop,start,end,body.notes))
+        cur=db.execute("INSERT INTO grows(name,crop,started_at,ended_at,notes,room_id) VALUES (?,?,?,?,?,?)",
+                       (body.name,body.crop,start,end,body.notes,body.room_id))
         db.commit()
         return {"id":cur.lastrowid,"name":body.name}
+
+@router.get("/room-series")
+def room_series(room_id: str=Query(min_length=1,max_length=120),
+                days:int=Query(30,ge=1,le=3660),limit:int=Query(2000,ge=1,le=10000)):
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
+    return {"room_id":room_id,"samples":rows(
+      """SELECT * FROM (SELECT * FROM room_samples WHERE room_id=? AND recorded_at>=?
+      ORDER BY recorded_at DESC LIMIT ?) ORDER BY recorded_at""",
+      (room_id,cutoff,limit))}
+
 
 @router.get("/compare")
 def compare(a:int=Query(ge=1),b:int=Query(ge=1)):
@@ -175,5 +222,16 @@ def compare(a:int=Query(ge=1),b:int=Query(ge=1)):
             ROUND(AVG(brightness_percent),2) avg_light_percent
             FROM samples WHERE recorded_at>=? AND recorded_at<=?
             GROUP BY device""",(start,end))
-        result.append({"grow":grow,"metrics":metrics})
-    return {"comparisons":result,"note":"Vergleich der verfügbaren BLE-Messwerte; Wasser/Ertrag aus Raum- und Pflanzentagebuch separat."}
+        room_metrics=rows("""SELECT COUNT(*) AS count,
+            ROUND(AVG(temperature_c),2) avg_room_temp_c,
+            ROUND(AVG(humidity_percent),2) avg_room_humidity_rh,
+            ROUND(AVG(vpd_kpa),3) avg_vpd_kpa,
+            ROUND(AVG(soil_moisture_percent),2) avg_soil_moisture_percent,
+            ROUND(AVG(soil_temperature_c),2) avg_soil_temp_c,
+            ROUND(AVG(ppfd_umol_m2_s),1) avg_ppfd,
+            ROUND(AVG(ec_ms_cm),2) avg_ec,
+            ROUND(AVG(ph),2) avg_ph
+            FROM room_samples WHERE room_id=? AND recorded_at>=? AND recorded_at<=?""",
+            (grow["room_id"],start,end)) if grow["room_id"] else []
+        result.append({"grow":grow,"metrics":metrics,"room_metrics":room_metrics})
+    return {"comparisons":result,"note":"BLE- und zugeordnete Raum-Sensormessungen, soweit vorhanden. Bewässerungsereignisse und Ertrag aus dem Pflanzentagebuch ergänzen."}
