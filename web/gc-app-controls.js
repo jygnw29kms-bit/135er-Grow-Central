@@ -121,6 +121,7 @@
   }
   const plotColor='#39efab';
   function plot(samples){
+    S.plot=samples;
     const canvas=$('gcHistoryChart');if(!canvas)return;
     const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(240,canvas.clientWidth||300),h=190;
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
@@ -160,7 +161,23 @@
     }
   }
   async function loadGrows(){
-    const data=await api('/api/mars-history/grows'),grows=data.grows||[];
+    const [data,roomData]=await Promise.all([
+      api('/api/mars-history/grows'),
+      api('/api/v1/rooms').catch(()=>({rooms:[]}))
+    ]);
+    const grows=data.grows||[];
+    const roomPicker=$('gcGrowRoom');
+    if(roomPicker){
+      const previous=roomPicker.value;roomPicker.replaceChildren();
+      const empty=document.createElement('option');empty.value='';empty.textContent='Ohne Raumzuordnung';
+      roomPicker.appendChild(empty);
+      for(const room of roomData.rooms||[]){
+        const option=document.createElement('option');
+        option.value=room.id;option.textContent=room.name;
+        roomPicker.appendChild(option);
+      }
+      roomPicker.value=previous;
+    }
     for(const id of ['gcGrowA','gcGrowB']){
       const select=$(id);if(!select)continue;
       const previous=select.value;select.replaceChildren();
@@ -180,7 +197,8 @@
     if(!name||!date){writeText('gcGrowFeedback','Name und Startdatum fehlen.');return;}
     if(!window.confirm('Grow-Durchlauf "'+name+'" dauerhaft anlegen?'))return;
     try{
-      await api('/api/mars-history/grows',{name,crop,started_at:new Date(date+'T12:00:00').toISOString()});
+      await api('/api/mars-history/grows',{name,crop,room_id:$('gcGrowRoom')?.value||'',
+        started_at:new Date(date+'T12:00:00').toISOString()});
       $('gcGrowName').value='';
       writeText('gcGrowFeedback','Grow "'+name+'" angelegt. Sensorwerte werden nach Datum verglichen.');
       await loadGrows();
@@ -202,7 +220,22 @@
         div.appendChild(info);
         const light=document.createElement('span');
         light.textContent=lamp?('Ø Licht-Sollwert '+num(lamp.avg_light_percent,1)+' %'):'Lichtwerte nicht verfügbar';
-        div.appendChild(light);target.appendChild(div);
+        div.appendChild(light);
+        const rooms=x.room_metrics||[];
+        for(const [metric,label,unit] of [
+          ['soil_moisture_percent','Ø Bodenfeuchte','%'],
+          ['soil_temperature_c','Ø Bodentemperatur','°C'],
+          ['ppfd_umol_m2_s','Ø PPFD','µmol/m²/s'],
+          ['ec_ms_cm','Ø EC','mS/cm'],
+          ['ph','Ø pH','']
+        ]){
+          const row=rooms.find(r=>r.metric===metric);
+          if(row?.avg==null)continue;
+          const span=document.createElement('span');
+          span.textContent=label+': '+num(row.avg,1)+' '+unit;
+          div.appendChild(span);
+        }
+        target.appendChild(div);
       }
       writeText('gcGrowFeedback','Vergleich anhand archivierter Messwerte, keine Schätzungen.');
     }catch(e){writeText('gcGrowFeedback','Vergleich fehlgeschlagen: '+e.message);}
