@@ -261,6 +261,35 @@
     }finally{marsLampBusy=false;if(button)button.disabled=false;}
   }
   $('marsLampRead')?.addEventListener('click',()=>marsLampRead(true));
+  $('marsLampTrialLevel')?.addEventListener('input',()=>setText('marsLampTrialLevelText',$('marsLampTrialLevel').value+' %'));
+  $('marsLampTrialAction')?.addEventListener('change',()=>{
+    $('marsLampTrialLevel').disabled=$('marsLampTrialAction').value!=='brightness';
+  });
+  $('marsLampTrialRun')?.addEventListener('click',async()=>{
+    const note=$('marsLampTrialMessage'),button=$('marsLampTrialRun');
+    if(!note||!button)return;
+    if(!marsLampId){note.textContent='Zuerst FC3000 über „Status lesen“ erkennen.';return;}
+    const choice=$('marsLampTrialAction').value;
+    const action=choice==='brightness'?'brightness':'power';
+    const value=choice==='brightness'?Number($('marsLampTrialLevel').value):(choice==='power_on'?1:0);
+    const description=choice==='brightness'?value+' % Helligkeit':choice==='power_on'?'Lampe einschalten':'Lampe ausschalten';
+    if(!window.confirm('FC3000 wirklich auf '+description+' setzen? Ein echter Bluetooth-Befehl wird gesendet.'))return;
+    button.disabled=true;note.textContent='Prüfe aktuelle FC3000-Sitzung und sende höchstens einen Befehl…';
+    try{
+      const result=await api('/api/mars-hydro/ble/control-lamp-trial',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({candidate_id:marsLampId,action,value,confirm_physical_change:true})
+      });
+      note.textContent=result.message+
+        (result.device_report_confirmed?' · Status vom Controller bestätigt.':' · Physische Wirkung bitte direkt prüfen.');
+      if(result.latest){
+        setText('marsLampPower',result.latest.power_on?'Ein':'Aus');
+        setText('marsLampBrightness',result.latest.brightness_percent+' %');
+        setText('marsLampUpdated','FC3000 Statusmeldung nach Test · '+new Date().toLocaleTimeString('de-DE'));
+      }
+    }catch(err){note.textContent='Kein erfolgreicher Steuerungstest: '+err.message;}
+    finally{button.disabled=false;}
+  });
   $('marsConnectLive')?.addEventListener('click',()=>{
     marsLiveRead(true);
     if(marsTimer===null)marsTimer=setInterval(()=>marsLiveRead(false),30000);
