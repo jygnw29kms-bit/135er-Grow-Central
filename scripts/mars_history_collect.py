@@ -10,7 +10,7 @@ import os
 import sys
 from bleak import BleakScanner, BleakClient
 
-from app.history_archive import append
+from app.history_archive import append, room_for
 from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
 from app.mars_hydro_ble import MZF002_NOTIFY
 
@@ -47,7 +47,7 @@ async def observe(device, kind):
         values={"lamp_brightness_percent":v["brightness_percent"],"lamp_power_on":v["power_on"]}
         label="mars-hydro-fc3000"
         source=""
-    count=append(label,values,source=source)
+    count=append(label,values,room_id=room_for(label),source=source)
     print(kind+"_saved",count,flush=True)
     return count
 
