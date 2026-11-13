@@ -20,7 +20,6 @@ cp --reflink=auto --sparse=always "$original" "$target"
 chmod 0600 "$target"
 work="$(mktemp -d /tmp/gc-maint-image.XXXXXXXX)"
 mkdir "$work/root" "$work/boot"
-loop=""
 root_on=0
 boot_on=0
 complete=0
@@ -28,14 +27,30 @@ cleanup(){
   set +e
   [[ $boot_on -eq 1 ]] && umount "$work/boot"
   [[ $root_on -eq 1 ]] && umount "$work/root"
-  [[ -n "$loop" ]] && losetup -d "$loop"
   rmdir "$work/boot" "$work/root" "$work" 2>/dev/null || :
   [[ $complete -eq 1 ]] || rm -f -- "$target"
 }
 trap cleanup EXIT
-loop="$(losetup --find --show --partscan "$target")"
-mount "$loop"p2 "$work/root"; root_on=1
-mount "$loop"p1 "$work/boot"; boot_on=1
+# Some virtualized root servers do not create /dev/loopXp1 and p2 for
+# --partscan. Mount the exact MBR partition byte ranges instead.
+read -r BOOT_OFFSET BOOT_BYTES ROOT_OFFSET ROOT_BYTES < <(
+  sfdisk --json "$target" | python3 -c '
+import json,sys
+t=json.load(sys.stdin)["partitiontable"]
+parts=t["partitions"]
+if len(parts)!=2:
+    raise SystemExit("Expected two Raspberry Pi partitions")
+sector=t.get("sectorsize",512)
+print(*(v*sector for p in parts for v in (p["start"],p["size"])))
+')
+[[ "${BOOT_OFFSET:-}" =~ ^[0-9]+$ && "${BOOT_BYTES:-}" =~ ^[0-9]+$ &&
+   "${ROOT_OFFSET:-}" =~ ^[0-9]+$ && "${ROOT_BYTES:-}" =~ ^[0-9]+$ ]] || {
+  echo "Invalid image partition geometry" >&2; exit 4
+}
+mount -o "loop,offset=$ROOT_OFFSET,sizelimit=$ROOT_BYTES" "$target" "$work/root"
+root_on=1
+mount -o "loop,offset=$BOOT_OFFSET,sizelimit=$BOOT_BYTES" "$target" "$work/boot"
+boot_on=1
 root="$work/root"
 [[ -s "$work/boot/gc-maintenance.pub" &&
    -f "$root/opt/135er-grow-central/SOURCE_COMMIT" &&
@@ -70,7 +85,6 @@ install -o root -g root -m 0755 "$script" "$root/opt/135er-grow-central/image-bu
 sync
 umount "$work/boot"; boot_on=0
 umount "$work/root"; root_on=0
-losetup -d "$loop"; loop=""
 complete=1
 echo "PRIVATE_FIXED_PASSWORD_IMAGE=$target"
 echo "SHA256=$(sha256sum "$target" | cut -d' ' -f1)"
