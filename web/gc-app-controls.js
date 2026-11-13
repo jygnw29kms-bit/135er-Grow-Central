@@ -281,6 +281,26 @@
       writeText('gcGrowFeedback','Vergleich anhand archivierter Messwerte, keine Schätzungen.');
     }catch(e){writeText('gcGrowFeedback','Vergleich fehlgeschlagen: '+e.message);}
   }
+  async function overviewQuick(){
+    try {
+      const data=await api('/api/mars-history/summary');
+      const fan=data.latest?.find(x=>x.device==='fan');
+      const lamp=data.latest?.find(x=>x.device==='lamp');
+      if(fan){
+        writeText('gcQuickTemp',num(fan.temperature_c,1)+' °C');
+        writeText('gcQuickHum',num(fan.humidity_rh,1)+' %');
+        writeText('gcQuickFan',fan.power_on?num(fan.setpoint_percent)+' %':'Aus');
+      }
+      if(lamp)writeText('gcQuickLamp',lamp.power_on?num(lamp.brightness_percent)+' %':'Aus');
+      const stamps=[fan?.recorded_at,lamp?.recorded_at].filter(Boolean).map(Date.parse).filter(Number.isFinite);
+      if(stamps.length){
+        const age=Math.round((Date.now()-Math.max(...stamps))/60000);
+        writeText('gcQuickAge',age<0?'Letzte Archivmessung · Zeitprüfung nötig':
+          age<2?'Zuletzt aufgezeichnet: gerade eben':
+          'Letzte Archivmessung vor '+age+' Minuten'+(age>10?' · nicht aktuell':''));
+      }else writeText('gcQuickAge','Noch keine automatischen Messungen im Archiv');
+    }catch(e){writeText('gcQuickAge','Messarchiv derzeit nicht erreichbar');}
+  }
   function view(id){
     S.view=id;
     if(id==='devices'){
@@ -290,6 +310,7 @@
       clearInterval(S.refresh);S.refresh=null;
     }
     if(id==='growlog'){history();loadGrows().catch(e=>writeText('gcGrowFeedback',e.message));}
+    if(id==='overview')overviewQuick();
   }
   document.addEventListener('gc:view',e=>view(e.detail.id));
   document.addEventListener('visibilitychange',()=>{
@@ -297,5 +318,9 @@
   });
   window.addEventListener('resize',()=>{if(S.view==='growlog'&&S.plot)plot(S.plot.points,S.plot.metric);});
   controls();
+  document.querySelectorAll('[data-gc-nav]').forEach(button=>button.addEventListener('click',()=>{
+    document.querySelector('#mainNav [data-view="'+button.dataset.gcNav+'"]')?.click();
+  }));
+  if($('overview')?.classList.contains('active')){S.view='overview';overviewQuick();}
   if($('gcGrowDate'))$('gcGrowDate').value=new Date().toLocaleDateString('en-CA');
 })();
