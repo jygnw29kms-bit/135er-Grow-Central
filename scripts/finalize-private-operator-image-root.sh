@@ -85,9 +85,17 @@ echo "OFFLINE_PRIVILEGED_IMAGE_AUDIT=PASS"
 # Archive + checksums, always within owner-only folder; no public upload.
 name="135er-GrowCentral-Operator-FixedSudo-$(date -u +%Y%m%d)-${CHECKOUT_SHA:0:12}.img.xz"
 [[ ! -e "$TARGET/$name" ]] || { echo "Target already exists" >&2; exit 6; }
-nice -n 10 xz -T2 -2 -c "$NEW_IMAGE" > "$TARGET/$name"
-chmod 0600 "$TARGET/$name"
-xz -t "$TARGET/$name"
+archive_tmp="$(mktemp "$TARGET/.grow-central-partial.XXXXXXXX.xz")"
+archive_cleanup() {
+  set +e
+  [[ -n "${archive_tmp:-}" ]] && rm -f -- "$archive_tmp"
+}
+trap 'cleanup; audit_cleanup; archive_cleanup' EXIT
+nice -n 10 xz -T2 -2 -c "$NEW_IMAGE" > "$archive_tmp"
+chmod 0600 "$archive_tmp"
+xz -t "$archive_tmp"
+mv -n "$archive_tmp" "$TARGET/$name"
+archive_tmp=""
 (cd "$TARGET"; sha256sum "$name" > "$name.sha256"; sha256sum -c "$name.sha256")
 chmod 0600 "$TARGET/$name.sha256"
 echo "PRIVATE_IMAGE_READY=$TARGET/$name"
