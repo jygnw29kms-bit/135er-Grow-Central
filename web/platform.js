@@ -34,7 +34,18 @@
     document.querySelectorAll('.view').forEach((node) => node.classList.toggle('active', node.id === id));
     document.querySelectorAll('#mainNav [data-view]').forEach((node) => node.classList.toggle('active', node.dataset.view === id));
     setText('pageTitle', titles[id] || 'Grow Central');
-    if (id === 'devices') renderDeviceTable();
+    if (id === 'devices') {
+      renderDeviceTable();
+      // Local BLE fan telemetry starts automatically upon opening Devices.
+      // No fan commands, vendor cloud logins, or device pairing.
+      if (marsTimer===null) {
+        marsLiveRead(true);
+        marsTimer=setInterval(()=>marsLiveRead(false),30000);
+      }
+    } else if (marsTimer!==null) {
+      clearInterval(marsTimer);
+      marsTimer=null;
+    }
     if (id === 'automation') loadAutomations();
     if (id === 'camera') loadCamera();
     if (id === 'energy') loadEnergy(true);
@@ -296,6 +307,10 @@
   });
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden && marsTimer!==null){clearInterval(marsTimer);marsTimer=null;}
+    else if(!document.hidden && document.getElementById('devices')?.classList.contains('active') && marsTimer===null){
+      marsLiveRead(true);
+      marsTimer=setInterval(()=>marsLiveRead(false),30000);
+    }
   });
 
   // Optional separate vendor-cloud control for DF150-M. Never log in or
