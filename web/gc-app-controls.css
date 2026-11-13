@@ -54,3 +54,17 @@
 .gc-app-error{color:#ffb19b!important}
 @media(max-width:930px){.gc-app-grid{grid-template-columns:1fr}.gc-app-growform{grid-template-columns:1fr 1fr}.gc-app-head{align-items:flex-start}}
 @media(max-width:600px){.gc-app{padding:0 12px}.gc-app-card{padding:16px}.gc-app-head{display:block}.gc-app-head h3{font-size:22px!important}.gc-app-status{text-align:left;max-width:100%;margin-top:9px}.gc-app-value strong{font-size:46px}.gc-app-mini b{font-size:16px}.gc-app-history{padding:15px}.gc-app-compare{grid-template-columns:1fr}.gc-app-growform{grid-template-columns:1fr}.gc-app-actions .gc-app-btn{flex:1}.gc-app-picker{width:100%}}
+
+/* Final-Master quick entry: status tiles are navigational, not simulated controls. */
+.gc-quick{margin:14px 14px 0}
+.gc-quick-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.gc-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.gc-quick-card{min-height:112px;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:6px;
+ background:linear-gradient(155deg,#102d28,#0b1b21);border:1px solid #27544a;border-radius:12px;padding:14px;color:#eafff4;transition:transform .2s,border-color .2s}
+.gc-quick-card:hover,.gc-quick-card:focus-visible{transform:translateY(-2px);border-color:#32dfa0}
+.gc-quick-card small{font-size:11px;color:#8cafaa}
+.gc-quick-card strong{font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums;color:#f1fff8}
+.gc-quick-card span{font-size:10px;color:#46dfac;font-weight:700}
+.gc-quick-card.archive{background:linear-gradient(160deg,#1d302c,#121d27);border-color:#4a695f}
+@media(max-width:1000px){.gc-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.gc-quick{margin:12px}.gc-quick-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;padding-bottom:5px}.gc-quick-card{flex:0 0 145px;min-height:118px;scroll-snap-align:start}.gc-quick-head{display:block}.gc-quick-card strong{font-size:23px}.gc-quick-head .gc-app-caption{display:block;margin-top:7px}}
