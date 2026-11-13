@@ -60,3 +60,39 @@ def mzf002_telemetry(data: bytes) -> dict[str, Any] | None:
         "identity_verified": False,
         "control_verified": False,
     }
+
+
+def fc3000_telemetry(data: bytes) -> dict[str, Any] | None:
+    """Decode only the 19-field Mars Legacy FC3000 status observed on real iPhone HCI.
+
+    Original app action windows independently confirmed that index 12 is power
+    and 13 is brightness (24/26/50/75/76/25%). This is a read-only status
+    parser; it never authenticates to or commands the lamp.
+    """
+    if not data or len(data) > 512:
+        return None
+    try:
+        fields = data.decode("ascii").strip("\\r\\n").split("|")
+    except UnicodeDecodeError:
+        return None
+    if len(fields) != 19 or fields[3] != "MARS":
+        return None
+    if fields[12] not in ("0", "1") or not fields[13].isdigit():
+        return None
+    brightness = int(fields[13])
+    if brightness < 0 or brightness > 100:
+        return None
+    version = fields[4]
+    if not re.fullmatch(r"[0-9]{1,3}(?:\\.[0-9]{1,3}){1,2}", version):
+        return None
+    return {
+        "device_family": "MARS",
+        "power_on": fields[12] == "1",
+        "brightness_percent": brightness,
+        "firmware_version": version,
+        "decoded_fields": [3, 4, 12, 13],
+        "interpretation": "correlated_with_real_mars_legacy_fc3000_actions",
+        "read_only": True,
+        "identity_verified": False,
+        "control_verified": False,
+    }
