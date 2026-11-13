@@ -301,6 +301,47 @@
       }else writeText('gcQuickAge','Noch keine automatischen Messungen im Archiv');
     }catch(e){writeText('gcQuickAge','Messarchiv derzeit nicht erreichbar');}
   }
+  function ageLabel(time){
+    if(!time)return 'Noch keine Messung vorhanden';
+    const age=Math.max(0,Math.round((Date.now()-Date.parse(time))/60000));
+    return age<=1?'Archiv · gerade gemessen':'Letzte Messung vor '+age+' Minuten'+(age>10?' · nicht live':'');
+  }
+  async function hub(id){
+    try{
+      if(id==='climate'||id==='lighting'){
+        const result=await api('/api/mars-history/summary');
+        const fan=result.latest?.find(row=>row.device==='fan');
+        const lamp=result.latest?.find(row=>row.device==='lamp');
+        if(id==='climate'){
+          if(fan){
+            writeText('gcClimateTemp',num(fan.temperature_c,1)+' °C');
+            writeText('gcClimateHum',num(fan.humidity_rh,1)+' %');
+            writeText('gcClimateRpm',num(fan.rpm)+' RPM');
+          }
+          writeText('gcClimateAge',ageLabel(fan?.recorded_at));
+        }else{
+          if(lamp){
+            writeText('gcLightingPower',lamp.power_on?'Ein':'Aus');
+            writeText('gcLightingLevel',num(lamp.brightness_percent)+' %');
+          }
+          writeText('gcLightingAge',ageLabel(lamp?.recorded_at));
+        }
+      }else if(id==='irrigation'){
+        const [soil,temp]=await Promise.all([
+          api('/api/v1/history/points?metric=soil_moisture_percent&limit=1'),
+          api('/api/v1/history/points?metric=soil_temperature_c&limit=1')
+        ]);
+        const a=soil.points?.[0],b=temp.points?.[0];
+        writeText('gcIrrigationSoil',a?num(a.value,1)+' %':'—');
+        writeText('gcIrrigationTemp',b?num(b.value,1)+' °C':'—');
+        writeText('gcIrrigationSource',a?'Sensorarchiv':'Keine Daten');
+        writeText('gcIrrigationAge',ageLabel(a?.recorded_at||b?.recorded_at)+
+          (a?' · Kalibrierstatus separat prüfen':''));
+      }
+    }catch(e){
+      writeText(id==='climate'?'gcClimateAge':id==='lighting'?'gcLightingAge':'gcIrrigationAge','Keine neuen Sensordaten verfügbar');
+    }
+  }
   function view(id){
     S.view=id;
     if(id==='devices'){
@@ -311,6 +352,7 @@
     }
     if(id==='growlog'){history();loadGrows().catch(e=>writeText('gcGrowFeedback',e.message));}
     if(id==='overview')overviewQuick();
+    if(['climate','lighting','irrigation'].includes(id))hub(id);
   }
   document.addEventListener('gc:view',e=>view(e.detail.id));
   document.addEventListener('visibilitychange',()=>{
