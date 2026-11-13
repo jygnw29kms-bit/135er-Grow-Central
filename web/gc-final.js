@@ -33,7 +33,7 @@ function page(id){
 }
 function controlMarkup(kind){
  const lamp=kind==='lamp',title=lamp?'FC3000':'DF150-M';
- return '<article class="control" data-control="'+kind+'"><div class="controlhead"><div class="name"><div class="symbol">'+(lamp?'☼':'✳')+'</div><div><h3>'+title+'</h3><small>Mars Hydro · '+(lamp?'Licht':'Abluft')+'</small></div></div><button class="switch" data-power="'+kind+'" type="button">—</button></div><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüfterstufe')+'</span><strong data-level-label="'+kind+'">—</strong></div><input aria-label="'+(lamp?'Helligkeit FC3000':'Lüfterstufe DF150-M')+'" data-slider="'+kind+'" class="slider" type="range" min="'+(lamp?10:25)+'" max="100" step="1" value="'+(lamp?10:25)+'"><div class="ctlrow"><span data-status-label="'+kind+'">Prüfe Verbindung …</span><button class="apply" data-apply="'+kind+'" type="button">Übernehmen</button></div><div class="ctlfoot"><span>'+(lamp?'Status: ':'Drehzahl: ')+'<b data-live-detail="'+kind+'">—</b></span><span data-read-age="'+kind+'">—</span></div><div class="ctlmsg" data-control-msg="'+kind+'"></div></article>';
+ return '<article class="control" data-control="'+kind+'"><div class="controlhead"><div class="name"><div class="device-photo"><img src="/static/'+(lamp?'mars-fc3000-official.jpg':'mars-df150m-official.jpg')+'" alt="'+(lamp?'Mars Hydro FC3000':'Mars Hydro DF150-M')+'" loading="lazy"></div><div><h3>'+title+'</h3><small>Mars Hydro · '+(lamp?'Licht':'Abluft')+'</small></div></div><button class="switch" data-power="'+kind+'" type="button">—</button></div><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüfterstufe')+'</span><strong data-level-label="'+kind+'">—</strong></div><input aria-label="'+(lamp?'Helligkeit FC3000':'Lüfterstufe DF150-M')+'" data-slider="'+kind+'" class="slider" type="range" min="'+(lamp?10:25)+'" max="100" step="1" value="'+(lamp?10:25)+'"><div class="ctlrow"><span data-status-label="'+kind+'">Prüfe Verbindung …</span><button class="apply" data-apply="'+kind+'" type="button">Übernehmen</button></div><div class="ctlfoot"><span>'+(lamp?'Status: ':'Drehzahl: ')+'<b data-live-detail="'+kind+'">—</b></span><span data-read-age="'+kind+'">—</span></div><div class="ctlmsg" data-control-msg="'+kind+'"></div></article>';
 }
 function renderControls(){
  $('controlMount').innerHTML='<div class="controls">'+controlMarkup('lamp')+controlMarkup('fan')+'</div>';
@@ -141,14 +141,14 @@ async function loadHistory(){
  $('historyData').innerHTML=rows.length?rows.map(x=>'<div class="archiverow"><span>'+esc(x.device==='fan'?'DF150-M':x.device==='lamp'?'FC3000':x.device)+'</span><span>'+esc(x.recorded_at?new Date(x.recorded_at).toLocaleString('de-DE'):'Ohne Zeitstempel')+'</span><span>'+esc(x.device==='fan'?[x.temperature_c!=null?n(x.temperature_c,1)+' °C':null,x.humidity_rh!=null?n(x.humidity_rh,1)+' %':null,x.rpm!=null?n(x.rpm)+' RPM':null].filter(Boolean).join(' · '):x.power_on?'Ein':'Aus')+'</span></div>').join(''):'<p class="desc">Noch keine Archivdaten verfügbar.</p>';
  }catch(e){text('historyData','Archivdaten derzeit nicht erreichbar');}
 }
-function updateCamera(){
+function updateCamera(force=false){
  const target=state.page==='camera'?'largeCam':state.page==='home'?'homeCam':null;
- if(state.activeCam===target)return;
+ if(state.activeCam===target&&!force)return;
  document.querySelectorAll('.camframe img').forEach(img=>img.remove());
  state.activeCam=target;
  if(target){
  const container=$(target),img=document.createElement('img');img.alt='Growzelt Live-Kamera';img.loading='eager';img.onerror=()=>{img.remove();container.querySelector('.camblank').textContent='Kamera derzeit nicht verfügbar';container.querySelector('.camblank').style.display='block';};
- container.prepend(img);img.src='/api/v1/camera/stream';
+ container.prepend(img);img.src='/api/v1/camera/stream'+(cam.resolution&&cam.cameraId?'?camera_id='+encodeURIComponent(cam.cameraId)+'&width='+encodeURIComponent(cam.resolution.split('x')[0])+'&height='+encodeURIComponent(cam.resolution.split('x')[1]):'');
  container.querySelector('.camblank').style.display='none';
  }
 }
@@ -163,9 +163,82 @@ document.addEventListener('click',e=>{
  const smart=e.target.closest('[data-smart-id]');if(smart){switchSmart(smart.dataset.smartId);return;}
 });
 document.addEventListener('input',e=>{if(!e.target.matches('[data-slider]'))return;const k=e.target.dataset.slider;state.sliderEdit[k]=true;document.querySelectorAll('[data-slider="'+k+'"]').forEach(s=>{if(s!==e.target)s.value=e.target.value});setAll('[data-level-label="'+k+'"]',e.target.value+' %');});
-renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();
 setInterval(()=>{tick();if(!document.hidden)refreshLive();},1600);
 setInterval(()=>{if(!document.hidden){loadSmart();loadHomekit();}},30000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){state.activeCam=null;document.querySelectorAll('.camframe img').forEach(img=>img.remove());}else{updateCamera();refreshLive();}});
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('/gc-worker.js',{scope:'/'}).catch(()=>{});
+
+// Camera settings use existing V4L2 API; no mock sliders or unsupported fields.
+const cam={cameraId:null,modes:[],resolution:'',settingsLoaded:false};
+const names={brightness:'Helligkeit',contrast:'Kontrast',saturation:'Farbsättigung',
+ sharpness:'Schärfe',gain:'Verstärkung',white_balance_automatic:'Automatischer Weißabgleich',
+ white_balance_temperature:'Farbtemperatur',power_line_frequency:'Netzfrequenz',
+ backlight_compensation:'Gegenlichtausgleich',auto_exposure:'Belichtung',
+ exposure_time_absolute:'Belichtungszeit',exposure_dynamic_framerate:'Dynamische Bildrate',
+ pan_absolute:'Horizontal bewegen',tilt_absolute:'Vertikal bewegen',
+ focus_absolute:'Fokus',focus_automatic_continuous:'Autofokus',zoom_absolute:'Zoom'};
+async function cameraLoad(){
+ try{
+  const d=await api('/api/v1/camera/status');
+  const device=(d.devices||[]).find(x=>x.id===d.selected_camera_id)||d.devices?.[0];
+  if(!device||!d.ready)throw Error('Keine betriebsbereite Kamera');
+  cam.cameraId=device.id;cam.modes=device.mjpeg_modes||[];
+  const select=$('cameraMode');
+  if(select){const chosen=cam.resolution;select.replaceChildren();
+    for(const mode of cam.modes){const op=document.createElement('option');op.value=mode.width+'x'+mode.height;op.textContent=mode.width+' × '+mode.height;select.append(op);}
+    select.value=chosen&&[...select.options].some(o=>o.value===chosen)?chosen:'640x480';
+    cam.resolution=select.value;
+  }
+  text('cameraSettingsStatus',device.name+' · '+cam.modes.length+' unterstützte Auflösungen');
+  if(state.page==='camera')updateCamera(true);
+ }catch(e){text('cameraSettingsStatus','Kamera: '+e.message);}
+}
+function cameraInput(c){
+ if(!c.writable)return '';
+ const name=names[c.name]||c.name;
+ const min=Number(c.min),max=Number(c.max),step=Number(c.step)||1;
+ let field='';
+ if(c.menu?.length){
+  field='<select data-camera-input="'+esc(c.name)+'">'+c.menu.map(o=>'<option value="'+o.value+'" '+(o.value===c.value?'selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
+ }else if(min===0&&max===1){
+  field='<select data-camera-input="'+esc(c.name)+'"><option value="1" '+(c.value===1?'selected':'')+'>Ein</option><option value="0" '+(c.value===0?'selected':'')+'>Aus</option></select>';
+ }else if(Number.isFinite(min)&&Number.isFinite(max)&&max>min){
+  field='<input data-camera-input="'+esc(c.name)+'" type="number" min="'+min+'" max="'+max+'" step="'+step+'" value="'+c.value+'">';
+ }else return '';
+ return '<div class="camera-setting"><label>'+esc(name)+'</label><div class="camera-setting-actions">'+field+'<button type="button" class="subtle" data-camera-apply="'+esc(c.name)+'">Setzen</button></div></div>';
+}
+async function cameraLoadControls(){
+ try{
+  const d=await api('/api/v1/camera/controls?camera_id='+encodeURIComponent(cam.cameraId||'cam0'));
+  const controls=(d.controls||[]).filter(c=>c.writable);
+  $('cameraControls').innerHTML=controls.length?controls.map(cameraInput).join(''):'<p>Keine veränderbaren Kameraeinstellungen vorhanden.</p>';
+  cam.settingsLoaded=true;
+  text('cameraSettingsStatus',controls.length+' verfügbare Kameraeinstellungen');
+ }catch(e){text('cameraSettingsStatus','Bildeinstellungen nicht verfügbar: '+e.message);}
+}
+async function cameraApply(control){
+ const input=[...document.querySelectorAll('[data-camera-input]')].find(x=>x.dataset.cameraInput===control);
+ if(!input||!cam.cameraId)return;
+ const value=Number(input.value);if(!Number.isInteger(value))return;
+ const button=[...document.querySelectorAll('[data-camera-apply]')].find(x=>x.dataset.cameraApply===control);
+ if(button)button.disabled=true;
+ try{
+  await api('/api/v1/camera/controls',{camera_id:cam.cameraId,control,value});
+  notify('Kameraeinstellung übernommen');await cameraLoadControls();
+ }catch(e){notify('Kamera: '+e.message);}finally{if(button)button.disabled=false;}
+}
+$('cameraMode')?.addEventListener('change',e=>{cam.resolution=e.target.value;updateCamera(true);});
+$('cameraRefresh')?.addEventListener('click',()=>cameraLoad());
+$('cameraSettingsToggle')?.addEventListener('click',async()=>{
+ const panel=$('cameraSettingsPanel');panel.hidden=!panel.hidden;
+ $('cameraSettingsToggle').setAttribute('aria-expanded',String(!panel.hidden));
+ if(!panel.hidden&&!cam.settingsLoaded)await cameraLoadControls();
+});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-camera-apply]');
+ if(b)cameraApply(b.dataset.cameraApply);
+});
+renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();
+cameraLoad();
+
 })();
