@@ -155,6 +155,18 @@
       power_on:!!v.power_on,setpoint_percent:Number(v.setpoint_percent)};
     if(![row.temperature_c,row.humidity_rh,row.rpm,row.setpoint_percent].every(Number.isFinite))return;
     marsHistory.push(row);if(marsHistory.length>120)marsHistory.shift();
+    const curve=$('marsRpmLine'),title=$('marsTrendLabel');
+    if(curve&&title){
+      const samples=marsHistory.slice(-40);
+      const maxRpm=Math.max(3000,...samples.map(r=>r.rpm));
+      const points=samples.map((r,i)=>{
+        const px=samples.length===1?320:(i/(samples.length-1))*624+8;
+        const py=110-(r.rpm/maxRpm)*100;
+        return px.toFixed(1)+','+py.toFixed(1);
+      }).join(' ');
+      curve.setAttribute('points',points);
+      title.textContent='Drehzahlverlauf · '+samples.length+' echte BLE-Proben · zuletzt '+row.rpm+' RPM bei '+row.setpoint_percent+' %';
+    }
     const el=$('marsHistory');if(el){
       el.replaceChildren();
       for(const sample of marsHistory.slice(-8).reverse()){
