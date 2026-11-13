@@ -16,7 +16,7 @@ router = APIRouter(tags=["gui-shell"])
 @router.get("/ui", include_in_schema=False)
 async def gui_shell():
     """Serve the approved GrowCentral Final Master desktop UI."""
-    return FileResponse(WEB_DIR / "platform.html", headers={"Cache-Control": "no-store"})
+    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/rooms", include_in_schema=False)
@@ -28,7 +28,7 @@ async def room_workspace():
 @router.get("/mobile", include_in_schema=False)
 async def mobile_gui():
     """Dedicated touch-first UI for phones and compact mobile devices."""
-    return FileResponse(WEB_DIR / "mobile.html", headers={"Cache-Control": "no-store"})
+    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/legacy", include_in_schema=False)
@@ -36,3 +36,13 @@ async def legacy_gui():
     """Keep the proven diagnostic/transition console available explicitly."""
     console = WEB_DIR / "console.html"
     return FileResponse(console if console.exists() else WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
+
+@router.get("/ui-legacy", include_in_schema=False)
+async def gui_legacy_master():
+    """Previous GUI for advanced workflows during migration."""
+    return FileResponse(WEB_DIR / "platform.html", headers={"Cache-Control": "no-store"})
+
+@router.get("/gc-worker.js", include_in_schema=False)
+async def gui_pwa_worker():
+    return FileResponse(WEB_DIR / "gc-worker.js", media_type="application/javascript",
+                        headers={"Cache-Control":"no-cache","Service-Worker-Allowed":"/"})
