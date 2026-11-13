@@ -23,6 +23,7 @@ from app.security import require_write_auth
 from app.mars_legacy_telemetry import mzf002_telemetry, fc3000_telemetry
 from app.mars_fc3000_trial import context_from_live_status, encode_command
 from app.mars_wifi_probe import wifi_status
+from app.history_archive import append as history_append, room_for as history_room_for
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -433,6 +434,21 @@ async def observe_fan_telemetry(body: InspectRequest):
                             await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY), timeout=3.0)
                         except Exception as exc:
                             logger.warning("MZF002 unsubscribe: %s", type(exc).__name__)
+            if samples:
+                v=samples[-1]
+                try:
+                    history_append("mars-hydro-mzf002", {
+                        "temperature_c":v["temperature_c"],
+                        "humidity_percent":v["humidity_rh"],
+                        "fan_rpm":v["rpm"],
+                        "fan_setpoint_percent":v["setpoint_percent"],
+                        "fan_power_on":v["power_on"],
+                        "airflow_cfm":v.get("airflow_cfm"),
+                        "pressure_pa":v.get("pressure_pa"),
+                    }, room_id=history_room_for("mars-hydro-mzf002"),
+                       source=v.get("airflow_pressure_source",""))
+                except Exception:
+                    logger.exception("MZF002 permanent history append failed")
             return {
                 "candidate_id": body.candidate_id,
                 "device_family": "MZF002",
@@ -486,6 +502,15 @@ async def observe_lamp_telemetry(body: InspectRequest):
                             await asyncio.wait_for(client.stop_notify(MZF002_NOTIFY), timeout=3.0)
                         except Exception as exc:
                             logger.warning("FC3000 notify cleanup failure: %s", type(exc).__name__)
+            if samples:
+                v=samples[-1]
+                try:
+                    history_append("mars-hydro-fc3000", {
+                        "lamp_brightness_percent":v["brightness_percent"],
+                        "lamp_power_on":v["power_on"],
+                    }, room_id=history_room_for("mars-hydro-fc3000"))
+                except Exception:
+                    logger.exception("FC3000 permanent history append failed")
             return {
                 "candidate_id": body.candidate_id,
                 "device_family": "MARS",
