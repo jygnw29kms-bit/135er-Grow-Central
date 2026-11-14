@@ -41,3 +41,11 @@ Vorhandene systemd-Timer: `grow-central-healthcheck.timer`, `grow-central-remote
 Der historische reale Pi-4-Sensortest vom 14. Oktober bestätigte Teile des USB-/MQTT-TLS-/Bodenfeuchte-Pfads. Build 461 ist laut [RELEASE_STATE.md](../RELEASE_STATE.md) der zuletzt dokumentierte Image-Candidate mit Sensor-Firmware 0.5.3. Ein vollständiger Test dieses Images auf allen Hardwareklassen und reale Schreibvalidierung der Mars-Hydro-Geräte sind offen.
 
 Weitere technische Beschreibung und Roadmap siehe [README](../README.md), [Roadmap](ROADMAP.md), [Release State](../RELEASE_STATE.md) und [Pi-4-Testplan](de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
+
+## Pi ↔ GitHub-Dateiabgleich (14.11.2026)
+
+Der Pi ist online und meldet `SOURCE_COMMIT=be24ba9097c2e98eb1e3f302b5992c004d2e6e29`, `BUILD=operator-be24ba9097c2-base508` und `IMAGE_DISTRIBUTION=OPERATOR_PROVISIONED`. Das ist der **installierte Betreiber-Build**, nicht der ältere öffentliche Image-Candidate 461.
+
+Die tatsächlich gelesenen Dateien wurden unter [Pi-Live-Archiv](../pi-snapshots/2026-11-14/STATUS.md) im Branch `archive/pi-live-2026-11-14` festgehalten. Ein erneuter Inhaltsvergleich zeigte `web/gc-final.html`, `web/gc-final.js`, `web/gc-final.css`, `app/grow_photos.py` und `app/history_archive.py` bereits inhaltlich gleich zum aktuellen `master`. Die lokal erfassten Versionen von `app/mars_history.py`, `app/main.py` und `local/cloud_link/remote_agent.py` wurden separat archiviert und müssen vor Übernahme auf Verhalten/Unterschiede geprüft werden. Die Übertragung von `app/rooms.py` war nachweislich abgeschnitten; die ungültige Archivkopie wurde deshalb entfernt. Der aktuelle `master` enthält die vollständige Datei, eine unabhängige Identitätsprüfung gegen die Pi-Datei steht aus.
+
+**Wichtig:** GitHub-Quellsicherung ist kein vollständiges Pi-Systembackup. Runtime-Daten, Pflanzenfotos, Historie und Secrets müssen separat und geschützt gesichert werden. Entwicklungsstopp: **aufgehoben**; laufende Entwicklung darf weitergehen.
