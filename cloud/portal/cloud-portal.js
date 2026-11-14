@@ -148,7 +148,7 @@ window.addEventListener('message',event=>{
   }
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:method==='POST'?'plant_create':'plant_update',
-   request_id:msg.id,room_id,plant_id,name:payload.name,strain:payload.strain||'',
+   request_id:msg.id,room_id,plant_id,name:payload.name,strain:payload.strain||'',crop:payload.crop||'',
    plant_type:payload.plant_type||'other',start_date:payload.start_date||'',
    phase:payload.phase||'vegetative',notes:payload.notes||'',confirm_write:true}));return;
  }
