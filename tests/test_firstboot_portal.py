@@ -108,7 +108,7 @@ def test_ssh_enabled_path_sets_password_opens_firewall_and_starts_service(tmp_pa
     assert "PasswordAuthentication yes" in dropin.read_text(encoding="utf-8")
     chpasswd = next(item for item in calls if item[0] == ("chpasswd",))
     assert chpasswd[1] == "GrowCentral:ein-neues-systempasswort\n"
-    assert any(item[0] == ("ufw", "allow", "22/tcp") for item in calls)
+    assert all(any(item[0] == ("ufw", "allow", "from", net, "to", "any", "port", "22", "proto", "tcp") for item in calls) for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
     assert any(item[0] == ("systemctl", "enable", "--now", "ssh.service") for item in calls)
 
 
