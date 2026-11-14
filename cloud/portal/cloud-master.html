@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071411"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Grow Central · Steuerung</title><link rel="icon" href="/static/brand-mark.png"><link rel="apple-touch-icon" href="/static/gc-icon-192.png">
+<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-master-13"></head>
+<body><div class="shell">
+<aside class="sidebar"><a class="brand" href="/" aria-label="Grow Central"><img src="/static/brand-logo.png" alt="Grow Central"><small>ENVIRONMENT SYSTEM  //  GC-OS</small></a>
+<nav id="nav" aria-label="Hauptnavigation">
+<button data-page="home" class="selected"><i data-icon="home"></i> Dashboard</button>
+<button data-page="devices"><i data-icon="layers"></i> Geräte</button>
+<button data-page="climate"><i data-icon="thermometer"></i> Klima</button>
+<button data-page="camera"><i data-icon="camera"></i> Kamera</button>
+<button data-page="growbook"><i data-icon="book"></i> Growbuch</button>
+<button data-page="rooms"><i data-icon="grid"></i> Räume</button>
+<button data-page="homekit"><i data-icon="house"></i> Apple Home</button>
+<button data-page="cloud"><i data-icon="cloud"></i> Cloud</button>
+<button data-page="more"><i data-icon="settings"></i> System</button></nav>
+<div class="sidefoot"><span id="coreStatus" class="status-dot">Verbinde …</span><small>Grow Central · Local First</small></div></aside>
+<main><header class="topbar"><div><div class="eyebrow">RAUM: <span id="currentRoom" class="sr-only">—</span></div>
+<select id="roomPicker" aria-label="Aktiver Grow-Raum"><option value="">Räume laden …</option></select>
+<h1 id="pageTitle" class="sr-only">Dashboard</h1></div>
+<div class="headright"><span id="clock" class="clock">—</span><span id="networkMode" class="pill" title="Automatische Erreichbarkeitsprüfung">Verbindung prüfen …</span><span id="systemBadge" class="pill">Prüfe …</span></div></header>
+<div class="content">
+<section id="home" class="page active">
+<div class="master-columns">
+<div class="master-primary">
+ <article class="hero hero-master">
+  <div class="hero-overlay">
+   <div class="hero-brand"><img src="/static/brand-mark.png" alt="" aria-hidden="true"><div><h2>Grow Central</h2><span>Environment Control</span></div></div>
+   <p>Zentrale Steuerung und Überwachung deines Grows.<br>Klima, Licht, Lüftung, Kamera und Growbuch an einem Ort.</p>
+  </div>
+ </article>
+ <section id="liveTiles" class="tilegrid" aria-label="Live-Telemetrie">
+  <article class="metric"><span class="metric-icon" data-icon="thermometer"></span><div><span>Temperatur</span><strong id="tempValue">—</strong><small id="tempAge">Warte auf Sensorwert</small></div></article>
+  <article class="metric"><span class="metric-icon" data-icon="droplets"></span><div><span>Luftfeuchte</span><strong id="humidityValue">—</strong><small>DF150-M · BLE</small></div></article>
+  <article class="metric"><span class="metric-icon" data-icon="fan"></span><div><span>Lüfterdrehzahl</span><strong id="rpmValue">—</strong><small>Istwert · RPM</small></div></article>
+  <article class="metric"><span class="metric-icon" data-icon="sun"></span><div><span>Lichtstufe</span><strong id="lightValue">—</strong><small>FC3000 · Sollwert, kein PPFD</small></div></article>
+ </section>
+ <div id="controlMount" class="master-control-mount"></div>
+ <article class="panel journal-panel">
+  <header class="panelhead journal-head"><div class="journal-title"><span data-icon="book"></span><h3>Growbuch</h3></div>
+  <div class="journal-tabs" role="group" aria-label="Growbuch-Ansicht">
+   <button class="tab active" data-journal-tab="entries">Einträge</button>
+   <button class="tab" data-journal-tab="overview">Übersicht</button>
+   <button class="tab" data-journal-tab="phases">Phasen</button>
+   <button class="tab" data-journal-tab="notes">Notizen</button>
+  </div><button class="primary-btn" data-add-journal>＋ Eintrag</button></header>
+  <div class="journal-body"><div id="journalPreview" class="journal-entries" aria-live="polite">Lade Growbuch …</div>
+   <div id="journalSelected" class="journal-detail"><p class="empty-text">Wähle einen Growbucheintrag oder lege einen neuen an.</p></div>
+  </div>
+ </article>
+</div>
+<aside class="master-right">
+ <article class="panel status-panel"><header class="panelhead"><h3>Systemstatus <span class="subhead">(Live)</span></h3></header>
+  <div class="statusrow"><span><i data-icon="wifi"></i> Verbindung</span><strong id="heroConnection">Prüfe …</strong></div>
+  <div class="statusrow"><span><i data-icon="cloud"></i> Cloud</span><strong id="cloudLinkRow">Prüfe …</strong></div>
+  <div class="statusrow"><span><i data-icon="house"></i> Bridge</span><strong id="homekitRow">Prüfe …</strong></div>
+  <span id="coreRow" class="sr-only">Prüfe …</span><span id="bleRow" class="sr-only">Prüfe …</span><span id="heroRoom" class="sr-only">Raum</span>
+ </article>
+ <article class="panel camera-panel"><header class="panelhead"><h3><i data-icon="camera"></i> Kamera <span class="subhead">(Live)</span></h3>
+  <button class="icon-button" aria-label="Kamera vergrößern" data-open="camera">⤢</button></header>
+  <div id="homeCam" class="camframe"><div class="camblank">Live-Kamera wird verbunden …</div>
+   <div class="osd"><span class="osdClock">—</span><span class="osdClimate">Keine aktuellen Messwerte</span></div>
+  </div>
+ </article>
+ <article class="panel integration-panel"><header class="panelhead"><h3><i data-icon="house"></i> Apple Home / Cloud</h3></header>
+  <div class="statusrow"><span><i data-icon="house"></i> Apple Home</span><strong id="homeLinkStatus">Prüfe …</strong></div>
+  <div class="statusrow"><span><i data-icon="cloud"></i> Cloud</span><strong id="cloudHomeStatus">Prüfe …</strong></div>
+ </article>
+ <article class="panel activity-panel"><header class="panelhead"><h3><i data-icon="history"></i> Verlauf</h3>
+ <button class="plain-link" data-open="history">Alle anzeigen →</button></header>
+ <div id="recentEvents" class="recent-events">Lade Verlauf …</div></article>
+</aside></div></section>
+<section id="growbook" class="page">
+<div class="intro"><h2>Growbuch</h2><p>Die tatsächliche Chronik deiner Kulturen. Änderungen werden mit deinem Grow-Pi synchronisiert.</p></div>
+<article class="panel full-journal">
+ <header class="panelhead"><h3>Einträge und Beobachtungen</h3><button class="primary-btn" data-add-journal>＋ Neuer Eintrag</button></header>
+ <div id="journalFullList" class="journal-full-list">Lade Growbuch …</div>
+</article>
+</section>
+<dialog id="journalDialog" class="journal-dialog"><form id="journalForm">
+ <header><h2 id="journalDialogTitle">Growbucheintrag</h2><button type="button" class="icon-button" id="journalClose" aria-label="Schließen">✕</button></header>
+ <label>Kategorie<select id="journalCategory" required><option value="observation">Beobachtung</option><option value="watering">Bewässerung</option><option value="feeding">Düngung</option><option value="training">Training</option><option value="repotting">Umtopfen</option><option value="photo">Foto / Dokumentation</option><option value="diagnosis">Diagnose</option><option value="harvest">Ernte</option><option value="note">Notiz</option></select></label>
+ <label>Titel<input id="journalTitle" name="title" maxlength="120" required placeholder="Was wurde gemacht?"></label>
+ <label>Notizen<textarea id="journalText" rows="5" maxlength="5000" placeholder="Beobachtungen, Mengen, Maßnahmen …"></textarea></label>
+<label>Foto (optional, JPEG/PNG/WebP · max. 8 MiB)<input id="journalPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
+ <div id="journalError" role="alert" class="form-error"></div>
+ <footer><button type="button" id="journalCancel" class="subtle">Abbrechen</button><button type="submit" class="primary-btn" id="journalSave">Speichern</button></footer>
+</form></dialog>
+<section id="devices" class="page"><div class="intro"><h2>Geräte</h2><p>Eine einheitliche Bedienung. Reale Statusdaten und bestätigte Funktionen.</p></div><div id="deviceControls"></div><div id="smartPreview" hidden></div><article class="panel"><h3>FRITZ!Box und TP-Link Tapo</h3><p class="desc">Bereits eingebundene Geräte werden automatisch angezeigt. Nicht eingerichtete Geräte werden nicht erfunden.</p><div id="smartDevices" class="smartlist"></div></article></section>
+<section id="climate" class="page"><div class="intro"><h2>Klima</h2><p>Aktuelle Messungen vom DF150-M, unabhängig davon, ob der Lüfter läuft.</p></div><div id="climateTiles"></div><article class="panel"><h3>Messquelle und Aktualität</h3><p id="climateDetails" class="desc">Verbindung wird geprüft.</p><p class="desc">CO₂, PPFD und weitere Werte erscheinen erst nach Anschluss eines passenden Sensors. CFM und Pa sind keine gemessenen Werte.</p></article></section>
+<section id="camera" class="page"><div class="intro"><h2>Live-Kamera</h2><p>Lokaler Kamerastream mit aktueller Zeit, Temperatur und Luftfeuchte.</p></div><article class="panel"><div id="largeCam" class="camframe large"><div class="camblank">Kamera wird geprüft</div><div class="osd"><span class="osdClock">—</span><span class="osdClimate">Keine aktuellen Messwerte</span></div></div><div class="camera-toolbar">
+  <div class="camera-field"><label for="cameraMode">Bildauflösung</label><select id="cameraMode" aria-label="Kameraauflösung"><option value="">Kamera wird erkannt …</option></select></div>
+  <button type="button" id="cameraRefresh" class="subtle">Kamera aktualisieren</button>
+  <button type="button" id="cameraSettingsToggle" class="subtle" aria-expanded="false">Bildeinstellungen</button>
+</div><div id="cameraSettingsPanel" hidden><div id="cameraControls" class="camera-controls"></div><p id="cameraSettingsStatus" class="desc">Nur tatsächlich von der C920 unterstützte Einstellungen.</p></div>
+<p class="desc">Einstellungen werden nur nach Bestätigung an die angeschlossene Kamera übertragen.</p></article></section>
+<section id="history" class="page"><div class="intro"><h2>Verlauf und Archiv</h2><p>Dokumentierte historische Messwerte, keine beispielhaften Kurven.</p></div><article class="panel"><h3>Letzte gespeicherte Werte</h3><div id="historyData">Lade Archiv …</div></article></section>
+<section id="rooms" class="page"><div class="intro"><h2>Räume</h2><p>Deine tatsächlichen Grow-Central-Räume.</p></div><div id="roomData" class="stack">Lade Räume …</div></section>
+<section id="homekit" class="page"><div class="intro"><h2>Apple Home</h2><p>HomeKit-Bridge, Lampensteuerung, Abluft und Klimawerte.</p></div><article class="panel"><h3>Bridge-Status</h3><div id="hkData">Lade Bridge …</div></article></section>
+<section id="cloud" class="page">
+<div class="intro"><h2>Grow Central Cloud</h2><p>Deinen Grow-Pi sicher mit deinem Cloud-Konto verbinden. Keine Routerfreigabe nötig.</p></div>
+<article class="panel gc-cloud-panel">
+<div class="panelhead"><div><h3>Cloud-Verbindung</h3><p id="cloudDetail">Cloud-Verbindung wird geprüft …</p></div><span id="cloudState" class="pill">Prüfe …</span></div>
+<div class="statusrow"><span>Zugriffsweg dieser PWA</span><strong id="cloudAccessMode">Prüfe …</strong></div>
+<div class="statusrow"><span>Fernsteuerung</span><strong id="cloudRemoteStatus">Noch nicht geprüft</strong></div>
+<div class="statusrow"><span>Cloud-Server</span><strong id="cloudServer">—</strong></div>
+<div class="statusrow"><span>Gerätefreigabe</span><strong id="cloudPairState">—</strong></div>
+<div id="cloudPairCodeBox" class="cloud-pair-box" hidden>
+<p class="desc">Einmaliger Kopplungscode, in deinem persönlichen Cloud-Konto bestätigen:</p>
+<div id="cloudPairCode" class="cloud-code" aria-label="Kopplungscode">—</div>
+<p id="cloudExpiry" class="desc"></p>
+<a id="cloudPairUrl" class="cloud-action" href="https://135ercloud.grow-central.de/pair" rel="noopener noreferrer" target="_blank">Anmelden und Gerät bestätigen</a>
+</div>
+<div class="cloud-actions">
+<button id="cloudPairStart" type="button" class="cloud-action">Gerät mit Cloud verbinden</button>
+<button id="cloudPairRefresh" type="button" class="subtle">Status aktualisieren</button>
+<button id="cloudPairCancel" type="button" class="subtle" hidden>Kopplung abbrechen</button>
+</div>
+<p id="cloudFeedback" class="desc" role="status" aria-live="polite">Eine bestehende Statusverbindung ist noch keine Gerätefreigabe oder Fernsteuerung.</p>
+</article>
+<article class="panel" style="margin-top:16px"><h3>Fernzugriff</h3><p class="desc">Die Anmeldung und Kopplung erfolgen verschlüsselt über die Grow-Central-Cloud. Die Freigabe eines Geräts ist Voraussetzung für den Zugriff von unterwegs. Ob der Fernzugriffskanal bereitsteht, wird separat geprüft.</p></article>
+</section>
+<section id="more" class="page"><div class="intro"><h2>SYSTEM & INTEGRATIONEN</h2><p>Eine Anwendung. Alle bestätigten Geräte und Schnittstellen.</p></div>
+<article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
+<article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
+</div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="growbook">▣<small>Growbuch</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-bridge-1"></script><script src="/static/gc-final.js?v=20261114-master-13"></script></body></html>
