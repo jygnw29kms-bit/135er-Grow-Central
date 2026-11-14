@@ -77,10 +77,15 @@ def _scaled_cloud_frame(frame: bytes) -> bytes:
 @router.get("/snapshot/cloud-preview")
 async def camera_cloud_preview():
     """A bounded preview from the *existing* capture, without stealing /dev/video0."""
-    if _LATEST_JPEG is None or time.monotonic() - _LATEST_JPEG_AT > 15:
-        raise HTTPException(503, "active camera stream has no fresh preview frame")
+    cached = _LATEST_JPEG if _LATEST_JPEG is not None and time.monotonic() - _LATEST_JPEG_AT <= 15 else None
     try:
-        frame = await asyncio.to_thread(_scaled_cloud_frame, _LATEST_JPEG)
+        if cached is None:
+            if _ACTIVE_STREAM_PROCESS is not None:
+                raise RuntimeError("active stream has no recent frame")
+            captured, _, _, _ = await asyncio.to_thread(_snapshot_sync, None, 320, 240)
+            frame = await asyncio.to_thread(_scaled_cloud_frame, captured)
+        else:
+            frame = await asyncio.to_thread(_scaled_cloud_frame, cached)
     except (RuntimeError, subprocess.TimeoutExpired):
         raise HTTPException(503, "preview encoding unavailable")
     return Response(content=frame, media_type="image/jpeg",
