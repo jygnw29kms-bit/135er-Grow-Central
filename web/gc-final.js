@@ -88,7 +88,7 @@ async function refreshLive(){
  if(state.refreshBusy)return;state.refreshBusy=true;
  try{
  const [fl,ff]=await Promise.allSettled([api('/api/mars-hydro/ble/fast-lamp-status'),api('/api/mars-hydro/ble/fast-fan-status')]);
- const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
+const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
  const ok=lamp.fresh&&fan.fresh;
@@ -156,9 +156,35 @@ async function loadRooms(){
   if(selector&&growJournal.roomId)selector.value=growJournal.roomId;
   const selected=rooms.find(x=>x.id===growJournal.roomId);
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
-  $('roomData').innerHTML=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p></article>').join(''):'<article class="panel"><p>Es ist noch kein Raum angelegt.</p></article>';
+  $('roomData').innerHTML=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein Raum angelegt.</p></article>';
   await Promise.all([loadJournal(),loadRecentEvents()]);
  }catch(e){text('roomData','Raumdaten nicht erreichbar');text('recentEvents','Raumdaten nicht erreichbar');}
+}
+async function manageRoomDevices(roomId){
+ const holder=$('roomDevices-'+roomId);if(!holder)return;
+ holder.textContent='Geräte werden geladen …';
+ try{
+  const result=await api('/api/v1/rooms/'+encodeURIComponent(roomId)+'/devices');
+  const devices=result.devices||[];
+  holder.innerHTML=devices.map(d=>'<label class="statusrow"><span>'+esc(d.name||d.id)+(d.room_id&&d.room_id!==roomId?' (anderem Raum zugeordnet)':'')+'</span><input type="checkbox" data-room-device="'+esc(d.id)+'" data-room-id="'+esc(roomId)+'" '+(d.assigned?'checked':'')+'></label>').join('')||'<p class="desc">Keine erkannten Geräte.</p>';
+ }catch(e){holder.textContent='Geräte nicht erreichbar: '+e.message;}
+}
+async function roomDeviceChange(input){
+ const roomId=input.dataset.roomId,deviceId=input.dataset.roomDevice,checked=input.checked;
+ input.disabled=true;
+ try{
+  const base='/api/v1/rooms/'+encodeURIComponent(roomId)+'/devices';
+  await journalRequest(checked?'POST':'DELETE',checked?base:base+'/'+encodeURIComponent(deviceId),checked?{device_id:deviceId}:undefined);
+  await loadRooms();await manageRoomDevices(roomId);
+  notify('Raumzuordnung gespeichert');
+ }catch(e){input.checked=!checked;notify('Zuordnung fehlgeschlagen: '+e.message);}
+finally{input.disabled=false;}
+}
+async function createGrowRoom(){
+ const name=prompt('Name des neuen Grow-Raums');
+ if(!name||!name.trim())return;
+ try{await journalRequest('POST','/api/v1/rooms',{name:name.trim(),kind:'grow_tent'});await loadRooms();notify('Raum mit Growbuch angelegt');}
+ catch(e){notify('Raum konnte nicht angelegt werden: '+e.message);}
 }
 async function loadHistory(){
  try{const d=await api('/api/mars-history/summary');const rows=d.latest||[];
@@ -242,7 +268,7 @@ async function cameraLoadControls(){
 }
 async function cameraApply(control){
  const input=[...document.querySelectorAll('[data-camera-input]')].find(x=>x.dataset.cameraInput===control);
- if(!input||!cam.cameraId)return;
+if(!input||!cam.cameraId)return;
  const value=Number(input.value);if(!Number.isInteger(value))return;
  const button=[...document.querySelectorAll('[data-camera-apply]')].find(x=>x.dataset.cameraApply===control);
  if(button)button.disabled=true;
@@ -332,7 +358,7 @@ async function cloudRefresh(){
   const result=await api('/api/cloud/status');
   text('cloudServer',result.host||'Nicht konfiguriert');
   text('cloudDetail',result.detail||'Keine Statusmeldung');
-  const reachable=result.connected===true;
+const reachable=result.connected===true;
   text('cloudState',reachable?'Cloud-Server online':'Cloud-Verbindung getrennt');
   $('cloudState').classList.toggle('good',reachable);
   $('cloudState').classList.toggle('bad',!reachable);
@@ -367,7 +393,8 @@ setInterval(()=>{if(!document.hidden&&state.page==='cloud')cloudRefresh();},1000
 
 // Final Master: inline scalable SVG icons, no icon fonts or raster scaling.
 const svgPaths={
-home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
+home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
+layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
 thermometer:'<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 11v7"/>',
 droplets:'<path d="M12 2C10 5 5 10 5 14a7 7 0 0 0 14 0c0-4-5-9-7-12z"/>',
 fan:'<path d="M12 12c-4-9-8-8-8-4 0 2 2 4 8 4zm0 0c9-4 8-8 4-8-2 0-4 2-4 8zm0 0c4 9 8 8 8 4 0-2-2-4-8-4zm0 0c-9 4-8 8-4 8 2 0 4-2 4-8z"/><circle cx="12" cy="12" r="2"/>',
@@ -421,7 +448,7 @@ function journalEntryDetail(row){
 }
 function renderJournal(){
  const entries=growJournal.entries;
- const active=growJournal.tab;
+const active=growJournal.tab;
  document.querySelectorAll('[data-journal-tab]').forEach(b=>b.classList.toggle('active',b.dataset.journalTab===active));
  let filtered=entries;
  if(active==='notes')filtered=entries.filter(x=>['note','observation'].includes(x.category));
@@ -513,12 +540,16 @@ async function loadRecentEvents(){
  }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
 }
 document.addEventListener('click',e=>{
+ const create=e.target.closest('[data-create-room]');if(create){createGrowRoom();return;}
+ const manage=e.target.closest('[data-room-manage]');if(manage){manageRoomDevices(manage.dataset.roomManage);return;}
+ const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');loadJournal();return;}
  const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
  const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
  const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
  const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
  const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
 });
+document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
 $('journalForm')?.addEventListener('submit',saveJournal);
 $('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
 $('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
