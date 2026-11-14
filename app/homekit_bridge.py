@@ -96,6 +96,7 @@ def _accessory_aids(room_rows, switches) -> dict[tuple[str, str], int]:
     keys = [("room", str(row.get("id") or "")) for row in room_rows if any(service != "soil_moisture" for service in tuple(row.get("services") or ()))]
     keys += [("soil", str(row.get("id") or "")) for row in room_rows if "soil_moisture" in tuple(row.get("services") or ())]
     keys += [("switch", str(getattr(device, "id", ""))) for device in switches]
+    keys += [("mars","fc3000"),("mars","mzf002")]
     for key in sorted(keys):
         result[key] = _stable_aid(key[0], key[1], used)
     return result
@@ -103,6 +104,37 @@ def _accessory_aids(room_rows, switches) -> dict[tuple[str, str], int]:
 
 def _room_services(snapshot: dict[str, Any]) -> tuple[str, ...]:
     return tuple(service for key, service in _HOMEKIT_METRICS if _valid_number(snapshot.get(key)))
+
+
+MARS_LIVE_FILE = Path("/var/lib/135er-grow-central/mars-fan-live.json")
+
+def _mars_climate_row(now: datetime) -> dict[str, Any] | None:
+    # Fan controller temperature/humidity sensors remain available even if fan power is off.
+    try:
+        data=json.loads(MARS_LIVE_FILE.read_text(encoding="utf-8"))
+        stamp=_timestamp(data.get("timestamp"))
+        # Preserve paired HomeKit accessory topology during brief BLE outages.
+        # Stale values are NOT pushed as fresh by RoomAccessory._update().
+        if stamp is None:
+            return None
+        temperature=data.get("temperature_c")
+        humidity=data.get("humidity_percent")
+        if not (_valid_number(temperature) and -40 <= temperature <= 85
+                and _valid_number(humidity) and 0 <= humidity <= 100):
+            return None
+        return {"id":"mars-hydro-mzf002-climate","name":"Growzelt Klima",
+                "latest":{"temperature_c":temperature,"humidity_percent":humidity},
+                "services":("temperature","humidity")}
+    except (OSError,ValueError,TypeError):
+        return None
+
+def _mars_climate_fresh() -> bool:
+    try:
+        stamp=_timestamp(json.loads(MARS_LIVE_FILE.read_text()).get("timestamp"))
+        age=(datetime.now(timezone.utc)-stamp).total_seconds() if stamp else 99999
+        return 0 <= age <= 90
+    except (OSError,ValueError,TypeError):
+        return False
 
 
 def _latest_room_values(*, now: datetime | None = None) -> list[dict[str, Any]]:
@@ -135,6 +167,9 @@ def _latest_room_values(*, now: datetime | None = None) -> list[dict[str, Any]]:
         if not services:
             continue
         result.append({"id": room.get("id"), "name": room.get("name") or room.get("id"), "latest": snapshot, "services": services})
+    mars_row=_mars_climate_row(now)
+    if mars_row is not None:
+        result.append(mars_row)
     return sorted(result, key=lambda row: str(row.get("id") or ""))
 
 
@@ -176,6 +211,12 @@ def _export_diagnostics(room_rows, switches, aids) -> list[dict[str, Any]]:
                 "kind": "soil_moisture", "source_id": room_id, "name": f"{name} Bodenfeuchte",
                 "aid": aids[("soil", room_id)], "services": ["soil_moisture"], "state": "published",
             })
+    for name,key,kind,services in [
+        ("Growzelt Licht","fc3000","light",["power","brightness"]),
+        ("Growzelt Abluft","mzf002","fan",["power","rotation_speed_percent"])
+    ]:
+        rows.append({"kind":kind,"source_id":key,"name":name,
+                     "aid":aids[("mars",key)],"services":services,"state":"published"})
     for device in switches:
         device_id = str(getattr(device, "id", ""))
         rows.append({
@@ -212,6 +253,9 @@ def run_bridge() -> None:
             row = {item["id"]: item for item in _latest_room_values()}.get(self.room_id)
             if not row:
                 return
+            if self.room_id == "mars-hydro-mzf002-climate":
+                if _mars_climate_fresh() is False:
+                    return
             latest = row["latest"]
             temperature = latest.get("temperature_c")
             humidity = latest.get("humidity_percent")
@@ -352,6 +396,9 @@ def run_bridge() -> None:
                 ))
         except Exception:
             continue
+    from app.homekit_mars_accessories import MarsLampAccessory, MarsFanAccessory
+    bridge.add_accessory(MarsLampAccessory(driver,"Growzelt Licht",aid=aids[("mars","fc3000")]))
+    bridge.add_accessory(MarsFanAccessory(driver,"Growzelt Abluft",aid=aids[("mars","mzf002")]))
     for device in selected_switches:
         try:
             bridge.add_accessory(SwitchAccessory(driver, device.name, aid=aids[("switch", str(device.id))], device=device))

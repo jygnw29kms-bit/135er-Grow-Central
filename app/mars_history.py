@@ -118,11 +118,23 @@ def save_room_measurement(room_id: str, sample: dict[str, Any]) -> None:
 
 async def sample_once() -> dict[str,bool]:
     result={"fan":False,"lamp":False}
+    from app.mars_fast_lamp import fast_lamp
+    import time
+    from app.mars_fast_fan import fast_fan
+    if fast_fan.last and time.monotonic()-fast_fan.at<30:
+        await asyncio.to_thread(save,"fan",fast_fan.last[1])
+        result["fan"]=True
+    if fast_lamp.latest and time.monotonic()-fast_lamp.at<30:
+        row=fast_lamp.latest[1]
+        await asyncio.to_thread(save,"lamp",row)
+        result["lamp"]=True
     if _capture_lock.locked():return result
     async with _capture_lock:
         devices=await BleakScanner.discover(timeout=7)
         found={d.name:d for d in devices if d.name in (FAN,LAMP)}
         for name,role,parser in ((FAN,"fan",mzf002_telemetry),(LAMP,"lamp",fc3000_telemetry)):
+            if role=="lamp" and fast_lamp.client and fast_lamp.client.is_connected:continue
+            if role=="fan" and fast_fan.client and fast_fan.client.is_connected:continue
             if name not in found:continue
             updates=[]
             try:
