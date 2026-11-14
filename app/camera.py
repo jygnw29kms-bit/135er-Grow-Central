@@ -64,7 +64,7 @@ def _cache_jpeg_chunks(buffer: bytearray, chunk: bytes) -> None:
 def _scaled_cloud_frame(frame: bytes) -> bytes:
     result = subprocess.run(
         ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "image2pipe",
-         "-vcodec", "mjpeg", "-i", "pipe:0", "-vf", "scale=320:240",
+         "-vcodec", "mjpeg", "-i", "pipe:0", "-vf", "scale=320:-2",
          "-frames:v", "1", "-q:v", "7", "-f", "image2pipe",
          "-vcodec", "mjpeg", "pipe:1"],
         input=frame, capture_output=True, timeout=8, check=False,
