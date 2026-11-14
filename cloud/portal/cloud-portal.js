@@ -29,6 +29,79 @@ $('refresh').addEventListener('click',()=>listDevices().catch(error=>$('summary'
 $('logout').addEventListener('click',()=>{remoteClose();accessToken='';$('account').hidden=true;$('login').hidden=false;$('msg').textContent='Abgemeldet.';});
 // Authenticated read-only telemetry. Never sends power, fan or light commands.
 let remoteSocket=null,remoteInterval=null,remoteRequest=0;
+const masterPending=new Map();
+let masterVisible=false;
+function masterStatus(value){if($('masterStatus'))$('masterStatus').textContent=value}
+function masterToggle(){
+ masterVisible=!masterVisible;
+ $('masterMount').hidden=!masterVisible;
+ $('remoteDashboard').hidden=masterVisible;
+ $('masterToggle').textContent=masterVisible?'Live-Dashboard anzeigen':'Final-Master-GUI öffnen';
+ if(masterVisible){
+  const iframe=$('masterFrame');
+  if(iframe.getAttribute('src')!=='/cloud-master.html')iframe.src='/cloud-master.html';
+  masterStatus('Originale Final-Master-GUI wird geladen …');
+ }else masterStatus('Cloud-Datenbrücke bereit');
+}
+$('masterToggle')?.addEventListener('click',masterToggle);
+function masterReply(id,status,data){
+ const frame=$('masterFrame')?.contentWindow;
+ if(frame)frame.postMessage({source:'gc-cloud-parent',id,status,data},location.origin);
+}
+function masterHandleResult(data){
+ const pending=masterPending.get(data.request_id);
+ if(!pending)return false;
+ masterPending.delete(data.request_id);
+ if(data.ok){
+  if(data.type==='camera_result')masterReply(data.request_id,200,{image:data.image});
+  else if(data.type==='control_result')masterReply(data.request_id,200,{device_report_confirmed:data.device_report_confirmed,kind:data.kind});
+  else masterReply(data.request_id,200,data.data||{ok:true,entry_id:data.entry_id});
+ }else masterReply(data.request_id,503,{detail:data.error||'Keine Gerätebestätigung'});
+ return true;
+}
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==$('masterFrame')?.contentWindow)return;
+ const msg=event.data;
+ if(!msg||msg.source!=='gc-cloud-master'||typeof msg.id!=='string'||msg.id.length>64)return;
+ if(!accessToken||!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN){
+  masterReply(msg.id,503,{detail:'Cloud-Gerätekanal nicht erreichbar'});return
+ }
+ if(msg.kind==='camera'){
+  masterPending.set(msg.id,true);
+  remoteSocket.send(JSON.stringify({type:'camera_frame',request_id:msg.id}));return;
+ }
+ if(msg.kind!=='fetch'||typeof msg.path!=='string'||!msg.path.startsWith('/api/')){
+  masterReply(msg.id,400,{detail:'Ungültiger API-Aufruf'});return;
+ }
+ const method=msg.method||'GET';
+ if(method==='GET'){
+  masterPending.set(msg.id,true);
+  remoteSocket.send(JSON.stringify({type:'read',request_id:msg.id,path:msg.path}));return;
+ }
+ let payload=msg.body;
+ if(typeof payload!=='object'||payload===null){masterReply(msg.id,400,{detail:'Ungültige Eingabe'});return}
+ if(method==='POST'&&['/api/mars-hydro/ble/fast-lamp-control','/api/mars-hydro/ble/fast-fan-control'].includes(msg.path)){
+  const kind=msg.path.includes('lamp')?'lamp':'fan';
+  const action=payload.action,value=payload.value;
+  if(!['power',kind==='lamp'?'brightness':'speed'].includes(action)||!Number.isInteger(value)||!payload.confirm_physical_change){
+   masterReply(msg.id,400,{detail:'Ungültiger Gerätebefehl'});return;
+  }
+  if(!window.confirm('Grow Central Cloud: '+kind+' · '+action+' '+value+' wirklich ausführen?\\nDas physische Gerät wird verändert.')){
+   masterReply(msg.id,409,{detail:'Nicht bestätigt'});return;
+  }
+  masterPending.set(msg.id,true);
+  remoteSocket.send(JSON.stringify({type:'control',request_id:msg.id,kind,action,value,confirm_physical_change:true}));return;
+ }
+ if(method==='POST'&&/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/journal$/.test(msg.path)){
+  if(!window.confirm('Neuen Growbucheintrag auf dem Pi speichern?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
+  const room_id=msg.path.split('/')[4];
+  masterPending.set(msg.id,true);
+  remoteSocket.send(JSON.stringify({type:'journal_create',request_id:msg.id,room_id,
+    title:payload.title,text:payload.text,category:payload.category,confirm_write:true}));return;
+ }
+ masterReply(msg.id,403,{detail:'Diese Funktion ist im Cloudmodus noch nicht freigegeben'});
+});
+
 let cameraTimer=null,cameraActive=false,cameraPending=false;
 function cameraStop(){
  cameraActive=false;cameraPending=false;
@@ -54,6 +127,12 @@ function cameraStart(){
 $('cameraStart')?.addEventListener('click',cameraStart);
 $('cameraStop')?.addEventListener('click',cameraStop);
 function remoteClose(){
+ for(const id of masterPending.keys())masterReply(id,503,{detail:'Verbindung geschlossen'});
+ masterPending.clear();
+ if($('masterFrame'))$('masterFrame').src='about:blank';
+ if($('masterMount'))$('masterMount').hidden=true;
+ masterVisible=false;
+ if($('masterToggle'))$('masterToggle').textContent='Final-Master-GUI öffnen';
  selectedRoomId=null;
  if(journalPending){clearTimeout(journalPending.timeout);journalPending=null;}
  if($('journalSubmit'))$('journalSubmit').disabled=false;
@@ -266,6 +345,7 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
+  if(['read_result','control_result','journal_result','camera_result'].includes(data.type)&&masterHandleResult(data))return;
   if(data.type==='journal_result'){journalResult(data);return}
   if(data.type==='control_result'){controlResult(data);return}
   if(data.type==='camera_result'){
