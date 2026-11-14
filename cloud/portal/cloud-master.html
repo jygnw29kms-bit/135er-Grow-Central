@@ -2,7 +2,7 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#071411"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Grow Central · Steuerung</title><link rel="icon" href="/static/brand-mark.png"><link rel="apple-touch-icon" href="/static/gc-icon-192.png">
-<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/growbook-plants-wiki.css?v=20261114-plantwiki-1"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-cloud-2"></head>
+<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/growbook-plants-wiki.css?v=20261114-plantwiki-1"><link rel="stylesheet" href="/static/climate-stage.css?v=20261114-stage-1"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-cloud-2"></head>
 <body><div class="shell">
 <aside class="sidebar"><a class="brand" href="/" aria-label="Grow Central"><img src="/static/brand-logo.png" alt="Grow Central"><small>ENVIRONMENT SYSTEM  //  GC-OS</small></a>
 <nav id="nav" aria-label="Hauptnavigation">
@@ -36,7 +36,18 @@
   <article class="metric"><span class="metric-icon" data-icon="fan"></span><div><span>Lüfterdrehzahl</span><strong id="rpmValue">—</strong><small>Istwert · RPM</small></div></article>
   <article class="metric"><span class="metric-icon" data-icon="sun"></span><div><span>Lichtstufe</span><strong id="lightValue">—</strong><small>FC3000 · Sollwert, kein PPFD</small></div></article>
  </section>
- <div id="controlMount" class="master-control-mount"></div>
+ <article class="panel gc-stage-climate" id="stageClimate">
+<header class="panelhead"><h3>Klima · Kulturphasen-Richtwerte</h3><span class="gc-wiki-pill">Grün / Gelb / Rot</span></header>
+<div class="gc-stage-controls"><label for="stageClimateSelect">Cannabis-Entwicklungsphase
+<select id="stageClimateSelect"><option value="">Keine Phase ausgewählt</option><option value="germination">Keimung / Sämling</option><option value="vegetative">Wachstum</option><option value="flowering">Blüte</option><option value="finish">Späte Blüte / Reife</option></select></label>
+<button type="button" id="stageClimateReload" class="subtle">Pflanzenprofil aktualisieren</button></div>
+<p id="stageClimateSource" class="desc">Lade Pflanzenprofil …</p>
+<div id="stageClimateRows" aria-live="polite"></div>
+<div class="gc-stage-legend"><span><i class="good"></i> Richtbereich</span><span><i class="warning"></i> Knapp außerhalb</span><span><i class="danger"></i> Deutlich außerhalb</span></div>
+<p class="desc">Orientierungswerte für die Luft am Sensor, keine Diagnose. Sorte, Tages-/Nachtphase und VPD können andere Ziele erfordern. Änderungen werden nicht automatisch an Geräte gesendet.</p>
+<p class="gc-stage-citations">Referenzen: <a href="https://cannabisworkforce.org/wp-content/uploads/2023/02/CWI-Cannabis-Plant-Seed-to-Sale-Train-the-Trainer-Updated-121823v3-1-1.pdf" target="_blank" rel="noopener noreferrer">Cannabis Workforce Initiative</a> · <a href="https://conviron.b-cdn.net/uploads/documents/Cannabis-Humidity-Management-Rev.01-April-2017.pdf" target="_blank" rel="noopener noreferrer">Conviron</a></p>
+</article>
+<div id="controlMount" class="master-control-mount"></div>
  <article class="panel journal-panel">
   <header class="panelhead journal-head"><div class="journal-title"><span data-icon="book"></span><h3>Growbuch</h3></div>
   <div class="journal-tabs" role="group" aria-label="Growbuch-Ansicht">
@@ -146,4 +157,4 @@
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
 </div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="growbook">▣<small>Growbuch</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-growbook-5"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-1"></script></body></html>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-stage-6"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-1"></script><script src="/static/climate-stage.js?v=20261114-stage-1"></script></body></html>
