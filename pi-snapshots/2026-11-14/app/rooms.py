@@ -98,7 +98,7 @@ def empty_state() -> dict[str, Any]:
 
 
 def load_state() -> dict[str, Any]:
-if not DATA_FILE.exists():
+    if not DATA_FILE.exists():
         return empty_state()
     try:
         raw = json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -198,7 +198,7 @@ def calc_vpd(temp_c: float | None, rh: float | None) -> float | None:
 
 class RoomCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-kind: Literal["grow_tent", "grow_room", "drying", "storage", "other"] = "grow_tent"
+    kind: Literal["grow_tent", "grow_room", "drying", "storage", "other"] = "grow_tent"
     description: str = Field(default="", max_length=1000)
     target_temperature_c: float | None = Field(default=None, ge=0, le=60)
     target_humidity_percent: float | None = Field(default=None, ge=0, le=100)
@@ -298,7 +298,7 @@ class GrowProfilePhase(BaseModel):
 
 
 class GrowProfileCreate(BaseModel):
-name: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=1000)
     phases: list[GrowProfilePhase] = Field(default_factory=list, max_length=20)
     tasks: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
@@ -398,7 +398,7 @@ def _cycle_forecast(plant: dict[str, Any], profile: dict[str, Any] | None) -> di
     return {
         "expected_harvest_from": (center - timedelta(days=spread)).isoformat(),
         "expected_harvest_to": (center + timedelta(days=spread)).isoformat(),
-"forecast": True,
+        "forecast": True,
     }
 
 
@@ -498,7 +498,7 @@ def calculate_daily_dli(samples: list[dict[str, Any]], light_hours: float = 18.0
         if gap <= 0:
             continue
         largest_gap = max(largest_gap, gap)
-if gap > max_gap:
+        if gap > max_gap:
             dropped_segments += 1
             continue
         total_umol += ((left_v + right_v) / 2.0) * gap
@@ -598,7 +598,7 @@ async def list_rooms():
 @router.post("", dependencies=[Depends(require_write_auth)])
 async def create_room(body: RoomCreate):
     with edit_state() as state:
-row = {"id": new_id("room"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
+        row = {"id": new_id("room"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
         state["rooms"].append(row)
         return row
 
@@ -698,7 +698,7 @@ async def room_devices(room_id: str):
         for d in DeviceRegistry.from_env().list() if not d.id.startswith("growcentral_esp32:")
     ]
     native = await _native_gc_devices(timeout=0.8)
-merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
+    merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
     for row in native:
         merged[row["id"]] = row
     for row in _mars_catalog():
@@ -798,7 +798,7 @@ async def update_plant(room_id: str, plant_id: str, body: PlantCreate):
         values = body.model_dump()
         if values.get("profile_id"):
             profile_or_404(state, values["profile_id"])
-if values.get("phase") != previous_phase and not values.get("phase_started_at"):
+        if values.get("phase") != previous_phase and not values.get("phase_started_at"):
             values["phase_started_at"] = now_iso()
         elif not values.get("phase_started_at"):
             values["phase_started_at"] = row.get("phase_started_at", "")
@@ -806,413 +806,3 @@ if values.get("phase") != previous_phase and not values.get("phase_started_at"):
         if row.get("phase") != previous_phase:
             _append_grow_event(state, room_id, plant_id=plant_id, event_type="phase_changed", note="Pflanzenphase geändert", payload={"from": previous_phase, "to": row.get("phase")}, source="system")
         return row
-
-
-@router.delete("/{room_id}/plants/{plant_id}", dependencies=[Depends(require_write_auth)])
-async def delete_plant(room_id: str, plant_id: str):
-    with edit_state() as state:
-        room_or_404(state, room_id); row = plant_or_404(state, plant_id)
-        if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-        state["plants"] = [p for p in state["plants"] if p["id"] != plant_id]
-        state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] != plant_id]
-        state["grow_events"] = [e for e in state["grow_events"] if e.get("plant_id") != plant_id]
-        return {"ok": True}
-
-
-@router.get("/{room_id}/plants/{plant_id}/grow-status")
-async def plant_grow_status(room_id: str, plant_id: str):
-    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-    if plant["room_id"] != room_id:
-        raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    profile = None
-    if plant.get("profile_id"):
-        profile = next((row for row in state["grow_profiles"] if row["id"] == plant["profile_id"]), None)
-    phase_profile = _phase_profile(profile, plant.get("phase"))
-    snapshot = _latest_sensor_snapshot(state, room_id)
-    targets = (phase_profile or {}).get("targets", {})
-    return {
-        "plant": plant,
-        "profile": profile,
-        "phase_profile": phase_profile,
-        "sensor_snapshot": snapshot,
-        "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
-        "harvest_window": _cycle_forecast(plant, profile),
-    }
-
-
-def diagnose_plant_health(
-    *,
-    symptoms: list[str],
-    affected_zone: str,
-    medium: str,
-    snapshot: dict[str, Any],
-    targets: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Return conservative horticultural hypotheses; never a certain diagnosis."""
-    findings: list[dict[str, Any]] = []
-    normalized = {str(item).strip().lower() for item in symptoms if str(item).strip()}
-
-    def add(code: str, title: str, reason: str, checks: list[str], actions: list[str], confidence: str = "possible"):
-        findings.append({
-            "code": code,
-            "title": title,
-            "confidence": confidence,
-            "reason": reason,
-            "checks": checks,
-            "actions": actions,
-        })
-
-    vpd = snapshot.get("vpd_kpa")
-    vpd_eval = evaluate_vpd(vpd, targets)
-    if vpd_eval["status"] == "high":
-        add(
-            "environment_vpd_high",
-            "Zu trockene Luft / hoher Verdunstungsdruck möglich",
-            f"VPD liegt mit {vpd} kPa über dem hinterlegten Phasenziel.",
-            ["Luftfeuchte- und Temperaturtrend prüfen", "Sensorposition und Kalibrierung prüfen"],
-            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
-            "supported_by_sensor",
-        )
-    elif vpd_eval["status"] == "low":
-        add(
-            "environment_vpd_low",
-            "Zu feuchte Luft / niedriger Verdunstungsdruck möglich",
-            f"VPD liegt mit {vpd} kPa unter dem hinterlegten Phasenziel.",
-            ["Luftfeuchte- und Temperaturtrend prüfen", "Luftbewegung und Sensorposition prüfen"],
-            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
-            "supported_by_sensor",
-        )
-
-    soil = snapshot.get("soil_moisture_percent")
-    if isinstance(soil, (int, float)):
-        if soil < 20:
-            add(
-                "soil_moisture_low",
-                "Trockener Wurzelbereich möglich",
-                f"Die gemessene Bodenfeuchte ist mit {soil}% niedrig.",
-                ["Kalibrierstatus des Bodensensors prüfen", "Feuchte an mehreren Stellen gegenprüfen"],
-                ["Bewässerungsbedarf anhand Medium und Pflanzenzustand prüfen"],
-                "supported_by_sensor",
-            )
-        elif soil > 85:
-            add(
-                "soil_moisture_high",
-                "Sehr feuchter Wurzelbereich möglich",
-f"Die gemessene Bodenfeuchte ist mit {soil}% hoch.",
-                ["Kalibrierstatus prüfen", "Drainage und längerfristigen Feuchteverlauf prüfen"],
-                ["Weitere Bewässerung erst nach Plausibilitätsprüfung des Feuchteverlaufs planen"],
-                "supported_by_sensor",
-            )
-
-    if normalized & {"yellow", "yellowing", "gelb", "vergilbung", "chlorosis"}:
-        zone_reason = f"Betroffene Zone: {affected_zone}." if affected_zone != "unknown" else "Betroffene Pflanzenzone wurde nicht eingegrenzt."
-        add(
-            "symptom_chlorosis",
-            "Chlorose / Vergilbung – mehrere Ursachen möglich",
-            zone_reason,
-            ["Muster an alten vs. jungen Blättern vergleichen", "Wurzelraum, pH/EC und Umweltverlauf gegenprüfen, sofern Messwerte vorhanden"],
-            ["Keine Einzelursache annehmen; zuerst Messwerte und Verlauf bestätigen"],
-        )
-    if normalized & {"droop", "drooping", "hanging", "hängend", "haengend", "welk", "wilting"}:
-        add(
-            "symptom_droop",
-            "Hängende oder welke Blätter – Wasserhaushalt oder Umweltstress möglich",
-            f"Medium: {medium or 'nicht angegeben'}; Zone: {affected_zone}.",
-            ["Bodenfeuchteverlauf und Wurzelraum prüfen", "Temperatur/VPD-Verlauf prüfen"],
-            ["Ursache anhand Verlauf eingrenzen, bevor Stellgrößen verändert werden"],
-        )
-
-    if not findings:
-        add(
-            "insufficient_evidence",
-            "Noch keine belastbare Ursache ableitbar",
-            "Die vorhandenen Symptome und Messwerte reichen für eine sinnvolle Eingrenzung noch nicht aus.",
-            ["Symptome genauer beschreiben", "Aktuelle Sensorwerte und Verlauf prüfen", "Foto und betroffene Pflanzenzone dokumentieren"],
-            ["Weitere Beobachtung als Timeline-Ereignis festhalten"],
-            "insufficient",
-        )
-    return findings
-
-
-@router.post("/{room_id}/plants/{plant_id}/diagnosis", dependencies=[Depends(require_write_auth)])
-async def diagnose_plant(room_id: str, plant_id: str, body: PlantDiagnosisRequest):
-    with edit_state() as state:
-        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-        if plant["room_id"] != room_id:
-            raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-        profile = next((row for row in state["grow_profiles"] if row["id"] == plant.get("profile_id")), None)
-        phase_profile = _phase_profile(profile, plant.get("phase"))
-        targets = (phase_profile or {}).get("targets", {})
-        snapshot = _latest_sensor_snapshot(state, room_id)
-        findings = diagnose_plant_health(
-            symptoms=body.symptoms,
-            affected_zone=body.affected_zone,
-            medium=body.medium,
-            snapshot=snapshot,
-            targets=targets,
-        )
-        result = {
-            "plant_id": plant_id,
-            "generated_at": now_iso(),
-            "disclaimer": "Mögliche Ursachen, keine sichere Diagnose. Verlauf und Messwerte gegenprüfen.",
-            "sensor_snapshot": snapshot,
-            "findings": findings,
-        }
-        if body.save_event:
-            event = _append_grow_event(
-                state,
-                room_id,
-                plant_id=plant_id,
-                event_type="diagnosis",
-                note=body.note or "Plant-Doctor-Auswertung",
-                payload={
-                    "symptoms": body.symptoms,
-                    "affected_zone": body.affected_zone,
-                    "medium": body.medium,
-                    "findings": findings,
-                },
-                source="plant-doctor",
-            )
-            result["event_id"] = event["id"]
-        return result
-
-
-@router.get("/{room_id}/plants/{plant_id}/journal")
-async def plant_journal(room_id: str, plant_id: str):
-    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-    if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    return {"entries": [e for e in reversed(state["plant_journal"]) if e["plant_id"] == plant_id]}
-
-
-@router.post("/{room_id}/plants/{plant_id}/journal", dependencies=[Depends(require_write_auth)])
-async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
-    with edit_state() as state:
-        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-        if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-        snapshot = _latest_sensor_snapshot(state, room_id)
-        row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
-        state["plant_journal"].append(row)
-        _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
-        return row
-
-
-@router.get("/{room_id}/events")
-async def room_events(room_id: str, limit: int = Query(default=200, ge=1, le=5000)):
-state = load_state(); room_or_404(state, room_id)
-    rows = [e for e in state["grow_events"] if e.get("room_id") == room_id][-limit:]
-    return {"events": list(reversed(rows))}
-
-
-@router.post("/{room_id}/events", dependencies=[Depends(require_write_auth)])
-async def add_room_event(room_id: str, body: GrowEventCreate):
-    with edit_state() as state:
-        room_or_404(state, room_id)
-        return _append_grow_event(state, room_id, plant_id=None, event_type=body.type, note=body.note, payload=body.payload, source=body.source)
-
-
-@router.get("/{room_id}/plants/{plant_id}/events")
-async def plant_events(room_id: str, plant_id: str, limit: int = Query(default=200, ge=1, le=5000)):
-    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-    if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-    rows = [e for e in state["grow_events"] if e.get("plant_id") == plant_id][-limit:]
-    return {"events": list(reversed(rows))}
-
-
-@router.post("/{room_id}/plants/{plant_id}/events", dependencies=[Depends(require_write_auth)])
-async def add_plant_event(room_id: str, plant_id: str, body: GrowEventCreate):
-    with edit_state() as state:
-        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
-        if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-        return _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.type, note=body.note, payload=body.payload, source=body.source)
-
-
-def append_sensor(state: dict[str, Any], room_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    row = {"id": new_id("sample"), "room_id": room_id, "timestamp": now_iso(), **payload}
-    row["vpd_kpa"] = calc_vpd(row.get("temperature_c"), row.get("humidity_percent"))
-    state["sensor_history"].append(row)
-    state["sensor_history"] = state["sensor_history"][-50000:]
-    # Long-term SQLite archive is independent of the bounded JSON UI cache.
-    # Keep measurements, source and room identity even after browser restarts.
-    try:
-        history_append("room-sensors", {
-            key: value for key, value in row.items()
-            if key in ("temperature_c","humidity_percent","soil_moisture_percent",
-                       "soil_temperature_c","co2_ppm","ppfd_umol_m2_s","ec_ms_cm",
-                       "ph","vpd_kpa","power_w","energy_wh")
-        }, room_id=room_id)
-    except Exception:
-        logger.exception("Permanent sensor history could not be saved")
-    return row
-
-
-@router.get("/{room_id}/sensors")
-async def sensor_history(room_id: str, limit: int = 500):
-    state = load_state(); room_or_404(state, room_id); limit = min(max(limit, 1), 5000)
-    rows = [e for e in state["sensor_history"] if e["room_id"] == room_id][-limit:]
-    return {"samples": rows}
-
-
-def _csv_cell(value: Any) -> Any:
-    if value is None or isinstance(value, float) and not math.isfinite(value):
-        return ""
-    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
-        # Prevent user-entered source labels from executing as spreadsheet formulas.
-        return "'" + value
-    return value
-
-
-@router.get("/{room_id}/sensors.csv")
-async def export_sensor_history(room_id: str, limit: int = Query(default=5000, ge=1, le=50000)):
-    state = load_state()
-    room_or_404(state, room_id)
-    rows = [row for row in state["sensor_history"] if row["room_id"] == room_id][-limit:]
-    columns = ["timestamp", "temperature_c", "humidity_percent", "vpd_kpa", "co2_ppm",
-               "soil_moisture_percent", "soil_substrate_reference_percent",
-               "soil_substrate_index_percent", "soil_substrate_delta_pp", "soil_substrate_state",
-               "soil_calibration_status", "power_w", "energy_wh", "source"]
-    output = io.StringIO(newline="")
-    writer = csv.writer(output)
-    writer.writerow(columns)
-    for row in rows:
-        export = {**row,
-                  "soil_calibration_status": row.get("soil_calibration_status") or ("calibration_required" if row.get("soil_moisture_percent") is not None else "")}
-        writer.writerow([_csv_cell(export.get(key)) for key in columns])
-    return Response(output.getvalue(), media_type="text/csv", headers={
-        "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-    })
-
-
-
-@router.post("/{room_id}/sensors", dependencies=[Depends(require_write_auth)])
-async def add_sensor_sample(room_id: str, body: SensorSample):
-    with edit_state() as state:
-        room_or_404(state, room_id); row = append_sensor(state, room_id, body.model_dump()); return row
-
-
-def _measurement(state: dict[str, Any], key: str, minimum: float, maximum: float | None = None, alias: str | None = None) -> float | None:
-    value = state.get(key)
-    if value is None and alias:
-        value = state.get(alias)
-    if isinstance(value, bool):
-        return None
-    try:
-number = float(value)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    if not math.isfinite(number) or number < minimum or (maximum is not None and number > maximum):
-        return None
-    return number
-
-
-async def capture_room_sensors_once() -> int:
-    initial = load_state()
-    if not initial["rooms"] or not initial["assignments"]:
-        return 0
-    overview = await device_overview(refresh=True)
-    combined_devices = [row for row in overview.get("devices", []) if not str(row.get("id", "")).startswith("growcentral_esp32:")]
-    combined_devices.extend(await _native_gc_devices(timeout=0.8))
-    by_id = {d["id"]: d for d in combined_devices}
-    count = 0
-    # Network reads can take seconds. Reload after them so UI edits, deletions,
-    # and sensor acceptance completed during the read cannot be overwritten.
-    with edit_state() as state:
-        for room in state["rooms"]:
-            rows = [by_id[d] for d, rid in state["assignments"].items() if rid == room["id"] and d in by_id]
-            states = [r.get("state") for r in rows if r.get("online") and isinstance(r.get("state"), dict)]
-            measurements = {
-                "temperature_c": ("temperature_c", -30, 80, "temperature"),
-                "humidity_percent": ("humidity_percent", 0, 100, "humidity"),
-                "co2_ppm": ("co2_ppm", 0, 100000, None),
-                "soil_moisture_percent": ("soil_moisture", 0, 100, None),
-                "soil_temperature_c": ("soil_temperature_c", -30, 80, "soil_temperature"),
-                "ppfd_umol_m2_s": ("ppfd_umol_m2_s", 0, 5000, "ppfd"),
-                "ec_ms_cm": ("ec_ms_cm", 0, 20, "ec"),
-                "ph": ("ph", 0, 14, None),
-                "soil_substrate_reference_percent": ("soil_substrate_reference_percent", 0, 100, None),
-                "soil_substrate_index_percent": ("soil_substrate_index_percent", 0, None, None),
-                "soil_substrate_delta_pp": ("soil_substrate_delta_pp", -100, 100, None),
-                "power_w": ("power_w", 0, None, None),
-                "energy_wh": ("energy_wh", 0, None, None),
-            }
-            payload: dict[str, Any] = {}
-            for target, arguments in measurements.items():
-                values = [value for row in states if (value := _measurement(row, *arguments)) is not None]
-                total = sum(values)
-                payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
-            calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
-            if payload.get("soil_substrate_delta_pp") is not None:
-                payload["soil_substrate_state"] = classify_soil_substrate_delta(float(payload["soil_substrate_delta_pp"]))
-            if any(value == 'valid' for value in calibration_states):
-                payload['soil_calibration_status'] = 'valid'
-            elif any(value == 'required' for value in calibration_states):
-                payload['soil_calibration_status'] = 'required'
-            if all(value is None for key, value in payload.items() if key != 'soil_calibration_status'):
-                continue
-            append_sensor(state, room["id"], {**payload, "source": "assigned-devices"})
-            count += 1
-    return count
-
-
-@router.post("/capture", dependencies=[Depends(require_write_auth)])
-async def capture_now():
-    return {"ok": True, "rooms_captured": await capture_room_sensors_once()}
-
-
-async def _capture_loop() -> None:
-    while True:
-        try: await capture_room_sensors_once()
-        except Exception:
-            logger.exception("Room sensor capture failed; next interval will retry")
-        await asyncio.sleep(CAPTURE_INTERVAL_SECONDS)
-
-
-def install(app) -> None:
-    async def start_room_capture() -> None:
-        global _capture_task
-        if _capture_task is None or _capture_task.done():
-            _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
-
-    async def stop_room_capture() -> None:
-        global _capture_task
-        if _capture_task:
-            _capture_task.cancel()
-            try:
-                await _capture_task
-            except asyncio.CancelledError:
-                pass
-            _capture_task = None
-
-    app.router.add_event_handler("startup", start_room_capture)
-    app.router.add_event_handler("shutdown", stop_room_capture)
-
-@router.put("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
-async def update_room_journal(room_id: str, entry_id: str, body: JournalEntry):
-    """Edit a real room journal entry. Photo entries retain their photo metadata."""
-    with edit_state() as state:
-        room_or_404(state, room_id)
-        row = next((entry for entry in state["room_journal"]
-                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
-        if row is None:
-            raise HTTPException(404, "Growbucheintrag nicht gefunden")
-        if row.get("photo_id"):
-            raise HTTPException(409, "Fotoeinträge werden über das Fotoarchiv bearbeitet")
-row.update(body.model_dump())
-        row["updated_at"] = now_iso()
-        return row
-
-
-@router.delete("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
-async def delete_room_journal(room_id: str, entry_id: str):
-    """Remove a journal entry without removing immutable historical events."""
-    with edit_state() as state:
-        room_or_404(state, room_id)
-        row = next((entry for entry in state["room_journal"]
-                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
-        if row is None:
-            raise HTTPException(404, "Growbucheintrag nicht gefunden")
-        if row.get("photo_id"):
-            raise HTTPException(409, "Fotoeintrag über Fotoarchiv löschen")
-        state["room_journal"] = [entry for entry in state["room_journal"] if entry.get("id") != entry_id]
-        return {"ok": True}
