@@ -54,6 +54,10 @@ function cameraStart(){
 $('cameraStart')?.addEventListener('click',cameraStart);
 $('cameraStop')?.addEventListener('click',cameraStop);
 function remoteClose(){
+ selectedRoomId=null;
+ if(journalPending){clearTimeout(journalPending.timeout);journalPending=null;}
+ if($('journalSubmit'))$('journalSubmit').disabled=false;
+
  for(const [id,item] of pendingControl){clearTimeout(item.timeout);controlStatus(item.kind,'Verbindung beendet, Ergebnis unbestimmt.')}
  pendingControl.clear();busyControl.lamp=false;busyControl.fan=false;controlButtons();
  cameraStop();
@@ -70,6 +74,54 @@ function remoteTile(label,value){
  item.append(head,number);return item;
 }
 const latestRemote={fan:null,lamp:null};
+let selectedRoomId=null,journalPending=null;
+function requestPath(path){
+ if(!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN)return;
+ const id=crypto.randomUUID();pendingRemote.set(id,path);
+ remoteSocket.send(JSON.stringify({type:'read',request_id:id,path}));
+}
+function requestJournal(){
+ if(!selectedRoomId)return;
+ const base='/api/v1/rooms/'+selectedRoomId;
+ requestPath(base+'/journal');requestPath(base+'/plants');requestPath(base+'/events?limit=7');
+}
+function renderJournal(data){
+ const target=$('journalDisplay');target.replaceChildren();
+ const rows=Array.isArray(data.entries)?data.entries:[];
+ if(!rows.length){target.textContent='Noch keine Growbucheinträge vorhanden.';return}
+ for(const entry of rows.slice(0,12)){
+  const item=document.createElement('div');item.className='gc-journal-item';
+  const title=document.createElement('strong');title.textContent=entry.title||'Eintrag';
+  const date=document.createElement('small');const when=new Date(entry.created_at);
+  date.textContent=(entry.category||'Notiz')+' · '+(Number.isFinite(when.getTime())?when.toLocaleString('de-DE'):'');
+  const body=document.createElement('p');body.textContent=entry.text||'';
+  item.append(title,date,body);target.append(item);
+ }
+}
+function submitJournal(event){
+ event.preventDefault();
+ if(!selectedRoomId||journalPending){$('journalStatus').textContent='Bitte einen verbundenen Raum auswählen.';return}
+ if(!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN){$('journalStatus').textContent='Cloud-Verbindung unterbrochen.';return}
+ const title=$('journalTitle').value.trim(),note=$('journalText').value,category=$('journalCategory').value;
+ if(!title||title.length>120||note.length>5000)return;
+ const id=crypto.randomUUID();
+ $('journalSubmit').disabled=true;$('journalStatus').textContent='Speichere auf dem Grow-Pi …';
+ const timeout=setTimeout(()=>{
+  if(journalPending?.id!==id)return;
+  journalPending=null;$('journalSubmit').disabled=false;
+  $('journalStatus').textContent='Speicherbestätigung fehlt. Bitte Growbuch prüfen, nicht blind erneut senden.';
+ },16000);
+ journalPending={id,timeout};
+ remoteSocket.send(JSON.stringify({type:'journal_create',request_id:id,room_id:selectedRoomId,title,text:note,category,confirm_write:true}));
+}
+$('journalForm')?.addEventListener('submit',submitJournal);
+function journalResult(data){
+ if(journalPending?.id!==data.request_id)return;
+ clearTimeout(journalPending.timeout);journalPending=null;$('journalSubmit').disabled=false;
+ if(data.ok){$('journalForm').reset();$('journalStatus').textContent='Auf dem Grow-Pi gespeichert.';requestJournal()}
+ else{$('journalStatus').textContent='Speichern nicht bestätigt ('+(data.error||'Fehler')+'). Kein automatischer Wiederholungsversuch.'}
+}
+
 const pendingControl=new Map();
 const busyControl={lamp:false,fan:false};
 function controlButtons(){
@@ -162,6 +214,7 @@ function renderRooms(data){
  const rooms=Array.isArray(data.rooms)?data.rooms:[];
  if(!rooms.length){target.textContent='Noch keine Räume vorhanden';return}
  for(const room of rooms.slice(0,12))target.append(textRow(room.name||'Raum',String(room.plant_count??0)+' Pflanzen'));
+ selectedRoomId=rooms[0]?.id||null;requestJournal();
 }
 function renderHistory(data){
  const target=$('historyDisplay');target.replaceChildren();
@@ -180,6 +233,9 @@ function renderHistory(data){
 function displayRemote(message){
  if(!message.ok){$('remoteState').textContent='Lesezugriff: '+(message.error||'Fehler');return}
  const info=message.data||{};
+ if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/journal$/.test(message.path)){renderJournal(info);return}
+ if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/plants$/.test(message.path)){return}
+ if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/events\\?limit=7$/.test(message.path)){return}
  switch(message.path){
  case '/api/mars-hydro/ble/fast-fan-status':
   latestRemote.fan=info.fresh?info.latest:null;renderTelemetry();break;
@@ -209,6 +265,7 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
+  if(data.type==='journal_result'){journalResult(data);return}
   if(data.type==='control_result'){controlResult(data);return}
   if(data.type==='camera_result'){
    cameraPending=false;
