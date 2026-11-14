@@ -34,7 +34,7 @@ cp "$repo/cloud/portal/tent-growing-wiki.js" "$stage/static/tent-growing-wiki.js
 cp "$repo/cloud/portal/tent-growing-wiki.css" "$stage/static/tent-growing-wiki.css"
 cp "$repo/cloud/portal/room-setup.js" "$stage/static/room-setup.js"
 cp "$repo/cloud/portal/room-setup.css" "$stage/static/room-setup.css"
-for f in brand-logo.png brand-mark.png gc-icon-192.png gc-icon-512.png gc-manifest.webmanifest; do
+for f in brand-logo.png brand-mark.png gc-icon-192.png gc-icon-512.png gc-manifest.webmanifest soil-sensor-reference.jpg; do
  cp "$repo/web/$f" "$stage/static/$f"
 done
 cp "$repo/web/brand-logo.png" "$stage/brand-logo.png"
@@ -54,6 +54,10 @@ done
 CHECKSUMS
 )
 grep -q 'cloud-master-bridge.js' "$stage/cloud-master.html"
+grep -q 'dashboardSoilValue' "$stage/cloud-master.html"
+grep -q 'Phasengerechtes Klima' "$stage/cloud-master.html"
+grep -q 'soilTileReading(' "$stage/static/gc-final.js"
+test -s "$stage/static/soil-sensor-reference.jpg"
 grep -q 'gc-hero-leaf.webp' "$stage/static/gc-final.css"
 grep -q 'mars-fc3000-transparent.webp' "$stage/static/gc-final.js"
 grep -q 'mars-df150m-hires.webp' "$stage/static/gc-final.js"
