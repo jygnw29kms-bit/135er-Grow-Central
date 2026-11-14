@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Read-only verification of deployed Grow Central Cloud Final Master assets.
+
+Run on the Plesk host against a checkout of the desired Git revision:
+  python3 scripts/verify_cloud_final_master_deployment.py --cloud-root /var/www/vhosts/grow-central.de/135ercloud.grow-central.de
+Exit 0 only if the live static files match the checkout byte-for-byte.
+No credentials, network access, or third-party Python packages required.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+from pathlib import Path
+
+SOURCE_TO_LIVE = {
+    "cloud/portal/index.html": "index.html",
+    "cloud/portal/cloud-master.html": "cloud-master.html",
+    "cloud/portal/cloud-portal.js": "cloud-portal.js",
+    "cloud/portal/gc-final-cloud.js": "static/gc-final.js",
+    "cloud/portal/gc-final-cloud.css": "static/gc-final.css",
+    "cloud/portal/cloud-master-bridge.js": "static/cloud-master-bridge.js",
+}
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify(source_root: Path, cloud_root: Path) -> int:
+    failures = 0
+    for source_name, live_name in SOURCE_TO_LIVE.items():
+        source, live = source_root / source_name, cloud_root / live_name
+        if not source.is_file() or not live.is_file():
+            print(f"MISSING {live_name} (source={source.is_file()}, deployed={live.is_file()})")
+            failures += 1
+        elif sha256(source) != sha256(live):
+            print(f"DIFF    {live_name}")
+            failures += 1
+        else:
+            print(f"MATCH   {live_name}")
+    print(f"RESULT: {len(SOURCE_TO_LIVE) - failures}/{len(SOURCE_TO_LIVE)} deployed files match")
+    return 1 if failures else 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cloud-root", type=Path, required=True)
+    parser.add_argument("--source-root", type=Path, default=Path(__file__).resolve().parents[1])
+    args = parser.parse_args()
+    return verify(args.source_root.resolve(), args.cloud_root.resolve())
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
