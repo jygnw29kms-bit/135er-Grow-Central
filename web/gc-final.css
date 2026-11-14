@@ -254,3 +254,12 @@ main{min-width:0}
  #toast{left:12px;right:12px;bottom:89px;max-width:none}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* Cloud pairing belongs to the same GC-OS design system. */
+.gc-cloud-panel{max-width:880px}
+.cloud-pair-box{margin:20px 0;padding:22px;border:1px solid #437d7a;border-radius:12px;background:linear-gradient(125deg,#0e313b,#0c212b)}
+.cloud-code{font-size:clamp(29px,5vw,42px);font-weight:600;letter-spacing:.15em;color:#b1fae1;font-variant-numeric:tabular-nums;margin:17px 0;text-shadow:0 0 18px #4abfa858}
+.cloud-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+.cloud-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 17px;border-radius:8px;background:#66d8c5;color:#08282d;border:1px solid #a6f3df;font-size:12px;font-weight:600}
+.cloud-action:hover{background:#a1f0dc;color:#08282d;text-decoration:none}
+#cloudFeedback{padding-top:10px}
+@media(max-width:780px){.cloud-actions{flex-direction:column}.cloud-actions button,.cloud-pair-box a{width:100%}}
