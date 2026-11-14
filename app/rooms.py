@@ -362,7 +362,7 @@ def _latest_sensor_snapshot(state: dict[str, Any], room_id: str) -> dict[str, An
         "soil_moisture_percent", "soil_temperature_c", "ppfd_umol_m2_s",
         "ec_ms_cm", "ph", "soil_substrate_reference_percent",
         "soil_substrate_index_percent", "soil_substrate_delta_pp",
-        "soil_substrate_state", "soil_calibration_status", "power_w", "energy_wh", "source",
+        "soil_substrate_state", "soil_calibration_status", "soil_measurement_status", "power_w", "energy_wh", "source",
     )
     return {key: latest[key] for key in keys if latest.get(key) is not None}
 
@@ -1259,14 +1259,23 @@ async def capture_room_sensors_once() -> int:
                 total = sum(values)
                 payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
             calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
+            sensor_faults = [str((row.get('meta') or {}).get('measurement_status') or '')
+                             for row in states if isinstance(row.get('meta'), dict)]
+            if any(value in {'sensor_fault', 'out_of_calibration_range'} for value in sensor_faults):
+                payload['soil_measurement_status'] = 'sensor_fault' if 'sensor_fault' in sensor_faults else 'out_of_calibration_range'
+                # Never include another device's soil measurement when a
+                # trusted soil sensor in this room explicitly reports a fault.
+                payload['soil_moisture_percent'] = None
             if payload.get("soil_substrate_delta_pp") is not None:
                 payload["soil_substrate_state"] = classify_soil_substrate_delta(float(payload["soil_substrate_delta_pp"]))
             if any(value == 'valid' for value in calibration_states):
                 payload['soil_calibration_status'] = 'valid'
             elif any(value == 'required' for value in calibration_states):
                 payload['soil_calibration_status'] = 'required'
-            if all(value is None for key, value in payload.items() if key != 'soil_calibration_status'):
-                continue
+            if all(value is None for key, value in payload.items()
+                   if key not in {'soil_calibration_status', 'soil_measurement_status'}):
+                if payload.get('soil_measurement_status') not in {'sensor_fault', 'out_of_calibration_range'}:
+                    continue
             append_sensor(state, room["id"], {**payload, "source": "assigned-devices"})
             count += 1
     return count
