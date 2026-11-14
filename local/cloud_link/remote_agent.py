@@ -262,7 +262,7 @@ async def serve(ws,local):
    continue
   if req.get("type")!="read":continue
   path=req.get("path")
-  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices)(\?limit=[0-9]{1,3})?",path)
+  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices|live-snapshot)(\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
   is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
   if path not in READ_PATHS and not is_room_path and not is_camera_query and not is_smart_query:
