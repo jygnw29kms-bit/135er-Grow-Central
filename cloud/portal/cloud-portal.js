@@ -41,7 +41,7 @@ function masterToggle(){
   const iframe=$('masterFrame');
   if(iframe.getAttribute('src')!=='/cloud-master.html')iframe.src='/cloud-master.html';
   masterStatus('Originale Final-Master-GUI wird geladen …');
- }else masterStatus('Cloud-Datenbrücke bereit');
+ }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
 $('masterToggle')?.addEventListener('click',masterToggle);
 function masterReply(id,status,data){
