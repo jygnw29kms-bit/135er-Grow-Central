@@ -30,7 +30,7 @@ function page(id){
  if(id==='homekit')loadHomekit();
  if(id==='cloud')cloudRefresh();
  if(id==='more')api('/api/health').then(x=>text('aboutVersion',x.version||'—')).catch(()=>text('aboutVersion','Nicht verfügbar'));
- if(id==='devices')loadSmart(true);
+ if(id==='devices'){loadSmart(true);loadSoilUsb();}
  window.scrollTo(0,0);
 }
 function controlMarkup(kind){
@@ -127,6 +127,57 @@ async function loadSmart(force=false){
  }).join('');
  $('smartDevices').innerHTML=html;$('smartPreview').innerHTML=html;
  }catch(e){const m='FRITZ!/Tapo-Daten derzeit nicht erreichbar';$('smartDevices').textContent=m;$('smartPreview').textContent=m;}
+}
+const soilOnboard={devices:[],busy:false,broker:null};
+function soilStageLabel(device){
+ const stages={DETECTED:'USB erkannt',CHECKING:'Prüfe Identität und Kalibrierung',NEEDS_FIRMWARE:'Firmware-Aktualisierung erforderlich',FLASHING:'Firmware wird installiert',CALIBRATION:'Kalibrierung prüfen',CALIBRATING:'Kalibrierung läuft',NETWORK:'WLAN/MQTT einrichten',PROVISIONING:'WLAN/TLS-MQTT wird eingerichtet',CONNECTING:'Prüfe Netzwerk-Identität',ASSIGN:'Bereit für Raumzuordnung',READY:'Sensor angenommen',ERROR:'Einrichtung unterbrochen',BLOCKED:'Sensor gesperrt'};
+ return stages[device.state]||device.state||'USB erkannt';
+}
+async function loadSoilUsb(){
+ const holder=$('soilUsbDevices');if(!holder||soilOnboard.busy)return;
+ try{
+  const [found,broker]=await Promise.all([api('/api/devices/usb'),api('/api/devices/usb/broker')]);
+  soilOnboard.devices=found.devices||[];
+  soilOnboard.broker=broker;
+  if(!soilOnboard.devices.length){
+   holder.innerHTML='<p class="desc">Aktuell kein USB-Sensor angeschlossen. Bereits angenommene WLAN-Sensoren bleiben unabhängig vom USB-Anschluss registriert.</p>';return;
+  }
+  holder.innerHTML=soilOnboard.devices.map(d=>{
+   const id=esc(d.id),name=esc(d.name||'Grow-Central ESP32-C3'),phase=esc(soilStageLabel(d));
+   const message=esc(d.message||'');
+   const firmware=esc(d.firmware||'Nicht bestätigt');
+   const calibration=d.calibration_ready?'3-Punkt-Kalibrierung bestätigt':
+     (d.air_calibrated||d.wet_calibrated||d.substrate_calibrated?'Kalibrierung unvollständig':'Kalibrierung noch nicht geprüft');
+   const network=d.mqtt_connected?'MQTT verbunden':d.wifi_configured?'WLAN gespeichert · MQTT offline':'Netzwerk nicht eingerichtet';
+   const actions='<button type="button" class="subtle" data-soil-inspect="'+id+'">Identität prüfen</button>'+
+      (d.state==='NEEDS_FIRMWARE'&&found.firmware_ready?'<button type="button" class="subtle" data-soil-flash="'+id+'">Firmware '+esc(found.firmware_version)+' installieren</button>':'')+
+      (d.device_id&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN','READY'].includes(d.state)?'<button type="button" class="subtle" data-soil-connect="'+id+'">Verbindung prüfen</button>':'');
+   const canNetwork=d.device_id&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN'].includes(d.state);
+   const hosts=(soilOnboard.broker?.hosts||[]).filter(v=>/^\d{1,3}(?:\.\d{1,3}){3}$/.test(v));
+   const defaultHost=hosts[0]||'';
+   const wifiForm=canNetwork?'<form data-soil-network="'+id+'"><label>WLAN-Name (2,4 GHz)<input name="ssid" maxlength="32" autocomplete="off" required placeholder="WLAN-Name"></label>'+
+      '<label>WLAN-Kennwort<input name="password" type="password" autocomplete="off" required minlength="8" maxlength="63" placeholder="Nur an den Pi senden"></label>'+
+      '<label>Broker auf dem Pi<select name="broker_host">'+hosts.map(v=>'<option value="'+esc(v)+'" '+(v===defaultHost?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>'+
+      '<button type="submit" class="primary-btn" '+(!defaultHost?'disabled':'')+'>WLAN und sicheres MQTT einrichten</button></form>':'';
+   const rooms=(state.rooms||[]);
+   const assignForm=d.state==='ASSIGN'?'<form data-soil-assign="'+id+'"><label>Sensorname<input name="name" maxlength="120" value="'+name+'" required></label>'+
+      '<label>Raum<select name="room_id" required>'+rooms.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('')+'</select></label>'+
+      '<button type="submit" class="primary-btn" '+(!rooms.length?'disabled':'')+'>Sensor diesem Raum zuordnen</button></form>'+
+      (!rooms.length?'<p class="desc">Bitte unter Räume zunächst ein Growzelt wiederherstellen oder anlegen.</p>':''):'';
+   return '<div class="smartitem" style="display:block"><strong>'+name+'</strong><p class="desc">'+phase+' · Firmware '+firmware+' · '+esc(calibration)+' · '+esc(network)+'</p>'+
+      '<p class="desc">'+message+'</p><div class="control-buttons">'+actions+'</div>'+wifiForm+assignForm+'</div>';
+  }).join('');
+ }catch(e){holder.textContent='USB-Sensorprüfung nicht möglich: '+e.message;}
+}
+async function soilCommand(id,step,body){
+ if(soilOnboard.busy)return;
+ soilOnboard.busy=true;
+ try{
+  const d=soilOnboard.devices.find(x=>x.id===id);if(!d)throw Error('USB-Sensor nicht mehr verbunden');
+  const result=await api('/api/devices/usb/'+encodeURIComponent(id)+'/'+step,body);
+  notify(result.message||'Einrichtungsschritt gestartet');
+ }catch(e){notify('Sensor: '+e.message);}
+ finally{soilOnboard.busy=false;loadSoilUsb();}
 }
 async function switchSmart(id){
  const row=(state.smart?.devices||[]).find(x=>x.id===id);if(!row||!row.approved||!row.writable||!row.online||typeof row.state?.on!=='boolean')return;
@@ -555,6 +606,13 @@ async function loadRecentEvents(){
  }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
 }
 document.addEventListener('click',e=>{
+ const soilRefresh=e.target.closest('[data-soil-refresh]');if(soilRefresh){loadSoilUsb();return;}
+ const soilInspect=e.target.closest('[data-soil-inspect]');if(soilInspect){soilCommand(soilInspect.dataset.soilInspect,'inspect',{});return;}
+ const soilConnect=e.target.closest('[data-soil-connect]');if(soilConnect){soilCommand(soilConnect.dataset.soilConnect,'connection',{});return;}
+ const soilFlash=e.target.closest('[data-soil-flash]');if(soilFlash){
+  if(confirm('Firmware auf dem XIAO ESP32-C3 aktualisieren? Dies startet das USB-Flashen. Vorhandene Kalibrierung wird anschließend erneut geprüft. USB bis zum Abschluss nicht abziehen.'))soilCommand(soilFlash.dataset.soilFlash,'flash',{board:'seeed_xiao_esp32c3',confirmed:true});
+  return;
+ }
  const create=e.target.closest('[data-create-room]');if(create){createGrowRoom();return;}
  const archive=e.target.closest('[data-room-delete]');if(archive){archiveGrowRoom(archive.dataset.roomDelete);return;}
  const restore=e.target.closest('[data-room-restore]');if(restore){restoreGrowRoom(restore.dataset.roomRestore);return;}
@@ -565,6 +623,15 @@ document.addEventListener('click',e=>{
  const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
  const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
  const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
+});
+document.addEventListener('submit',async e=>{
+ const network=e.target.closest('[data-soil-network]');
+ if(network){
+  e.preventDefault();const data=new FormData(network);const body={ssid:String(data.get('ssid')||''),password:String(data.get('password')||''),broker_host:String(data.get('broker_host')||'')};
+  network.reset();await soilCommand(network.dataset.soilNetwork,'network',body);return;
+ }
+ const assign=e.target.closest('[data-soil-assign]');
+ if(assign){e.preventDefault();const data=new FormData(assign);await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
 });
 document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
 $('journalForm')?.addEventListener('submit',saveJournal);
@@ -578,6 +645,7 @@ $('roomPicker')?.addEventListener('change',async e=>{
  await Promise.all([loadJournal(),loadRecentEvents()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+setInterval(()=>{if(!document.hidden&&state.page==='devices')loadSoilUsb();},6000);
 
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
 cameraLoad();
