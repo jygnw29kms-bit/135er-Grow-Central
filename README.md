@@ -4,6 +4,11 @@
 
 # 135er-Grow Central
 
+## Entwicklungsfreigabe und Pi-Abgleich · 14. November 2026
+
+**Der zuvor angeordnete Entwicklungsstopp wurde vom Betreiber ausdrücklich aufgehoben.** Weiterentwicklung und Tests sind wieder freigegeben. Der tatsächlich installierte Pi-Stand wird in `archive/pi-live-2026-11-14` unter `pi-snapshots/2026-11-14/` quellenbezogen archiviert und mit `master` abgeglichen. Nicht veröffentlichbare Betriebsdaten, Schlüssel und Zugangsdaten bleiben ausgeschlossen. Der Archivstand ist kein vollständig verifiziertes Systemabbild und kein Release.
+
+
 ## Raspberry-Pi-Bestandsaufnahme und Git-Abgleich · 14. November 2026
 
 **Aktualisierung am 14.11.2026:** Der Betreiber hat den Entwicklungsstopp ausdrücklich aufgehoben. Grow Central darf weiterentwickelt, getestet und kontrolliert deployed werden. Die zuvor erstellte Bestandsaufnahme bleibt eine historische Momentaufnahme, nicht der aktuelle Arbeitsauftrag. Laufenden Betrieb, Sensorik und Fernwartung bei Änderungen schützen.
