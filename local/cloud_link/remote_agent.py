@@ -2,7 +2,7 @@
 No remote device operations are accepted in this phase.
 """
 import asyncio,base64,json,logging,os,time,socket,re,subprocess
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, parse_qs
 import httpx
 from websockets.asyncio.client import connect
 from .device_identity import ensure_identity
@@ -54,6 +54,7 @@ READ_PATHS={
  "/api/mars-hydro/ble/fast-lamp-status",
  "/api/v1/homekit/status",
  "/api/v1/rooms",
+ "/api/v1/rooms/climate-overview",
  "/api/mars-history/summary",
  "/api/cloud/status",
  "/api/v1/camera/status",
@@ -275,7 +276,21 @@ async def serve(ws,local):
   is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices|live-snapshot)(\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
   is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
-  if path not in READ_PATHS and not is_room_path and not is_camera_query and not is_smart_query:
+  # Only authenticated room-scoped historical readings are permitted through
+  # this tunnel. Deny arbitrary paths and unexpected query parameters.
+  is_history_query=False
+  if isinstance(path,str) and len(path)<512:
+   parsed_history=urlsplit(path)
+   if parsed_history.path=="/api/v1/history/points" and not parsed_history.fragment:
+    query=parse_qs(parsed_history.query,keep_blank_values=True)
+    allowed_keys={"room_id","limit","start","end","metric"}
+    room=query.get("room_id",[])
+    limit=query.get("limit",["500"])
+    is_history_query=(set(query)<=allowed_keys and all(len(v)==1 for v in query.values())
+     and len(room)==1 and bool(re.fullmatch(r"room_[a-zA-Z0-9_-]{1,110}",room[0]))
+     and len(limit)==1 and limit[0].isdigit() and 1<=int(limit[0])<=10000
+     and all(len(v[0])<=48 for k,v in query.items() if k in {"start","end","metric"}))
+  if path not in READ_PATHS and not is_room_path and not is_camera_query and not is_smart_query and not is_history_query:
    response={"type":"read_result","request_id":request_id,"ok":False,"error":"path_not_allowed"}
   else:
    try:
