@@ -156,7 +156,10 @@ async function loadRooms(){
   if(selector&&growJournal.roomId)selector.value=growJournal.roomId;
   const selected=rooms.find(x=>x.id===growJournal.roomId);
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
-  $('roomData').innerHTML=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein Raum angelegt.</p></article>';
+  const activeMarkup=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen oder freigeben</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><button type="button" class="subtle" data-room-delete="'+esc(x.id)+'">Raum archivieren</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein aktiver Raum angelegt.</p></article>';
+  const archived=data.archived_rooms||[];
+  const archivedMarkup=archived.length?'<section class="panel"><h3>Archivierte Räume</h3><p class="desc">Pflanzen, Fotos, Growbuch und Messhistorie bleiben erhalten. Geräte werden nicht automatisch erneut zugewiesen.</p>'+archived.map(r=>'<div class="statusrow"><span>'+esc(r.name)+'</span><button type="button" class="subtle" data-room-restore="'+esc(r.id)+'">Wiederherstellen</button></div>').join('')+'</section>':'';
+  $('roomData').innerHTML=activeMarkup+archivedMarkup;
   await Promise.all([loadJournal(),loadRecentEvents()]);
  }catch(e){text('roomData','Raumdaten nicht erreichbar');text('recentEvents','Raumdaten nicht erreichbar');}
 }
@@ -166,7 +169,7 @@ async function manageRoomDevices(roomId){
  try{
   const result=await api('/api/v1/rooms/'+encodeURIComponent(roomId)+'/devices');
   const devices=result.devices||[];
-  holder.innerHTML=devices.map(d=>'<label class="statusrow"><span>'+esc(d.name||d.id)+(d.room_id&&d.room_id!==roomId?' (anderem Raum zugeordnet)':'')+'</span><input type="checkbox" data-room-device="'+esc(d.id)+'" data-room-id="'+esc(roomId)+'" '+(d.assigned?'checked':'')+'></label>').join('')||'<p class="desc">Keine erkannten Geräte.</p>';
+  holder.innerHTML=devices.map(d=>'<label class="statusrow"><span>'+esc(d.name||d.id)+(d.room_id&&d.room_id!==roomId?' (anderem Raum zugeordnet)':!d.room_id?' (nicht zugeordnet)':'')+'</span><input type="checkbox" data-room-device="'+esc(d.id)+'" data-room-id="'+esc(roomId)+'" '+(d.assigned?'checked':'')+'></label>').join('')||'<p class="desc">Keine erkannten Geräte.</p>';
  }catch(e){holder.textContent='Geräte nicht erreichbar: '+e.message;}
 }
 async function roomDeviceChange(input){
@@ -179,6 +182,17 @@ async function roomDeviceChange(input){
   notify('Raumzuordnung gespeichert');
  }catch(e){input.checked=!checked;notify('Zuordnung fehlgeschlagen: '+e.message);}
  finally{input.disabled=false;}
+}
+async function archiveGrowRoom(roomId){
+ const room=(state.rooms||[]).find(x=>x.id===roomId);if(!room)return;
+ const reason='Raum „'+room.name+'“ archivieren? Alle Geräte werden freigegeben. Pflanzen, Fotos, Growbuch und Messhistorie bleiben erhalten. Der Raum kann wiederhergestellt werden.';
+ if(!confirm(reason))return;
+ try{await journalRequest('DELETE','/api/v1/rooms/'+encodeURIComponent(roomId));await loadRooms();notify('Raum archiviert, Hardware nicht zugeordnet');}
+ catch(e){notify('Archivierung fehlgeschlagen: '+e.message);}
+}
+async function restoreGrowRoom(roomId){
+ try{await journalRequest('POST','/api/v1/rooms/'+encodeURIComponent(roomId)+'/restore',{});await loadRooms();notify('Raum wiederhergestellt. Hardware bitte neu zuordnen.');}
+ catch(e){notify('Wiederherstellen fehlgeschlagen: '+e.message);}
 }
 async function createGrowRoom(){
  const name=prompt('Name des neuen Grow-Raums');
@@ -541,6 +555,8 @@ async function loadRecentEvents(){
 }
 document.addEventListener('click',e=>{
  const create=e.target.closest('[data-create-room]');if(create){createGrowRoom();return;}
+ const archive=e.target.closest('[data-room-delete]');if(archive){archiveGrowRoom(archive.dataset.roomDelete);return;}
+ const restore=e.target.closest('[data-room-restore]');if(restore){restoreGrowRoom(restore.dataset.roomRestore);return;}
  const manage=e.target.closest('[data-room-manage]');if(manage){manageRoomDevices(manage.dataset.roomManage);return;}
  const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');loadJournal();return;}
  const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
