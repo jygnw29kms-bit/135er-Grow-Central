@@ -85,6 +85,33 @@ function setMetrics(fan,lamp){
  text('climateDetails',f?'DF150-M · reale BLE-Messung, '+n((fan.age_ms||0)/1000,1)+' s alt.':'Keine frischen DF150-M-Messwerte.');
  text('bleRow',f&&l?'Beide BLE live':f||l?'Ein Gerät live':'Keine aktuellen Gerätewerte');
 }
+function showBleQuality(kind,status){
+ const elm=$(kind==='lamp'?'bleLampSignal':'bleFanSignal');
+ if(!elm)return;
+ const detail=$(kind==='lamp'?'bleLampSignalDetail':'bleFanSignalDetail');
+ const connected=status?.connected===true;
+ const fresh=status?.fresh===true;
+ const age=Number(status?.age_ms);
+ const hasAge=Number.isFinite(age)&&age>=0;
+ const rssi=Number(status?.rssi_dbm);
+ const hasRssi=status?.rssi_dbm!=null&&Number.isFinite(rssi)&&rssi<=0&&rssi>=-120;
+ // When there is no measured RSSI, bars describe freshness/reliability of
+ // actual BLE notifications, NOT absolute radio signal strength.
+ const quality=!connected?'bad':!fresh?'warn':hasRssi?(rssi>=-65?'good':rssi>=-80?'warn':'bad'):(hasAge&&age>4500?'warn':'good');
+ elm.classList.remove('gc-signal-good','gc-signal-warn','gc-signal-bad','gc-signal-unknown');
+ elm.classList.add('gc-signal-'+quality);
+ const name=kind==='lamp'?'FC3000':'DF150-M';
+ const description=!connected?'Getrennt':!fresh?'Keine frischen Daten':hasRssi?rssi+' dBm':hasAge?n(age/1000,1)+' s alt':'Daten frisch';
+ if(detail)detail.textContent=description;
+ elm.setAttribute('aria-label',name+' Bluetooth: '+(quality==='good'?'Grün':quality==='warn'?'Gelb':'Rot')+' · '+description+(hasRssi?'':' · Datenqualität, RSSI nicht verfügbar'));
+ elm.title=hasRssi?'Gemessene BLE-Feldstärke '+rssi+' dBm':'BLE-Datenqualität nach Verbindung und Messwert-Aktualität; kein gemessener RSSI-Pegel';
+}
+function setNetworkIndicator(isConnected,isCloud){
+ const badge=$('systemBadge');if(!badge)return;
+ badge.textContent=isConnected?(isCloud?'Cloud verbunden':'LAN verbunden'):(isCloud?'Cloud-Kanal getrennt':'LAN nicht erreichbar');
+ badge.classList.toggle('good',!!isConnected);
+ badge.classList.toggle('bad',!isConnected);
+}
 async function refreshLive(){
  if(state.refreshBusy)return;state.refreshBusy=true;
  try{
@@ -92,12 +119,12 @@ async function refreshLive(){
  const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
+ showBleQuality('lamp',lamp);showBleQuality('fan',fan);
  const ok=lamp.fresh&&fan.fresh;
- text('heroConnection',ok?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'KEINE AKTUELLEN WERTE');
- text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');
- $('systemBadge').classList.toggle('good',ok);$('systemBadge').classList.toggle('bad',!ok);
- text('coreStatus','Grow-Pi '+(ok?'verbunden':'erreichbar'));text('coreRow','Online');
- }catch(e){text('systemBadge','Verbindungsfehler');}finally{state.refreshBusy=false;}
+ text('heroConnection',ok?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'KEINE AKTUELLEN BLE-WERTE');
+ // BLE failures never imply that the LAN or the authenticated cloud channel is down.
+ }catch(e){showBleQuality('lamp',null);showBleQuality('fan',null);}
+ finally{state.refreshBusy=false;}
 }
 async function command(kind,action,value){
  if(state.busy[kind])return;
@@ -496,25 +523,29 @@ async function detectAccessMode(){
  try{
    if(!navigator.onLine){
      accessMode.local=false;accessMode.remote=false;
+     setNetworkIndicator(false,fromCloud);
      text('networkMode','Offline');text('cloudAccessMode','Keine Netzwerkverbindung');
      text('cloudRemoteStatus','Nicht erreichbar');return;
    }
    if(fromCloud){
      accessMode.local=false;
      text('networkMode','Cloud');text('cloudAccessMode','HTTPS-Cloudzugang');
-     // The authenticated cloudRefresh result owns the actual remote-channel status.
+     // Only the authenticated remote channel can confirm that the Pi is reachable.
+     await cloudRefresh();
      return;
    }
    const result=await fetch('/api/health',{cache:'no-store',credentials:'same-origin',signal:controller.signal});
    const type=result.headers.get('content-type')||'';
    const data=type.includes('json')?await result.json():{};
    accessMode.local=result.ok&&data&&typeof data==='object'&&data.status!=='error';
+   setNetworkIndicator(accessMode.local,false);
    text('networkMode',accessMode.local?'Direkt · Heimnetz':'Lokal nicht erreichbar');
    text('cloudAccessMode',accessMode.local?'Lokaler Grow-Pi':'Lokale Verbindung unterbrochen');
    text('cloudRemoteStatus',accessMode.local?'Cloud-Status wird geprüft':'Nicht verfügbar');
    if(!accessMode.local&&localOrigin)text('cloudFeedback','Lokaler Zugriff unterbrochen. Der HTTPS-Fernzugriff ist noch nicht freigegeben.');
  }catch(e){
    accessMode.local=false;
+   setNetworkIndicator(false,fromCloud);
    text('networkMode','Verbindung getrennt');
    text('cloudAccessMode','Grow-Pi nicht erreichbar');
    text('cloudRemoteStatus','Nicht verfügbar');
@@ -552,6 +583,7 @@ function cloudPairDisplay(pair){
 async function cloudRefresh(){
  try{
   const result=await api('/api/cloud/status');
+  if(location.hostname==='135ercloud.grow-central.de')setNetworkIndicator(result.connected===true,true);
   text('cloudServer',result.host||'Nicht konfiguriert');
   text('cloudDetail',result.detail||'Keine Statusmeldung');
   const reachable=result.connected===true;
@@ -562,7 +594,10 @@ async function cloudRefresh(){
   text('cloudRemoteStatus',result.connected?'Cloud-Fernkanal verbunden':result.health_reachable?'Cloud erreichbar · Fernkanal getrennt':'Cloud nicht erreichbar');
   text('cloudLinkRow',result.connected?'Verbunden':'Getrennt');
   text('cloudHomeStatus',result.connected?'Verbunden':'Getrennt');
- }catch(e){text('cloudState','Nicht erreichbar');text('cloudFeedback','Cloud-Status konnte nicht geladen werden: '+e.message);}
+ }catch(e){
+  if(location.hostname==='135ercloud.grow-central.de')setNetworkIndicator(false,true);
+  text('cloudState','Nicht erreichbar');text('cloudFeedback','Cloud-Status konnte nicht geladen werden: '+e.message);
+ }
 }
 async function cloudPairStart(){
  if(cloudBusy)return;

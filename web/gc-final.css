@@ -215,3 +215,24 @@ main{min-width:0}
 .gc-plant-form .form-error{margin:0}
 @media(max-width:1100px){.gc-grid-three{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.gc-plant-form{padding:12px;gap:12px}.gc-form-section{padding:12px}.gc-grid-three,.gc-grid-two{grid-template-columns:minmax(0,1fr)}.gc-form-actions>*{flex:1;min-width:130px}}
+
+/* Distinguish network transport from BLE radio/device notifications. */
+.gc-transport-status{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:0}
+.gc-transport-status .gc-link-state{font-weight:600}
+.gc-signal{display:inline-flex;align-items:center;gap:6px;border:1px solid #435555;border-radius:9px;padding:7px 9px;background:#111d20;color:#b9c6c4;font-size:10px;min-height:32px;white-space:nowrap;line-height:1}
+.gc-signal-label{font-weight:600;letter-spacing:.01em}
+.gc-signal small{color:inherit;opacity:.9;font-size:9px;white-space:nowrap}
+.gc-signal-bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px;flex:0 0 auto}
+.gc-signal-bars i{display:block;width:4px;min-height:4px;border:1px solid currentColor;border-radius:2px 2px 0 0;opacity:.2;background:currentColor}
+.gc-signal-bars i:nth-child(1){height:5px}
+.gc-signal-bars i:nth-child(2){height:9px}
+.gc-signal-bars i:nth-child(3){height:14px}
+.gc-signal-good{color:#73e6a5;border-color:#2a7850}
+.gc-signal-good .gc-signal-bars i{opacity:1}
+.gc-signal-warn{color:#f2cc63;border-color:#8d7133}
+.gc-signal-warn .gc-signal-bars i:nth-child(-n+2){opacity:1}
+.gc-signal-bad{color:#fa7777;border-color:#8c4545}
+.gc-signal-bad .gc-signal-bars i:first-child{opacity:1}
+.gc-signal-unknown{color:#99a9a7}
+@media(max-width:820px){.gc-transport-status{width:100%;justify-content:flex-start;gap:5px}.gc-signal{padding:7px 6px;gap:4px}.gc-signal small{font-size:9px}.gc-signal-label{font-size:10px}}
+@media(max-width:390px){.gc-signal small{display:none}}
