@@ -92,7 +92,7 @@ window.addEventListener('message',event=>{
   masterPending.set(msg.id,true);
   remoteSocket.send(JSON.stringify({type:'control',request_id:msg.id,kind,action,value,confirm_physical_change:true}));return;
  }
- if(method==='POST'&&/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/journal$/.test(msg.path)){
+ if(method==='POST'&&msg.path.startsWith('/api/v1/rooms/')&&msg.path.endsWith('/journal')){
   if(!window.confirm('Neuen Growbucheintrag auf dem Pi speichern?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
   const room_id=msg.path.split('/')[4];
   masterPending.set(msg.id,true);
