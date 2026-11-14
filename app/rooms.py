@@ -231,6 +231,7 @@ class JournalEntry(BaseModel):
 
 class PlantCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
+    crop: str = Field(default="", max_length=80)  # Culture identity; empty for existing unclassified plants
     strain: str = Field(default="", max_length=120)
     plant_type: Literal["automatic", "feminized", "mother", "clone", "other"] = "other"
     start_date: str = Field(default="", max_length=32)
