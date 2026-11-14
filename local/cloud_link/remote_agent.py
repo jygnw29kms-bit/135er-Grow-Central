@@ -70,11 +70,13 @@ async def serve(ws,local):
   if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
   if req.get("type")=="photo_create":
    room_id=req.get("room_id");image=req.get("image_data_url");title=req.get("title","Foto")
+   plant_id=req.get("plant_id")
    note=req.get("note","");tags=req.get("tags",[])
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
      and isinstance(image,str) and image.startswith("data:image/jpeg;base64,")
      and 1000<=len(image)<=180000 and isinstance(title,str) and 1<=len(title)<=120
      and isinstance(note,str) and len(note)<=5000 and isinstance(tags,list)
+     and (plant_id is None or (isinstance(plant_id,str) and re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id)))
      and len(tags)<=20 and all(isinstance(t,str) and len(t)<=40 for t in tags)
      and req.get("confirm_write") is True)
    if not valid:
@@ -83,7 +85,7 @@ async def serve(ws,local):
     continue
    try:
     result=await local.post(LOCAL_API+"/api/v1/grow-photos",headers=local_headers(),
-      json={"room_id":room_id,"title":title,"note":note,"tags":tags,"image_data_url":image},
+      json={"room_id":room_id,"plant_id":plant_id,"title":title,"note":note,"tags":tags,"image_data_url":image},
       timeout=20)
     result.raise_for_status();photo=result.json()
     response={"type":"photo_result","request_id":request_id,"ok":True,
@@ -125,6 +127,34 @@ async def serve(ws,local):
               "error":type(exc).__name__}
    await ws.send(json.dumps(response))
    continue
+  if req.get("type") in ("room_create","room_assign_device"):
+   room_id=req.get("room_id");device_id=req.get("device_id");name=req.get("name")
+   if req.get("confirm_write") is not True:
+    await ws.send(json.dumps({"type":"room_result","request_id":request_id,"ok":False,
+                              "error":"confirmation_required"}));continue
+   if req["type"]=="room_create":
+    valid=isinstance(name,str) and 1<=len(name.strip())<=80 and req.get("kind","grow_tent") in ("grow_tent","grow_room","drying","storage","other")
+   else:
+    valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
+           and device_id in ("mars-hydro:fc3000","mars-hydro:df150m"))
+   if not valid:
+    await ws.send(json.dumps({"type":"room_result","request_id":request_id,"ok":False,
+                              "error":"invalid_room_data"}));continue
+   try:
+    if req["type"]=="room_create":
+     result=await local.post(LOCAL_API+"/api/v1/rooms",headers=local_headers(),
+       json={"name":name.strip(),"kind":req.get("kind","grow_tent")},timeout=12)
+    else:
+     result=await local.post(LOCAL_API+"/api/v1/rooms/"+room_id+"/devices",
+       headers=local_headers(),json={"device_id":device_id},timeout=12)
+    result.raise_for_status();data=result.json()
+    response={"type":"room_result","request_id":request_id,"ok":True,
+              "room_id":str(data.get("room_id") or data.get("id") or room_id or "")[:128],
+              "device_id":device_id if req["type"]=="room_assign_device" else None}
+   except Exception as exc:
+    response={"type":"room_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response));continue
   if req.get("type") in ("plant_create","plant_update"):
    room_id=req.get("room_id");name=req.get("name");plant_id=req.get("plant_id")
    plant_type=req.get("plant_type","other");phase=req.get("phase","vegetative")
@@ -163,9 +193,11 @@ async def serve(ws,local):
    continue
   if req.get("type")=="journal_create":
    room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
+   plant_id=req.get("plant_id")
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
       and isinstance(title,str) and 1<=len(title.strip())<=120
       and isinstance(note,str) and len(note)<=5000
+      and (plant_id is None or (isinstance(plant_id,str) and re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id)))
       and category in {"note","observation","watering","feeding","training","other"}
       and req.get("confirm_write") is True)
    if not valid:
@@ -174,7 +206,7 @@ async def serve(ws,local):
     continue
    try:
     path="/api/v1/rooms/"+room_id+"/journal"
-    body={"title":title.strip(),"text":note,"category":category}
+    body={"title":title.strip(),"text":note,"category":category,"plant_id":plant_id}
     result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
     result.raise_for_status()
     entry=result.json()
@@ -230,7 +262,7 @@ async def serve(ws,local):
    continue
   if req.get("type")!="read":continue
   path=req.get("path")
-  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events)(\?limit=[0-9]{1,3})?",path)
+  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices)(\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
   is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
   if path not in READ_PATHS and not is_room_path and not is_camera_query and not is_smart_query:
