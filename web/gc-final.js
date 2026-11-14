@@ -133,10 +133,17 @@ function soilStageLabel(device){
  const stages={DETECTED:'USB erkannt',CHECKING:'Prüfe Identität und Kalibrierung',NEEDS_FIRMWARE:'Firmware-Aktualisierung erforderlich',FLASHING:'Firmware wird installiert',CALIBRATION:'Kalibrierung prüfen',CALIBRATING:'Kalibrierung läuft',NETWORK:'WLAN/MQTT einrichten',PROVISIONING:'WLAN/TLS-MQTT wird eingerichtet',CONNECTING:'Prüfe Netzwerk-Identität',ASSIGN:'Bereit für Raumzuordnung',READY:'Sensor angenommen',ERROR:'Einrichtung unterbrochen',BLOCKED:'Sensor gesperrt'};
  return stages[device.state]||device.state||'USB erkannt';
 }
-async function loadSoilUsb(){
- const holder=$('soilUsbDevices');if(!holder||soilOnboard.busy)return;
+function soilFormEditing(holder){
+ if(!holder)return false;
+ const current=document.activeElement;
+ return !!(current&&holder.contains(current)&&current.closest('[data-soil-network], [data-soil-assign]'))||
+  !!holder.querySelector('[data-soil-network][data-editing="true"], [data-soil-assign][data-editing="true"]');
+}
+async function loadSoilUsb(force=false){
+ const holder=$('soilUsbDevices');if(!holder||soilOnboard.busy||(!force&&soilFormEditing(holder)))return;
  try{
   const [found,broker]=await Promise.all([api('/api/devices/usb'),api('/api/devices/usb/broker')]);
+  if(!force&&soilFormEditing(holder))return;
   soilOnboard.devices=found.devices||[];
   soilOnboard.broker=broker;
   if(!soilOnboard.devices.length){
@@ -177,7 +184,7 @@ async function soilCommand(id,step,body){
   const result=await api('/api/devices/usb/'+encodeURIComponent(id)+'/'+step,body);
   notify(result.message||'Einrichtungsschritt gestartet');
  }catch(e){notify('Sensor: '+e.message);}
- finally{soilOnboard.busy=false;loadSoilUsb();}
+ finally{soilOnboard.busy=false;loadSoilUsb(true);}
 }
 async function switchSmart(id){
  const row=(state.smart?.devices||[]).find(x=>x.id===id);if(!row||!row.approved||!row.writable||!row.online||typeof row.state?.on!=='boolean')return;
@@ -606,7 +613,7 @@ async function loadRecentEvents(){
  }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
 }
 document.addEventListener('click',e=>{
- const soilRefresh=e.target.closest('[data-soil-refresh]');if(soilRefresh){loadSoilUsb();return;}
+ const soilRefresh=e.target.closest('[data-soil-refresh]');if(soilRefresh){loadSoilUsb(true);return;}
  const soilInspect=e.target.closest('[data-soil-inspect]');if(soilInspect){soilCommand(soilInspect.dataset.soilInspect,'inspect',{});return;}
  const soilConnect=e.target.closest('[data-soil-connect]');if(soilConnect){soilCommand(soilConnect.dataset.soilConnect,'connection',{});return;}
  const soilFlash=e.target.closest('[data-soil-flash]');if(soilFlash){
@@ -624,14 +631,18 @@ document.addEventListener('click',e=>{
  const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
  const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
 });
+document.addEventListener('input',e=>{
+ const form=e.target.closest('[data-soil-network], [data-soil-assign]');
+ if(form)form.dataset.editing='true';
+});
 document.addEventListener('submit',async e=>{
  const network=e.target.closest('[data-soil-network]');
  if(network){
   e.preventDefault();const data=new FormData(network);const body={ssid:String(data.get('ssid')||''),password:String(data.get('password')||''),broker_host:String(data.get('broker_host')||'')};
-  network.reset();await soilCommand(network.dataset.soilNetwork,'network',body);return;
+  network.dataset.editing='false';network.reset();await soilCommand(network.dataset.soilNetwork,'network',body);return;
  }
  const assign=e.target.closest('[data-soil-assign]');
- if(assign){e.preventDefault();const data=new FormData(assign);await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
+ if(assign){e.preventDefault();const data=new FormData(assign);assign.dataset.editing='false';await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
 });
 document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
 $('journalForm')?.addEventListener('submit',saveJournal);
