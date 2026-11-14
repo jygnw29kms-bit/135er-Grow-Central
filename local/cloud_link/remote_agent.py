@@ -41,6 +41,9 @@ READ_PATHS={
  "/api/mars-hydro/ble/fast-fan-status",
  "/api/mars-hydro/ble/fast-lamp-status",
  "/api/v1/homekit/status",
+ "/api/v1/rooms",
+ "/api/mars-history/summary",
+ "/api/cloud/status",
 }
 async def serve(ws,local):
  async for raw in ws:
