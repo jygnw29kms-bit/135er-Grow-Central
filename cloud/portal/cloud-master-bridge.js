@@ -73,7 +73,8 @@
   for(const img of document.querySelectorAll('img.journal-photo')){
    if(img.dataset.cloudPhotoRequested)return;
    const src=img.getAttribute('src')||'';
-   const photoId=src.match(/^\\/api\\/v1\\/grow-photos\\/(photo_[a-zA-Z0-9_-]+)$/)?.[1];
+   const photoId=src.startsWith('/api/v1/grow-photos/')?src.split('/').pop():null;
+   if(!photoId||!/^photo_[a-zA-Z0-9_-]+$/.test(photoId))continue;
    if(!photoId)continue;
    img.dataset.cloudPhotoRequested='1';img.src=transparent;
    ask('photo',{photo_id:photoId}).then(result=>{
