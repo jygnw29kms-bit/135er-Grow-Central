@@ -108,6 +108,7 @@ function showBleQuality(kind,status){
 }
 function setNetworkIndicator(isConnected,isCloud){
  const badge=$('systemBadge');if(!badge)return;
+ badge.dataset.transport=isCloud?'cloud':'lan';
  badge.textContent=isConnected?(isCloud?'Cloud verbunden':'LAN verbunden'):(isCloud?'Cloud-Kanal getrennt':'LAN nicht erreichbar');
  badge.classList.toggle('good',!!isConnected);
  badge.classList.toggle('bad',!isConnected);

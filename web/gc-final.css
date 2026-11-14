@@ -236,3 +236,7 @@ main{min-width:0}
 .gc-signal-unknown{color:#99a9a7}
 @media(max-width:820px){.gc-transport-status{width:100%;justify-content:flex-start;gap:5px}.gc-signal{padding:7px 6px;gap:4px}.gc-signal small{font-size:9px}.gc-signal-label{font-size:10px}}
 @media(max-width:390px){.gc-signal small{display:none}}
+
+/* Transport is explicitly indicated by a LAN or cloud icon. */
+.gc-link-state[data-transport="cloud"]::before{content:"☁";display:inline-block;margin-right:6px;font-size:14px;line-height:1}
+.gc-link-state[data-transport="lan"]::before{content:"⌁";display:inline-block;margin-right:6px;font-size:16px;line-height:1}
