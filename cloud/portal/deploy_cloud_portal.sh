@@ -18,6 +18,7 @@ node --check "$repo/cloud/portal/cloud-master-bridge.js"
 node --check "$repo/cloud/portal/gc-final-cloud.js"
 node --check "$repo/cloud/portal/growbook-plants-wiki.js"
 node --check "$repo/cloud/portal/climate-stage.js"
+node --check "$repo/cloud/portal/tent-growing-wiki.js"
 cp "$repo/cloud/portal/index.html" "$stage/index.html"
 cp "$repo/cloud/portal/cloud-master.html" "$stage/cloud-master.html"
 cp "$repo/cloud/portal/cloud-portal.js" "$stage/cloud-portal.js"
@@ -28,6 +29,8 @@ cp "$repo/cloud/portal/growbook-plants-wiki.js" "$stage/static/growbook-plants-w
 cp "$repo/cloud/portal/growbook-plants-wiki.css" "$stage/static/growbook-plants-wiki.css"
 cp "$repo/cloud/portal/climate-stage.js" "$stage/static/climate-stage.js"
 cp "$repo/cloud/portal/climate-stage.css" "$stage/static/climate-stage.css"
+cp "$repo/cloud/portal/tent-growing-wiki.js" "$stage/static/tent-growing-wiki.js"
+cp "$repo/cloud/portal/tent-growing-wiki.css" "$stage/static/tent-growing-wiki.css"
 for f in brand-logo.png brand-mark.png gc-icon-192.png gc-icon-512.png gc-manifest.webmanifest; do
  cp "$repo/web/$f" "$stage/static/$f"
 done
