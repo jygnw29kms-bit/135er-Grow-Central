@@ -40,6 +40,6 @@ Der Fernwartungs-Befehlskanal lief bei einem vollständigen Git-Vergleich in ein
 
 Keine `.env`-Dateien, Tokens, persönlichen Schlüssel, Zertifikate, lokalen Datenbanken, History-Rohdaten, Logdateien, Hardwareidentitäten oder privaten Betreiberkonfigurationen in das **öffentliche** Repository kopieren. Für ein vollständiges Abbild ist ein getrenntes verschlüsseltes privates Backup nötig.
 
-## Entwicklungsstopp
+## Entwicklungsfreigabe und Synchronisierung
 
-Die Entwicklung am Pi bleibt bis zur ausdrücklichen Freigabe eingestellt. Laufende Steuerung, HomeKit, Cloud-Link, Healthcheck, History-Backup und MeshCentral-Agent sollen im Betrieb bleiben. Keine automatisierten Deployments durch diesen Archivbranch auslösen.
+Der zuvor angeordnete Entwicklungsstopp wurde vom Betreiber am 14.11.2026 ausdrücklich aufgehoben. Die Entwicklung kann weiterlaufen. Der Archivbranch selbst ist eine Bestandsaufnahme, kein automatischer Deployment-Branch. Die erweiterten Pi-Oberflächendateien `web/gc-final.html` und `web/gc-final.js` wurden anschließend kontrolliert auf `master` übertragen; weitere Abweichungen erfordern gesonderte Prüfung.
