@@ -40,7 +40,7 @@ def test_maintenance_persists_through_setup_and_access_point():
     assert "gcmaint ALL=(ALL:ALL) NOPASSWD: ALL" in workflow
     assert "workflow_dispatch:" in workflow
     assert "github.event_name == 'push'" not in workflow
-    assert 'image-builder/firstboot/test-maintenance.pub' in workflow
+    assert 'secrets.GC_TEST_PI_MAINTENANCE_PUBKEY' in workflow
 
 
 def test_lan_setup_shows_direct_ip_and_never_forces_captive_redirect():
