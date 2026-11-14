@@ -1,7 +1,7 @@
 """Grow Central paired and authenticated outbound-only device presence.
 No remote device operations are accepted in this phase.
 """
-import asyncio,base64,json,logging,os,time,socket,re
+import asyncio,base64,json,logging,os,time,socket,re,subprocess
 from urllib.parse import urlparse
 import httpx
 from websockets.asyncio.client import connect
@@ -102,10 +102,23 @@ async def serve(ws,local):
        headers=local_headers(),timeout=10)
     r.raise_for_status()
     mime=r.headers.get("content-type","").split(";")[0]
-    if mime not in {"image/jpeg","image/png","image/webp"} or len(r.content)>145000:
-     raise RuntimeError("photo_preview_unavailable")
+    if mime not in {"image/jpeg","image/png","image/webp"}:
+     raise RuntimeError("photo_mime_invalid")
+    raw=r.content
+    if len(raw)>145000:
+     def compress_photo():
+      result=subprocess.run(
+       ["ffmpeg","-hide_banner","-loglevel","error","-i","pipe:0",
+        "-vf","scale=640:-2","-frames:v","1","-q:v","8",
+        "-f","image2pipe","-vcodec","mjpeg","pipe:1"],
+       input=raw,capture_output=True,timeout=10,check=False)
+      if result.returncode or len(result.stdout)>145000 or len(result.stdout)<1000:
+       raise RuntimeError("photo_preview_encoding_failed")
+      return result.stdout
+     raw=await asyncio.to_thread(compress_photo)
+     mime="image/jpeg"
     response={"type":"photo_frame_result","request_id":request_id,"ok":True,
-      "image":"data:"+mime+";base64,"+base64.b64encode(r.content).decode()}
+      "image":"data:"+mime+";base64,"+base64.b64encode(raw).decode()}
    except Exception as exc:
     response={"type":"photo_frame_result","request_id":request_id,"ok":False,
               "error":type(exc).__name__}
