@@ -372,7 +372,7 @@ function renderTelemetry(){
  $('remoteTiles').replaceChildren(
   remoteTile('Temperatur',metric(f?.temperature_c,' °C',1)),
   remoteTile('Luftfeuchte',metric(f?.humidity_rh,' % rF',1)),
-  remoteTile('Lüfterdrehzahl',metric(f?.rpm,' RPM')),
+  remoteTile('Lüfterdrehzahl',f&&!f.power_on?'Aus':metric(f?.rpm,' RPM')),
   remoteTile('FC3000 Licht',l?(l.power_on?metric(l.brightness_percent,' %'):'Aus'):'—')
  );
  $('lampDisplay').replaceChildren(
@@ -382,7 +382,7 @@ function renderTelemetry(){
  $('fanDisplay').replaceChildren(
   textRow('Gerätestatus',f?(f.power_on?'Eingeschaltet':'Ausgeschaltet'):'Keine BLE-Werte'),
   textRow('Sollstufe',f?metric(f.setpoint_percent,' %'):'—'),
-  textRow('Ist-Drehzahl',metric(f?.rpm,' RPM'))
+  textRow('Ist-Drehzahl',f&&!f.power_on?'Aus':metric(f?.rpm,' RPM'))
  );
 }
 function renderRooms(data){
