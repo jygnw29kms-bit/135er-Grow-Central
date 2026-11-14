@@ -156,7 +156,7 @@ async function loadRooms(){
   if(selector&&growJournal.roomId)selector.value=growJournal.roomId;
   const selected=rooms.find(x=>x.id===growJournal.roomId);
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
-  const activeMarkup=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen oder freigeben</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><button type="button" class="subtle" data-room-delete="'+esc(x.id)+'">Raum archivieren</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein aktiver Raum angelegt.</p></article>';
+  const activeMarkup=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen oder freigeben</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><button type="button" class="subtle" data-room-delete="'+esc(x.id)+'">Raum löschen (rückgängig)</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein aktiver Raum angelegt.</p></article>';
   const archived=data.archived_rooms||[];
   const archivedMarkup=archived.length?'<section class="panel"><h3>Archivierte Räume</h3><p class="desc">Pflanzen, Fotos, Growbuch und Messhistorie bleiben erhalten. Geräte werden nicht automatisch erneut zugewiesen.</p>'+archived.map(r=>'<div class="statusrow"><span>'+esc(r.name)+'</span><button type="button" class="subtle" data-room-restore="'+esc(r.id)+'">Wiederherstellen</button></div>').join('')+'</section>':'';
   $('roomData').innerHTML=activeMarkup+archivedMarkup;
@@ -329,7 +329,7 @@ async function detectAccessMode(){
    accessMode.local=result.ok&&data&&typeof data==='object'&&data.status!=='error';
    text('networkMode',accessMode.local?'Direkt · Heimnetz':'Lokal nicht erreichbar');
    text('cloudAccessMode',accessMode.local?'Lokaler Grow-Pi':'Lokale Verbindung unterbrochen');
-   text('cloudRemoteStatus',accessMode.local?'Cloud-Fernkanal noch nicht abgenommen':'Nicht verfügbar');
+   text('cloudRemoteStatus',accessMode.local?'Cloud-Status wird geprüft':'Nicht verfügbar');
    if(!accessMode.local&&localOrigin)text('cloudFeedback','Lokaler Zugriff unterbrochen. Der HTTPS-Fernzugriff ist noch nicht freigegeben.');
  }catch(e){
    accessMode.local=false;
@@ -373,10 +373,11 @@ async function cloudRefresh(){
   text('cloudServer',result.host||'Nicht konfiguriert');
   text('cloudDetail',result.detail||'Keine Statusmeldung');
   const reachable=result.connected===true;
-  text('cloudState',reachable?'Cloud-Server online':'Cloud-Verbindung getrennt');
+  text('cloudState',reachable?'Cloud-Fernkanal verbunden':result.health_reachable?'Cloud-Server online · Gerät getrennt':'Cloud-Verbindung getrennt');
   $('cloudState').classList.toggle('good',reachable);
   $('cloudState').classList.toggle('bad',!reachable);
   cloudPairDisplay(result.pairing||{});
+  text('cloudRemoteStatus',result.connected?'Cloud-Fernkanal verbunden':result.health_reachable?'Cloud erreichbar · Fernkanal getrennt':'Cloud nicht erreichbar');
   text('cloudLinkRow',result.connected?'Verbunden':'Getrennt');
   text('cloudHomeStatus',result.connected?'Verbunden':'Getrennt');
  }catch(e){text('cloudState','Nicht erreichbar');text('cloudFeedback','Cloud-Status konnte nicht geladen werden: '+e.message);}
