@@ -41,7 +41,7 @@ function masterToggle(){
   cameraStop();
   const iframe=$('masterFrame');
   if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-final-2')iframe.src='/cloud-master.html?v=20261114-final-2';
-  masterStatus('Originale Final-Master-GUI wird geladen …');
+  masterStatus('Final Master · Verschlüsselter Cloud-Zugang');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
 $('masterToggle')?.addEventListener('click',masterToggle);
@@ -389,7 +389,7 @@ function remoteOpen(deviceId){
      socket.send(JSON.stringify({type:'read',request_id:id,path}));
     }
    };
-   poll();remoteInterval=setInterval(poll,15000);return;
+   poll();remoteInterval=setInterval(poll,15000);if(!masterVisible)masterToggle();return;
   }
   if(data.type==='read_result'){
    const path=pendingRemote.get(data.request_id);
@@ -400,6 +400,6 @@ function remoteOpen(deviceId){
    $('remoteState').textContent='Grow-Pi-Gerätekanal offline';
   }
  });
- socket.addEventListener('close',()=>{if(remoteSocket===socket){cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null}});
+ socket.addEventListener('close',()=>{if(remoteSocket===socket){masterStatus('Verbindung unterbrochen · Daten werden nicht aktualisiert');cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null}});
  socket.addEventListener('error',()=>{$('remoteState').textContent='WebSocket-Verbindung fehlgeschlagen'});
 }
