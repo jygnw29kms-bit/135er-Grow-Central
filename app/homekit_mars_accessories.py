@@ -34,7 +34,7 @@ def request(kind,action,value):
     route='fast-lamp-control' if kind=='lamp' else 'fast-fan-control'
     payload=json.dumps({'action':action,'value':value,'confirm_physical_change':True}).encode()
     req=Request(API+route,data=payload,headers={'Content-Type':'application/json','X-API-Token':TOKEN.read_text().strip()},method='POST')
-    with urlopen(req,timeout=9) as response:
+    with urlopen(req,timeout=9) as response:  # nosec B310 - fixed loopback API and finite route set, not user URL
         result=json.load(response)
     if not result.get('device_report_confirmed'):
         raise RuntimeError('No controller status confirmation')
