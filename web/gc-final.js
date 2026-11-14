@@ -88,7 +88,7 @@ async function refreshLive(){
  if(state.refreshBusy)return;state.refreshBusy=true;
  try{
  const [fl,ff]=await Promise.allSettled([api('/api/mars-hydro/ble/fast-lamp-status'),api('/api/mars-hydro/ble/fast-fan-status')]);
-const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
+ const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
  const ok=lamp.fresh&&fan.fresh;
@@ -178,7 +178,7 @@ async function roomDeviceChange(input){
   await loadRooms();await manageRoomDevices(roomId);
   notify('Raumzuordnung gespeichert');
  }catch(e){input.checked=!checked;notify('Zuordnung fehlgeschlagen: '+e.message);}
-finally{input.disabled=false;}
+ finally{input.disabled=false;}
 }
 async function createGrowRoom(){
  const name=prompt('Name des neuen Grow-Raums');
@@ -268,7 +268,7 @@ async function cameraLoadControls(){
 }
 async function cameraApply(control){
  const input=[...document.querySelectorAll('[data-camera-input]')].find(x=>x.dataset.cameraInput===control);
-if(!input||!cam.cameraId)return;
+ if(!input||!cam.cameraId)return;
  const value=Number(input.value);if(!Number.isInteger(value))return;
  const button=[...document.querySelectorAll('[data-camera-apply]')].find(x=>x.dataset.cameraApply===control);
  if(button)button.disabled=true;
@@ -358,7 +358,7 @@ async function cloudRefresh(){
   const result=await api('/api/cloud/status');
   text('cloudServer',result.host||'Nicht konfiguriert');
   text('cloudDetail',result.detail||'Keine Statusmeldung');
-const reachable=result.connected===true;
+  const reachable=result.connected===true;
   text('cloudState',reachable?'Cloud-Server online':'Cloud-Verbindung getrennt');
   $('cloudState').classList.toggle('good',reachable);
   $('cloudState').classList.toggle('bad',!reachable);
@@ -448,7 +448,7 @@ function journalEntryDetail(row){
 }
 function renderJournal(){
  const entries=growJournal.entries;
-const active=growJournal.tab;
+ const active=growJournal.tab;
  document.querySelectorAll('[data-journal-tab]').forEach(b=>b.classList.toggle('active',b.dataset.journalTab===active));
  let filtered=entries;
  if(active==='notes')filtered=entries.filter(x=>['note','observation'].includes(x.category));
