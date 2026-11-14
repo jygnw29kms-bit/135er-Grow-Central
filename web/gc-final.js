@@ -545,6 +545,59 @@ function renderJournal(){
  '<div class="toolbar">'+(row.photo_id?'':'<button class="subtle" data-journal-edit="'+esc(row.id)+'">Bearbeiten</button>')+'<button class="subtle" data-journal-delete="'+esc(row.id)+'">Löschen</button></div></article>').join(''):'<p class="empty-text">Keine Einträge vorhanden. Nutze „Neuer Eintrag“.</p>';
 }
 
+const phaseNames={germination:'Keimung',seedling:'Sämling',vegetative:'Wachstum',flowering:'Blüte',flush:'Spülen',finish:'Abschluss',harvest:'Ernte',completed:'Abgeschlossen',other:'Sonstige'};
+const substrateNames={peat_mix:'Torf-/Erdmischung',coco_mix:'Kokos-/Perlitmischung',living_soil:'Living Soil',compost_mix:'Kompost-/Humusmischung',mineral_mix:'Mineralisches Substrat',rockwool:'Steinwolle',hydroponic:'Hydrokultur',custom:'Eigene Mischung'};
+const containerNames={plastic:'Kunststofftopf',fabric:'Stofftopf',air_pruning:'Air-Pruning-Topf',self_watering:'Selbstbewässerung',high_tech:'Hightech-Growtopf',hydro_system:'Hydro-System',other:'Sonstiger Topf'};
+function renderRoomPlantProfiles(){
+ const holder=$('roomPlantProfiles');if(!holder)return;
+ const room=(state.rooms||[]).find(r=>r.id===growJournal.roomId);
+ text('journalRoomInfo',room?'Growbuch · '+room.name:'Raum auswählen');
+ holder.innerHTML=growJournal.plants.length?growJournal.plants.map(p=>{
+  const ready=!!(p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized);
+  return '<div class="statusrow"><span><strong>'+esc(p.name)+'</strong> · '+esc(phaseNames[p.phase]||p.phase)+' · '+esc(substrateNames[p.substrate_type]||'Substrat fehlt')+
+   ' · '+esc(containerNames[p.container_type]||'Topf fehlt')+'</span><button type="button" class="subtle" data-plant-edit="'+esc(p.id)+'">'+(ready?'Bearbeiten':'Profil vervollständigen')+'</button></div>';
+ }).join(''):'<p class="desc">Noch keine Pflanze vorhanden. Lege zuerst eine Pflanze mit Phase, Substrat, Düngung und Topf an.</p>';
+}
+async function loadRoomPlants(){
+ if(!growJournal.roomId)return;
+ try{
+  const result=await api('/api/v1/rooms/'+encodeURIComponent(growJournal.roomId)+'/plants');
+  growJournal.plants=result.plants||[];
+  renderRoomPlantProfiles();
+ }catch(e){text('roomPlantProfiles','Pflanzen nicht verfügbar: '+e.message);}
+}
+function editRoomPlant(id){
+ const p=growJournal.plants.find(x=>x.id===id);if(!p)return;
+ const fields={plantEditId:p.id,plantName:p.name,plantCrop:p.crop,plantPhase:p.phase,plantSubstrate:p.substrate_type,
+ plantComposition:p.substrate_components,plantPreFert:p.substrate_pre_fertilized,plantNutrition:p.nutrition_plan,
+ plantContainer:p.container_type,plantVolume:p.container_volume_l};
+ Object.entries(fields).forEach(([key,val])=>{if($(key))$(key).value=val??'';});
+ $('roomPlantForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resetRoomPlantForm(){
+ $('roomPlantForm')?.reset();text('plantFormError','');
+ $('plantEditId').value='';
+}
+async function saveRoomPlant(e){
+ e.preventDefault();if(!growJournal.roomId)return;
+ const data={name:$('plantName').value.trim(),crop:$('plantCrop').value.trim(),phase:$('plantPhase').value,
+  substrate_type:$('plantSubstrate').value,substrate_components:$('plantComposition').value.trim(),
+  substrate_pre_fertilized:$('plantPreFert').value,nutrition_plan:$('plantNutrition').value,
+  container_type:$('plantContainer').value,
+  container_volume_l:$('plantVolume').value?Number($('plantVolume').value):null};
+ const id=$('plantEditId').value;
+ const old=growJournal.plants.find(p=>p.id===id);
+ const payload={...old,...data};
+ delete payload.id;delete payload.room_id;delete payload.created_at;delete payload.updated_at;
+ try{
+  if(!data.name||!data.crop||!data.substrate_type||!data.substrate_components||!data.substrate_pre_fertilized||
+     !data.nutrition_plan||!data.container_type)throw Error('Pflanze, Phase, Substrat, Vordüngung, Düngekonzept und Topf sind Pflicht.');
+  const path='/api/v1/rooms/'+encodeURIComponent(growJournal.roomId)+'/plants'+(id?'/'+encodeURIComponent(id):'');
+  await journalRequest(id?'PUT':'POST',path,payload);
+  resetRoomPlantForm();await loadRoomPlants();await loadJournal();await loadClimateOverview();
+  notify('Pflanzenprofil gespeichert');
+ }catch(err){text('plantFormError','Pflanze konnte nicht gespeichert werden: '+err.message);}
+}
 function openJournalForm(id=null){
  const row=growJournal.entries.find(x=>x.id===id);
  if(!growJournal.plants.some(p=>p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized)){notify('Zuerst Pflanzenprofil mit Phase, Substrat, Topf und Düngung vollständig ausfüllen.');return;}
@@ -628,6 +681,7 @@ document.addEventListener('click',e=>{
   if(confirm('Firmware auf dem XIAO ESP32-C3 aktualisieren? Dies startet das USB-Flashen. Vorhandene Kalibrierung wird anschließend erneut geprüft. USB bis zum Abschluss nicht abziehen.'))soilCommand(soilFlash.dataset.soilFlash,'flash',{board:'seeed_xiao_esp32c3',confirmed:true});
   return;
  }
+ const plantEdit=e.target.closest('[data-plant-edit]');if(plantEdit){editRoomPlant(plantEdit.dataset.plantEdit);return;}
  const create=e.target.closest('[data-create-room]');if(create){createGrowRoom();return;}
  const archive=e.target.closest('[data-room-delete]');if(archive){archiveGrowRoom(archive.dataset.roomDelete);return;}
  const restore=e.target.closest('[data-room-restore]');if(restore){restoreGrowRoom(restore.dataset.roomRestore);return;}
@@ -653,6 +707,8 @@ document.addEventListener('submit',async e=>{
  if(assign){e.preventDefault();const data=new FormData(assign);assign.dataset.editing='false';await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
 });
 document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
+$('roomPlantForm')?.addEventListener('submit',saveRoomPlant);
+$('plantFormReset')?.addEventListener('click',resetRoomPlantForm);
 $('journalForm')?.addEventListener('submit',saveJournal);
 $('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
 $('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
