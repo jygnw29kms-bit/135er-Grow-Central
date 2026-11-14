@@ -42,3 +42,6 @@ def test_cloud_only_offers_final_master_after_authentication():
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
     assert "/cloud-master.html?v=20261114-ui-parity-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
+    # Never expose the legacy telemetry panel during WebSocket authentication.
+    assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
+    assert "const panel=$('remoteDashboard');panel.hidden=false;" not in PORTAL
