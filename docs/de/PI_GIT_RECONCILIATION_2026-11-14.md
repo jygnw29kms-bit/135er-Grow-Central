@@ -57,9 +57,9 @@ Bereits identische Versionen, darunter `app/rooms.py`, `app/grow_photos.py`, `ap
 - Gezielt korrigierte Integrationssuite: **50 bestanden**.
 - Abschließende Gesamtsuite in isolierter Pi-QA-Kopie: **507 bestanden, 2 native Broker-Tests unter root bewusst ausgenommen**, zusätzlich **26 Untertests bestanden**.
 - Beide nativen Broker-Testdateien unter dem Systembenutzer `mosquitto`: **13 bestanden**. Die ursprünglichen Ausfälle wurden durch Dateirechte temporärer root-Testverzeichnisse verursacht, nicht durch einen fehlerhaften produktiven Broker.
-- Der abschließende direkte Git-Blobvergleich zeigte **758 identische Dateien**, **102 nur in Git vorhandene Dateien** und **17 erklärte Dokumentations-/Test-/Sicherheitsunterschiede**. Kein offener ungeklärter Quellcode-Diff in den geprüften Pi-Laufzeitpfaden.
+- Der abschließende direkte Git-Blobvergleich zeigte **755 identische Dateien**, **102 nur in Git vorhandene Dateien** und **20 erklärte Dokumentations-/Test-/Sicherheitsunterschiede**. Kein offener ungeklärter Quellcode-Diff in den geprüften Pi-Laufzeitpfaden.
 - Quellscan der geänderten Dateien auf private Schlüssel und typische eingebettete Tokenmuster: keine Treffer bei den verwendeten Prüfregeln. Dies ist kein vollständiger Secrets-Audit.
 
-## Abgrenzung
+Drei zusätzliche, rein kommentierende Bandit-Erklärungen in `app/history_archive.py`, `app/homekit_mars_accessories.py` und `local/cloud_link/remote_agent.py` erläutern fest begrenzte SQL-Fragmente, lokale API-Aufrufe und ausgehende Quelladress-Bindung. Sie verändern keine Steuerungslogik.\n\n## Abgrenzung
 
 **Quellcodeabgleich ist nicht identisch mit einem vollständigen Pi-Datenträger-Backup.** Die Entwicklung ist ausdrücklich freigegeben. Das Produktivsystem darf nicht aus einem Git-Commit unkontrolliert überschrieben werden. GitHub soll den geprüften Pi-Funktionsstand repräsentieren, vorhandene zusätzliche Projektmodule und neuere Sicherheitsfunktionen aber behalten.

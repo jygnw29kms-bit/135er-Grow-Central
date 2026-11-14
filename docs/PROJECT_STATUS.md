@@ -17,9 +17,9 @@
 ## Pi ↔ GitHub Abgleich
 
 - 871 ursprünglich versionierte Dateien überprüft; 19 Unterschiede untersucht, davon 3 projektbezogene Statusdateien.
-- Der finale Sync-Branch enthält 758 byteidentische Pi-/Git-Dateien. 102 nur im Repository vorkommende CI-/Cloud-/Dokumentationsdateien bleiben erhalten.
-- Die 17 verbleibenden Differenzen gegenüber der installierten Pi-Struktur sind bewusst aktuelle Dokumentations-, Test- und Sicherheitspfade; keine unbeabsichtigte Laufzeitdatei-Abweichung.
-- Räume, Growbuch/Fotos, BLE, HomeKit, Pi-API und Final-Master-Weboberfläche mit Original-Git-Blobh­ashes gegenüber dem Pi bestätigt.
+- Der finale Sync-Branch enthält 755 byteidentische Pi-/Git-Dateien. 102 nur im Repository vorkommende CI-/Cloud-/Dokumentationsdateien bleiben erhalten.
+- Die 20 verbleibenden Differenzen gegenüber der installierten Pi-Struktur sind bewusst aktuelle Dokumentations-, Test- und Sicherheitspfade; keine unbeabsichtigte Laufzeitdatei-Abweichung.
+- Räume, Growbuch/Fotos, BLE, HomeKit, Pi-API und Final-Master-Weboberfläche mit Original-Git-Blobhashes gegenüber dem Pi bestätigt.
 - Pi-spezifische HomeKit-Zubehörmodule, Mars-Hydro-Steuerungsmodule, PWA-Icons und das Sensor-Firmware-Prüfsummenmanifest sind in Git übernommen.
 - Sicherheitskritische First-Boot-/sudo-/Netzwerkprüfungen aus dem neueren Git-Stand werden **nicht** auf ältere Pi-Versionen zurückgesetzt.
 - Sensible Runtime-Daten, Zugangsdaten, private Provisionierung, historische Pflanzenbilder sowie nicht freigegebene Herstellerfotos werden nicht ins öffentliche Repository übertragen.
