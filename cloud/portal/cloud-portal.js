@@ -50,7 +50,7 @@ function masterToggle(){
  if(masterVisible){
   cameraStop();
   const iframe=$('masterFrame');
-  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-final-2')iframe.src='/cloud-master.html?v=20261114-final-2';
+  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-camera-3')iframe.src='/cloud-master.html?v=20261114-camera-3';
   masterStatus('Final Master · Verschlüsselter Cloud-Zugang');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
