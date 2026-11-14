@@ -63,8 +63,8 @@ main{min-width:0}
 .controlhead small{font-size:11px;color:#b0b8b8}
 .switch{border:1px solid #28664a;border-radius:999px;padding:5px 11px;background:#1d322a;color:#8bab99;white-space:nowrap;min-width:56px;font-size:11px}
 .switch.on{color:#78f3af;background:#19553b;border-color:#246945}
-.control-image{display:grid;place-items:center;flex:1 1 auto;min-height:173px;max-height:205px;padding:5px 10px 0;overflow:hidden}
-.control-image img{display:block;width:100%;height:100%;max-width:100%;max-height:198px;object-fit:contain;object-position:center;image-rendering:auto}
+.control-image{display:flex;align-items:center;justify-content:center;flex:1 1 190px;min-width:0;width:100%;min-height:173px;height:190px;max-height:205px;padding:5px 10px 0;overflow:hidden}
+.control-image img{display:block;flex:1 1 auto;width:100%;height:100%;min-width:0;max-width:100%;max-height:195px;object-fit:contain;object-position:center;image-rendering:auto}
 .control-bottom{border:1px solid #2e4044;border-radius:9px;padding:10px 11px;background:#1b262a}
 .ctlrow{display:flex;justify-content:space-between;align-items:center;gap:9px;color:#d2dcda;font-size:11px;margin-bottom:4px}
 .ctlrow strong{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}

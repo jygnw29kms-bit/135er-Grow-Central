@@ -39,7 +39,7 @@ function controlMarkup(kind){
  return '<article class="control" data-control="'+kind+'">'+
   '<div class="controlhead"><div class="name"><h3>Mars Hydro '+model+'</h3><small>'+(lamp?'LED Grow Light':'Inline-Lüfter · BLE')+'</small></div>'+
   '<button class="switch" type="button" data-power="'+kind+'" aria-label="'+model+' ein- oder ausschalten">Status —</button></div>'+
-  '<div class="control-image"><img src="'+src+'" alt="Original Mars Hydro '+model+'" loading="lazy" decoding="async"></div>'+
+  '<div class="control-image"><img src="'+src+'" alt="Original Mars Hydro '+model+'" loading="eager" decoding="async"></div>'+
   '<div class="control-bottom"><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüftergeschwindigkeit')+'</span><strong data-level-label="'+kind+'">—</strong></div>'+
   '<input class="slider" aria-label="'+model+' Sollstufe" data-slider="'+kind+'" type="range" min="'+(lamp?10:25)+'" max="100" value="'+(lamp?10:25)+'" step="1">'+
   '<div class="ctlrow"><span data-status-label="'+kind+'">Prüfe …</span><button class="apply" type="button" data-apply="'+kind+'">Übernehmen</button></div></div>'+
