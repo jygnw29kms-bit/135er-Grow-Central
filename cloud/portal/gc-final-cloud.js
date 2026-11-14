@@ -278,7 +278,7 @@ async function detectAccessMode(){
      text('cloudRemoteStatus','Nicht erreichbar');return;
    }
    if(fromCloud){
-accessMode.local=false;
+     accessMode.local=false;
      text('networkMode','Cloud');text('cloudAccessMode','HTTPS-Cloudzugang');
      text('cloudRemoteStatus','Fernkanal separat prüfen');
      return;
@@ -533,3 +533,5 @@ setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60
 
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
 cameraLoad();
+
+})();
