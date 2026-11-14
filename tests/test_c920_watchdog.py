@@ -18,7 +18,7 @@ def test_watchdog_stops_only_the_matching_stream(monkeypatch):
         returncode = None
         pid = 10203
     proc = FakeProcess()
-    async def fake_stop(reason):
+    async def fake_stop(reason, *, expected_token=None):
         calls.append(reason)
         proc.returncode = 0
         return True
