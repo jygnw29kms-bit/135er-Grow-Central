@@ -46,14 +46,16 @@ def test_current_feature_set_is_integrated():
     assert apt_bootstrap.index("Alte GrowCentral-APT-Quellen prüfen") < apt_bootstrap.index("apt-get update")
 
 
-def test_release_workflow_still_builds_and_publishes_image():
+def test_release_workflow_builds_without_public_image_release():
     workflow = read(".github/workflows/build-pi3-image.yml")
     assert "workflow_dispatch:" in workflow
     assert "ubuntu-24.04-arm" in workflow
     assert "Boot and reboot the completed image userspace" in workflow
     assert "Verify published image is still pristine" in workflow
     assert "actions/upload-artifact" in workflow
-    assert "gh release create" in workflow
+    assert "gh release create" not in workflow
+    assert "Verify no public image is published" in workflow
+    assert "OPERATOR-ONLY POLICY" in workflow
 
 
 def test_native_esp32_mqtt_is_included_in_pi_image():
