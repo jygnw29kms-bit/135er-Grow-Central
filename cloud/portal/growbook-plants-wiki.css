@@ -1,0 +1,18 @@
+.gc-plant-wiki{display:grid;gap:18px;margin-top:18px}
+.gc-plant-actions{display:flex;flex-wrap:wrap;gap:8px}
+.gc-plant-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.gc-plant-card{background:#132821;border:1px solid #345f4b;border-radius:12px;padding:17px}
+.gc-plant-card h4{margin:0 0 8px;font-size:18px}
+.gc-plant-card p{margin:8px 0;overflow-wrap:anywhere}
+.gc-plant-card small{color:#a5cdb7}
+.gc-plant-card button{margin-top:12px}
+.gc-wiki-pill{border:1px solid #3f745b;color:#9ce4b9;border-radius:99px;font-size:11px;padding:5px 12px}
+.gc-wiki-sections{display:grid;gap:9px}
+.gc-wiki-sections details{border:1px solid #355b48;border-radius:10px;background:#12251d;padding:14px}
+.gc-wiki-sections summary{cursor:pointer;color:#b4efd0;font-weight:600}
+.gc-wiki-sections p{margin:10px 0 0;color:#d0e2d6;line-height:1.65}
+.gc-wiki-sources{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px;font-size:12px}
+.gc-wiki-sources a{color:#a1e9c4;text-decoration:underline}
+#plantDialog input,#plantDialog select,#plantDialog textarea{width:100%;box-sizing:border-box;padding:10px;background:#0c1d17;color:#dff4e8;border:1px solid #426a55;border-radius:7px}
+#plantDialog label{display:block;margin:12px 0;color:#cbe6d6}
+@media(max-width:650px){.gc-plant-actions{width:100%}.gc-plant-cards{grid-template-columns:1fr}}
