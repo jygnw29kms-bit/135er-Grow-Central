@@ -25,6 +25,7 @@ function page(id){
  document.title='Grow Central · '+pages[id];
  updateCamera();
  if(id==='rooms')loadRooms();
+ if(id==='climate')loadClimateOverview();
  if(id==='growbook')loadJournal();
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
@@ -68,25 +69,108 @@ function setControls(kind,status){
  setAll('[data-live-detail="'+kind+'"]',!active?'—':!latest.power_on?'Aus':kind==='lamp'?'Eingeschaltet':n(latest.rpm)+' RPM');
  setAll('[data-read-age="'+kind+'"]',active&&Number.isFinite(status.age_ms)?n(status.age_ms/1000,1)+' s alt':active?'Live':'Kein aktueller Wert');
 }
+const soilTileState={dashboard:{value:'—',detail:'Warte auf Bodensensor',valid:false},climate:{value:'—',detail:'Warte auf Bodensensor',valid:false}};
+const phaseNames={germination:'Keimung',seedling:'Sämling',vegetative:'Wachstum',flowering:'Blüte',flush:'Spülen',finish:'Abschluss',harvest:'Ernte',completed:'Abgeschlossen',other:'Sonstige'};
+const chartMetricNames={temperature_c:['Temperatur','°C'],humidity_percent:['Luftfeuchte','%'],soil_moisture_percent:['Bodenfeuchte','%'],vpd_kpa:['VPD','kPa']};
+function soilTileReading(room){
+ const snapshot=room?.snapshot;
+ if(!snapshot)return {value:'—',detail:'Keine Messung im gewählten Raum',valid:false};
+ const status=snapshot.soil_measurement_status;
+ if(status==='sensor_fault')return {value:'—',detail:'Sensorfehler · Messung ungültig',valid:false};
+ if(status==='out_of_calibration_range')return {value:'—',detail:'Außerhalb der Kalibrierung',valid:false};
+ if(snapshot.soil_calibration_status==='required'||snapshot.soil_calibration_status==='calibration_required')
+  return {value:'—',detail:'Kalibrierung erforderlich',valid:false};
+ const age=Date.now()-Date.parse(snapshot.timestamp||'');
+ if(!Number.isFinite(age)||age<0||age>15*60*1000)
+  return {value:'—',detail:'Messung veraltet oder nicht verfügbar',valid:false};
+ const value=snapshot.soil_moisture_percent;
+ if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>100)
+  return {value:'—',detail:'Kein gültiger Messwert',valid:false};
+ return {value:n(value,1)+' %',detail:'Bodensensor · '+Math.floor(age/60000)+' Min. alt',valid:true};
+}
+function updateSoilTiles(){
+ const home=soilTileState.dashboard;
+ const climate=soilTileState.climate;
+ text('dashboardSoilValue',home.value);
+ text('dashboardSoilDetail',home.detail);
+ const dashboard=$('dashboardSoilTile');
+ if(dashboard)dashboard.dataset.sensorValid=String(home.valid);
+ const tile=$('climateTiles')?.querySelector('.metric-soil');
+ if(tile){
+  const value=tile.querySelector('strong'),detail=tile.querySelector('small');
+  if(value)value.textContent=climate.value;
+  if(detail)detail.textContent=climate.detail;
+  tile.dataset.sensorValid=String(climate.valid);
+ }
+}
+function climateMetricRow(m){
+ const title=chartMetricNames[m.metric]?.[0]||m.metric;
+ if(m.status==='unknown')return '';
+ const status=m.status==='target'?'Im Zielbereich':m.status==='low'?'Unter dem Zielbereich':'Über dem Zielbereich';
+ return '<span class="'+(m.status==='target'?'good':'bad')+'">'+esc(title)+': '+esc(status)+' · '+n(m.value,1)+
+  ' (Ziel '+n(m.target_min,1)+'–'+n(m.target_max,1)+')</span>';
+}
+function climateJudgementMarkup(items){
+ if(!items.length)return '<p class="desc">Noch keine Pflanze im Raum. Zuerst unter Räume eine Pflanze mit Phase anlegen.</p>';
+ return items.map(p=>{
+  const label=p.status==='target'?'Klima passt zur Phase':p.status==='warning'?'Klima außerhalb des Phasenbereichs':
+    p.status==='stale'?'Messwerte veraltet':'Keine vollständige Klimabewertung möglich';
+  const tag=p.source==='grow_profile'?'Individuelles Kulturprofil':p.source==='cannabis_orientation'?'Cannabis-Orientierungswerte':'Noch keine phasenspezifischen Sollwerte';
+  return '<div class="statusrow" style="display:block"><strong>'+esc(p.plant_name)+' · '+esc(phaseNames[p.phase]||p.phase)+
+   '</strong><p class="'+(p.status==='target'?'good':p.status==='warning'?'bad':'desc')+'">'+esc(label)+'</p>'+
+   '<p class="desc">'+esc(tag)+(p.age_seconds!=null?' · Messung '+Math.round(p.age_seconds/60)+' Min. alt':'')+'</p>'+
+   '<div class="desc">'+(p.metrics||[]).map(climateMetricRow).filter(Boolean).join(' · ')+'</div></div>';
+ }).join('');
+}
+async function loadClimateOverview(){
+ try{
+  const data=await api('/api/v1/rooms/climate-overview');
+  climateOverview=data;
+  const rooms=data.rooms||[];
+  const first=rooms.find(r=>r.room_id===growJournal.roomId)||rooms[0];
+  const all=rooms.flatMap(r=>r.plants||[]);
+  text('homePhaseClimate','');
+  $('homePhaseClimate').innerHTML=climateJudgementMarkup(all);
+  $('climatePhasePanel').innerHTML=climateJudgementMarkup(all);
+  const dashboardRoom=rooms.find(r=>r.room_id===growJournal.roomId);
+  const climateRoom=rooms.find(r=>r.room_id===$('climateRoomSelect')?.value)||dashboardRoom||first;
+  soilTileState.dashboard=soilTileReading(dashboardRoom);
+  soilTileState.climate=soilTileReading(climateRoom);
+  updateSoilTiles();
+  const room=dashboardRoom;
+  const show=soilTileState.dashboard.valid;
+  $('homeSoilPanel').hidden=!show;
+  if(show){
+   text('homeSoilValue',soilTileState.dashboard.value);
+   text('homeSoilSource',room.room_name+' · '+soilTileState.dashboard.detail);
+  }
+  const status=climateRoom?.snapshot?.soil_measurement_status;
+  const unavailable=status==='sensor_fault'?'Sensorfehler: ADC-Signal instabil. Messung ungültig.':
+    status==='out_of_calibration_range'?'Bodensensor außerhalb des kalibrierten Bereichs. Messung ungültig.':
+    soilTileState.climate.detail;
+  text('climateSoilValue',soilTileState.climate.valid?
+    climateRoom.room_name+' · '+soilTileState.climate.value+' · gemessen':unavailable);
+ }catch(e){
+  text('homePhaseClimate','Klimabewertung nicht erreichbar.');
+  text('climatePhasePanel','Klimabewertung nicht erreichbar: '+e.message);
+  $('homeSoilPanel').hidden=true;
+  soilTileState.dashboard={value:'—',detail:'Messung nicht erreichbar',valid:false};
+  soilTileState.climate={value:'—',detail:'Messung nicht erreichbar',valid:false};
+  updateSoilTiles();
+  text('climateSoilValue','Bodenfeuchte derzeit nicht erreichbar.');
+ }
+}
 function setMetrics(fan,lamp){
  const f=fan?.fresh?fan.latest:null,l=lamp?.fresh?lamp.latest:null;
  text('tempValue',f&&Number.isFinite(f.temperature_c)?n(f.temperature_c,1)+' °C':'—');
  text('humidityValue',f&&Number.isFinite(f.humidity_rh)?n(f.humidity_rh,1)+' % rF':'—');
- const rpmLabel=f&&!f.power_on?'Aus':f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—';
- text('rpmValue',rpmLabel);
- const rpmTile=$('rpmValue')?.closest('.metric');
- if(rpmTile){
-  const hint=rpmTile.querySelector('small');
-  if(hint)hint.textContent=f?.power_on&&f.rpm===0
-   ?'Sanftanlauf · Ist-Drehzahl läuft verzögert nach'
-   :'Ist-Drehzahl · BLE-Messwert';
- }
+ text('rpmValue',!f?'—':f.power_on===false?'AUS':Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—');
  text('lightValue',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—');
  text('tempAge',f?'Frischer BLE-Wert · '+n((fan.age_ms||0)/1000,1)+' s alt':'Kein frischer Sensorwert');
- let tiles=$('liveTiles').cloneNode(true);
+ const tiles=$('liveTiles').cloneNode(true);
  tiles.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
- tiles.querySelectorAll('.metric strong').forEach((e,i)=>e.textContent=[f?n(f.temperature_c,1)+' °C':'—',f?n(f.humidity_rh,1)+' % rF':'—',rpmLabel,l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—'][i]);
  $('climateTiles').replaceChildren(tiles);
+ updateSoilTiles();
  const overlay=f?'🌡 '+n(f.temperature_c,1)+' °C    ◇ '+n(f.humidity_rh,1)+' % rF':'Keine aktuellen Klimamesswerte';
  document.querySelectorAll('.osdClimate').forEach(e=>e.textContent=overlay);
  text('climateDetails',f?'DF150-M · reale BLE-Messung, '+n((fan.age_ms||0)/1000,1)+' s alt.':'Keine frischen DF150-M-Messwerte.');
@@ -165,7 +249,7 @@ async function loadRooms(){
   const selected=rooms.find(x=>x.id===growJournal.roomId);
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
   $('roomData').innerHTML=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p></article>').join(''):'<article class="panel"><p>Es ist noch kein Raum angelegt.</p></article>';
-  await Promise.all([loadJournal(),loadRecentEvents()]);
+  await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
  }catch(e){text('roomData','Raumdaten nicht erreichbar');text('recentEvents','Raumdaten nicht erreichbar');}
 }
 async function loadHistory(){
@@ -379,6 +463,7 @@ const svgPaths={
 home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
 thermometer:'<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 11v7"/>',
 droplets:'<path d="M12 2C10 5 5 10 5 14a7 7 0 0 0 14 0c0-4-5-9-7-12z"/>',
+sprout:'<path d="M12 22V12m0 4c-5 0-8-3-8-8 5 0 8 2 8 8zm0-6c0-5 3-7 8-7 0 5-3 7-8 7z"/>',
 fan:'<path d="M12 12c-4-9-8-8-8-4 0 2 2 4 8 4zm0 0c9-4 8-8 4-8-2 0-4 2-4 8zm0 0c4 9 8 8 8 4 0-2-2-4-8-4zm0 0c-9 4-8 8-4 8 2 0 4-2 4-8z"/><circle cx="12" cy="12" r="2"/>',
 sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
 camera:'<rect x="2" y="5" width="15" height="14" rx="2"/><path d="m17 10 5-3v10l-5-3"/><circle cx="9" cy="12" r="3"/>',
@@ -549,9 +634,10 @@ $('roomPicker')?.addEventListener('change',async e=>{
  const row=(state.rooms||[]).find(x=>x.id===growJournal.roomId);
  text('currentRoom',row?.name||'—');text('heroRoom',row?.name||'—');
  growJournal.selectedId=null;
- await Promise.all([loadJournal(),loadRecentEvents()]);
+ await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadClimateOverview();},30000);
 
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
 cameraLoad();

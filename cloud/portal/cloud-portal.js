@@ -51,11 +51,13 @@ function masterToggle(){
  masterVisible=!masterVisible;
  $('masterMount').hidden=!masterVisible;
  $('remoteDashboard').hidden=masterVisible;
- $('masterToggle').textContent=masterVisible?'Live-Dashboard anzeigen':'Final-Master-GUI öffnen';
+ // One user-facing GUI: the legacy cloud dashboard stays internal, never an alternate layout.
+ $('masterToggle').hidden=masterVisible;
+ $('masterToggle').textContent='Final-Master-GUI öffnen';
  if(masterVisible){
   cameraStop();
   const iframe=$('masterFrame');
-  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-camera-3')iframe.src='/cloud-master.html?v=20261114-camera-3';
+  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-ui-parity-1')iframe.src='/cloud-master.html?v=20261114-ui-parity-1';
   masterStatus('Final Master · Verschlüsselter Cloud-Zugang');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
