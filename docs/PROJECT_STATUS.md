@@ -1,51 +1,41 @@
-# Project Status – 135er-Grow Central
+# Grow Central · aktueller Projektstatus
 
-## Entwicklungsfreigabe und Pi-Abgleich · 14. November 2026
+**Stand:** 14. November 2026 · **Entwicklung freigegeben** · **Raspberry-Pi-Quellstand abgeglichen**
 
-**Der zuvor angeordnete Entwicklungsstopp wurde vom Betreiber ausdrücklich aufgehoben.** Weiterentwicklung und Tests sind wieder freigegeben. Der tatsächlich installierte Pi-Stand wird in `archive/pi-live-2026-11-14` unter `pi-snapshots/2026-11-14/` quellenbezogen archiviert und mit `master` abgeglichen. Nicht veröffentlichbare Betriebsdaten, Schlüssel und Zugangsdaten bleiben ausgeschlossen. Der Archivstand ist kein vollständig verifiziertes Systemabbild und kein Release.
+## Maßgeblicher Pi-Livestand
 
+| Merkmal | Verifizierter Stand |
+|---|---|
+| Hardware | Raspberry Pi 4 Model B, Debian 13 (aarch64) |
+| Installationsbasis | `be24ba9097c2e98eb1e3f302b5992c004d2e6e29` |
+| Betreiber-Build | `operator-be24ba9097c2-base508` |
+| Distribution | `OPERATOR_PROVISIONED` |
+| Git-Ziel | synchronisierte Pi-Laufzeit auf `master`, mit bewahrten Sicherheitserweiterungen |
+| Letzter veröffentlichter Image-Candidate | `alpha-0.7.5`, Build 461; von diesem Livestand zu unterscheiden |
+| Gesamte Image-Hardwareabnahme | nicht bestätigt |
 
-- **Stand:** 14. November 2026
-- **Projektmodus:** Weiterentwicklung freigegeben; Pi/Git-Abgleich läuft
-- **Repository:** `jygnw29kms-bit/135er-Grow-Central`, Branch `master`
-- **Version letzter dokumentierter Kandidat:** `alpha-0.7.5`, Build 461, `CANDIDATE`
-- **Hardwarevalidierung:** Vollständige reale Abnahme nicht bestätigt
-- **Synchronisierung:** Pi-Snapshot im Archivbranch; die aktuellen Raum-/Growbuch-Oberflächendateien `web/gc-final.html` und `web/gc-final.js` auf `master` übertragen; vollständiger Abgleich offen.
+## Pi ↔ GitHub Abgleich
 
-## Live-Prüfung am 14.11.2026
+- 871 ursprünglich versionierte Dateien überprüft; 19 Unterschiede untersucht, davon 3 projektbezogene Statusdateien.
+- Der finale Sync-Branch enthält 758 byteidentische Pi-/Git-Dateien. 102 nur im Repository vorkommende CI-/Cloud-/Dokumentationsdateien bleiben erhalten.
+- Die 17 verbleibenden Differenzen gegenüber der installierten Pi-Struktur sind bewusst aktuelle Dokumentations-, Test- und Sicherheitspfade; keine unbeabsichtigte Laufzeitdatei-Abweichung.
+- Räume, Growbuch/Fotos, BLE, HomeKit, Pi-API und Final-Master-Weboberfläche mit Original-Git-Blobh­ashes gegenüber dem Pi bestätigt.
+- Pi-spezifische HomeKit-Zubehörmodule, Mars-Hydro-Steuerungsmodule, PWA-Icons und das Sensor-Firmware-Prüfsummenmanifest sind in Git übernommen.
+- Sicherheitskritische First-Boot-/sudo-/Netzwerkprüfungen aus dem neueren Git-Stand werden **nicht** auf ältere Pi-Versionen zurückgesetzt.
+- Sensible Runtime-Daten, Zugangsdaten, private Provisionierung, historische Pflanzenbilder sowie nicht freigegebene Herstellerfotos werden nicht ins öffentliche Repository übertragen.
 
-Der über MeshCentral erreichbare Host `135er-grow-central` (Debian 13) meldete laufende Dienste für API/Uvicorn (Port 8080), Provisioning-Broker, Cloud-Link-Agenten und HomeKit-Bridge. Der MeshCentral-Agent war ebenfalls aktiv. Der Ordner `/opt/135er-grow-central` ist **kein Git-Repository**; `git status` ist dort nicht möglich. Aus dem laufenden Prozessstatus folgt **keine** vollständige Geräte-, Sensor- oder Feature-Abnahme.
+## Validierung
 
-Vorhandene systemd-Timer: `grow-central-healthcheck.timer`, `grow-central-remote-watchdog.timer` und `grow-central-history-backup.timer`. Das sind Betriebs-/Wartungsfunktionen, keine nachgewiesenen Entwicklungsjobs. Sie werden durch die Dokumentationssicherung nicht deaktiviert.
+- **507 von 507 nicht-nativen Tests erfolgreich**; zwei native Mosquitto-Integrationsfälle wurden in der root-basierten QA-Umgebung ausgeschlossen.
+- Die beiden Broker-Testdateien wurden separat unter dem Systembenutzer `mosquitto` mit **13 von 13 erfolgreichen Tests** geprüft; 26 Untertests ebenfalls bestanden.
+- Python- und Shell-Syntax in einer von der produktiven Installation getrennten Git-Prüfkopie erfolgreich.
+- Typische Geheimnis-/Token-Muster in geänderten Quelltexten ohne Treffer; kein Ersatz für einen umfassenden Security-Audit.
+- Keine automatische Neuerstellung eines Images und kein ungeprüftes Deployment auf den laufenden Pi.
 
-## Entwicklungsbetrieb und Abgleich
+## Bekannte Grenzen und nächste Aufgaben
 
-1. Der Betreiber hat den zuvor angeordneten Entwicklungsstopp am 14.11.2026 ausdrücklich aufgehoben. Entwicklung, Tests und kontrollierte Deployments sind wieder freigegeben; technische Validierung und Schutz des laufenden Systems bleiben erforderlich.
-2. Bestehenden Betrieb und den sicheren Fernwartungsweg nicht abschalten.
-3. Keine lokalen Geheimnisse, API-Tokens, Zugangsdaten, privaten Zertifikate, Logs oder Datenbankinhalte in das öffentliche Repository übernehmen.
-4. GitHub bleibt Dokumentations- und Quellreferenz. Ein selektiver Quellcode-Snapshot des Pi liegt unter `pi-snapshots/2026-11-14/` im Branch `archive/pi-live-2026-11-14`. Ein vollständiger Dateivergleich bleibt offen.
-5. Die Test- und Releasepläne vom 12./13. November bleiben historische Planung; nicht als durchgeführt kennzeichnen.
+Die Historie, SQLite-Daten, Pflanzenbilder und übrigen lokalen Betriebsdaten sind **kein Teil** eines öffentlichen Quellcode-Backups. Ein vollständiges verschlüsseltes Systemabbild ist separat nötig. Einige Pi-exklusive Herstellerbilder sind wegen fehlender Weiterverteilungsrechte nur mit Quell- und SHA-256-Nachweis dokumentiert. Ein grafischer Build aus dem öffentlichen Repository braucht für diese Bildpfade rechtlich zulässige Assets.
 
-## Git-Abgleich am 14.11.2026
+Die reale End-to-End-Hardwareabnahme für alle Pi-Klassen, First Boot und alle Geräteprotokolle bleibt vom Quellcodeabgleich unabhängig offen.
 
-- Installierter Pi-Quellcommit: `be24ba9097c2e98eb1e3f302b5992c004d2e6e29`; Betreiber-Build `operator-be24ba9097c2-base508`.
-- GitHub `master` liegt bereits deutlich vor diesem Image-Basiscommit. Der Abgleich darf nicht durch einen pauschalen Reset auf den Pi-Stand erfolgen.
-- Selektive Pi-Sicherung auf [`archive/pi-live-2026-11-14`](https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/archive/pi-live-2026-11-14/pi-snapshots/2026-11-14) mit echten Laufzeitquelldateien.
-- Nach Vergleich wurden die Pi-Versionen von `web/gc-final.html` und `web/gc-final.js` auf `master` übertragen: Gerätezuordnung pro Raum, Raum-Growbuch und Pflanzenauswahl im Tagebuch.
-- `web/gc-final.css`, `web/gc-worker.js`, `web/gc-manifest.webmanifest`, Teile von `app/history_archive.py` und weitere Skripte waren bereits inhaltlich identisch (abgesehen von Dateiende-Zeilenumbrüchen).
-- Einige Pi-Dateien weichen von der aktuellen Git-Version ab, unter anderem `app/entrypoint.py`, `app/mars_history.py`, `app/rooms.py` sowie lokale Fast-BLE-Module. Diese dürfen wegen neuerer GitHub-Änderungen, möglicher installierter Sonderkonfigurationen und nicht abgeschlossener Tests nicht ungeprüft überschrieben werden.
-- **Keine erneute Pi-Installation und keine vollständige Datensicherung in diesem Git-Abgleich nachgewiesen.** Lokale Zugangsdaten, Datenbanken und gerätespezifische Konfigurationen gehören nicht ins öffentliche Repository.
-
-## Letzter belegter Funktions-/Release-Stand
-
-Der historische reale Pi-4-Sensortest vom 14. Oktober bestätigte Teile des USB-/MQTT-TLS-/Bodenfeuchte-Pfads. Build 461 ist laut [RELEASE_STATE.md](../RELEASE_STATE.md) der zuletzt dokumentierte Image-Candidate mit Sensor-Firmware 0.5.3. Ein vollständiger Test dieses Images auf allen Hardwareklassen und reale Schreibvalidierung der Mars-Hydro-Geräte sind offen.
-
-Weitere technische Beschreibung und Roadmap siehe [README](../README.md), [Roadmap](ROADMAP.md), [Release State](../RELEASE_STATE.md) und [Pi-4-Testplan](de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
-
-## Pi ↔ GitHub-Dateiabgleich (14.11.2026)
-
-Der Pi ist online und meldet `SOURCE_COMMIT=be24ba9097c2e98eb1e3f302b5992c004d2e6e29`, `BUILD=operator-be24ba9097c2-base508` und `IMAGE_DISTRIBUTION=OPERATOR_PROVISIONED`. Das ist der **installierte Betreiber-Build**, nicht der ältere öffentliche Image-Candidate 461.
-
-Die tatsächlich gelesenen Dateien wurden unter [Pi-Live-Archiv](../pi-snapshots/2026-11-14/STATUS.md) im Branch `archive/pi-live-2026-11-14` festgehalten. Ein erneuter Inhaltsvergleich zeigte `web/gc-final.html`, `web/gc-final.js`, `web/gc-final.css`, `app/grow_photos.py` und `app/history_archive.py` bereits inhaltlich gleich zum aktuellen `master`. Die lokal erfassten Versionen von `app/mars_history.py`, `app/main.py` und `local/cloud_link/remote_agent.py` wurden separat archiviert und müssen vor Übernahme auf Verhalten/Unterschiede geprüft werden. Die Übertragung von `app/rooms.py` war nachweislich abgeschnitten; die ungültige Archivkopie wurde deshalb entfernt. Der aktuelle `master` enthält die vollständige Datei, eine unabhängige Identitätsprüfung gegen die Pi-Datei steht aus.
-
-**Wichtig:** GitHub-Quellsicherung ist kein vollständiges Pi-Systembackup. Runtime-Daten, Pflanzenfotos, Historie und Secrets müssen separat und geschützt gesichert werden. Entwicklungsstopp: **aufgehoben**; laufende Entwicklung darf weitergehen.
+**Details:** [Pi-/Git-Abgleichbericht](de/PI_GIT_RECONCILIATION_2026-11-14.md) · [Release State](../RELEASE_STATE.md) · [Pi-4-Abnahmeplan](de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
