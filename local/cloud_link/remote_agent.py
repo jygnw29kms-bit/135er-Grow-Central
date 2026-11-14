@@ -129,9 +129,11 @@ async def serve(ws,local):
    room_id=req.get("room_id");name=req.get("name");plant_id=req.get("plant_id")
    plant_type=req.get("plant_type","other");phase=req.get("phase","vegetative")
    strain=req.get("strain","");start_date=req.get("start_date","");notes=req.get("notes","")
+   crop=req.get("crop","")
    valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
      and isinstance(name,str) and 1<=len(name.strip())<=80
      and isinstance(strain,str) and len(strain)<=120
+     and isinstance(crop,str) and len(crop)<=80
      and isinstance(start_date,str) and (not start_date or re.fullmatch(r"\d{4}-\d{2}-\d{2}",start_date))
      and isinstance(notes,str) and len(notes)<=2000
      and plant_type in ("automatic","feminized","mother","clone","other")
@@ -145,7 +147,7 @@ async def serve(ws,local):
    try:
     path="/api/v1/rooms/"+room_id+"/plants"
     if req["type"]=="plant_update":path+="/"+plant_id
-    body={"name":name.strip(),"strain":strain,"plant_type":plant_type,
+    body={"name":name.strip(),"strain":strain,"crop":crop,"plant_type":plant_type,
           "start_date":start_date,"phase":phase,"notes":notes}
     if req["type"]=="plant_create":
      result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=12)
