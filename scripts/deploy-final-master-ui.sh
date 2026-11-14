@@ -52,6 +52,8 @@ for f in "${APP_FILES[@]}"; do install -m 0644 "$TMP/$f" "$ROOT/app/$f"; done
 for img in mars-fc3000-hires.jpg mars-df150m-hires.jpg gc-hero-leaf.jpg; do
  [[ ! -s "$TMP/$img" ]] || install -m 0644 "$TMP/$img" "$WEB/$img"
 done
+# Render transparent presentation assets from full-resolution original photos.
+ffmpeg -y -hide_banner -loglevel error -i "$WEB/mars-fc3000-hires.jpg" -vf 'format=rgba,colorkey=0xFFFFFF:0.095:0.065' -frames:v 1 -pix_fmt rgba "$WEB/mars-fc3000-transparent.png"
 systemctl restart 135er-grow-central.service
 systemctl is-active --quiet 135er-grow-central.service
 curl -fsS --max-time 7 http://127.0.0.1:8080/static/gc-final.js >/dev/null
