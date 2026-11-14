@@ -83,9 +83,9 @@ async def camera_cloud_preview():
             if _ACTIVE_STREAM_PROCESS is not None:
                 raise RuntimeError("active stream has no recent frame")
             captured, _, _, _ = await asyncio.to_thread(_snapshot_sync, None, 320, 240)
-            frame = await asyncio.to_thread(_scaled_cloud_frame, captured)
+            frame = captured if 1000 <= len(captured) <= 145000 else await asyncio.to_thread(_scaled_cloud_frame, captured)
         else:
-            frame = await asyncio.to_thread(_scaled_cloud_frame, cached)
+            frame = cached if 1000 <= len(cached) <= 145000 else await asyncio.to_thread(_scaled_cloud_frame, cached)
     except (RuntimeError, subprocess.TimeoutExpired):
         raise HTTPException(503, "preview encoding unavailable")
     return Response(content=frame, media_type="image/jpeg",
