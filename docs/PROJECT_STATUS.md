@@ -39,3 +39,16 @@ Die Historie, SQLite-Daten, Pflanzenbilder und übrigen lokalen Betriebsdaten si
 Die reale End-to-End-Hardwareabnahme für alle Pi-Klassen, First Boot und alle Geräteprotokolle bleibt vom Quellcodeabgleich unabhängig offen.
 
 **Details:** [Pi-/Git-Abgleichbericht](de/PI_GIT_RECONCILIATION_2026-11-14.md) · [Release State](../RELEASE_STATE.md) · [Pi-4-Abnahmeplan](de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
+
+## Nächste Integration: bereits abgenommener ESP32-Bodenfeuchtesensor
+
+**Verbindlich:** Der vom Betreiber abgenommene ESP32-/XIAO-Bodenfeuchtesensor ist vorhandene, akzeptierte Hardware und muss in die vollständige Raum-Geräte-Pflanzen-Growbuch-Integration einbezogen werden. Die Hardwareabnahme darf nicht mit einer bereits vollständig getesteten aktuellen Ende-zu-Ende-Integration verwechselt werden.
+
+- Sensor als echtes Gerät erfassen, identifizieren und dem Growzelt 100 × 100 × 200 cm sowie der betreffenden Pflanze beziehungsweise dem Pflanzentopf zuordnen.
+- Die bereits vorhandene dreistufige Kalibrierung (lufttrocken, wassergesättigt, frisches Substrat) und ihre gültige Gerätezuordnung respektieren; keine unbegründete Neukalibrierung auslösen.
+- Bodenfeuchte mit Messzeitpunkt, Einheit, Sensor-ID, Kalibrierstatus und Raum-/Pflanzenbezug als tatsächlichen Messwert speichern. Veraltete oder ungültig kalibrierte Werte kennzeichnen und nicht als aktuelle Messwerte ausgeben.
+- Bodenfeuchte im Raum-Dashboard, in der Pflanzenansicht, in Growbuch-Foto-Snapshots, Langzeitverlauf und Grow-Vergleich anzeigen.
+- HomeKit-Export der tatsächlichen Bodenfeuchte prüfen, getrennt von den Werten des HomePod und anderen Raumtemperatur-/Feuchtesensoren.
+- Livekette ESP32 → MQTT/API → persistente Historie → PWA → Growbuch → HomeKit einschließlich Neustart/Wiederverbindung unter realer Hardware abnehmen.
+
+**Reihenfolge:** gesichertes Pi-Backup, Raum-Geräte-Sensor-Zuordnung einschließlich des abgenommenen ESP32, Growbuch-/Livedaten-Verknüpfung, vollständige Liveabnahme. Die kulturübergreifende Architektur von Grow Central bleibt erhalten.
