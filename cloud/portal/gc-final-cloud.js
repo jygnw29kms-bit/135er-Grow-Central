@@ -475,6 +475,7 @@ function openJournalForm(id=null){
  text('journalError','');
  if(!growJournal.roomId){notify('Erst einen Raum auswählen');return;}
  $('journalDialog').showModal();
+ window.dispatchEvent(new CustomEvent('gc:journal-open',{detail:{room_id:growJournal.roomId}}));
 }
 async function journalRequest(method,path,body){
  const opts={method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'}};
