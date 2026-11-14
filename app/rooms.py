@@ -224,6 +224,7 @@ class DeviceAssignment(BaseModel):
 
 
 class JournalEntry(BaseModel):
+    plant_id: str | None = Field(default=None, max_length=128)
     category: Literal["note", "watering", "feeding", "training", "defoliation", "pest", "flowering", "photo", "observation", "diagnosis", "repotting", "harvest", "other"] = "note"
     title: str = Field(min_length=1, max_length=120)
     text: str = Field(default="", max_length=5000)
@@ -625,6 +626,63 @@ async def delete_room(room_id: str):
         return {"ok": True}
 
 
+MARS_DEVICE_IDS = {
+    "mars-hydro:fc3000": {"name": "Mars Hydro FC3000", "adapter": "mars_hydro_ble", "role": "light"},
+    "mars-hydro:df150m": {"name": "Mars Hydro DF150-M", "adapter": "mars_hydro_ble", "role": "ventilation"},
+}
+
+
+def _mars_catalog() -> list[dict[str, Any]]:
+    """Expose locally observed devices, without creating unpaired or fictitious hardware."""
+    from app.mars_fast_lamp import fast_lamp
+    from app.mars_fast_fan import fast_fan
+    return [
+        {"id": "mars-hydro:fc3000", **MARS_DEVICE_IDS["mars-hydro:fc3000"],
+         "connected": bool(fast_lamp.client and fast_lamp.client.is_connected),
+         "fresh": bool(fast_lamp.latest and fast_lamp.at and fast_lamp.client and fast_lamp.client.is_connected and __import__("time").monotonic()-fast_lamp.at < 12)}
+        ,
+        {"id": "mars-hydro:df150m", **MARS_DEVICE_IDS["mars-hydro:df150m"],
+         "connected": bool(fast_fan.client and fast_fan.client.is_connected),
+         "fresh": bool(fast_fan.last and fast_fan.at and fast_fan.client and fast_fan.client.is_connected and __import__("time").monotonic()-fast_fan.at < 12)},
+    ]
+
+
+def live_room_snapshot(room_id: str, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Real, timestamped and source-labelled BLE measurements from assigned equipment."""
+    import time
+    from app.mars_fast_lamp import fast_lamp
+    from app.mars_fast_fan import fast_fan
+    state = state if state is not None else load_state()
+    snapshot = _latest_sensor_snapshot(state, room_id)
+    result: dict[str, Any] = {
+        "captured_at": now_iso(),
+        "room_id": room_id,
+        "historical_snapshot": snapshot or None,
+        "devices": {},
+    }
+    assignments = state["assignments"]
+    if assignments.get("mars-hydro:df150m") == room_id and fast_fan.last and fast_fan.client and fast_fan.client.is_connected:
+        if fast_fan.at and time.monotonic() - fast_fan.at < 12:
+            fan = fast_fan.last[1]
+            result["devices"]["mars-hydro:df150m"] = {
+                "source": "BLE_MZF002", "age_ms": round((time.monotonic()-fast_fan.at)*1000),
+                "temperature_c": fan.get("temperature_c"), "humidity_rh": fan.get("humidity_rh"),
+                "rpm": fan.get("rpm"), "power_on": fan.get("power_on"),
+                "setpoint_percent": fan.get("setpoint_percent"),
+                "measured": ["temperature_c","humidity_rh","rpm"],
+            }
+    if assignments.get("mars-hydro:fc3000") == room_id and fast_lamp.latest and fast_lamp.client and fast_lamp.client.is_connected:
+        if fast_lamp.at and time.monotonic()-fast_lamp.at < 12:
+            lamp = fast_lamp.latest[1]
+            result["devices"]["mars-hydro:fc3000"] = {
+                "source": "BLE_FC3000", "age_ms": round((time.monotonic()-fast_lamp.at)*1000),
+                "power_on": lamp.get("power_on"), "brightness_percent": lamp.get("brightness_percent"),
+                "brightness_is_ppfd": False,
+            }
+    result["device_data_fresh"] = bool(result["devices"])
+    return result
+
+
 @router.get("/{room_id}/devices")
 async def room_devices(room_id: str):
     state = load_state(); room_or_404(state, room_id)
@@ -635,6 +693,8 @@ async def room_devices(room_id: str):
     native = await _native_gc_devices(timeout=0.8)
     merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
     for row in native:
+        merged[row["id"]] = row
+    for row in _mars_catalog():
         merged[row["id"]] = row
     devices = []
     for row in merged.values():
@@ -655,12 +715,14 @@ async def assign_device(room_id: str, body: DeviceAssignment):
             TrustStore().require_trusted(body.device_id.split(":", 1)[1])
         except PermissionError as exc:
             raise HTTPException(403, "Sensor muss zuerst manuell angenommen werden") from exc
-    exists = True
-    try:
-        DeviceRegistry.from_env().get(body.device_id)
-    except KeyError:
-        native = await _native_gc_devices(timeout=1.2)
-        exists = any(row["id"] == body.device_id for row in native)
+    exists = body.device_id in MARS_DEVICE_IDS
+    if not exists:
+        try:
+            DeviceRegistry.from_env().get(body.device_id)
+            exists = True
+        except KeyError:
+            native = await _native_gc_devices(timeout=1.2)
+            exists = any(row["id"] == body.device_id for row in native)
     if not exists:
         raise HTTPException(404, "Gerät nicht gefunden")
     with edit_state() as current:
@@ -687,8 +749,13 @@ async def room_journal(room_id: str):
 async def add_room_journal(room_id: str, body: JournalEntry):
     with edit_state() as state:
         room_or_404(state, room_id)
-        snapshot = _latest_sensor_snapshot(state, room_id)
-        row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
+        if body.plant_id:
+            plant = plant_or_404(state, body.plant_id)
+            if plant.get("room_id") != room_id:
+                raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        snapshot = live_room_snapshot(room_id, state)
+        row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(),
+               "device_ids": sorted(snapshot["devices"]), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["room_journal"].append(row)
         _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
         return row
