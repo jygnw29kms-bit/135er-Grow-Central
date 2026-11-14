@@ -68,7 +68,7 @@ def _decode_image(data_url: str) -> tuple[bytes, str, str]:
     elif ext == "webp":
         valid = len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
     if not valid:
-raise HTTPException(415, "Bildinhalt passt nicht zum Dateityp")
+        raise HTTPException(415, "Bildinhalt passt nicht zum Dateityp")
     return raw, ext, media_type
 
 
@@ -138,7 +138,7 @@ async def create_grow_photo(body: GrowPhotoCreate):
     state = rooms.load_state()
     rooms.room_or_404(state, body.room_id)
     plant = None
-if body.plant_id:
+    if body.plant_id:
         plant = rooms.plant_or_404(state, body.plant_id)
         if plant.get("room_id") != body.room_id:
             raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
@@ -208,7 +208,7 @@ async def get_grow_photo(photo_id: str):
         raise HTTPException(404, "Foto nicht gefunden")
     media_type = str(row.get("photo_media_type") or "image/jpeg")
     suffix = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(media_type)
-if not suffix:
+    if not suffix:
         raise HTTPException(404, "Foto nicht gefunden")
     path = PHOTO_DIR / f"{photo_id}.{suffix}"
     if not path.is_file():
