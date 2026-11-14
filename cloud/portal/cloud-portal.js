@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let accessToken='';
+let accessToken='',refreshToken='';
+let reconnectTimer=null,reconnectAttempts=0;
 async function listDevices(){
  const res=await fetch('/api/v2/account/devices',{headers:{Authorization:'Bearer '+accessToken},cache:'no-store'});
  if(!res.ok)throw Error('Geräteliste HTTP '+res.status);
@@ -21,12 +22,12 @@ $('form').addEventListener('submit',async event=>{
  try{
   const res=await fetch('/api/v2/account/login',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({email:$('email').value,password:$('password').value})});
   if(!res.ok)throw Error('Anmeldung fehlgeschlagen (HTTP '+res.status+')');
-  const data=await res.json();accessToken=data.access_token;$('password').value='';
+  const data=await res.json();accessToken=data.access_token;refreshToken=data.refresh_token||'';reconnectAttempts=0;$('password').value='';
   $('login').hidden=true;$('account').hidden=false;await listDevices();
  }catch(error){$('msg').textContent=error.message}
 });
 $('refresh').addEventListener('click',()=>listDevices().catch(error=>$('summary').textContent=error.message));
-$('logout').addEventListener('click',()=>{remoteClose();accessToken='';$('account').hidden=true;$('login').hidden=false;$('msg').textContent='Abgemeldet.';});
+$('logout').addEventListener('click',()=>{remoteClose();accessToken='';refreshToken='';$('account').hidden=true;$('login').hidden=false;$('msg').textContent='Abgemeldet.';});
 // Authenticated read-only telemetry. Never sends power, fan or light commands.
 let remoteSocket=null,remoteInterval=null,remoteRequest=0;
 const masterPending=new Map();
@@ -147,7 +148,33 @@ function cameraStart(){
 }
 $('cameraStart')?.addEventListener('click',cameraStart);
 $('cameraStop')?.addEventListener('click',cameraStop);
+async function renewAccess(){
+ if(!refreshToken)return false;
+ try{
+  const response=await fetch('/api/v2/account/refresh',{method:'POST',cache:'no-store',
+   headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+  if(!response.ok)return false;
+  const values=await response.json();
+  if(!values.access_token||!values.refresh_token)return false;
+  accessToken=values.access_token;refreshToken=values.refresh_token;return true;
+ }catch{return false}
+}
+function scheduleReconnect(deviceId,code=0){
+ if(!accessToken||!deviceId||reconnectTimer)return;
+ const delay=Math.min(30000,2000*Math.pow(2,Math.min(reconnectAttempts++,4)));
+ masterStatus('Cloud-Verbindung unterbrochen · neuer Verbindungsversuch läuft');
+ reconnectTimer=setTimeout(async()=>{
+  reconnectTimer=null;
+  if(!accessToken)return;
+  if(code===4401){
+   const renewed=await renewAccess();
+   if(!renewed){masterStatus('Cloud-Sitzung abgelaufen · bitte neu anmelden');return}
+  }
+  remoteOpen(deviceId);
+ },delay);
+}
 function remoteClose(){
+ if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}
  for(const id of masterPending.keys())masterReply(id,503,{detail:'Verbindung geschlossen'});
  masterPending.clear();
  if($('masterFrame'))$('masterFrame').src='about:blank';
@@ -380,7 +407,8 @@ function remoteOpen(deviceId){
    return;
   }
   if(data.type==='auth_ok'){
-   if(!data.device_online){$('remoteState').textContent='Grow-Pi ist offline';return}
+   if(!data.device_online){$('remoteState').textContent='Grow-Pi ist offline';socket.close();return}
+   reconnectAttempts=0;
    const poll=()=>{
     pendingRemote.clear();
     if(socket.readyState!==WebSocket.OPEN)return;
@@ -400,6 +428,6 @@ function remoteOpen(deviceId){
    $('remoteState').textContent='Grow-Pi-Gerätekanal offline';
   }
  });
- socket.addEventListener('close',()=>{if(remoteSocket===socket){masterStatus('Verbindung unterbrochen · Daten werden nicht aktualisiert');cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null}});
+ socket.addEventListener('close',event=>{if(remoteSocket===socket){masterStatus('Verbindung unterbrochen · Daten werden nicht aktualisiert');cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null;scheduleReconnect(deviceId,event.code)}});
  socket.addEventListener('error',()=>{$('remoteState').textContent='WebSocket-Verbindung fehlgeschlagen'});
 }
