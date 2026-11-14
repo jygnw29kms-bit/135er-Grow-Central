@@ -59,6 +59,7 @@ READ_PATHS={
  "/api/v1/camera/status",
  "/api/v1/smarthome/overview",
  "/api/v1/camera/controls",
+ "/api/v1/smarthome/overview",
 }
 async def serve(ws,local):
  async for raw in ws:
@@ -195,7 +196,8 @@ async def serve(ws,local):
   path=req.get("path")
   is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events)(\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
-  if path not in READ_PATHS and not is_room_path and not is_camera_query:
+  is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
+  if path not in READ_PATHS and not is_room_path and not is_camera_query and not is_smart_query:
    response={"type":"read_result","request_id":request_id,"ok":False,"error":"path_not_allowed"}
   else:
    try:
@@ -204,7 +206,7 @@ async def serve(ws,local):
     payload=r.json()
     if not isinstance(payload,dict):raise ValueError("invalid_payload")
     if path=="/api/v1/homekit/status":
-     payload={k:payload.get(k) for k in ("running","paired","accessories_exported")}
+     payload={k:payload.get(k) for k in ("running","paired","accessories_exported","accessories")}
     serialized=json.dumps(payload,ensure_ascii=False)
     if len(serialized)>180000:raise ValueError("response_too_large")
     response={"type":"read_result","request_id":request_id,"ok":True,"path":path,"data":payload}
