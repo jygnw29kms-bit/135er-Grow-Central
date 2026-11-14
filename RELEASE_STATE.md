@@ -1,5 +1,14 @@
 # 135er-Grow Central · Canonical Release State
 
+## Entwicklungsstopp Raspberry Pi · 14. November 2026
+
+**Anweisung des Betreibers:** Sämtliche Entwicklungsarbeiten am Grow-Central-Pi sind bis zur ausdrücklichen Wiederfreigabe eingestellt. Keine neuen Features, Builds, Deployments, Hardwareexperimente oder automatisierten Entwicklungsänderungen am Pi. Laufende Betriebs-, Sensor-, Steuerungs- und Fernwartungsdienste dürfen weiterlaufen; keine unnötigen Dienststopps oder Reboots.
+
+**Sicherungsstand:** Das öffentliche GitHub-Repository dokumentiert den zuletzt bekannten Quellstand. Bei der Live-Prüfung am 14.11.2026 war `135er-grow-central` über MeshCentral erreichbar. Die produktive Installation unter `/opt/135er-grow-central` besitzt **kein Git-Arbeitsverzeichnis**; deshalb ist ein vollständiger Abgleich/Push sämtlicher lokal installierter Dateien und lokaler Änderungen **nicht verifiziert**. Der historische Image-Candidate bleibt Build 461 (`alpha-0.7.5`), kein neu validiertes Image. Keine Credentials, privaten Konfigurationen, Schlüssel, Datenbankinhalte oder lokalen Logs öffentlich committen.
+
+**Offen vor einer endgültigen Archivierung:** Version/Dateiinventar des Pi mit dem GitHub-Quellstand vergleichen, erforderliche nicht-sensitive Änderungen kontrolliert übertragen, Commit und Hardwareabbild prüfen. Bis dahin gilt **Entwicklungsstopp bestätigt, vollständige lokale Pi-Sicherung nicht bestätigt**.
+
+
 - **Stand:** 12. November 2026
 - **Repository-Version:** `alpha-0.7.5`
 - **Branch:** `master`
