@@ -97,6 +97,17 @@ class TrustStore:
             db.execute('UPDATE devices SET status=\'TRUSTED\',name=?,room_id=? WHERE id=?', (name, room_id, device_id))
             return self.public(db.execute('SELECT * FROM devices WHERE id=?', (device_id,)).fetchone())
 
+    def set_room_id(self, device_id: str, room_id: str | None, *, previous_room_id: str | None = None):
+        """Update room membership without changing sensor trust or calibration."""
+        with self.db() as db:
+            row = db.execute("SELECT room_id FROM devices WHERE id=? AND status='TRUSTED'", (device_id,)).fetchone()
+            if row is None:
+                return False
+            if previous_room_id is not None and row["room_id"] != previous_room_id:
+                return False
+            db.execute("UPDATE devices SET room_id=? WHERE id=? AND status='TRUSTED'", (room_id, device_id))
+            return True
+
     def transition(self, device_id, status):
         if status not in ('REJECTED', 'REVOKED', 'DISCOVERED'):
             raise ValueError('unsupported trust transition')

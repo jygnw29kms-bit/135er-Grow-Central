@@ -87,6 +87,7 @@ def new_id(prefix: str) -> str:
 def empty_state() -> dict[str, Any]:
     return {
         "rooms": [],
+        "archived_rooms": [],
         "assignments": {},
         "room_journal": [],
         "plants": [],
@@ -592,7 +593,7 @@ async def list_rooms():
     for room in state["rooms"]:
         latest = next((x for x in reversed(state["sensor_history"]) if x["room_id"] == room["id"]), None)
         result.append({**room, "device_count": counts.get(room["id"], 0), "plant_count": sum(1 for p in state["plants"] if p["room_id"] == room["id"]), "latest_sensor": latest})
-    return {"rooms": result}
+    return {"rooms": result, "archived_rooms": state["archived_rooms"]}
 
 
 @router.post("", dependencies=[Depends(require_write_auth)])
@@ -613,17 +614,35 @@ async def update_room(room_id: str, body: RoomUpdate):
 
 @router.delete("/{room_id}", dependencies=[Depends(require_write_auth)])
 async def delete_room(room_id: str):
+    """Archive room and free hardware; never erase photos or grow history."""
     with edit_state() as state:
-        room_or_404(state, room_id)
-        state["rooms"] = [r for r in state["rooms"] if r["id"] != room_id]
-        state["assignments"] = {d: r for d, r in state["assignments"].items() if r != room_id}
-        plant_ids = {p["id"] for p in state["plants"] if p["room_id"] == room_id}
-        state["plants"] = [p for p in state["plants"] if p["room_id"] != room_id]
-        state["room_journal"] = [e for e in state["room_journal"] if e["room_id"] != room_id]
-        state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] not in plant_ids]
-        state["grow_events"] = [e for e in state["grow_events"] if e.get("room_id") != room_id]
-        state["sensor_history"] = [e for e in state["sensor_history"] if e["room_id"] != room_id]
-        return {"ok": True}
+        room = room_or_404(state, room_id)
+        released = [device_id for device_id, assigned in state["assignments"].items() if assigned == room_id]
+        state["archived_rooms"].append({**room, "archived_at": now_iso()})
+        state["rooms"] = [row for row in state["rooms"] if row["id"] != room_id]
+        state["assignments"] = {dev: rid for dev, rid in state["assignments"].items() if rid != room_id}
+        # Retain plants, photos, journals, events and measurements with
+        # historical room IDs. Restoring recovers their original context.
+    for device_id in released:
+        if device_id.startswith("growcentral_esp32:"):
+            TrustStore().set_room_id(device_id.split(":", 1)[1], None, previous_room_id=room_id)
+    return {"ok": True, "archived": True, "room_id": room_id, "released_devices": released}
+
+
+@router.post("/{room_id}/restore", dependencies=[Depends(require_write_auth)])
+async def restore_room(room_id: str):
+    """Undo room removal without silently reassigning hardware."""
+    with edit_state() as state:
+        if any(row["id"] == room_id for row in state["rooms"]):
+            raise HTTPException(409, "Raum ist bereits aktiv")
+        row = next((r for r in state["archived_rooms"] if r["id"] == room_id), None)
+        if row is None:
+            raise HTTPException(404, "Archivierter Raum nicht gefunden")
+        restored = {key: value for key, value in row.items() if key != "archived_at"}
+        restored["updated_at"] = now_iso()
+        state["rooms"].append(restored)
+        state["archived_rooms"] = [r for r in state["archived_rooms"] if r["id"] != room_id]
+        return {"ok": True, "room": restored, "devices_unassigned": True}
 
 
 MARS_DEVICE_IDS = {
@@ -735,6 +754,8 @@ async def assign_device(room_id: str, body: DeviceAssignment):
     with edit_state() as current:
         room_or_404(current, room_id)
         current["assignments"][body.device_id] = room_id
+    if body.device_id.startswith("growcentral_esp32:"):
+        TrustStore().set_room_id(body.device_id.split(":", 1)[1], room_id)
     return {"ok": True, "device_id": body.device_id, "room_id": room_id}
 
 
@@ -742,8 +763,12 @@ async def assign_device(room_id: str, body: DeviceAssignment):
 async def unassign_device(room_id: str, device_id: str):
     with edit_state() as state:
         room_or_404(state, room_id)
-        if state["assignments"].get(device_id) == room_id: state["assignments"].pop(device_id, None)
-        return {"ok": True}
+        was_assigned = state["assignments"].get(device_id) == room_id
+        if was_assigned:
+            state["assignments"].pop(device_id, None)
+    if was_assigned and device_id.startswith("growcentral_esp32:"):
+        TrustStore().set_room_id(device_id.split(":", 1)[1], None, previous_room_id=room_id)
+    return {"ok": True, "unassigned": was_assigned}
 
 
 @router.get("/{room_id}/journal")
