@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import httpx
 from websockets.asyncio.client import connect
 from .device_identity import ensure_identity
+from .agent_v2 import LOCAL_API, local_headers
 log=logging.getLogger("growcentral.cloud.remote")
 URL=os.getenv("GC_CLOUD_URL","https://135ercloud.grow-central.de").rstrip("/")
 def b64(value):
@@ -32,13 +33,41 @@ async def session():
   if result.get("type")!="auth_ok" or result.get("device_id")!=identity.device_id:
    raise RuntimeError("cloud auth rejected")
   log.info("Device channel authenticated")
-  async for raw in ws:
-   try:req=json.loads(raw)
-   except (ValueError,TypeError):continue
-   if isinstance(req,dict) and req.get("type")=="request":
-    await ws.send(json.dumps({"type":"error",
-      "request_id":str(req.get("request_id",""))[:64],
-      "error":"remote_operations_not_enabled"}))
+  async with httpx.AsyncClient(timeout=8,trust_env=False) as local:
+   await serve(ws,local)
+  return
+READ_PATHS={
+ "/api/health",
+ "/api/mars-hydro/ble/fast-fan-status",
+ "/api/mars-hydro/ble/fast-lamp-status",
+ "/api/v1/homekit/status",
+}
+async def serve(ws,local):
+ async for raw in ws:
+  try:req=json.loads(raw)
+  except (ValueError,TypeError):continue
+  if not isinstance(req,dict):continue
+  request_id=req.get("request_id")
+  if req.get("type")!="read" or not isinstance(request_id,str) or len(request_id)>64:
+   continue
+  path=req.get("path")
+  if path not in READ_PATHS:
+   response={"type":"read_result","request_id":request_id,"ok":False,"error":"path_not_allowed"}
+  else:
+   try:
+    r=await local.get(LOCAL_API+path,headers=local_headers(),timeout=7)
+    if not r.is_success:raise ValueError("local_http_"+str(r.status_code))
+    payload=r.json()
+    if not isinstance(payload,dict):raise ValueError("invalid_payload")
+    if path=="/api/v1/homekit/status":
+     payload={k:payload.get(k) for k in ("running","paired","accessories_exported")}
+    serialized=json.dumps(payload,ensure_ascii=False)
+    if len(serialized)>180000:raise ValueError("response_too_large")
+    response={"type":"read_result","request_id":request_id,"ok":True,"path":path,"data":payload}
+   except Exception as exc:
+    response={"type":"read_result","request_id":request_id,"ok":False,"error":type(exc).__name__}
+  await ws.send(json.dumps(response,ensure_ascii=False))
+
 async def main():
  logging.basicConfig(level=logging.INFO,format="%(asctime)s %(levelname)s %(message)s")
  while True:
