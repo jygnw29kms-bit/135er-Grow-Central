@@ -31,6 +31,15 @@ $('logout').addEventListener('click',()=>{remoteClose();accessToken='';refreshTo
 // Authenticated read-only telemetry. Never sends power, fan or light commands.
 let remoteSocket=null,remoteInterval=null,remoteRequest=0;
 const masterPending=new Map();
+function trackMaster(id){
+ const timer=setTimeout(()=>{
+  if(!masterPending.has(id))return;
+  masterPending.delete(id);
+  masterReply(id,504,{detail:'Zeitüberschreitung: Ergebnis unbekannt. Kein automatischer Wiederholungsversuch.'});
+ },34000);
+ masterPending.set(id,timer);
+}
+
 let masterVisible=false;
 function masterStatus(value){if($('masterStatus'))$('masterStatus').textContent=value}
 function masterToggle(){
@@ -54,6 +63,7 @@ function masterHandleResult(data){
  const pending=masterPending.get(data.request_id);
  if(!pending)return false;
  masterPending.delete(data.request_id);
+ clearTimeout(pending);
  if(data.ok){
   if(data.type==='camera_result'||data.type==='photo_frame_result')masterReply(data.request_id,200,{image:data.image});
   else if(data.type==='control_result')masterReply(data.request_id,200,{device_report_confirmed:data.device_report_confirmed,kind:data.kind});
@@ -70,11 +80,11 @@ window.addEventListener('message',event=>{
   masterReply(msg.id,503,{detail:'Cloud-Gerätekanal nicht erreichbar'});return
  }
  if(msg.kind==='photo'&&typeof msg.photo_id==='string'&&/^photo_[a-zA-Z0-9_-]{1,100}$/.test(msg.photo_id)){
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'photo_frame',request_id:msg.id,photo_id:msg.photo_id}));return;
  }
  if(msg.kind==='camera'){
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'camera_frame',request_id:msg.id}));return;
  }
  if(msg.kind!=='fetch'||typeof msg.path!=='string'||!msg.path.startsWith('/api/')){
@@ -82,7 +92,7 @@ window.addEventListener('message',event=>{
  }
  const method=msg.method||'GET';
  if(method==='GET'){
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'read',request_id:msg.id,path:msg.path}));return;
  }
  let payload=msg.body;
@@ -96,13 +106,13 @@ window.addEventListener('message',event=>{
   if(!window.confirm('Grow Central Cloud: '+kind+' · '+action+' '+value+' wirklich ausführen?\\nDas physische Gerät wird verändert.')){
    masterReply(msg.id,409,{detail:'Nicht bestätigt'});return;
   }
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'control',request_id:msg.id,kind,action,value,confirm_physical_change:true}));return;
  }
  if(method==='POST'&&msg.path.startsWith('/api/v1/rooms/')&&msg.path.endsWith('/journal')){
   if(!window.confirm('Neuen Growbucheintrag auf dem Pi speichern?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
   const room_id=msg.path.split('/')[4];
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'journal_create',request_id:msg.id,room_id,
     title:payload.title,text:payload.text,category:payload.category,confirm_write:true}));return;
  }
@@ -115,7 +125,7 @@ window.addEventListener('message',event=>{
   if(!window.confirm('Dieses Foto im Growbuch des Pi speichern?')){
    masterReply(msg.id,409,{detail:'Nicht bestätigt'});return;
   }
-  masterPending.set(msg.id,true);
+  trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'photo_create',request_id:msg.id,
    room_id:payload.room_id,title:payload.title||'Foto',note:payload.note||'',
    tags:Array.isArray(payload.tags)?payload.tags:[],image_data_url:payload.image_data_url,
@@ -175,7 +185,7 @@ function scheduleReconnect(deviceId,code=0){
 }
 function remoteClose(){
  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}
- for(const id of masterPending.keys())masterReply(id,503,{detail:'Verbindung geschlossen'});
+ for(const [id,timer] of masterPending){clearTimeout(timer);masterReply(id,503,{detail:'Verbindung geschlossen'});}
  masterPending.clear();
  if($('masterFrame'))$('masterFrame').src='about:blank';
  if($('masterMount'))$('masterMount').hidden=true;
@@ -426,8 +436,11 @@ function remoteOpen(deviceId){
    displayRemote({...data,path});
   }else if(data.type==='error'&&data.error==='device_offline'){
    $('remoteState').textContent='Grow-Pi-Gerätekanal offline';
+   latestRemote.fan=null;latestRemote.lamp=null;renderTelemetry();
+   masterStatus('Grow-Pi offline · keine aktuellen Werte · Wiederverbindung läuft');
+   socket.close(4404,'device offline');
   }
  });
- socket.addEventListener('close',event=>{if(remoteSocket===socket){masterStatus('Verbindung unterbrochen · Daten werden nicht aktualisiert');cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null;scheduleReconnect(deviceId,event.code)}});
+ socket.addEventListener('close',event=>{if(remoteSocket===socket){latestRemote.fan=null;latestRemote.lamp=null;renderTelemetry();masterStatus('Verbindung unterbrochen · Daten werden nicht aktualisiert');cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null;scheduleReconnect(deviceId,event.code)}});
  socket.addEventListener('error',()=>{$('remoteState').textContent='WebSocket-Verbindung fehlgeschlagen'});
 }
