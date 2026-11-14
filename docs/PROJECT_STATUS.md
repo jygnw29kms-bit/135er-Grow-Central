@@ -10,7 +10,7 @@
 - **Repository:** `jygnw29kms-bit/135er-Grow-Central`, Branch `master`
 - **Version letzter dokumentierter Kandidat:** `alpha-0.7.5`, Build 461, `CANDIDATE`
 - **Hardwarevalidierung:** Vollständige reale Abnahme nicht bestätigt
-- **Sicherung:** **Pi-Quellcode-Snapshot teilweise im Archivbranch gesichert; vollständiger Abgleich offen**
+- **Synchronisierung:** Pi-Snapshot im Archivbranch; die aktuellen Raum-/Growbuch-Oberflächendateien `web/gc-final.html` und `web/gc-final.js` auf `master` übertragen; vollständiger Abgleich offen.
 
 ## Live-Prüfung am 14.11.2026
 
@@ -25,6 +25,16 @@ Vorhandene systemd-Timer: `grow-central-healthcheck.timer`, `grow-central-remote
 3. Keine lokalen Geheimnisse, API-Tokens, Zugangsdaten, privaten Zertifikate, Logs oder Datenbankinhalte in das öffentliche Repository übernehmen.
 4. GitHub bleibt Dokumentations- und Quellreferenz. Ein selektiver Quellcode-Snapshot des Pi liegt unter `pi-snapshots/2026-11-14/` im Branch `archive/pi-live-2026-11-14`. Ein vollständiger Dateivergleich bleibt offen.
 5. Die Test- und Releasepläne vom 12./13. November bleiben historische Planung; nicht als durchgeführt kennzeichnen.
+
+## Git-Abgleich am 14.11.2026
+
+- Installierter Pi-Quellcommit: `be24ba9097c2e98eb1e3f302b5992c004d2e6e29`; Betreiber-Build `operator-be24ba9097c2-base508`.
+- GitHub `master` liegt bereits deutlich vor diesem Image-Basiscommit. Der Abgleich darf nicht durch einen pauschalen Reset auf den Pi-Stand erfolgen.
+- Selektive Pi-Sicherung auf [`archive/pi-live-2026-11-14`](https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/archive/pi-live-2026-11-14/pi-snapshots/2026-11-14) mit echten Laufzeitquelldateien.
+- Nach Vergleich wurden die Pi-Versionen von `web/gc-final.html` und `web/gc-final.js` auf `master` übertragen: Gerätezuordnung pro Raum, Raum-Growbuch und Pflanzenauswahl im Tagebuch.
+- `web/gc-final.css`, `web/gc-worker.js`, `web/gc-manifest.webmanifest`, Teile von `app/history_archive.py` und weitere Skripte waren bereits inhaltlich identisch (abgesehen von Dateiende-Zeilenumbrüchen).
+- Einige Pi-Dateien weichen von der aktuellen Git-Version ab, unter anderem `app/entrypoint.py`, `app/mars_history.py`, `app/rooms.py` sowie lokale Fast-BLE-Module. Diese dürfen wegen neuerer GitHub-Änderungen, möglicher installierter Sonderkonfigurationen und nicht abgeschlossener Tests nicht ungeprüft überschrieben werden.
+- **Keine erneute Pi-Installation und keine vollständige Datensicherung in diesem Git-Abgleich nachgewiesen.** Lokale Zugangsdaten, Datenbanken und gerätespezifische Konfigurationen gehören nicht ins öffentliche Repository.
 
 ## Letzter belegter Funktions-/Release-Stand
 
