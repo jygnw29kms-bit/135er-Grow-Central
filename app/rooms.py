@@ -450,6 +450,8 @@ async def create_grow_profile(body: GrowProfileCreate):
 async def update_grow_profile(profile_id: str, body: GrowProfileCreate):
     with edit_state() as state:
         row = profile_or_404(state, profile_id)
+        if body.plant_id:
+            require_journal_plant(state, room_id, body.plant_id)
         row.update(body.model_dump())
         row["updated_at"] = now_iso()
         return row
@@ -811,12 +813,10 @@ async def room_journal(room_id: str):
 async def add_room_journal(room_id: str, body: JournalEntry):
     with edit_state() as state:
         room_or_404(state, room_id)
-        if body.plant_id:
-            plant = plant_or_404(state, body.plant_id)
-            if plant.get("room_id") != room_id:
-                raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        plant = require_journal_plant(state, room_id, body.plant_id)
         snapshot = live_room_snapshot(room_id, state)
         row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(),
+               "plant_phase": plant.get("phase"),
                "device_ids": sorted(snapshot["devices"]), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["room_journal"].append(row)
         _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
@@ -1044,6 +1044,7 @@ async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
     with edit_state() as state:
         room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
         if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        require_journal_plant(state, room_id, plant_id)
         snapshot = _latest_sensor_snapshot(state, room_id)
         row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["plant_journal"].append(row)
