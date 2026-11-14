@@ -79,6 +79,17 @@
 <button type="submit" class="primary-btn">Pflanzenprofil speichern</button><button type="button" class="subtle" id="plantFormReset">Neue Pflanze</button>
 <p id="plantFormError" role="alert" class="form-error"></p>
 </form></article>
+<article class="panel journal-panel">
+<header class="panelhead journal-head"><div class="journal-title"><h3>Growbuch dieses Raums</h3></div>
+<div class="journal-tabs" role="group" aria-label="Growbuch-Ansicht">
+<button class="tab active" data-journal-tab="entries">Einträge</button>
+<button class="tab" data-journal-tab="overview">Übersicht</button>
+<button class="tab" data-journal-tab="phases">Phasen</button>
+<button class="tab" data-journal-tab="notes">Notizen</button>
+</div><button type="button" class="primary-btn" data-add-journal>＋ Eintrag</button></header>
+<div class="journal-body"><div id="journalPreview" class="journal-entries" aria-live="polite">Lade Growbuch …</div>
+<div id="journalSelected" class="journal-detail"><p class="empty-text">Wähle einen Eintrag oder lege eine neue Beobachtung an.</p></div></div>
+</article>
 <article class="panel full-journal">
  <header class="panelhead"><h3>Einträge und Beobachtungen</h3><button class="primary-btn" data-add-journal>＋ Neuer Eintrag</button></header>
  <div id="journalFullList" class="journal-full-list">Lade Growbuch …</div>
