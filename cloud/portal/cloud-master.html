@@ -2,7 +2,7 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#071411"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Grow Central · Steuerung</title><link rel="icon" href="/static/brand-mark.png"><link rel="apple-touch-icon" href="/static/gc-icon-192.png">
-<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/growbook-plants-wiki.css?v=20261114-plantwiki-1"><link rel="stylesheet" href="/static/climate-stage.css?v=20261114-stage-3"><link rel="stylesheet" href="/static/tent-growing-wiki.css?v=20261114-tent-1"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-cloud-2"></head>
+<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/growbook-plants-wiki.css?v=20261114-plantwiki-1"><link rel="stylesheet" href="/static/climate-stage.css?v=20261114-stage-3"><link rel="stylesheet" href="/static/tent-growing-wiki.css?v=20261114-tent-1"><link rel="stylesheet" href="/static/room-setup.css?v=20261114-room-1"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-cloud-2"></head>
 <body><div class="shell">
 <aside class="sidebar"><a class="brand" href="/" aria-label="Grow Central"><img src="/static/brand-logo.png" alt="Grow Central"><small>ENVIRONMENT SYSTEM  //  GC-OS</small></a>
 <nav id="nav" aria-label="Hauptnavigation">
@@ -115,6 +115,7 @@
  <header><h2 id="journalDialogTitle">Growbucheintrag</h2><button type="button" class="icon-button" id="journalClose" aria-label="Schließen">✕</button></header>
  <label>Kategorie<select id="journalCategory" required><option value="observation">Beobachtung</option><option value="watering">Bewässerung</option><option value="feeding">Düngung</option><option value="training">Training</option><option value="repotting">Umtopfen</option><option value="photo">Foto / Dokumentation</option><option value="diagnosis">Diagnose</option><option value="harvest">Ernte</option><option value="note">Notiz</option></select></label>
  <label>Titel<input id="journalTitle" name="title" maxlength="120" required placeholder="Was wurde gemacht?"></label>
+<label>Pflanzenzuordnung<select id="journalPlant"><option value="">Allgemeiner Raumeintrag</option></select></label>
  <label>Notizen<textarea id="journalText" rows="5" maxlength="5000" placeholder="Beobachtungen, Mengen, Maßnahmen …"></textarea></label>
 <label>Foto (optional, JPEG/PNG/WebP · max. 8 MiB)<input id="journalPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
  <div id="journalError" role="alert" class="form-error"></div>
@@ -129,7 +130,18 @@
 </div><div id="cameraSettingsPanel" hidden><div id="cameraControls" class="camera-controls"></div><p id="cameraSettingsStatus" class="desc">Nur tatsächlich von der C920 unterstützte Einstellungen.</p></div>
 <p class="desc">Einstellungen werden nur nach Bestätigung an die angeschlossene Kamera übertragen.</p></article></section>
 <section id="history" class="page"><div class="intro"><h2>Verlauf und Archiv</h2><p>Dokumentierte historische Messwerte, keine beispielhaften Kurven.</p></div><article class="panel"><h3>Letzte gespeicherte Werte</h3><div id="historyData">Lade Archiv …</div></article></section>
-<section id="rooms" class="page"><div class="intro"><h2>Räume</h2><p>Deine tatsächlichen Grow-Central-Räume.</p></div><div id="roomData" class="stack">Lade Räume …</div></section>
+<section id="rooms" class="page"><div class="intro"><h2>Räume</h2><p>Räume verbinden Pflanzen, Geräte, Journal, Fotos und zeitgestempelte Messwerte.</p></div>
+<article class="panel"><header class="panelhead"><h3>Raum anlegen</h3></header>
+<form id="gcRoomCreateForm" class="gc-room-create-form">
+<label>Raumname<input id="gcRoomName" required maxlength="80" placeholder="z. B. Growzelt 2"></label>
+<label>Raumtyp<select id="gcRoomKind"><option value="grow_tent">Growzelt</option><option value="grow_room">Growraum</option><option value="drying">Trocknung</option><option value="storage">Lager</option><option value="other">Sonstige</option></select></label>
+<button type="submit" class="primary-btn">Raum und Growbuch anlegen</button></form>
+<p class="desc">Das Growbuch wird automatisch über die Raum-ID geführt. Einträge, Pflanzen und Fotos sind dadurch vom ersten Tag an zugeordnet.</p><p id="gcRoomCreateStatus" role="status"></p></article>
+<article class="panel"><header class="panelhead"><h3>Geräte dem Raum zuordnen</h3></header>
+<p class="desc">Die Zuordnung verändert keine Lampen- oder Lüfterleistung. Bereits zugeordnete Geräte können über den zugehörigen Raum erkannt werden.</p>
+<div id="gcRoomDeviceList">Geräteliste wird geladen …</div><p id="gcRoomDevicesStatus" role="status"></p></article>
+<div id="roomData" class="stack">Lade Räume …</div>
+</section>
 <section id="homekit" class="page"><div class="intro"><h2>Apple Home</h2><p>HomeKit-Bridge, Lampensteuerung, Abluft und Klimawerte.</p></div><article class="panel"><h3>Bridge-Status</h3><div id="hkData">Lade Bridge …</div></article></section>
 <section id="cloud" class="page">
 <div class="intro"><h2>Grow Central Cloud</h2><p>Deinen Grow-Pi sicher mit deinem Cloud-Konto verbinden. Keine Routerfreigabe nötig.</p></div>
@@ -158,4 +170,4 @@
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
 </div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="growbook">▣<small>Growbuch</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-stage-6"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-2"></script><script src="/static/climate-stage.js?v=20261114-stage-4"></script><script src="/static/tent-growing-wiki.js?v=20261114-tent-1"></script></body></html>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-room-7"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-2"></script><script src="/static/climate-stage.js?v=20261114-stage-4"></script><script src="/static/tent-growing-wiki.js?v=20261114-tent-1"></script><script src="/static/room-setup.js?v=20261114-room-1"></script></body></html>
