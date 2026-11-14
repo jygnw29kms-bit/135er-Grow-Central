@@ -54,6 +54,8 @@ function cameraStart(){
 $('cameraStart')?.addEventListener('click',cameraStart);
 $('cameraStop')?.addEventListener('click',cameraStop);
 function remoteClose(){
+ for(const [id,item] of pendingControl){clearTimeout(item.timeout);controlStatus(item.kind,'Verbindung beendet, Ergebnis unbestimmt.')}
+ pendingControl.clear();busyControl.lamp=false;busyControl.fan=false;controlButtons();
  cameraStop();
  if(remoteInterval){clearInterval(remoteInterval);remoteInterval=null}
  if(remoteSocket){remoteSocket.close();remoteSocket=null}
@@ -68,6 +70,65 @@ function remoteTile(label,value){
  item.append(head,number);return item;
 }
 const latestRemote={fan:null,lamp:null};
+const pendingControl=new Map();
+const busyControl={lamp:false,fan:false};
+function controlButtons(){
+ for(const kind of ['lamp','fan']){
+  const latest=latestRemote[kind];
+  for(const btn of document.querySelectorAll('[data-control-kind="'+kind+'"]')){
+   const active=!!latest;
+   btn.disabled=!active||busyControl[kind]||(btn.dataset.controlAction!=='power'&&!latest.power_on);
+  }
+ }
+}
+function controlStatus(kind,message){
+ const p=$(kind+'ControlStatus');if(p)p.textContent=message;
+}
+function remoteControl(kind,action){
+ if(!['lamp','fan'].includes(kind)||!['power','brightness','speed'].includes(action)||busyControl[kind])return;
+ if(kind==='lamp'&&action==='speed'||kind==='fan'&&action==='brightness')return;
+ const latest=latestRemote[kind];
+ if(!latest||!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN)return;
+ const value=action==='power'?(latest.power_on?0:1):Number($(kind+'Slider').value);
+ if(!Number.isInteger(value))return;
+ if(action!=='power'&&!latest.power_on){controlStatus(kind,'Das Gerät ist ausgeschaltet.');return}
+ const model=kind==='lamp'?'Mars Hydro FC3000':'Mars Hydro DF150-M';
+ const label=action==='power'?(value?'einschalten':'ausschalten'):('auf '+value+' % stellen');
+ if(!window.confirm(model+' wirklich '+label+'?\\nDer physische Gerätezustand wird verändert.'))return;
+ const request_id=crypto.randomUUID();
+ busyControl[kind]=true;controlButtons();
+ controlStatus(kind,'Befehl gesendet, warte auf echte Gerätebestätigung …');
+ const timeout=setTimeout(()=>{
+  if(!pendingControl.has(request_id))return;
+  pendingControl.delete(request_id);busyControl[kind]=false;controlButtons();
+  controlStatus(kind,'Keine eindeutige Bestätigung. NICHT erneut automatisch gesendet.');
+ },30000);
+ pendingControl.set(request_id,{kind,timeout});
+ remoteSocket.send(JSON.stringify({type:'control',request_id,kind,action,value,confirm_physical_change:true}));
+}
+document.addEventListener('click',e=>{
+ const btn=e.target.closest('[data-control-kind][data-control-action]');
+ if(btn)remoteControl(btn.dataset.controlKind,btn.dataset.controlAction);
+});
+for(const kind of ['lamp','fan']){
+ $(kind+'Slider')?.addEventListener('input',e=>{$(kind+'SliderLabel').textContent=e.target.value+' %'});
+}
+function controlResult(data){
+ const entry=pendingControl.get(data.request_id);if(!entry)return;
+ pendingControl.delete(data.request_id);clearTimeout(entry.timeout);
+ busyControl[entry.kind]=false;controlButtons();
+ if(data.ok&&data.device_report_confirmed===true){
+  controlStatus(entry.kind,'Vom Controller bestätigt · '+new Date().toLocaleTimeString('de-DE'));
+  const path=entry.kind==='lamp'?'/api/mars-hydro/ble/fast-lamp-status':'/api/mars-hydro/ble/fast-fan-status';
+  if(remoteSocket?.readyState===WebSocket.OPEN){
+   const id=crypto.randomUUID();pendingRemote.set(id,path);
+   remoteSocket.send(JSON.stringify({type:'read',request_id:id,path}));
+  }
+ }else{
+  controlStatus(entry.kind,'Gerätebestätigung fehlt ('+(data.error||'unbekannter Fehler')+'). Kein automatischer Wiederholungsversuch.');
+ }
+}
+
 function metric(value,unit='',precision=0){
  return Number.isFinite(value)?Number(value).toLocaleString('de-DE',{minimumFractionDigits:precision,maximumFractionDigits:precision})+unit:'—';
 }
@@ -79,6 +140,7 @@ function textRow(label,value){
 }
 function renderTelemetry(){
  const f=latestRemote.fan,l=latestRemote.lamp;
+ controlButtons();
  $('remoteTiles').replaceChildren(
   remoteTile('Temperatur',metric(f?.temperature_c,' °C',1)),
   remoteTile('Luftfeuchte',metric(f?.humidity_rh,' % rF',1)),
@@ -147,6 +209,7 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
+  if(data.type==='control_result'){controlResult(data);return}
   if(data.type==='camera_result'){
    cameraPending=false;
    if(!cameraActive)return;
