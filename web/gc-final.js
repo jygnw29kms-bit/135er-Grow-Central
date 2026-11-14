@@ -367,8 +367,7 @@ setInterval(()=>{if(!document.hidden&&state.page==='cloud')cloudRefresh();},1000
 
 // Final Master: inline scalable SVG icons, no icon fonts or raster scaling.
 const svgPaths={
-home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
-layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
+home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
 thermometer:'<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 11v7"/>',
 droplets:'<path d="M12 2C10 5 5 10 5 14a7 7 0 0 0 14 0c0-4-5-9-7-12z"/>',
 fan:'<path d="M12 12c-4-9-8-8-8-4 0 2 2 4 8 4zm0 0c9-4 8-8 4-8-2 0-4 2-4 8zm0 0c4 9 8 8 8 4 0-2-2-4-8-4zm0 0c-9 4-8 8-4 8 2 0 4-2 4-8z"/><circle cx="12" cy="12" r="2"/>',
@@ -499,3 +498,40 @@ async function deleteJournal(id){
   notify('Eintrag gelöscht');
  }catch(e){notify('Löschen fehlgeschlagen: '+e.message);}
 }
+async function loadRecentEvents(){
+ const root=journalPath();if(!root)return;
+ try{
+  const result=await api(root+'/events?limit=7');
+  const entries=result.events||[];
+  $('recentEvents').innerHTML=entries.length?entries.map(x=>{
+   const time=new Date(x.created_at||x.timestamp||'');
+   const dateText=isNaN(time)?'—':time.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+   const label=catLabels[x.type]||x.type||'Ereignis';
+   const note=x.note||label;
+   return '<div class="recent-event"><time>'+dateText+'</time><span>'+esc(note)+'</span></div>';
+  }).join(''):'<p class="empty-text">Noch keine Grow-Ereignisse vorhanden.</p>';
+ }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
+}
+document.addEventListener('click',e=>{
+ const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
+ const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
+ const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
+ const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
+ const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
+});
+$('journalForm')?.addEventListener('submit',saveJournal);
+$('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
+$('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
+$('roomPicker')?.addEventListener('change',async e=>{
+ growJournal.roomId=e.target.value;
+ const row=(state.rooms||[]).find(x=>x.id===growJournal.roomId);
+ text('currentRoom',row?.name||'—');text('heroRoom',row?.name||'—');
+ growJournal.selectedId=null;
+ await Promise.all([loadJournal(),loadRecentEvents()]);
+});
+setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+
+renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
+cameraLoad();
+
+})();
