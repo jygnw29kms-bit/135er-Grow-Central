@@ -9,6 +9,7 @@ from datetime import datetime,timezone
 from bleak import BleakClient, BleakScanner
 from app.mars_fc3000_trial import context_from_live_status, encode_command
 from app.mars_hydro_ble import MZF002_NOTIFY, MZF002_WRITE, MZF002_SERVICE
+from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay
 
 log=logging.getLogger(__name__)
 NAME="MZ_MARS_68756_FCB467AEC260"
@@ -40,29 +41,43 @@ class FastLamp:
                     'brightness_percent':status['brightness_percent']}))
                 os.replace(tmp,target)
     async def runner(self):
+        failures=0
         while True:
+            client=None
             try:
-                # Exact owner peripheral already present in BlueZ cache.
-                # Direct address avoids scanner round trips on reconnect.
                 target=os.getenv("GC_FC3000_BLE_ADDRESS","FC:B4:67:AE:C2:62")
-                async with BleakClient(target,timeout=6) as client:
-                    uuids={str(s.uuid).lower() for s in client.services}
-                    if MZF002_SERVICE not in uuids:raise ValueError("Unexpected service")
-                    await client.start_notify(MZF002_NOTIFY,self.notify)
-                    self.client=client
-                    log.info("FC3000 fast BLE connected")
-                    while client.is_connected:
-                        await asyncio.sleep(.5)
-                    self.client=None
+                # Avoid overlapping BlueZ connection attempts to the fan.
+                async with CONNECT_GATE:
+                    client=BleakClient(target,timeout=10)
+                    try:
+                        await client.connect()
+                        uuids={str(s.uuid).lower() for s in client.services}
+                        if MZF002_SERVICE not in uuids:
+                            raise ValueError("Unexpected service")
+                        await client.start_notify(MZF002_NOTIFY,self.notify)
+                    except BaseException:
+                        if client.is_connected:
+                            await client.disconnect()
+                        raise
+                self.client=client
+                failures=0
+                log.info("FC3000 fast BLE connected")
+                while client.is_connected:
+                    await asyncio.sleep(.5)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
+                failures+=1
                 log.warning("FC3000 fast BLE reconnect %s: %s",type(exc).__name__,str(exc)[:140])
             finally:
                 self.client=None
                 self.latest=None
                 self.at=0
-            await asyncio.sleep(3)
+                if client is not None and client.is_connected:
+                    try:await asyncio.wait_for(client.disconnect(),timeout=5)
+                    except Exception as exc:
+                        log.warning("FC3000 BLE disconnect %s",type(exc).__name__)
+            await asyncio.sleep(reconnect_delay(max(1,failures),base=3.0,cap=45.0))
     async def control(self,action,value,allowed):
         async with self.lock:
             client=self.client
