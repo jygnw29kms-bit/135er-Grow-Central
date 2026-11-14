@@ -463,7 +463,9 @@ function remoteOpen(deviceId){
  remoteClose();
  if(!deviceId||!accessToken)return;
  currentDeviceId=deviceId;
- const panel=$('remoteDashboard');panel.hidden=false;
+ // Keep the internal legacy panel hidden during WebSocket authentication.
+ // The authenticated Final Master becomes visible only after auth_ok.
+ const panel=$('remoteDashboard');panel.hidden=true;
  $('remoteState').textContent='Authentifiziere Gerätekanal …';
  const socket=new WebSocket('wss://'+location.host+'/api/v2/remote/connect');
  remoteSocket=socket;
