@@ -37,29 +37,77 @@ function remoteClose(){
  const panel=$('remoteDashboard');if(panel)panel.hidden=true;
 }
 function remoteTile(label,value){
- const item=document.createElement('div');item.className='device';
+ const item=document.createElement('div');item.className='gc-metric';
  const head=document.createElement('small');head.textContent=label;
  const number=document.createElement('b');number.textContent=value;
  item.append(head,number);return item;
 }
-function remoteRead(path){
- if(!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN)return;
- remoteSocket.send(JSON.stringify({type:'read',request_id:String(++remoteRequest)+'-'+crypto.randomUUID(),path}));
+const latestRemote={fan:null,lamp:null};
+function metric(value,unit='',precision=0){
+ return Number.isFinite(value)?Number(value).toLocaleString('de-DE',{minimumFractionDigits:precision,maximumFractionDigits:precision})+unit:'—';
+}
+function textRow(label,value){
+ const row=document.createElement('div');row.className='gc-system-row';
+ const a=document.createElement('span');a.textContent=label;
+ const b=document.createElement('strong');b.textContent=value;
+ row.append(a,b);return row;
+}
+function renderTelemetry(){
+ const f=latestRemote.fan,l=latestRemote.lamp;
+ $('remoteTiles').replaceChildren(
+  remoteTile('Temperatur',metric(f?.temperature_c,' °C',1)),
+  remoteTile('Luftfeuchte',metric(f?.humidity_rh,' % rF',1)),
+  remoteTile('Lüfterdrehzahl',metric(f?.rpm,' RPM')),
+  remoteTile('FC3000 Licht',l?(l.power_on?metric(l.brightness_percent,' %'):'Aus'):'—')
+ );
+ $('lampDisplay').replaceChildren(
+  textRow('Gerätestatus',l?(l.power_on?'Eingeschaltet':'Ausgeschaltet'):'Keine BLE-Werte'),
+  textRow('Helligkeit',l?metric(l.brightness_percent,' %'):'—')
+ );
+ $('fanDisplay').replaceChildren(
+  textRow('Gerätestatus',f?(f.power_on?'Eingeschaltet':'Ausgeschaltet'):'Keine BLE-Werte'),
+  textRow('Sollstufe',f?metric(f.setpoint_percent,' %'):'—'),
+  textRow('Ist-Drehzahl',metric(f?.rpm,' RPM'))
+ );
+}
+function renderRooms(data){
+ const target=$('roomsDisplay');target.replaceChildren();
+ const rooms=Array.isArray(data.rooms)?data.rooms:[];
+ if(!rooms.length){target.textContent='Noch keine Räume vorhanden';return}
+ for(const room of rooms.slice(0,12))target.append(textRow(room.name||'Raum',String(room.plant_count??0)+' Pflanzen'));
+}
+function renderHistory(data){
+ const target=$('historyDisplay');target.replaceChildren();
+ const rows=Array.isArray(data.latest)?data.latest:[];
+ if(!rows.length){target.textContent='Noch keine Messhistorie vorhanden.';return}
+ for(const entry of rows.slice(0,7)){
+  const el=document.createElement('div');el.className='gc-history-row';
+  const name=document.createElement('span');name.textContent=entry.device==='fan'?'DF150-M':entry.device==='lamp'?'FC3000':'Messung';
+  const detail=document.createElement('span');
+  detail.textContent=entry.device==='fan'?[metric(entry.temperature_c,' °C',1),metric(entry.humidity_rh,' %',1)].join(' · '):entry.power_on?'Licht Ein':'Licht Aus';
+  const stamp=document.createElement('time');const dt=new Date(entry.recorded_at);
+  stamp.textContent=Number.isFinite(dt.getTime())?dt.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'—';
+  el.append(name,detail,stamp);target.append(el);
+ }
 }
 function displayRemote(message){
  if(!message.ok){$('remoteState').textContent='Lesezugriff: '+(message.error||'Fehler');return}
  const info=message.data||{};
- if(message.path.includes('fan-status')){
-  const d=info.fresh?info.latest:null;
-  const target=$('remoteTiles');target.replaceChildren();
-  target.append(remoteTile('Temperatur',d&&Number.isFinite(d.temperature_c)?d.temperature_c.toFixed(1)+' °C':'Keine Daten'));
-  target.append(remoteTile('Luftfeuchte',d&&Number.isFinite(d.humidity_rh)?d.humidity_rh.toFixed(1)+' %':'Keine Daten'));
-  target.append(remoteTile('Lüfterdrehzahl',d&&Number.isFinite(d.rpm)?d.rpm+' RPM':'Keine Daten'));
- }else if(message.path.includes('lamp-status')){
-  const d=info.fresh?info.latest:null;
-  $('remoteTiles').append(remoteTile('FC3000 Licht',d?(d.power_on?d.brightness_percent+' %':'Aus'):'Keine Daten'));
+ switch(message.path){
+ case '/api/mars-hydro/ble/fast-fan-status':
+  latestRemote.fan=info.fresh?info.latest:null;renderTelemetry();break;
+ case '/api/mars-hydro/ble/fast-lamp-status':
+  latestRemote.lamp=info.fresh?info.latest:null;renderTelemetry();break;
+ case '/api/v1/rooms':renderRooms(info);break;
+ case '/api/mars-history/summary':renderHistory(info);break;
+ case '/api/cloud/status':
+  $('systemDisplay').replaceChildren(
+   textRow('Cloud-Kopplung',info.pairing?.status==='paired'?'Gekoppelt':'Prüfe …'),
+   textRow('Cloud-Steuerkanal','Verschlüsselt'),
+   textRow('Fernschalten','Deaktiviert')
+  );break;
  }
- $('remoteState').textContent='Live-Lesekanal verbunden · '+new Date().toLocaleTimeString('de-DE');
+ $('remoteState').textContent='LIVE · '+new Date().toLocaleTimeString('de-DE');
 }
 const pendingRemote=new Map();
 function remoteOpen(deviceId){
@@ -79,7 +127,7 @@ function remoteOpen(deviceId){
    const poll=()=>{
     pendingRemote.clear();
     if(socket.readyState!==WebSocket.OPEN)return;
-    for(const path of ['/api/mars-hydro/ble/fast-fan-status','/api/mars-hydro/ble/fast-lamp-status']){
+    for(const path of ['/api/mars-hydro/ble/fast-fan-status','/api/mars-hydro/ble/fast-lamp-status','/api/v1/rooms','/api/mars-history/summary','/api/cloud/status']){
      const id=crypto.randomUUID();pendingRemote.set(id,path);
      socket.send(JSON.stringify({type:'read',request_id:id,path}));
     }
