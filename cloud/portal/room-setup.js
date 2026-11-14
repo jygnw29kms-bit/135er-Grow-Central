@@ -85,5 +85,27 @@ create.addEventListener('submit',async event=>{
 });
 $('roomPicker')?.addEventListener('change',refresh);
 $('plantRefresh')?.addEventListener('click',()=>{setTimeout(refresh,150)});
+window.addEventListener('gc:journal-open',async event=>{
+ const target=$('journalLivePreview'),room=event.detail?.room_id;
+ if(!target||!room)return;
+ target.textContent='Prüfe Live-Messwerte für diesen Raum …';
+ try{
+  const snapshot=await api('/api/v1/rooms/'+encodeURIComponent(room)+'/live-snapshot');
+  const parts=['Momentaufnahme: '+new Date(snapshot.captured_at).toLocaleString('de-DE')];
+  const devices=snapshot.devices||{};
+  for(const [id,values] of Object.entries(devices)){
+   const label=id==='mars-hydro:df150m'?'DF150-M':id==='mars-hydro:fc3000'?'FC3000':id;
+   const d=id==='mars-hydro:df150m'
+    ?[Number.isFinite(values.temperature_c)?values.temperature_c+' °C':null,
+      Number.isFinite(values.humidity_rh)?values.humidity_rh+' % rF':null,
+      values.power_on?(Number.isFinite(values.rpm)?values.rpm+' RPM':'Drehzahl offen'):'Lüfter Aus']
+    :[values.power_on?'Lampe Ein':'Lampe Aus',
+      Number.isFinite(values.brightness_percent)?values.brightness_percent+' % Sollwert':null];
+   parts.push(label+': '+d.filter(Boolean).join(' · '));
+  }
+  target.textContent=Object.keys(devices).length?parts.join(' | ')
+   :'Zum Aufnahmezeitpunkt keine frischen Messwerte zugeordneter Geräte. Es werden keine Ersatzwerte erfunden.';
+ }catch(e){target.textContent='Messvorschau nicht verfügbar: '+e.message}
+});
 setTimeout(refresh,500);
 })();
