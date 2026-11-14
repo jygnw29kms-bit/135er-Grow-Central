@@ -148,7 +148,7 @@ class MarsLampAccessory(MarsAccessory):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         status=snapshot('lamp')
-service=self.add_preload_service('Lightbulb',chars=['Brightness'])
+        service=self.add_preload_service('Lightbulb',chars=['Brightness'])
         self.on=service.configure_char('On',value=bool(status.get('power_on',False)),
                                        setter_callback=self.set_on)
         self.level=service.configure_char('Brightness',

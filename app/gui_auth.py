@@ -148,7 +148,7 @@ def authenticated(request: Request) -> bool:
     SESSIONS.pop(token, None)
     persistent = _load_persistent_sessions().get(_token_hash(token))
     if not persistent or persistent <= time.time():
-return False
+        return False
     remaining = max(1.0, persistent - time.time())
     SESSIONS[token] = GuiSession(expires=time.monotonic() + remaining)
     return True
