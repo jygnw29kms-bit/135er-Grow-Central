@@ -38,11 +38,11 @@ function controlMarkup(kind){
  const src=lamp?'/static/mars-fc3000-transparent.png':'/static/mars-df150m-hires.jpg';
  return '<article class="control" data-control="'+kind+'">'+
   '<div class="controlhead"><div class="name"><h3>Mars Hydro '+model+'</h3><small>'+(lamp?'LED Grow Light':'Inline-Lüfter · BLE')+'</small></div>'+
-  '<button class="switch" type="button" data-power="'+kind+'" aria-label="'+model+' ein- oder ausschalten">Status —</button></div>'+
+  '<span class="switch" data-power-status="'+kind+'" aria-live="polite">Status —</span></div>'+
   '<div class="control-image"><img src="'+src+'" alt="Original Mars Hydro '+model+'" loading="eager" decoding="async"></div>'+
   '<div class="control-bottom"><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüftergeschwindigkeit')+'</span><strong data-level-label="'+kind+'">—</strong></div>'+
   '<input class="slider" aria-label="'+model+' Sollstufe" data-slider="'+kind+'" type="range" min="'+(lamp?10:25)+'" max="100" value="'+(lamp?10:25)+'" step="1">'+
-  '<div class="ctlrow"><span data-status-label="'+kind+'">Prüfe …</span><button class="apply" type="button" data-apply="'+kind+'">Übernehmen</button></div></div>'+
+  '<div class="ctlrow control-actions"><span data-status-label="'+kind+'">Prüfe …</span><div class="control-buttons"><button class="apply" type="button" data-apply="'+kind+'" aria-label="'+model+' Stufe übernehmen">Übernehmen</button><button class="power-action" type="button" data-power="'+kind+'" aria-label="'+model+' ein- oder ausschalten" title="Gerät ein-/ausschalten">⏻</button></div></div></div>'+
   '<div class="ctlfoot"><span>'+(lamp?'Status:':'Drehzahl:')+' <b data-live-detail="'+kind+'">—</b></span><span data-read-age="'+kind+'">—</span></div>'+
   '<div class="ctlmsg" data-control-msg="'+kind+'"></div></article>';
 }
@@ -57,8 +57,9 @@ function setControls(kind,status){
  const active=!!latest,level=kind==='lamp'?'brightness_percent':'setpoint_percent';
  const percent=active?latest[level]:null;
  document.querySelectorAll('[data-control="'+kind+'"]').forEach(root=>{
-   const sw=root.querySelector('[data-power]'),slider=root.querySelector('[data-slider]'),apply=root.querySelector('[data-apply]');
-   if(sw){sw.textContent=active?(latest.power_on?'Ein':'Aus'):'Keine Daten';sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];}
+   const sw=root.querySelector('[data-power]'),badge=root.querySelector('[data-power-status]'),slider=root.querySelector('[data-slider]'),apply=root.querySelector('[data-apply]');
+   if(badge){badge.textContent=active?(latest.power_on?'● Ein':'Aus'):'Keine Daten';badge.classList.toggle('on',active&&latest.power_on);}
+   if(sw){sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];sw.setAttribute('aria-pressed',String(active&&!!latest.power_on));}
    if(slider){slider.disabled=!active||!latest.power_on||state.busy[kind];if(!state.sliderEdit[kind]&&percent!=null)slider.value=percent;}
    if(apply)apply.disabled=!active||!latest.power_on||state.busy[kind];
  });
