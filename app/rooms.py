@@ -683,6 +683,13 @@ def live_room_snapshot(room_id: str, state: dict[str, Any] | None = None) -> dic
     return result
 
 
+@router.get("/{room_id}/live-snapshot")
+async def room_live_snapshot(room_id: str):
+    state=load_state()
+    room_or_404(state,room_id)
+    return live_room_snapshot(room_id,state)
+
+
 @router.get("/{room_id}/devices")
 async def room_devices(room_id: str):
     state = load_state(); room_or_404(state, room_id)
