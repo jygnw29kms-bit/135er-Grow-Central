@@ -13,6 +13,29 @@
    window.parent.postMessage({source:'gc-cloud-master',id,kind,...payload},origin);
   });
  }
+ async function compactPhoto(body){
+  if(!body||typeof body.image_data_url!=='string')return body;
+  const raw=body.image_data_url;
+  if(!raw.startsWith('data:image/'))throw new Error('Fotoformat nicht unterstützt');
+  const image=new Image();
+  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=raw});
+  const canvas=document.createElement('canvas');
+  const scale=Math.min(1,960/Math.max(image.naturalWidth,image.naturalHeight));
+  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Bildumwandlung nicht verfügbar');
+  ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  let encoded=canvas.toDataURL('image/jpeg',0.68);
+  for(let i=0;encoded.length>165000&&i<4;i++){
+   const previous=document.createElement('canvas');previous.width=canvas.width;previous.height=canvas.height;
+   previous.getContext('2d').drawImage(canvas,0,0);
+   canvas.width=Math.max(160,Math.round(canvas.width*0.75));canvas.height=Math.max(90,Math.round(canvas.height*0.75));
+   ctx.drawImage(previous,0,0,canvas.width,canvas.height);
+   encoded=canvas.toDataURL('image/jpeg',0.58);
+  }
+  if(encoded.length>165000)throw new Error('Foto ist für die Cloud-Vorschau zu groß');
+  return {...body,image_data_url:encoded};
+ }
  window.fetch=(input,init={})=>{
   let url;
   try{url=new URL(typeof input==='string'?input:input.url,location.href)}
@@ -21,7 +44,10 @@
   const method=(init.method||'GET').toUpperCase(),path=url.pathname+url.search;
   let body;
   if(init.body){try{body=JSON.parse(init.body)}catch{return Promise.reject(new Error('Invalid JSON request'))}}
-  return ask('fetch',{path,method,body}).then(result=>new Response(JSON.stringify(result.data??{}),{
+  const transmit=path==='/api/v1/grow-photos'&&method==='POST'
+   ?compactPhoto(body).then(compact=>ask('fetch',{path,method,body:compact}))
+   :ask('fetch',{path,method,body});
+  return transmit.then(result=>new Response(JSON.stringify(result.data??{}),{
    status:result.status,
    headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   }));
@@ -43,7 +69,21 @@
    }
   }).catch(()=>{cameraPending=false});
  }
+ function inspectPhotos(){
+  for(const img of document.querySelectorAll('img.journal-photo')){
+   if(img.dataset.cloudPhotoRequested)return;
+   const src=img.getAttribute('src')||'';
+   const photoId=src.match(/^\\/api\\/v1\\/grow-photos\\/(photo_[a-zA-Z0-9_-]+)$/)?.[1];
+   if(!photoId)continue;
+   img.dataset.cloudPhotoRequested='1';img.src=transparent;
+   ask('photo',{photo_id:photoId}).then(result=>{
+    if(result.status===200&&typeof result.data?.image==='string'&&result.data.image.startsWith('data:image/'))
+     img.src=result.data.image;
+   }).catch(()=>{});
+  }
+ }
  function inspectCamera(){
+  inspectPhotos();
   const img=document.querySelector('.camframe img');
   if(!img){cameraImage=null;return}
   const src=img.getAttribute('src')||'';
