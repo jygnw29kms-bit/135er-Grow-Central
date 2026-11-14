@@ -53,8 +53,21 @@ create.addEventListener('submit',async event=>{
  const button=create.querySelector('button[type="submit"]');
  inFlight=true;button.disabled=true;$('gcRoomCreateStatus').textContent='Raum wird angelegt …';
  try{
+  const selectedDevices=[
+   $('gcNewRoomLamp')?.checked?'mars-hydro:fc3000':null,
+   $('gcNewRoomFan')?.checked?'mars-hydro:df150m':null
+  ].filter(Boolean);
   const result=await api('/api/v1/rooms',{method:'POST',body:JSON.stringify({name,kind:$('gcRoomKind').value})});
-  $('gcRoomCreateStatus').textContent='Raum und zugehöriges Growbuch erstellt. Geräte können anschließend zugeordnet werden.';
+  const failures=[];
+  for(const device_id of selectedDevices){
+   try{
+    await api('/api/v1/rooms/'+encodeURIComponent(result.room_id)+'/devices',
+      {method:'POST',body:JSON.stringify({device_id})});
+   }catch(e){failures.push(device_id+': '+e.message)}
+  }
+  $('gcRoomCreateStatus').textContent=failures.length?
+   'Raum und Growbuch erstellt. Gerätezuordnung teilweise offen: '+failures.join('; '):
+   'Raum und Growbuch erstellt; '+selectedDevices.length+' Gerät(e) zugeordnet.';
   create.reset();
   const roomList=await api('/api/v1/rooms');
   const selector=$('roomPicker');
