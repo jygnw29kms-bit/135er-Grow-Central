@@ -54,7 +54,7 @@ async def serve(ws,local):
   if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
   if req.get("type")=="camera_frame":
    try:
-    r=await local.get(LOCAL_API+"/api/v1/camera/snapshot?width=320&height=240",
+    r=await local.get(LOCAL_API+"/api/v1/camera/snapshot/cloud-preview",
        headers=local_headers(),timeout=17)
     if not r.is_success:raise ValueError("camera_http_"+str(r.status_code))
     if r.headers.get("content-type","").split(";")[0]!="image/jpeg":raise ValueError("invalid_image_format")
