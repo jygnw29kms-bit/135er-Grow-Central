@@ -2,7 +2,7 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#071411"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Grow Central · Steuerung</title><link rel="icon" href="/static/brand-mark.png"><link rel="apple-touch-icon" href="/static/gc-icon-192.png">
-<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-master-13"></head>
+<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-plant-form-1"></head>
 <body><div class="shell">
 <aside class="sidebar"><a class="brand" href="/ui" aria-label="Grow Central"><img src="/static/brand-logo.png" alt="Grow Central"><small>ENVIRONMENT SYSTEM  //  GC-OS</small></a>
 <nav id="nav" aria-label="Hauptnavigation">
@@ -65,29 +65,57 @@
 <div class="intro"><h2>Raum-Growbuch</h2><p id="journalRoomInfo">Raum auswählen · Pflanzen und Substrat zuerst anlegen.</p><button type="button" class="subtle" data-page="rooms">Zurück zu Räume</button></div>
 <article class="panel"><h3>Pflanzen im Raum</h3><div id="roomPlantProfiles">Noch keine Pflanzen geladen.</div>
 <form id="roomPlantForm" class="gc-plant-form">
-<h3>Pflanze und Kulturprofil</h3><input id="plantEditId" type="hidden">
-<label>Name der Pflanze<input id="plantName" maxlength="80" required></label>
-<label>Kultur<input id="plantCrop" maxlength="80" required placeholder="z. B. Cannabis, Tomate, Basilikum"></label>
-<label>Entwicklungsphase<select id="plantPhase" required><option value="germination">Keimung</option><option value="seedling">Sämling</option><option value="vegetative">Wachstum</option><option value="flowering">Blüte</option><option value="flush">Spülen / Reife</option><option value="finish">Abschluss</option><option value="harvest">Ernte</option><option value="other">Sonstige</option></select></label>
-<label>Herstellerneutrale Mischungsbeispiele<select id="plantMixPreset">
-<option value="">Eigene Zusammensetzung eingeben</option>
-<option value="coco70">Kokos 70 % / Perlit 30 % (in der Regel nährstoffarm)</option>
-<option value="peat60">Torf 60 % / Perlit 20 % / Vermiculit 20 %</option>
-<option value="coco50">Kokos 50 % / Perlit 17 % / Vermiculit 17 % / Wurmhumus 16 %</option>
-<option value="cocopeat">Kokos 60 % / Torf 30 % / Perlit 10 %</option>
-<option value="soilcompost">Torf 60 % / Perlit 30 % / Kompost 10 %</option>
-<option value="living">Living Soil (Zusammensetzung selbst erfassen)</option>
-<option value="rockwool">Steinwolle (ohne zugesetzte Nährstoffe)</option>
-</select></label>
-<label>Substrattyp<select id="plantSubstrate" required><option value="">Bitte wählen</option><option value="peat_mix">Torf-/Erdmischung</option><option value="coco_mix">Kokos-/Perlitmischung</option><option value="living_soil">Lebendige Erde / Living Soil</option><option value="compost_mix">Kompost-/Humusmischung</option><option value="mineral_mix">Mineralisches Substrat</option><option value="rockwool">Steinwolle</option><option value="hydroponic">Hydrokultur ohne Erde</option><option value="custom">Eigene Mischung</option></select></label>
-<label>Zusammensetzung<input id="plantComposition" maxlength="500" required placeholder="z. B. Torf 65 %, Perlit 25 %, Kompost 10 %"></label>
-<label>Substrat vorgedüngt?<select id="plantPreFert" required><option value="">Bitte wählen</option><option value="yes">Ja</option><option value="no">Nein</option><option value="unknown">Unbekannt</option></select></label>
-<label>Düngekonzept<select id="plantNutrition" required><option value="">Bitte wählen</option><option value="organic">Bio / organisch</option><option value="mineral">Mineralisch / nicht Bio</option><option value="mixed">Gemischt</option><option value="none_planned">Zunächst keine Nachdüngung geplant</option><option value="undecided">Noch nicht entschieden</option></select></label>
-<label>Topftyp<select id="plantContainer" required><option value="">Bitte wählen</option><option value="plastic">Standard-Kunststofftopf</option><option value="fabric">Stoff-/Airpot</option><option value="air_pruning">Air-Pruning-Topf</option><option value="self_watering">Selbstbewässernder Topf</option><option value="high_tech">Hightech-Growtopf (Sensorik/Steuerung)</option><option value="hydro_system">Hydroponisches System</option><option value="other">Sonstiger Topf</option></select></label>
-<label>Volumen in Litern (optional)<input id="plantVolume" type="number" min="0.1" max="10000" step="0.1"></label>
-<p class="desc">Die Düngung wird nicht automatisch empfohlen: Nährstoffbedarf hängt von Rezeptur, Vordüngung, Phase und Messwerten ab. Angaben sind herstellerunabhängig.</p>
-<button type="submit" class="primary-btn">Pflanzenprofil speichern</button><button type="button" class="subtle" id="plantFormReset">Neue Pflanze</button>
-<p id="plantFormError" role="alert" class="form-error"></p>
+  <div class="gc-plant-form-head"><div><h3>Pflanze und Kulturprofil</h3><p class="desc">Alle Pflichtangaben vor dem ersten Growbucheintrag erfassen. Bestehende Pflanzen können bearbeitet werden.</p></div></div>
+  <input id="plantEditId" type="hidden">
+  <fieldset class="gc-form-section">
+    <legend><span class="gc-form-step">01</span> Pflanze und Entwicklungsphase</legend>
+    <div class="gc-form-grid gc-grid-three">
+      <label class="gc-form-field"><span>Pflanzenname *</span><input id="plantName" maxlength="80" required placeholder="z. B. Pflanze 1" autocomplete="off"></label>
+      <label class="gc-form-field"><span>Kultur *</span><select id="plantCropSelect" required>
+        <option value="">Kultur auswählen</option>
+        <optgroup label="Kräuter und Heilpflanzen">
+          <option value="Cannabis">Cannabis / Hanf</option><option value="Basilikum">Basilikum</option><option value="Minze">Minze</option><option value="Petersilie">Petersilie</option><option value="Rosmarin">Rosmarin</option><option value="Thymian">Thymian</option>
+        </optgroup>
+        <optgroup label="Gemüse und Obst">
+          <option value="Tomate">Tomate</option><option value="Paprika">Paprika</option><option value="Chili">Chili</option><option value="Gurke">Gurke</option><option value="Salat">Salat</option><option value="Erdbeere">Erdbeere</option>
+        </optgroup>
+        <optgroup label="Weitere Kulturen">
+          <option value="Orchidee">Orchidee</option><option value="Zimmerpflanze">Zimmerpflanze</option><option value="Pilze">Pilze</option><option value="__custom__">Eigene Kultur eingeben …</option>
+        </optgroup>
+      </select><input id="plantCrop" type="hidden"></label>
+      <label class="gc-form-field"><span>Entwicklungsphase *</span><select id="plantPhase" required><option value="germination">Keimung</option><option value="seedling">Sämling</option><option value="vegetative">Wachstum</option><option value="flowering">Blüte</option><option value="flush">Spülen / Reife</option><option value="finish">Abschluss</option><option value="harvest">Ernte</option><option value="other">Sonstige</option></select></label>
+      <label class="gc-form-field gc-field-wide" id="plantCropOtherWrap" hidden><span>Eigene Kultur *</span><input id="plantCropOther" maxlength="80" placeholder="Name der Kultur eingeben" autocomplete="off"></label>
+    </div>
+  </fieldset>
+  <fieldset class="gc-form-section">
+    <legend><span class="gc-form-step">02</span> Substrat und Zusammensetzung</legend>
+    <div class="gc-form-grid gc-grid-two">
+      <label class="gc-form-field"><span>Substrattyp *</span><select id="plantSubstrate" required><option value="">Bitte wählen</option><option value="peat_mix">Torf-/Erdmischung</option><option value="coco_mix">Kokos-/Perlitmischung</option><option value="living_soil">Lebendige Erde / Living Soil</option><option value="compost_mix">Kompost-/Humusmischung</option><option value="mineral_mix">Mineralisches Substrat</option><option value="rockwool">Steinwolle</option><option value="hydroponic">Hydrokultur ohne Erde</option><option value="custom">Eigene Mischung</option></select></label>
+      <label class="gc-form-field"><span>Zusammensetzungs-Vorlage (optional)</span><select id="plantMixPreset">
+        <option value="">Individuelle Mischung</option>
+        <option value="coco70">Kokos 70 % / Perlit 30 %</option>
+        <option value="peat60">Torf 60 % / Perlit 20 % / Vermiculit 20 %</option>
+        <option value="coco50">Kokos 50 % / Perlit 17 % / Vermiculit 17 % / Wurmhumus 16 %</option>
+        <option value="cocopeat">Kokos 60 % / Torf 30 % / Perlit 10 %</option>
+        <option value="soilcompost">Torf 60 % / Perlit 30 % / Kompost 10 %</option>
+        <option value="living">Living Soil: Eigene Rezeptur</option>
+        <option value="rockwool">Steinwolle 100 %</option>
+      </select></label>
+      <label class="gc-form-field gc-field-wide"><span>Zusammensetzung *</span><input id="plantComposition" maxlength="500" required placeholder="z. B. Torf 65 %, Perlit 25 %, Kompost 10 %"></label>
+    </div>
+  </fieldset>
+  <fieldset class="gc-form-section">
+    <legend><span class="gc-form-step">03</span> Düngung und Topfsystem</legend>
+    <div class="gc-form-grid gc-grid-two">
+      <label class="gc-form-field"><span>Substrat vorgedüngt? *</span><select id="plantPreFert" required><option value="">Bitte wählen</option><option value="yes">Ja</option><option value="no">Nein</option><option value="unknown">Unbekannt</option></select></label>
+      <label class="gc-form-field"><span>Düngekonzept *</span><select id="plantNutrition" required><option value="">Bitte wählen</option><option value="organic">Bio / organisch</option><option value="mineral">Mineralisch / nicht Bio</option><option value="mixed">Gemischt</option><option value="none_planned">Zunächst keine Nachdüngung geplant</option><option value="undecided">Noch nicht entschieden</option></select></label>
+      <label class="gc-form-field"><span>Topftyp *</span><select id="plantContainer" required><option value="">Bitte wählen</option><option value="plastic">Standard-Kunststofftopf</option><option value="fabric">Stofftopf</option><option value="air_pruning">Air-Pruning-Topf</option><option value="self_watering">Selbstbewässernder Topf</option><option value="high_tech">Hightech-Growtopf (Sensorik/Steuerung)</option><option value="hydro_system">Hydroponisches System</option><option value="other">Sonstiger Topf</option></select></label>
+      <label class="gc-form-field"><span>Topfvolumen (Liter, optional)</span><input id="plantVolume" type="number" min="0.1" max="10000" step="0.1" placeholder="z. B. 20"></label>
+    </div>
+  </fieldset>
+  <p class="gc-form-hint">* Pflichtfeld. Nährstoffbedarf hängt von Rezeptur, Vordüngung, Pflanzenphase und Messwerten ab. Die Auswahl bleibt herstellerunabhängig.</p>
+  <div class="gc-form-actions"><button type="submit" class="primary-btn">Pflanzenprofil speichern</button><button type="button" class="subtle" id="plantFormReset">Neue Pflanze</button></div>
+  <p id="plantFormError" role="alert" class="form-error"></p>
 </form></article>
 <article class="panel journal-panel">
 <header class="panelhead journal-head"><div class="journal-title"><h3>Growbuch dieses Raums</h3></div>
@@ -160,4 +188,4 @@
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
 </div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="rooms">▣<small>Räume</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/gc-final.js?v=20261114-soil-fault-1"></script></body></html>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/gc-final.js?v=20261114-plant-form-1"></script></body></html>
