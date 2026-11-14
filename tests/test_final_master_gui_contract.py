@@ -24,6 +24,9 @@ def run():
  assert "mars-fc3000-transparent.png" in js
  assert "mars-df150m-hires.jpg" in js
  assert "loadJournal()" in js and "saveJournal(event)" in js
+ assert 'data-power-status' in js and 'data-power' in js and 'control-buttons' in js
+ assert '.power-action' in css and '.control-actions' in css
+ assert '20261114-master-13' in html and '20261114-master-13' in (WEB/'gc-worker.js').read_text()
  assert all((WEB/a).is_file() for a in ("gc-hero-leaf.jpg","mars-fc3000-transparent.png","mars-df150m-hires.jpg","brand-mark.png"))
  assert all(example not in html and example not in js for example in ("24.6 °C","1320 RPM","2,5 L pro Topf"))
  assert css.count("{")==css.count("}")
