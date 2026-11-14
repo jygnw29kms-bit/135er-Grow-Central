@@ -85,13 +85,12 @@
  }
  function inspectCamera(){
   inspectPhotos();
-  const img=document.querySelector('.camframe img');
+  const img=document.querySelector('.camframe img[data-cloud-camera="1"]');
   if(!img){cameraImage=null;return}
-  const src=img.getAttribute('src')||'';
-  if(src.startsWith('/api/v1/camera/stream')||src.startsWith(origin+'/api/v1/camera/stream')){
-   cameraImage=img;img.src=transparent;frameRequest();
+  if(cameraImage!==img){
+   cameraImage=img;
+   frameRequest();
   }
-  if(cameraImage!==img&&img.getAttribute('src')===transparent){cameraImage=img;frameRequest()}
  }
  const observer=new MutationObserver(inspectCamera);
  document.addEventListener('DOMContentLoaded',()=>{
