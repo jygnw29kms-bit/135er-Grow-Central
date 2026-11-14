@@ -1,31 +1,14 @@
 # 135er-Grow Central · Canonical Release State
 
-## Entwicklungsfreigabe und Pi-Abgleich · 14. November 2026
+## Verifizierter Pi-Livestand und Git-Synchronisierung · 14. November 2026
 
-**Der zuvor angeordnete Entwicklungsstopp wurde vom Betreiber ausdrücklich aufgehoben.** Weiterentwicklung und Tests sind wieder freigegeben. Der tatsächlich installierte Pi-Stand wird in `archive/pi-live-2026-11-14` unter `pi-snapshots/2026-11-14/` quellenbezogen archiviert und mit `master` abgeglichen. Nicht veröffentlichbare Betriebsdaten, Schlüssel und Zugangsdaten bleiben ausgeschlossen. Der Archivstand ist kein vollständig verifiziertes Systemabbild und kein Release.
+**Der Entwicklungsstopp ist aufgehoben.** Der installierte Raspberry Pi 4 meldet `SOURCE_COMMIT=be24ba9097c2e98eb1e3f302b5992c004d2e6e29` und `BUILD=operator-be24ba9097c2-base508` (`OPERATOR_PROVISIONED`). Dieser Betreiber-Livestand ist die Referenz für die synchronisierte Laufzeit, nicht der ältere veröffentlichte Image-Candidate 461.
 
+Der vollständige Dateipfadvergleich ergab 758 identische Pi-/Git-Dateien, 102 absichtlich erhaltene Git-Projektdateien sowie 17 bewusst verschiedene Dokumentations-, Test- und Sicherheitspfade. Die Pi-Laufzeitmodule und die Final-Master-Weboberfläche wurden mit Original-Git-Blobh­ashes bestätigt; die abweichenden modernen Wartungs-/First-Boot-Sicherheitsprüfungen in Git bleiben erhalten. **QA:** 507 Tests bestanden, 2 native Broker-Tests unter dem Dienstbenutzer separat mit 13 Tests bestanden (plus 26 Untertests). Betriebsdaten und Herstellerbilder ohne Weiterverteilungsrechte gehören nicht in das öffentliche Repository.
 
-## Raspberry-Pi-Bestandsaufnahme und Git-Abgleich · 14. November 2026
+[**Vollständiger Pi-/Git-Abgleichbericht**](docs/de/PI_GIT_RECONCILIATION_2026-11-14.md) · [Quell-Sicherungsarchiv](https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/archive/pi-live-2026-11-14)
 
-**Aktualisierung am 14.11.2026:** Der Betreiber hat den Entwicklungsstopp ausdrücklich aufgehoben. Grow Central darf weiterentwickelt, getestet und kontrolliert deployed werden. Die zuvor erstellte Bestandsaufnahme bleibt eine historische Momentaufnahme, nicht der aktuelle Arbeitsauftrag. Laufenden Betrieb, Sensorik und Fernwartung bei Änderungen schützen.
-
-**Sicherungsstand:** Das öffentliche GitHub-Repository dokumentiert den zuletzt bekannten Quellstand. Bei der Live-Prüfung am 14.11.2026 war `135er-grow-central` über MeshCentral erreichbar. Die produktive Installation unter `/opt/135er-grow-central` besitzt **kein Git-Arbeitsverzeichnis**; deshalb ist ein vollständiger Abgleich/Push sämtlicher lokal installierter Dateien und lokaler Änderungen **nicht verifiziert**. Der historische Image-Candidate bleibt Build 461 (`alpha-0.7.5`), kein neu validiertes Image. Keine Credentials, privaten Konfigurationen, Schlüssel, Datenbankinhalte oder lokalen Logs öffentlich committen.
-
-**Git-Abgleich:** Ausgewählte tatsächliche Pi-Quelldateien einschließlich Raum-/Growbuch, Fotojournal, Mars-Hydro-Code und Final-Master-Weboberfläche wurden auf Branch [`archive/pi-live-2026-11-14`](https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/archive/pi-live-2026-11-14/pi-snapshots/2026-11-14) gesichert. Der installierte Pi-Quellstand ist `be24ba9097c2e98eb1e3f302b5992c004d2e6e29`, Build `operator-be24ba9097c2-base508`. Der GitHub-`master` enthält bereits neuere Änderungen; eine pauschale Überschreibung ist nicht zulässig. Ein vollständiger Dateivergleich und Hardwareabbild sind weiter offen. **Entwicklung ist freigegeben.**
-
-
-- **Stand:** 12. November 2026
-- **Repository-Version:** `alpha-0.7.5`
-- **Branch:** `master`
-- **Aktueller Raspberry-Pi-Hardwaretest-Candidate:** **Build 461**
-- **Candidate-Tag:** `pi-universal-alpha-0.7.5-461`
-- **Candidate-Commit:** `5af7a97ee632a4ccaf32893c3c02735ac75bfadd`
-- **Status:** `CANDIDATE` – automatisierte Image-Gates bestanden; vollständige reale Prüfung dieses Images offen
-- **Entwicklungsmodus:** `OPEN SOURCE` – öffentliches Repository und veröffentlichbare Artefakte
-
-> Diese Datei ist die kanonische Referenz für README, Dokumentation, Pi-Image, Mobile, Cloud/APT und Release-Kommunikation. Historische Build-Dateien definieren nicht den aktuellen Candidate.
-
-## Nächster privater Betreiber-Test (geplant: 13. November 2026)
+## Historischer Betreiber-Testplan vom 13. November 2026
 
 - **Ziel:** nächstes privates Universal-Image aus dem jeweils aktuellen GitHub-`master`, kein Rückgriff auf den historischen Build 461
 - **Image-Typ:** `OPERATOR_ONLY` mit individuell provisioniertem `gc-maint`-Public-Key und MeshCentral-Geräte-Enrollment
@@ -35,7 +18,7 @@
 - **Versionsnachweis:** `/opt/135er-grow-central/SOURCE_COMMIT`, `BUILD`, `IMAGE_DISTRIBUTION` im Image
 - **Sicherheit:** Betreiber-Build ersetzt statische Test-API-Token durch individuelle Zufallswerte, keine Passwörter oder Roh-Captures aus Chats im Image
 - **Abnahme:** [verbindliche Testcheckliste](docs/de/OPERATOR_IMAGE_TEST_2026-11-13.md)
-- **Stand:** Quellstand, Build-Gates und Dokumentation vorbereitet; **kein fertiges privates Flash-Image und keine Pi-Hardwareabnahme bestätigt**.
+- **Stand:** Quellstand, Build-Gates und Dokumentation vorbereitet; **Betreiberinstallation Base508 inzwischen bestätigt; keine neue vollständige Image-Hardwareabnahme bestätigt**.
 
 ## Verbindlicher Veröffentlichungsstopp für Pi-Images (ab 2026-11-12)
 
@@ -45,7 +28,7 @@ Die Image-Build-Pipeline ist manuell und ohne öffentliche Veröffentlichungs-/A
 
 **Altbestand:** Vor Inkrafttreten dieser Regel veröffentlichte Release-Assets sind nicht automatisch verschwunden. Sie müssen gesondert als öffentliche Downloads zurückgezogen werden. Bis eine Prüfung ihre Entfernung belegt, ist der komplette Rückzug älterer Images **OFFEN**.
 
-## Aktueller Candidate: Build 461
+## Letzter veröffentlichter Image-Candidate: Build 461
 
 | Merkmal | Wert |
 |---|---|
