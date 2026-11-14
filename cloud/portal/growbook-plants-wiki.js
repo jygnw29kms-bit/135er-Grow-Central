@@ -13,6 +13,7 @@ const api=async(path,options={})=>{
 function roomId(){return $('roomPicker')?.value||''}
 const phaseNames={germination:'Keimung',seedling:'Sämling',vegetative:'Wachstum',flowering:'Blüte',flush:'Endphase',finish:'Reife',harvest:'Ernte',completed:'Abgeschlossen',other:'Sonstige'};
 const typeNames={automatic:'Automatisch',feminized:'Feminisiert',mother:'Mutterpflanze',clone:'Steckling',other:'Sonstige'};
+const cropNames={cannabis:'Cannabis / Hanf',tomato:'Tomate',basil:'Basilikum',pepper:'Paprika / Chili',herbs:'Kräuter',other:'Andere Kultur'};
 let plants=[],edited=null;
 function node(tag,text,className){
  const el=document.createElement(tag);
@@ -25,7 +26,7 @@ function render(){
  if(!plants.length){list.append(node('p','Noch keine Pflanzen erfasst. Über „Pflanze anlegen“ kannst du die erste hinzufügen.','desc'));return}
  for(const p of plants){
   const card=node('article',undefined,'gc-plant-card');
-  card.append(node('h4',p.name),node('p',[p.strain||'Kultur nicht angegeben',typeNames[p.plant_type]||'Sonstige',phaseNames[p.phase]||'Andere Phase'].join(' · '),'desc'));
+  card.append(node('h4',p.name),node('p',[cropNames[p.crop]||p.crop||'Kultur nicht angegeben',p.strain||'Sorte offen',typeNames[p.plant_type]||'Sonstige',phaseNames[p.phase]||'Andere Phase'].join(' · '),'desc'));
   if(p.start_date)card.append(node('small','Start: '+p.start_date));
   if(p.notes)card.append(node('p',p.notes));
   const btn=node('button','Bearbeiten','primary-btn');btn.type='button';btn.addEventListener('click',()=>edit(p));card.append(btn);
@@ -45,6 +46,7 @@ function edit(plant=null){
  $('plantDialogTitle').textContent=plant?'Pflanze bearbeiten':'Pflanze anlegen';
  $('plantName').value=plant?.name||'';
  $('plantStrain').value=plant?.strain||'';
+ $('plantCrop').value=plant?.crop||(/cannabis|hanf|autoflower|indica|sativa/i.test([plant?.name,plant?.strain].join(' '))?'cannabis':'');
  $('plantType').value=plant?.plant_type||'other';
  $('plantPhase').value=plant?.phase||'vegetative';
  $('plantStartDate').value=plant?.start_date||'';
@@ -58,7 +60,7 @@ $('plantForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const id=roomId(),button=$('plantSave');
  if(!id)return;
- const payload={name:$('plantName').value.trim(),strain:$('plantStrain').value.trim(),plant_type:$('plantType').value,
+ const payload={name:$('plantName').value.trim(),strain:$('plantStrain').value.trim(),crop:$('plantCrop').value,plant_type:$('plantType').value,
  phase:$('plantPhase').value,start_date:$('plantStartDate').value,notes:$('plantNotes').value};
  if(!payload.name){$('plantError').textContent='Name fehlt.';return}
  button.disabled=true;
@@ -67,6 +69,7 @@ $('plantForm').addEventListener('submit',async e=>{
   await api(path,{method:edited?'PUT':'POST',body:JSON.stringify(payload)});
   $('plantDialog').close();
   await load();
+  window.dispatchEvent(new CustomEvent('gc:plants-updated',{detail:{room_id:id}}));
  }catch(error){$('plantError').textContent=error.message}
  finally{button.disabled=false}
 });
