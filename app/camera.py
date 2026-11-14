@@ -33,6 +33,59 @@ _DISCOVERY_CACHE: tuple[float, str, list[dict[str, Any]], int] | None = None
 _STREAM_STATE_LOCK = asyncio.Lock()
 _ACTIVE_STREAM_TOKEN: object | None = None
 _ACTIVE_STREAM_PROCESS: asyncio.subprocess.Process | None = None
+_LATEST_JPEG: bytes | None = None
+_LATEST_JPEG_AT: float = 0.0
+
+
+def _cache_jpeg_chunks(buffer: bytearray, chunk: bytes) -> None:
+    """Extract bounded JPEG frames from the existing local MJPEG capture."""
+    global _LATEST_JPEG, _LATEST_JPEG_AT
+    buffer.extend(chunk)
+    while True:
+        start = buffer.find(b"\xff\xd8")
+        if start < 0:
+            if len(buffer) > 3:
+                del buffer[:-3]
+            return
+        if start:
+            del buffer[:start]
+        end = buffer.find(b"\xff\xd9", 2)
+        if end < 0:
+            if len(buffer) > 2_000_000:
+                buffer.clear()
+            return
+        frame = bytes(buffer[:end + 2])
+        del buffer[:end + 2]
+        if 1000 <= len(frame) <= 1_500_000:
+            _LATEST_JPEG = frame
+            _LATEST_JPEG_AT = time.monotonic()
+
+
+def _scaled_cloud_frame(frame: bytes) -> bytes:
+    result = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "image2pipe",
+         "-vcodec", "mjpeg", "-i", "pipe:0", "-vf", "scale=320:240",
+         "-frames:v", "1", "-q:v", "7", "-f", "image2pipe",
+         "-vcodec", "mjpeg", "pipe:1"],
+        input=frame, capture_output=True, timeout=8, check=False,
+    )
+    if result.returncode or not (1000 <= len(result.stdout) <= 145000):
+        raise RuntimeError("camera preview encoding failed")
+    return result.stdout
+
+
+@router.get("/snapshot/cloud-preview")
+async def camera_cloud_preview():
+    """A bounded preview from the *existing* capture, without stealing /dev/video0."""
+    if _LATEST_JPEG is None or time.monotonic() - _LATEST_JPEG_AT > 15:
+        raise HTTPException(503, "active camera stream has no fresh preview frame")
+    try:
+        frame = await asyncio.to_thread(_scaled_cloud_frame, _LATEST_JPEG)
+    except (RuntimeError, subprocess.TimeoutExpired):
+        raise HTTPException(503, "preview encoding unavailable")
+    return Response(content=frame, media_type="image/jpeg",
+                    headers={"Cache-Control": "no-store", "X-GrowCentral-Frame-Source": "shared-live-stream"})
+
 
 
 class CameraControlRequest(BaseModel):
@@ -422,7 +475,9 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
             stderr_task = asyncio.create_task(process.stderr.read())
         if process.stdout is None:
             return
+        jpeg_buffer = bytearray()
         while chunk := await process.stdout.read(64 * 1024):
+            _cache_jpeg_chunks(jpeg_buffer, chunk)
             yield chunk
     finally:
         if process is not None:
