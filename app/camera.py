@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import glob
+import logging
 import os
 import re
 import subprocess
@@ -25,6 +26,10 @@ from app.audit import append_audit
 from app.security import require_write_auth
 
 router = APIRouter(prefix="/api/v1/camera", tags=["camera"])
+log = logging.getLogger(__name__)
+CAMERA_FIRST_FRAME_TIMEOUT = 18.0
+CAMERA_FRAME_TIMEOUT = 15.0
+CAMERA_WATCHDOG_POLL = 3.0
 CONTROL_RE = re.compile(r"^\s*([a-zA-Z0-9_]+)\s+0x[0-9a-fA-F]+\s+\(([^)]+)\)\s*:\s*(.*)$")
 PAIR_RE = re.compile(r"([a-zA-Z_]+)=(-?\d+)")
 DISCOVERY_CACHE_SECONDS = 15.0
@@ -408,6 +413,27 @@ async def camera_snapshot(camera_id: str | None = None, width: int | None = None
     return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id, "X-GrowCentral-Video-Device": device, "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}'})
 
 
+def _stream_is_stale(last_frame_at: float, *, now: float | None = None, timeout: float = CAMERA_FRAME_TIMEOUT) -> bool:
+    """A running encoder is healthy only while complete JPEGs keep arriving."""
+    return (time.monotonic() if now is None else now) - last_frame_at > timeout
+
+
+async def _camera_stream_watchdog(token: object, process: asyncio.subprocess.Process, heartbeat: dict[str, float]) -> None:
+    """Watch each capture independently, even if the browser stream reader stalls."""
+    while process.returncode is None:
+        await asyncio.sleep(CAMERA_WATCHDOG_POLL)
+        async with _STREAM_STATE_LOCK:
+            current = _ACTIVE_STREAM_TOKEN is token and _ACTIVE_STREAM_PROCESS is process
+        if not current:
+            return
+        if _stream_is_stale(heartbeat["last_frame"], timeout=CAMERA_FRAME_TIMEOUT):
+            log.warning("Camera watchdog: no complete JPEG for %.1fs; terminating stalled ffmpeg pid=%s",
+                        time.monotonic() - heartbeat["last_frame"], process.pid)
+            append_audit("camera.stream.watchdog", reason="missing_frames", pid=process.pid)
+            await _stop_active_stream("watchdog_missing_frames")
+            return
+
+
 async def _terminate_process(process: asyncio.subprocess.Process | None) -> None:
     if process is None or process.returncode is not None:
         return
@@ -418,8 +444,14 @@ async def _terminate_process(process: asyncio.subprocess.Process | None) -> None
     try:
         await asyncio.wait_for(process.wait(), timeout=2)
     except asyncio.TimeoutError:
-        process.kill()
-        await process.wait()
+        try:
+            process.kill()
+        except ProcessLookupError:
+            return
+        try:
+            await asyncio.wait_for(process.wait(), timeout=3)
+        except asyncio.TimeoutError:
+            log.error("Camera ffmpeg pid=%s did not exit after SIGKILL", getattr(process, "pid", "?"))
 
 
 async def _stop_active_stream(reason: str) -> bool:
@@ -470,6 +502,8 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
     token = object()
     process: asyncio.subprocess.Process | None = None
     stderr_task: asyncio.Task[bytes] | None = None
+    watchdog_task: asyncio.Task[None] | None = None
+    heartbeat = {"last_frame": time.monotonic()}
     await _claim_stream(token)
     try:
         process = await asyncio.create_subprocess_exec("ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "v4l2", "-input_format", "mjpeg", "-video_size", f'{mode["width"]}x{mode["height"]}', "-framerate", str(mode["selected_fps"]), "-i", device, "-an", "-c:v", "copy", "-f", "mpjpeg", "pipe:1", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
@@ -481,10 +515,31 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
         if process.stdout is None:
             return
         jpeg_buffer = bytearray()
-        while chunk := await process.stdout.read(64 * 1024):
+        watchdog_task = asyncio.create_task(
+            _camera_stream_watchdog(token, process, heartbeat),
+            name="grow-central-c920-stream-watchdog",
+        )
+        while True:
+            try:
+                chunk = await asyncio.wait_for(process.stdout.read(64 * 1024), timeout=CAMERA_FRAME_TIMEOUT)
+            except asyncio.TimeoutError:
+                log.warning("Camera stream stalled: no ffmpeg output for %.1fs", CAMERA_FRAME_TIMEOUT)
+                append_audit("camera.stream.watchdog", reason="missing_output", pid=process.pid)
+                break
+            if not chunk:
+                break
+            before = _LATEST_JPEG_AT
             _cache_jpeg_chunks(jpeg_buffer, chunk)
+            if _LATEST_JPEG_AT > before:
+                heartbeat["last_frame"] = time.monotonic()
             yield chunk
     finally:
+        if watchdog_task is not None:
+            watchdog_task.cancel()
+            try:
+                await watchdog_task
+            except asyncio.CancelledError:
+                pass
         if process is not None:
             await _release_stream(token, process)
         detail = ""
