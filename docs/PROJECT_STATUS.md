@@ -52,3 +52,9 @@ Die reale End-to-End-Hardwareabnahme für alle Pi-Klassen, First Boot und alle G
 - Livekette ESP32 → MQTT/API → persistente Historie → PWA → Growbuch → HomeKit einschließlich Neustart/Wiederverbindung unter realer Hardware abnehmen.
 
 **Reihenfolge:** gesichertes Pi-Backup, Raum-Geräte-Sensor-Zuordnung einschließlich des abgenommenen ESP32, Growbuch-/Livedaten-Verknüpfung, vollständige Liveabnahme. Die kulturübergreifende Architektur von Grow Central bleibt erhalten.
+
+## Rückgängig machbare Raum- und Gerätezuordnung
+
+Die Raumverwaltung unterstützt jetzt als Entwicklungsstand die reversible Archivierung von Räumen. Beim Archivieren werden zugeordnete Geräte freigegeben und anschließend als „nicht zugeordnet“ angezeigt. Hardware wird dadurch weder gelöscht noch zurückgesetzt. Zugehörige Pflanzen, Growbuch-Einträge, Fotos und historische Sensormessungen bleiben mit ihrer ursprünglichen Raum-ID erhalten. Ein archivierter Raum kann mit derselben ID wiederhergestellt werden; Geräte müssen dann bewusst erneut zugeordnet werden.
+
+Die separate Trust-Information des abgenommenen ESP32-Bodenfeuchtesensors wird beim Freigeben der Raumzuordnung ebenfalls aktualisiert, ohne Geräteidentität, Annahmestatus oder Kalibrierung zu entfernen. Eine unabsichtliche Zuweisung zu einem fremden Raum darf beim Abwählen nicht entstehen. API-Schreibaktionen bleiben authentifizierungspflichtig.
