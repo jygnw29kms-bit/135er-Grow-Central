@@ -8,7 +8,6 @@ def _seed(tmp_path, monkeypatch):
     monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
     state = rooms.empty_state()
     state["rooms"].append({"id": "room_1", "name": "Zelt 1"})
-    state['plants'].append({'id':'plant_seed','room_id':'room_1','name':'Pflanze','crop':'Tomate','phase':'vegetative','substrate_type':'peat_mix','substrate_components':'Torf 60%, Perlit 40%','substrate_pre_fertilized':'no','nutrition_plan':'organic','container_type':'plastic'})
     rooms.save_state(state)
 
 
@@ -43,6 +42,9 @@ def test_today_checkin_aggregates_tasks_events_and_targets(tmp_path, monkeypatch
 
 def test_photo_journal_is_valid_quick_log_and_creates_photo_event(tmp_path, monkeypatch):
     _seed(tmp_path, monkeypatch)
+    asyncio.run(rooms.create_plant('room_1', rooms.PlantCreate(name='Foto-Pflanze', crop='Tomate', phase='vegetative', substrate_type='peat_mix', substrate_components='Torf 60 %, Perlit 40 %', substrate_pre_fertilized='no', nutrition_plan='organic', container_type='plastic')))
+    with rooms.edit_state() as s:
+        s['plants'][-1]['id']='plant_seed'
     row = asyncio.run(rooms.add_room_journal(
         "room_1", rooms.JournalEntry(category="photo", title="Foto", text="", plant_id="plant_seed")
     ))
