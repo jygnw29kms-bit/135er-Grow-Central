@@ -10,7 +10,7 @@ async function listDevices(){
  for(const device of devices){
   const card=document.createElement('div'),name=document.createElement('b'),status=document.createElement('small');
   card.className='device';name.textContent=device.name||'Grow Central';
-  status.textContent=device.online?'Gerätekanal verbunden · Fernsteuerung noch nicht freigegeben':'Konto gekoppelt · Gerätekanal offline';
+  status.textContent=device.online?'Gerätekanal verbunden · Steuerung mit Bestätigung':'Konto gekoppelt · Gerätekanal offline';
   card.append(name,status);target.append(card);
  }
  if(!devices.length)target.textContent='Noch keine aktiven Geräte gekoppelt.';
@@ -38,6 +38,7 @@ function masterToggle(){
  $('remoteDashboard').hidden=masterVisible;
  $('masterToggle').textContent=masterVisible?'Live-Dashboard anzeigen':'Final-Master-GUI öffnen';
  if(masterVisible){
+  cameraStop();
   const iframe=$('masterFrame');
   if(iframe.getAttribute('src')!=='/cloud-master.html')iframe.src='/cloud-master.html';
   masterStatus('Originale Final-Master-GUI wird geladen …');
