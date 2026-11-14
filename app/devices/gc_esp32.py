@@ -177,7 +177,7 @@ class GrowCentralEsp32Provider(DeviceProvider):
                 # sensors and raw ADC values within their calibrated endpoints.
                 bounds = calibration.get('points') or {}
                 air = bounds.get('air_raw')
-                wet = bounds.get('water_raw')
+                wet = bounds.get('wet_raw')
                 raw_in_range = (type(filtered_raw) in (int, float)
                     and math.isfinite(float(filtered_raw))
                     and type(air) in (int, float) and type(wet) in (int, float)
