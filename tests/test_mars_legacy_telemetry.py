@@ -23,8 +23,10 @@ class TestMarsLegacyTelemetry(unittest.TestCase):
         self.assertEqual((row["rpm"], row["temperature_c"], row["humidity_rh"]), (2080, 17.1, 52.4))
         self.assertTrue(row["power_on"])
         self.assertEqual(row["setpoint_percent"], 50)
-        self.assertIsNone(row["airflow_cfm"])
-        self.assertIsNone(row["pressure_pa"])
+        self.assertEqual(row["airflow_cfm"], 209.0)
+        self.assertEqual(row["pressure_pa"], 190.0)
+        self.assertEqual(row["airflow_pressure_source"], "estimated_from_setpoint_show_only")
+        self.assertFalse(row["airflow_pressure_measured"])
         self.assertNotIn("opaque-session", str(row))
         self.assertFalse(row["control_verified"])
 

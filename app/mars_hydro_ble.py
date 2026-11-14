@@ -563,6 +563,47 @@ async def observe_lamp_telemetry(body: InspectRequest):
             raise HTTPException(502, _transport_error(exc, "FC3000-Statusbeobachtung")) from exc
 
 
+class FastLampCommand(BaseModel):
+    action: Literal["power","brightness"]
+    value: int = Field(ge=0,le=100)
+    confirm_physical_change: bool = False
+
+@router.post("/fast-lamp-control")
+async def fast_lamp_control(body: FastLampCommand):
+    from app.mars_fast_lamp import fast_lamp
+    allowed=os.getenv("GC_FC3000_ALLOWED_ID","").upper().strip()
+    if os.getenv("GC_FC3000_CONTROL_TRIAL")!="1" or not re.fullmatch(r"FC[A-F0-9]{10}",allowed):
+        raise HTTPException(403,"FC3000 fast control disabled")
+    if not body.confirm_physical_change:raise HTTPException(428,"Explicit hardware confirmation required")
+    if body.action=="power" and body.value not in (0,1):
+        raise HTTPException(422,"Power only 0 or 1")
+    if body.action=="brightness" and not 10<=body.value<=100:
+        raise HTTPException(422,"Brightness only 10..100")
+    if body.action=="brightness":
+        from app.mars_fast_lamp import fast_lamp
+        if fast_lamp.latest and fast_lamp.latest[1]["power_on"] is False:
+            raise HTTPException(409,"Lampe ausgeschaltet: Helligkeit wird nicht als Einschaltbefehl behandelt")
+    if not fast_lamp.client or not fast_lamp.client.is_connected:
+        raise HTTPException(503,"FC3000 BLE not connected")
+    try:
+        result=await fast_lamp.control(body.action,body.value,allowed)
+        if result is None:raise HTTPException(409,"FC3000 session status stale")
+        return result
+    except HTTPException:raise
+    except Exception as exc:
+        logger.warning("FC3000 fast control error %s",type(exc).__name__)
+        raise HTTPException(502,"FC3000 write uncertain; no automatic retry") from exc
+
+@router.get("/fast-lamp-status")
+async def fast_lamp_status():
+    from app.mars_fast_lamp import fast_lamp
+    import time
+    live=bool(fast_lamp.client and fast_lamp.client.is_connected)
+    fresh=bool(live and fast_lamp.latest and time.monotonic()-fast_lamp.at<12)
+    return {"connected":live,"fresh":fresh,
+            "latest":fast_lamp.latest[1] if fresh else None,
+            "source":"persistent_ble" if fresh else "unavailable"}
+
 @router.post("/control-lamp-trial")
 async def control_lamp_trial(body: LampControlTrialRequest):
     """Opt-in, single-action owner test for exactly one FC3000 V3.4.
@@ -582,14 +623,23 @@ async def control_lamp_trial(body: LampControlTrialRequest):
         raise HTTPException(422, "Ein/Aus nur 0 oder 1.")
     if body.action == "brightness" and not 10 <= body.value <= 100:
         raise HTTPException(422, "Dimmung nur 10 bis 100 Prozent.")
+    # Zero-scan fast path: authenticated, hardware-bound, fresh session token.
+    from app.mars_fast_lamp import fast_lamp
+    if fast_lamp.client and fast_lamp.client.is_connected:
+        try:
+            ready=await fast_lamp.control(body.action,body.value,allowed_id)
+            if ready is not None:
+                return ready
+        except Exception as exc:
+            logger.warning("FC3000 fast write error %s",type(exc).__name__)
+            raise HTTPException(502,"FC3000 fast command failed; not retried") from exc
+        raise HTTPException(409,"FC3000 fast session waiting for fresh status")
     if _capture_lock.locked():
         raise HTTPException(409, "Bluetooth-Gerät ist bereits belegt.")
-
     address = _candidate(body.candidate_id)
     candidate = _candidates.get(body.candidate_id)
     if not candidate or not re.fullmatch(r"MZ_MARS_(?:0|68756)_" + re.escape(allowed_id), candidate[1].upper()):
         raise HTTPException(403, "Lampenidentität stimmt nicht mit dem Privatgerät überein.")
-
     async with _capture_lock:
         entries: list[tuple[str, dict[str, Any]]] = []
         try:
@@ -669,6 +719,38 @@ class FanControlRequest(InspectRequest):
     percent: int = Field(ge=25, le=100)
     confirm_physical_change: bool = False
 
+
+class FastFanControl(BaseModel):
+    action: Literal["power","speed"]
+    value: int = Field(ge=0,le=100)
+    confirm_physical_change: bool = False
+
+@router.get("/fast-fan-status")
+async def fast_fan_status():
+    from app.mars_fast_fan import fast_fan
+    fresh=bool(fast_fan.client and fast_fan.client.is_connected and fast_fan.last and time.monotonic()-fast_fan.at<12)
+    last=fast_fan.last[1] if fresh else None
+    return {"connected":bool(fast_fan.client and fast_fan.client.is_connected),"fresh":fresh,
+            "age_ms":round((time.monotonic()-fast_fan.at)*1000) if fast_fan.at else None,
+            "latest":last,"effective_output_percent":(last["setpoint_percent"] if last["power_on"] else 0) if last else None,
+            "rpm_measured":bool(last is not None),"temperature_measured":bool(last is not None),
+            "humidity_measured":bool(last is not None)}
+
+@router.post("/fast-fan-control")
+async def fast_fan_control(body: FastFanControl):
+    from app.mars_fast_fan import fast_fan
+    if os.getenv("GC_MZF002_CONTROL_ENABLED")!="1":raise HTTPException(403,"MZF002 disabled")
+    if not body.confirm_physical_change:raise HTTPException(428,"Confirmation required")
+    if body.action=="speed" and not 25<=body.value<=100:raise HTTPException(422,"Speed 25..100")
+    if body.action=="power" and body.value not in (0,1):raise HTTPException(422,"Power 0/1")
+    try:
+        result=await fast_fan.control(body.action,body.value)
+        if result is None:raise HTTPException(503,"No fresh MZF002 BLE connection")
+        return result
+    except HTTPException:raise
+    except Exception as exc:
+        logger.warning("MZF002 fast control %s",type(exc).__name__)
+        raise HTTPException(502,"MZF002 command not confirmed; no retry") from exc
 
 @router.post("/control-fan")
 async def control_fan(body: FanControlRequest):
@@ -754,6 +836,58 @@ async def control_fan(body: FanControlRequest):
         except Exception as exc:
             logger.warning("MZF002 control failed: %s", type(exc).__name__)
             raise HTTPException(502,"MZF002-Steuerung fehlgeschlagen; keine automatische Wiederholung.") from exc
+
+
+class FanPowerTrial(InspectRequest):
+    value: Literal[0,1]
+    confirm_physical_change: bool = False
+
+@router.post("/control-fan-power-trial")
+async def fan_power_trial(body: FanPowerTrial):
+    allowed=os.getenv("GC_MZF002_ALLOWED_ID","").upper().strip()
+    if os.getenv("GC_MZF002_CONTROL_ENABLED")!="1":raise HTTPException(403,"Fan disabled")
+    if not body.confirm_physical_change:raise HTTPException(428,"Confirmation required")
+    if _capture_lock.locked():raise HTTPException(409,"BLE busy")
+    address=_candidate(body.candidate_id)
+    row=_candidates.get(body.candidate_id)
+    if not row or not row[1].upper().endswith("_"+allowed) or "MZF002" not in row[1].upper():
+        raise HTTPException(403,"Fan identity mismatch")
+    async with _capture_lock:
+        reports=[]
+        try:
+            async with BleakClient(address,timeout=7) as client:
+                _characteristic(_services(client),MZF002_NOTIFY,"notify")
+                _characteristic(_services(client),MZF002_WRITE,"write")
+                def cb(sender,data):
+                    try:
+                        f=bytes(data).decode("ascii").strip().split("|")
+                        state=mzf002_telemetry(bytes(data))
+                        if state and len(f)==23 and f[1].upper()==allowed and f[2].upper()==allowed and f[4]=="1.8" and re.fullmatch(r"[0-9]{5}",f[5]):
+                            reports.append((f[5],state))
+                    except (UnicodeError,ValueError):pass
+                await asyncio.wait_for(client.start_notify(MZF002_NOTIFY,cb),timeout=3)
+                try:
+                    for _ in range(12):
+                        if reports:break
+                        await asyncio.sleep(.25)
+                    if not reports:raise HTTPException(409,"No valid live status")
+                    code,previous=reports[-1]
+                    if previous["power_on"]==bool(body.value):
+                        return {"command_sent":False,"device_report_confirmed":True,"latest":previous}
+                    before=len(reports)
+                    await asyncio.wait_for(client.write_gatt_char(MZF002_WRITE,f"1|0|{code}|{allowed}|{body.value}".encode(),response=True),timeout=4)
+                    for _ in range(16):
+                        await asyncio.sleep(.25)
+                        if any(state["power_on"]==bool(body.value) for _,state in reports[before:]):
+                            return {"command_sent":True,"device_report_confirmed":True,"latest":reports[-1][1]}
+                    return {"command_sent":True,"device_report_confirmed":False,"latest":reports[-1][1],"retry_attempted":False}
+                finally:
+                    try:await client.stop_notify(MZF002_NOTIFY)
+                    except Exception:pass
+        except HTTPException:raise
+        except Exception as exc:
+            logger.warning("Fan power trial %s",type(exc).__name__)
+            raise HTTPException(502,"Fan power not confirmed") from exc
 
 @router.post("/control-test")
 async def control_test():

@@ -38,6 +38,10 @@ def _seed(tmp_path, monkeypatch):
 
 def test_photo_is_stored_with_plant_phase_cycle_day_and_sensor_snapshot(tmp_path, monkeypatch):
     _seed(tmp_path, monkeypatch)
+    monkeypatch.setattr(rooms, "live_room_snapshot", lambda room_id, state=None: {
+        "temperature_c": 25.0, "soil_moisture_percent": 42.0,
+        "source": "measured_live", "room_id": room_id,
+    })
 
     row = asyncio.run(photos.create_grow_photo(photos.GrowPhotoCreate(
         room_id="room_1",

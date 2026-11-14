@@ -59,6 +59,7 @@ def test_homekit_room_inventory_exports_only_real_measurements(monkeypatch):
         ],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
+    monkeypatch.setattr(homekit,"_mars_climate_row",lambda now:None)
     rows=homekit._latest_room_values(now=NOW)
     assert len(rows)==1
     assert rows[0]["id"]=="r1"
@@ -95,6 +96,7 @@ def test_homekit_room_inventory_tolerates_short_metric_dropout(monkeypatch):
         ],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
+    monkeypatch.setattr(homekit,"_mars_climate_row",lambda now:None)
     row=homekit._latest_room_values(now=NOW)[0]
     assert row["services"]==("temperature","humidity")
     assert row["latest"]["temperature_c"]==24.3
@@ -111,6 +113,7 @@ def test_homekit_never_exports_stale_or_uncalibrated_soil(monkeypatch):
         ],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
+    monkeypatch.setattr(homekit,"_mars_climate_row",lambda now:None)
     rows=homekit._latest_room_values(now=NOW)
     assert len(rows)==1
     assert rows[0]["id"]=="r1"
@@ -125,6 +128,7 @@ def test_homekit_rejects_nonfinite_metrics(monkeypatch):
         "sensor_history":[{"room_id":"r1","timestamp":ts(),"temperature_c":float("nan"),"humidity_percent":58.0}],
     }
     monkeypatch.setattr(rooms,"load_state",lambda:state)
+    monkeypatch.setattr(homekit,"_mars_climate_row",lambda now:None)
     row=homekit._latest_room_values(now=NOW)[0]
     assert row["services"]==("humidity",)
     assert "temperature_c" not in row["latest"]
@@ -139,7 +143,8 @@ def test_homekit_accessory_aids_are_stable_across_inventory_order():
     first=homekit._accessory_aids([room_a,room_b],[switch_a,switch_b])
     second=homekit._accessory_aids([room_b,room_a],[switch_b,switch_a])
     assert first==second
-    assert len(set(first.values()))==4
+    assert len(set(first.values()))==6
+    assert ("mars","fc3000") in first and ("mars","mzf002") in first
     assert 1 not in first.values() and 7 not in first.values()
 
 

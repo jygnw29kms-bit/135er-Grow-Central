@@ -1,6 +1,7 @@
 """Prevent image builds from shipping mismatched USB and ESP32 firmware versions."""
 from pathlib import Path
 import re
+import json
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,4 +23,6 @@ def test_image_release_notes_match_sensor_version():
     cpp = (ROOT / "firmware/gc-soil-node/src/main.cpp").read_text(encoding="utf-8")
     version = re.search(r'FW_VERSION\[\]\s*=\s*"([0-9.]+)"', cpp).group(1)
     workflow = (ROOT / ".github/workflows/build-pi3-image.yml").read_text(encoding="utf-8")
-    assert f"bundled firmware {version}" in workflow
+    assert "python scripts/package-sensor-firmware.py" in workflow
+    manifest = json.loads((ROOT / "firmware/gc-soil-node/dist/manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == version

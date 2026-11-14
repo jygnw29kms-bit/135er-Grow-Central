@@ -76,7 +76,7 @@ def test_system_password_is_optional_only_when_ssh_is_disabled():
         apply_setup.validate(invalid)
 
 
-def test_ssh_disabled_path_locks_account_stops_listener_and_closes_firewall(tmp_path):
+def test_ssh_disabled_path_locks_password_account_but_keeps_key_only_maintenance(tmp_path):
     calls = []
 
     def fake_run(*arguments, **_kwargs):
@@ -89,9 +89,9 @@ def test_ssh_disabled_path_locks_account_stops_listener_and_closes_firewall(tmp_
 
     assert "PasswordAuthentication no" in dropin.read_text(encoding="utf-8")
     assert ("passwd", "--lock", "GrowCentral") in calls
-    for unit in ("ssh.socket", "ssh.service", "sshd.service"):
-        assert ("systemctl", "disable", "--now", unit) in calls
-    assert ("ufw", "--force", "delete", "allow", "22/tcp") in calls
+    assert ("systemctl", "enable", "--now", "ssh.service") in calls
+    assert not any(call[:3] == ("systemctl", "disable", "--now") for call in calls)
+    assert ("ufw", "--force", "delete", "allow", "22/tcp") not in calls
 
 
 def test_ssh_enabled_path_sets_password_opens_firewall_and_starts_service(tmp_path):
@@ -108,7 +108,7 @@ def test_ssh_enabled_path_sets_password_opens_firewall_and_starts_service(tmp_pa
     assert "PasswordAuthentication yes" in dropin.read_text(encoding="utf-8")
     chpasswd = next(item for item in calls if item[0] == ("chpasswd",))
     assert chpasswd[1] == "GrowCentral:ein-neues-systempasswort\n"
-    assert any(item[0] == ("ufw", "allow", "22/tcp") for item in calls)
+    assert all(any(item[0] == ("ufw", "allow", "from", net, "to", "any", "port", "22", "proto", "tcp") for item in calls) for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
     assert any(item[0] == ("systemctl", "enable", "--now", "ssh.service") for item in calls)
 
 

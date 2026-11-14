@@ -104,13 +104,13 @@ def _status_payload() -> dict[str, Any]:
 
 @app.get("/")
 async def index():
-    platform = WEB_DIR / "platform.html"
-    return FileResponse(platform if platform.exists() else WEB_DIR / "index.html")
+    return FileResponse(WEB_DIR / "gc-final.html", headers={"Cache-Control":"no-store"})
 
 
 @app.get("/legacy")
 async def legacy_index():
-    return FileResponse(WEB_DIR / "index.html")
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/ui",status_code=308)
 
 
 @app.get("/favicon.ico", include_in_schema=False)

@@ -183,7 +183,7 @@ def export_csv(room_id: str|None=None,grow_id: str|None=None,metric: str|None=No
     if end:where.append("recorded_at <= ?");args.append(end)
     cols=["recorded_at","room_id","grow_id","plant_id","device","metric",
           "value","unit","source_kind"]
-    query="SELECT "+",".join(cols)+" FROM points"
+    query="SELECT "+",".join(cols)+" FROM points"  # nosec B608 - fixed column allowlist; user values are bound parameters
     if where:query+=" WHERE "+" AND ".join(where)
     query+=" ORDER BY recorded_at,id"
     def generate():

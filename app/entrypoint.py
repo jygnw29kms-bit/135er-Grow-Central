@@ -9,7 +9,6 @@ from app.recipes import router as recipes_router
 from app.timelapse import router as timelapse_router
 from app.recordings import router as recordings_router
 from app.grow_photos import router as grow_photos_router
-from app.grow_photo_ui import GrowPhotoUiMiddleware
 from app.auth_middleware import GuiAuthMiddleware
 from app.gui_auth import router as gui_auth_router
 from app.firstboot import router as firstboot_router
@@ -39,9 +38,6 @@ app.add_middleware(GuiAuthMiddleware)
 # unprovisioned device can answer captive-portal probes and setup requests
 # before normal GUI/API authentication exists.
 app.add_middleware(SetupPortalMiddleware)
-# The photo enhancement is injected only into the approved product HTML shell;
-# setup/captive/legacy responses are positively excluded by the middleware.
-app.add_middleware(GrowPhotoUiMiddleware)
 # No kiosk/touch HTML rewriting is used anymore. Browser and mobile clients
 # provide their native input methods and receive responses byte-for-byte.
 app.include_router(gui_auth_router)
@@ -71,3 +67,28 @@ install_automation(app)
 
 install_observer(app)
 install_ble_observer(app)
+
+
+# Keep verified local lamp BLE session warm; no light control on startup.
+from app.mars_fast_lamp import fast_lamp
+import asyncio as _asyncio
+@app.on_event("startup")
+async def _fc3000_fast_start():
+    fast_lamp.task=_asyncio.create_task(fast_lamp.runner(),name="fc3000-fast-ble")
+@app.on_event("shutdown")
+async def _fc3000_fast_stop():
+    if fast_lamp.task:
+        fast_lamp.task.cancel()
+        try:await fast_lamp.task
+        except _asyncio.CancelledError:pass
+
+from app.mars_fast_fan import fast_fan
+@app.on_event("startup")
+async def _mzf002_fast_start():
+    fast_fan.task=_asyncio.create_task(fast_fan.run(),name="mzf002-fast-ble")
+@app.on_event("shutdown")
+async def _mzf002_fast_stop():
+    if fast_fan.task:
+        fast_fan.task.cancel()
+        try:await fast_fan.task
+        except _asyncio.CancelledError:pass
