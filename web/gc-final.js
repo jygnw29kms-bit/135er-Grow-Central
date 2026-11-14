@@ -704,20 +704,43 @@ function useSubstratePreset(){
  if(preset[1])$('plantComposition').value=preset[1];
  // Do not infer pre-fertilization from ingredients or overwrite the operator's feeding strategy.
 }
+function updatePlantCropInput(value=''){
+ const select=$('plantCropSelect');
+ const custom=$('plantCropOther');
+ const hidden=$('plantCrop');
+ const choices=[...select.options].map(o=>o.value).filter(v=>v&&v!=='__custom__');
+ const known=choices.includes(value);
+ select.value=known?value:value?'__custom__':'';
+ const isCustom=select.value==='__custom__';
+ $('plantCropOtherWrap').hidden=!isCustom;
+ custom.required=isCustom;
+ custom.value=isCustom?(value==='__custom__'?'':value):'';
+ hidden.value=isCustom?custom.value:(select.value||'');
+}
+function syncPlantCropInput(){
+ const select=$('plantCropSelect');
+ const isCustom=select.value==='__custom__';
+ $('plantCropOtherWrap').hidden=!isCustom;
+ $('plantCropOther').required=isCustom;
+ $('plantCrop').value=isCustom?$('plantCropOther').value.trim():select.value;
+}
 function editRoomPlant(id){
  const p=growJournal.plants.find(x=>x.id===id);if(!p)return;
- const fields={plantEditId:p.id,plantName:p.name,plantCrop:p.crop,plantPhase:p.phase,plantSubstrate:p.substrate_type,
+ const fields={plantEditId:p.id,plantName:p.name,plantPhase:p.phase,plantSubstrate:p.substrate_type,
  plantComposition:p.substrate_components,plantPreFert:p.substrate_pre_fertilized,plantNutrition:p.nutrition_plan,
  plantContainer:p.container_type,plantVolume:p.container_volume_l};
  Object.entries(fields).forEach(([key,val])=>{if($(key))$(key).value=val??'';});
+ updatePlantCropInput(p.crop||'');
  $('roomPlantForm')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function resetRoomPlantForm(){
  $('roomPlantForm')?.reset();text('plantFormError','');
  $('plantEditId').value='';
+ updatePlantCropInput('');
 }
 async function saveRoomPlant(e){
  e.preventDefault();if(!growJournal.roomId)return;
+ syncPlantCropInput();
  const data={name:$('plantName').value.trim(),crop:$('plantCrop').value.trim(),phase:$('plantPhase').value,
   substrate_type:$('plantSubstrate').value,substrate_components:$('plantComposition').value.trim(),
   substrate_pre_fertilized:$('plantPreFert').value,nutrition_plan:$('plantNutrition').value,
@@ -849,6 +872,8 @@ $('climateRoomSelect')?.addEventListener('change',loadClimateHistory);
 $('climateTimeSelect')?.addEventListener('change',loadClimateHistory);
 $('roomPlantForm')?.addEventListener('submit',saveRoomPlant);
 $('plantFormReset')?.addEventListener('click',resetRoomPlantForm);
+$('plantCropSelect')?.addEventListener('change',()=>{syncPlantCropInput();if($('plantCropSelect').value==='__custom__')$('plantCropOther').focus();});
+$('plantCropOther')?.addEventListener('input',syncPlantCropInput);
 $('plantMixPreset')?.addEventListener('change',useSubstratePreset);
 $('journalForm')?.addEventListener('submit',saveJournal);
 $('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
