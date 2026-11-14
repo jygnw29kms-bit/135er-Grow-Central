@@ -74,6 +74,7 @@ function masterHandleResult(data){
   else if(data.type==='control_result')masterReply(data.request_id,200,{device_report_confirmed:data.device_report_confirmed,kind:data.kind});
   else if(data.type==='photo_result')masterReply(data.request_id,200,{photo_id:data.photo_id,ok:true});
   else if(data.type==='plant_result')masterReply(data.request_id,200,{id:data.plant_id,ok:true});
+  else if(data.type==='room_result')masterReply(data.request_id,200,{room_id:data.room_id,device_id:data.device_id,ok:true});
   else masterReply(data.request_id,200,data.data||{ok:true,entry_id:data.entry_id});
  }else masterReply(data.request_id,503,{detail:data.error||'Keine Gerätebestätigung'});
  return true;
@@ -120,7 +121,7 @@ window.addEventListener('message',event=>{
   const room_id=msg.path.split('/')[4];
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'journal_create',request_id:msg.id,room_id,
-    title:payload.title,text:payload.text,category:payload.category,confirm_write:true}));return;
+    title:payload.title,text:payload.text,category:payload.category,plant_id:payload.plant_id||null,confirm_write:true}));return;
  }
  if(method==='POST'&&msg.path==='/api/v1/grow-photos'){
   if(typeof payload.room_id!=='string'||typeof payload.image_data_url!=='string'
@@ -133,7 +134,7 @@ window.addEventListener('message',event=>{
   }
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'photo_create',request_id:msg.id,
-   room_id:payload.room_id,title:payload.title||'Foto',note:payload.note||'',
+   room_id:payload.room_id,plant_id:payload.plant_id||null,title:payload.title||'Foto',note:payload.note||'',
    tags:Array.isArray(payload.tags)?payload.tags:[],image_data_url:payload.image_data_url,
    confirm_write:true}));return;
  }
@@ -151,6 +152,24 @@ window.addEventListener('message',event=>{
    request_id:msg.id,room_id,plant_id,name:payload.name,strain:payload.strain||'',crop:payload.crop||'',
    plant_type:payload.plant_type||'other',start_date:payload.start_date||'',
    phase:payload.phase||'vegetative',notes:payload.notes||'',confirm_write:true}));return;
+ }
+ if(method==='POST'&&msg.path==='/api/v1/rooms'){
+  const name=payload.name,kind=payload.kind||'grow_tent';
+  if(typeof name!=='string'||name.trim().length<1||name.length>80){
+   masterReply(msg.id,400,{detail:'Raumname ungültig'});return;
+  }
+  if(!window.confirm('Raum „'+name+'“ samt Growbuch anlegen?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
+  trackMaster(msg.id);
+  remoteSocket.send(JSON.stringify({type:'room_create',request_id:msg.id,name,kind,confirm_write:true}));return;
+ }
+ if(method==='POST'&&/^\/api\/v1\/rooms\/room_[A-Za-z0-9_-]+\/devices$/.test(msg.path)){
+  const room_id=msg.path.split('/')[4],device_id=payload.device_id;
+  if(!['mars-hydro:fc3000','mars-hydro:df150m'].includes(device_id)){
+   masterReply(msg.id,400,{detail:'Gerät nicht freigegeben'});return;
+  }
+  if(!window.confirm('Gerät '+device_id+' dem gewählten Raum zuordnen?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
+  trackMaster(msg.id);
+  remoteSocket.send(JSON.stringify({type:'room_assign_device',request_id:msg.id,room_id,device_id,confirm_write:true}));return;
  }
  masterReply(msg.id,403,{detail:'Diese Funktion ist im Cloudmodus noch nicht freigegeben'});
 });
@@ -451,7 +470,7 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
-  if(['read_result','control_result','journal_result','camera_result','photo_result','photo_frame_result','plant_result'].includes(data.type)&&masterHandleResult(data))return;
+  if(['read_result','control_result','journal_result','camera_result','photo_result','photo_frame_result','plant_result','room_result'].includes(data.type)&&masterHandleResult(data))return;
   if(data.type==='journal_result'){journalResult(data);return}
   if(data.type==='control_result'){controlResult(data);return}
   if(data.type==='camera_result'){
