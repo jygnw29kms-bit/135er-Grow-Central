@@ -68,7 +68,7 @@ def _decode_image(data_url: str) -> tuple[bytes, str, str]:
     elif ext == "webp":
         valid = len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
     if not valid:
-        raise HTTPException(415, "Bildinhalt passt nicht zum Dateityp")
+raise HTTPException(415, "Bildinhalt passt nicht zum Dateityp")
     return raw, ext, media_type
 
 
@@ -98,6 +98,8 @@ def _photo_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
     rows.extend(entry for entry in state["plant_journal"] if entry.get("photo_id"))
     rows.sort(key=lambda row: row.get("created_at", ""), reverse=True)
     return rows
+
+
 def _store_photo(raw: bytes, photo_id: str, ext: str) -> Path:
     PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     os.chmod(PHOTO_DIR, 0o700)
@@ -136,7 +138,7 @@ async def create_grow_photo(body: GrowPhotoCreate):
     state = rooms.load_state()
     rooms.room_or_404(state, body.room_id)
     plant = None
-    if body.plant_id:
+if body.plant_id:
         plant = rooms.plant_or_404(state, body.plant_id)
         if plant.get("room_id") != body.room_id:
             raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
@@ -196,3 +198,41 @@ async def create_grow_photo(body: GrowPhotoCreate):
     except Exception:
         target.unlink(missing_ok=True)
         raise
+
+
+@router.get("/{photo_id}", include_in_schema=False)
+async def get_grow_photo(photo_id: str):
+    state = rooms.load_state()
+    row = _find_photo_row(state, photo_id)
+    if not row:
+        raise HTTPException(404, "Foto nicht gefunden")
+    media_type = str(row.get("photo_media_type") or "image/jpeg")
+    suffix = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(media_type)
+if not suffix:
+        raise HTTPException(404, "Foto nicht gefunden")
+    path = PHOTO_DIR / f"{photo_id}.{suffix}"
+    if not path.is_file():
+        raise HTTPException(404, "Fotodatei fehlt")
+    return FileResponse(path, media_type=media_type, headers={
+        "Cache-Control": "private, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+@router.delete("/{photo_id}", dependencies=[Depends(require_write_auth)])
+async def delete_grow_photo(photo_id: str):
+    with rooms.edit_state() as state:
+        row = _find_photo_row(state, photo_id)
+        if not row:
+            raise HTTPException(404, "Foto nicht gefunden")
+        state["room_journal"] = [entry for entry in state["room_journal"] if entry.get("photo_id") != photo_id]
+        state["plant_journal"] = [entry for entry in state["plant_journal"] if entry.get("photo_id") != photo_id]
+        state["grow_events"] = [
+            event for event in state["grow_events"]
+            if (event.get("payload") or {}).get("photo_id") != photo_id
+        ]
+        media_type = str(row.get("photo_media_type") or "image/jpeg")
+    suffix = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(media_type)
+    if suffix:
+        (PHOTO_DIR / f"{photo_id}.{suffix}").unlink(missing_ok=True)
+    return {"ok": True, "photo_id": photo_id}
