@@ -19,6 +19,13 @@ def state_file(tmp_path, monkeypatch):
     state = rooms.empty_state()
     state['rooms'] = [{'id': 'r1', 'name': 'Zelt'}]
     state['assignments'] = {'plug1': 'r1'}
+    state['plants'] = [{
+        'id':'plant_1','room_id':'r1','name':'Testpflanze','crop':'Tomate',
+        'phase':'vegetative','substrate_type':'peat_mix',
+        'substrate_components':'Torf 70%, Perlit 30%',
+        'substrate_pre_fertilized':'no','nutrition_plan':'organic',
+        'container_type':'plastic',
+    }]
     rooms.save_state(state)
     return target
 
@@ -26,7 +33,7 @@ def state_file(tmp_path, monkeypatch):
 def test_capture_preserves_edits_completed_during_device_read(state_file, monkeypatch):
     async def overview(*, refresh):
         await rooms.update_room('r1', rooms.RoomUpdate(name='Geänderter Raum'))
-        await rooms.add_room_journal('r1', rooms.JournalEntry(title='Nicht verlieren'))
+        await rooms.add_room_journal('r1', rooms.JournalEntry(title='Nicht verlieren',plant_id='plant_1'))
         return {'devices': [{'id': 'plug1', 'online': True, 'state': {'power_w': 0}}]}
     async def native(timeout): return []
     monkeypatch.setattr(rooms, 'device_overview', overview)
@@ -51,7 +58,7 @@ def test_capture_does_not_restore_deleted_room(state_file, monkeypatch):
 
 def test_concurrent_transactions_preserve_all_journal_entries(state_file):
     def add(index):
-        asyncio.run(rooms.add_room_journal('r1', rooms.JournalEntry(title=str(index))))
+        asyncio.run(rooms.add_room_journal('r1', rooms.JournalEntry(title=str(index),plant_id='plant_1')))
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(add, range(30)))
     assert {row['title'] for row in rooms.load_state()['room_journal']} == {str(i) for i in range(30)}

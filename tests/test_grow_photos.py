@@ -25,6 +25,12 @@ def _seed(tmp_path, monkeypatch):
         "room_id": "room_1",
         "name": "Plant 1",
         "phase": "flowering",
+        "crop": "Cannabis",
+        "substrate_type": "peat_mix",
+        "substrate_components": "Torf 60 %, Perlit 30 %, Kompost 10 %",
+        "substrate_pre_fertilized": "yes",
+        "nutrition_plan": "organic",
+        "container_type": "plastic",
         "start_date": (date.today() - timedelta(days=20)).isoformat(),
     })
     rooms.append_sensor(state, "room_1", {
@@ -74,6 +80,7 @@ def test_photo_list_and_delete_use_canonical_journal_state(tmp_path, monkeypatch
     _seed(tmp_path, monkeypatch)
     row = asyncio.run(photos.create_grow_photo(photos.GrowPhotoCreate(
         room_id="room_1",
+        plant_id="plant_1",
         image_data_url=PNG_DATA_URL,
     )))
 

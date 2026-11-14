@@ -242,6 +242,36 @@ class PlantCreate(BaseModel):
     expected_phase_days: int | None = Field(default=None, ge=1, le=365)
     profile_id: str | None = Field(default=None, max_length=80)
     notes: str = Field(default="", max_length=2000)
+    substrate_type: Literal["", "peat_mix", "coco_mix", "living_soil", "compost_mix", "mineral_mix", "rockwool", "hydroponic", "custom"] = ""
+    substrate_components: str = Field(default="", max_length=500)
+    substrate_pre_fertilized: Literal["", "yes", "no", "unknown"] = ""
+    nutrition_plan: Literal["", "organic", "mineral", "mixed", "none_planned", "undecided"] = ""
+    container_type: Literal["", "plastic", "fabric", "air_pruning", "self_watering", "high_tech", "hydro_system", "other"] = ""
+    container_volume_l: float | None = Field(default=None, gt=0, le=10000)
+
+
+def plant_ready_for_journal(plant: dict[str, Any]) -> bool:
+    return all((
+        bool(str(plant.get("name") or "").strip()),
+        bool(str(plant.get("crop") or "").strip()),
+        bool(str(plant.get("phase") or "").strip()),
+        bool(str(plant.get("substrate_type") or "").strip()),
+        bool(str(plant.get("substrate_components") or "").strip()),
+        plant.get("substrate_pre_fertilized") in {"yes", "no", "unknown"},
+        plant.get("nutrition_plan") in {"organic", "mineral", "mixed", "none_planned", "undecided"},
+        bool(str(plant.get("container_type") or "").strip()),
+    ))
+
+
+def require_journal_plant(state: dict[str, Any], room_id: str, plant_id: str | None) -> dict[str, Any]:
+    if not plant_id:
+        raise HTTPException(422, "Vor einem Growbucheintrag eine Pflanze mit Phase, Substrat, Topf und Düngung auswählen.")
+    plant = plant_or_404(state, plant_id)
+    if plant.get("room_id") != room_id:
+        raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    if not plant_ready_for_journal(plant):
+        raise HTTPException(422, "Pflanzenprofil vervollständigen: Kultur, Phase, Substrat/Zusammensetzung, Topf und Düngung.")
+    return plant
 
 
 class SensorSample(BaseModel):
@@ -420,6 +450,8 @@ async def create_grow_profile(body: GrowProfileCreate):
 async def update_grow_profile(profile_id: str, body: GrowProfileCreate):
     with edit_state() as state:
         row = profile_or_404(state, profile_id)
+        if body.plant_id:
+            require_journal_plant(state, room_id, body.plant_id)
         row.update(body.model_dump())
         row["updated_at"] = now_iso()
         return row
@@ -576,6 +608,67 @@ async def today_checkin():
         "event_count": sum(len(room["events"]) for room in rooms),
         "task_count": sum(len(room["tasks"]) for room in rooms),
     }
+
+
+# Horticultural orientation only; profile-specific phase targets take precedence.
+# Sources: Conviron/Argus Cannabis Humidity Management and Cannabis Workforce
+# Initiative seed-to-sale training (not a cultivar-specific guarantee).
+_CANNABIS_PHASE_ORIENTATION = {
+    "germination": {"temperature_c_min": 21, "temperature_c_max": 29, "humidity_percent_min": 65, "humidity_percent_max": 80},
+    "seedling": {"temperature_c_min": 21, "temperature_c_max": 29, "humidity_percent_min": 65, "humidity_percent_max": 80},
+    "vegetative": {"temperature_c_min": 21, "temperature_c_max": 29, "humidity_percent_min": 50, "humidity_percent_max": 70},
+    "flowering": {"temperature_c_min": 18, "temperature_c_max": 29, "humidity_percent_min": 40, "humidity_percent_max": 60},
+}
+
+
+def _climate_judgement(plant: dict[str, Any], snapshot: dict[str, Any], profiles: dict[str, dict]) -> dict[str, Any]:
+    phase = str(plant.get("phase") or "")
+    profile = profiles.get(plant.get("profile_id")) if plant.get("profile_id") else None
+    defined = (_phase_profile(profile, phase) or {}).get("targets") or {}
+    culture = str(plant.get("crop") or "").strip().lower()
+    is_cannabis = culture in {"cannabis", "cannabis sativa", "hanf"}
+    orientation = _CANNABIS_PHASE_ORIENTATION.get(phase, {}) if is_cannabis else {}
+    targets = {**orientation, **{key: value for key, value in defined.items() if value is not None}}
+    source = "grow_profile" if defined else "cannabis_orientation" if orientation else "not_configured"
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(snapshot.get("timestamp")))).total_seconds()
+    except (ValueError, TypeError):
+        age = float("inf")
+    if not (0 <= age <= 900):
+        return {"plant_id": plant["id"], "plant_name": plant["name"], "phase": phase, "status": "stale",
+                "source": source, "age_seconds": round(age) if math.isfinite(age) else None, "metrics": []}
+    details = []
+    for metric, lowkey, highkey in (
+        ("temperature_c", "temperature_c_min", "temperature_c_max"),
+        ("humidity_percent", "humidity_percent_min", "humidity_percent_max"),
+        ("vpd_kpa", "vpd_kpa_min", "vpd_kpa_max"),
+        ("ppfd_umol_m2_s", "ppfd_umol_m2_s_min", "ppfd_umol_m2_s_max"),
+    ):
+        value = snapshot.get(metric)
+        low, high = targets.get(lowkey), targets.get(highkey)
+        if value is None or low is None or high is None:
+            status = "unknown"
+        else:
+            status = "low" if value < low else "high" if value > high else "target"
+        details.append({"metric": metric, "value": value, "target_min": low, "target_max": high, "status": status})
+    assessed = [row["status"] for row in details if row["status"] != "unknown"]
+    overall = "unrated" if not assessed else "warning" if any(x != "target" for x in assessed) else "target"
+    return {"plant_id": plant["id"], "plant_name": plant["name"], "phase": phase, "status": overall,
+            "source": source, "age_seconds": round(age), "metrics": details}
+
+
+@router.get("/climate-overview")
+async def climate_overview():
+    state = load_state()
+    profiles = {p["id"]: p for p in state["grow_profiles"]}
+    result = []
+    for room in state["rooms"]:
+        snapshot = _latest_sensor_snapshot(state, room["id"])
+        plants = [p for p in state["plants"] if p["room_id"] == room["id"] and p.get("phase") != "completed"]
+        result.append({"room_id": room["id"], "room_name": room["name"],
+                       "snapshot": snapshot,
+                       "plants": [_climate_judgement(p, snapshot, profiles) for p in plants]})
+    return {"rooms": result}
 
 
 @router.get("")
@@ -781,12 +874,10 @@ async def room_journal(room_id: str):
 async def add_room_journal(room_id: str, body: JournalEntry):
     with edit_state() as state:
         room_or_404(state, room_id)
-        if body.plant_id:
-            plant = plant_or_404(state, body.plant_id)
-            if plant.get("room_id") != room_id:
-                raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        plant = require_journal_plant(state, room_id, body.plant_id)
         snapshot = live_room_snapshot(room_id, state)
         row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(),
+               "plant_phase": plant.get("phase"),
                "device_ids": sorted(snapshot["devices"]), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["room_journal"].append(row)
         _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
@@ -1014,6 +1105,7 @@ async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
     with edit_state() as state:
         room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
         if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        require_journal_plant(state, room_id, plant_id)
         snapshot = _latest_sensor_snapshot(state, room_id)
         row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
         state["plant_journal"].append(row)

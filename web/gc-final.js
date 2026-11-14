@@ -25,7 +25,8 @@ function page(id){
  document.title='Grow Central · '+pages[id];
  updateCamera();
  if(id==='rooms')loadRooms();
- if(id==='growbook')loadJournal();
+ if(id==='climate'){loadClimateOverview();loadClimateHistory();}
+ if(id==='growbook'){loadRoomPlants();loadJournal();}
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
  if(id==='cloud')cloudRefresh();
@@ -216,9 +217,10 @@ async function loadRooms(){
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
   const activeMarkup=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen oder freigeben</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><button type="button" class="subtle" data-room-delete="'+esc(x.id)+'">Raum löschen (rückgängig)</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein aktiver Raum angelegt.</p></article>';
   const archived=data.archived_rooms||[];
+  if(state.page==='climate')renderClimateRoomChoices();
   const archivedMarkup=archived.length?'<section class="panel"><h3>Archivierte Räume</h3><p class="desc">Pflanzen, Fotos, Growbuch und Messhistorie bleiben erhalten. Geräte werden nicht automatisch erneut zugewiesen.</p>'+archived.map(r=>'<div class="statusrow"><span>'+esc(r.name)+'</span><button type="button" class="subtle" data-room-restore="'+esc(r.id)+'">Wiederherstellen</button></div>').join('')+'</section>':'';
   $('roomData').innerHTML=activeMarkup+archivedMarkup;
-  await Promise.all([loadJournal(),loadRecentEvents()]);
+  await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
  }catch(e){text('roomData','Raumdaten nicht erreichbar');text('recentEvents','Raumdaten nicht erreichbar');}
 }
 async function manageRoomDevices(roomId){
@@ -257,6 +259,124 @@ async function createGrowRoom(){
  if(!name||!name.trim())return;
  try{await journalRequest('POST','/api/v1/rooms',{name:name.trim(),kind:'grow_tent'});await loadRooms();notify('Raum mit Growbuch angelegt');}
  catch(e){notify('Raum konnte nicht angelegt werden: '+e.message);}
+}
+let climateOverview={rooms:[]};
+let climateHistoryRequest=0;
+const chartMetricNames={
+ temperature_c:['Temperatur','°C'],humidity_percent:['Luftfeuchtigkeit','% rF'],
+ soil_moisture_percent:['Bodenfeuchte','%'],soil_temperature_c:['Bodentemperatur','°C'],
+ vpd_kpa:['VPD','kPa'],co2_ppm:['CO₂','ppm'],ppfd_umol_m2_s:['PPFD','µmol/m²/s'],
+ ec_ms_cm:['EC','mS/cm'],ph:['pH','pH'],power_w:['Leistung','W'],
+ energy_wh:['Energie','Wh'],fan_rpm:['Lüfterdrehzahl','RPM'],
+ fan_setpoint_percent:['Lüfter Sollstufe','%'],fan_power_on:['Lüfter Ein/Aus','bool'],
+ lamp_brightness_percent:['Lampenstufe','%'],lamp_power_on:['Lampe Ein/Aus','bool'],
+ airflow_cfm:['Luftmenge (geschätzt)','CFM'],pressure_pa:['Druck (geschätzt)','Pa']
+};
+function renderClimateRoomChoices(){
+ const picker=$('climateRoomSelect');if(!picker)return;
+ const prior=picker.value;
+ const rooms=state.rooms||[];
+ picker.innerHTML=rooms.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
+ if(rooms.some(r=>r.id===prior))picker.value=prior;
+ else if(rooms.some(r=>r.id===growJournal.roomId))picker.value=growJournal.roomId;
+}
+function climateMetricRow(m){
+ const title=chartMetricNames[m.metric]?.[0]||m.metric;
+ if(m.status==='unknown')return '';
+ const status=m.status==='target'?'Im Zielbereich':m.status==='low'?'Unter dem Zielbereich':'Über dem Zielbereich';
+ return '<span class="'+(m.status==='target'?'good':'bad')+'">'+esc(title)+': '+esc(status)+' · '+n(m.value,1)+
+  ' (Ziel '+n(m.target_min,1)+'–'+n(m.target_max,1)+')</span>';
+}
+function climateJudgementMarkup(items){
+ if(!items.length)return '<p class="desc">Noch keine Pflanze im Raum. Zuerst unter Räume eine Pflanze mit Phase anlegen.</p>';
+ return items.map(p=>{
+  const label=p.status==='target'?'Klima passt zur Phase':p.status==='warning'?'Klima außerhalb des Phasenbereichs':
+    p.status==='stale'?'Messwerte veraltet':'Keine vollständige Klimabewertung möglich';
+  const tag=p.source==='grow_profile'?'Individuelles Kulturprofil':p.source==='cannabis_orientation'?'Cannabis-Orientierungswerte':'Noch keine phasenspezifischen Sollwerte';
+  return '<div class="statusrow" style="display:block"><strong>'+esc(p.plant_name)+' · '+esc(phaseNames[p.phase]||p.phase)+
+   '</strong><p class="'+(p.status==='target'?'good':p.status==='warning'?'bad':'desc')+'">'+esc(label)+'</p>'+
+   '<p class="desc">'+esc(tag)+(p.age_seconds!=null?' · Messung '+Math.round(p.age_seconds/60)+' Min. alt':'')+'</p>'+
+   '<div class="desc">'+(p.metrics||[]).map(climateMetricRow).filter(Boolean).join(' · ')+'</div></div>';
+ }).join('');
+}
+async function loadClimateOverview(){
+ try{
+  const data=await api('/api/v1/rooms/climate-overview');
+  climateOverview=data;
+  const rooms=data.rooms||[];
+  const first=rooms.find(r=>r.room_id===growJournal.roomId)||rooms[0];
+  const all=rooms.flatMap(r=>r.plants||[]);
+  text('homePhaseClimate','');
+  $('homePhaseClimate').innerHTML=climateJudgementMarkup(all);
+  $('climatePhasePanel').innerHTML=climateJudgementMarkup(all);
+  const picked=$('climateRoomSelect')?.value;
+  const room=rooms.find(r=>r.room_id===picked)||first;
+  const soil=room?.snapshot?.soil_moisture_percent;
+  const captured=Date.parse(room?.snapshot?.timestamp||'');
+  const fresh=Number.isFinite(captured)&&Date.now()-captured>=0&&Date.now()-captured<=15*60*1000;
+  const validCalibration=room?.snapshot?.soil_calibration_status!=='required';
+  const show=Number.isFinite(soil)&&fresh&&validCalibration;
+  $('homeSoilPanel').hidden=!show;
+  if(show){
+   text('homeSoilValue',n(soil,1)+' %');
+   text('homeSoilSource',room.room_name+' · reale Messung · '+Math.round((Date.now()-captured)/60000)+' Min. alt');
+  }
+  text('climateSoilValue',show?room.room_name+' · '+n(soil,1)+' % · gemessen':'Kein frischer, kalibrierter und einem aktiven Raum zugeordneter Bodensensorwert.');
+ }catch(e){
+  text('homePhaseClimate','Klimabewertung nicht erreichbar.');
+  text('climatePhasePanel','Klimabewertung nicht erreichbar: '+e.message);
+  $('homeSoilPanel').hidden=true;
+  text('climateSoilValue','Bodenfeuchte derzeit nicht erreichbar.');
+ }
+}
+function climateCurve(metric,rows){
+ if(!rows.length)return '';
+ const title=chartMetricNames[metric]||[metric,''];
+ const series=rows.filter(r=>Number.isFinite(Number(r.value))&&Number.isFinite(Date.parse(r.recorded_at)));
+ if(!series.length)return '';
+ const vals=series.map(r=>Number(r.value));
+ const low=Math.min(...vals),high=Math.max(...vals),pad=(high-low)||1;
+ const first=Date.parse(series[0].recorded_at),last=Date.parse(series[series.length-1].recorded_at),span=Math.max(last-first,1);
+ const points=series.map(r=>{
+  const x=36+568*(Date.parse(r.recorded_at)-first)/span;
+  const y=116-96*(Number(r.value)-low)/pad;
+  return x.toFixed(1)+','+y.toFixed(1);
+ }).join(' ');
+ const timeline=series.length>1?'<polyline points="'+points+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>':
+ '<circle cx="36" cy="116" r="3" fill="currentColor"/>';
+ const startLabel=new Date(first).toLocaleDateString('de-DE'),endLabel=new Date(last).toLocaleDateString('de-DE');
+ const estimation=series.some(r=>r.source_kind==='estimated_show_only')?' · Nur berechnet, kein Sensorwert':'';
+ return '<article class="panel"><h4>'+esc(title[0])+' · '+esc(title[1])+'</h4>'+
+  '<p class="desc">'+series.length+' echte Archivpunkte · Min '+n(low,1)+' · Max '+n(high,1)+estimation+'</p>'+
+  '<svg viewBox="0 0 640 152" role="img" aria-label="'+esc(title[0])+' als historische Messkurve" style="width:100%;max-height:210px">'+
+  '<path d="M36 15V116H604" fill="none" stroke="currentColor" opacity=".4"/>'+
+  '<text x="32" y="13" font-size="11" fill="currentColor">'+n(high,1)+'</text>'+
+  '<text x="32" y="131" font-size="11" fill="currentColor">'+n(low,1)+'</text>'+timeline+
+  '<text x="36" y="147" font-size="11" fill="currentColor">'+esc(startLabel)+'</text>'+
+  '<text x="604" y="147" text-anchor="end" font-size="11" fill="currentColor">'+esc(endLabel)+'</text></svg></article>';
+}
+async function loadClimateHistory(){
+ const holder=$('climateHistoryCharts');if(!holder)return;
+ renderClimateRoomChoices();
+ const roomId=$('climateRoomSelect')?.value;
+ if(!roomId){holder.textContent='Kein aktiver Raum. Bitte unter Räume einen Raum anlegen oder wiederherstellen.';return;}
+ const seq=++climateHistoryRequest;
+ holder.textContent='Lade Langzeitmesswerte …';
+ try{
+  const hours=Number($('climateTimeSelect')?.value||24);
+  const start=hours?new Date(Date.now()-hours*3600000).toISOString():null;
+  const url='/api/v1/history/points?room_id='+encodeURIComponent(roomId)+'&limit=10000'+(start?'&start='+encodeURIComponent(start):'');
+  const d=await api(url);
+  if(seq!==climateHistoryRequest)return;
+  const grouped=new Map();
+  for(const row of d.points||[]){
+   if(!grouped.has(row.metric))grouped.set(row.metric,[]);
+   grouped.get(row.metric).push(row);
+  }
+  const html=[...grouped.entries()].map(([metric,rows])=>climateCurve(metric,rows)).filter(Boolean).join('');
+  holder.innerHTML=html||'<p class="desc">Für diesen Raum liegen im ausgewählten Zeitraum noch keine archivierten Messwerte vor. Diagramme erscheinen erst mit echten Messpunkten.</p>';
+  if((d.points||[]).length===10000)holder.insertAdjacentHTML('beforeend','<p class="desc">Anzeige auf die letzten 10.000 Messpunkte begrenzt; ältere Daten bleiben im Archiv erhalten.</p>');
+ }catch(e){if(seq===climateHistoryRequest)holder.textContent='Messverlauf nicht verfügbar: '+e.message;}
 }
 async function loadHistory(){
  try{const d=await api('/api/mars-history/summary');const rows=d.latest||[];
@@ -501,6 +621,7 @@ async function loadJournal(){
   if(seq!==growJournal.sequence)return;
   growJournal.entries=(journal.entries||[]).slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
   growJournal.plants=plants.plants||[];
+  renderRoomPlantProfiles();
   if(!growJournal.entries.find(x=>x.id===growJournal.selectedId))growJournal.selectedId=growJournal.entries[0]?.id||null;
   renderJournal();
  }catch(e){$('journalPreview').innerHTML='<p class="empty-text">Growbuch nicht erreichbar: '+esc(e.message)+'</p>';text('journalFullList','Growbuchdaten konnten nicht geladen werden.');}
@@ -542,14 +663,87 @@ function renderJournal(){
  '<div class="toolbar">'+(row.photo_id?'':'<button class="subtle" data-journal-edit="'+esc(row.id)+'">Bearbeiten</button>')+'<button class="subtle" data-journal-delete="'+esc(row.id)+'">Löschen</button></div></article>').join(''):'<p class="empty-text">Keine Einträge vorhanden. Nutze „Neuer Eintrag“.</p>';
 }
 
+const phaseNames={germination:'Keimung',seedling:'Sämling',vegetative:'Wachstum',flowering:'Blüte',flush:'Spülen',finish:'Abschluss',harvest:'Ernte',completed:'Abgeschlossen',other:'Sonstige'};
+const substrateNames={peat_mix:'Torf-/Erdmischung',coco_mix:'Kokos-/Perlitmischung',living_soil:'Living Soil',compost_mix:'Kompost-/Humusmischung',mineral_mix:'Mineralisches Substrat',rockwool:'Steinwolle',hydroponic:'Hydrokultur',custom:'Eigene Mischung'};
+const containerNames={plastic:'Kunststofftopf',fabric:'Stofftopf',air_pruning:'Air-Pruning-Topf',self_watering:'Selbstbewässerung',high_tech:'Hightech-Growtopf',hydro_system:'Hydro-System',other:'Sonstiger Topf'};
+function renderRoomPlantProfiles(){
+ const holder=$('roomPlantProfiles');if(!holder)return;
+ const room=(state.rooms||[]).find(r=>r.id===growJournal.roomId);
+ text('journalRoomInfo',room?'Growbuch · '+room.name:'Raum auswählen');
+ holder.innerHTML=growJournal.plants.length?growJournal.plants.map(p=>{
+  const ready=!!(p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized);
+  return '<div class="statusrow"><span><strong>'+esc(p.name)+'</strong> · '+esc(phaseNames[p.phase]||p.phase)+' · '+esc(substrateNames[p.substrate_type]||'Substrat fehlt')+
+   ' · '+esc(containerNames[p.container_type]||'Topf fehlt')+'</span><button type="button" class="subtle" data-plant-edit="'+esc(p.id)+'">'+(ready?'Bearbeiten':'Profil vervollständigen')+'</button></div>';
+ }).join(''):'<p class="desc">Noch keine Pflanze vorhanden. Lege zuerst eine Pflanze mit Phase, Substrat, Düngung und Topf an.</p>';
+}
+async function loadRoomPlants(){
+ if(!growJournal.roomId)return;
+ try{
+  const result=await api('/api/v1/rooms/'+encodeURIComponent(growJournal.roomId)+'/plants');
+  growJournal.plants=result.plants||[];
+  renderRoomPlantProfiles();
+ }catch(e){text('roomPlantProfiles','Pflanzen nicht verfügbar: '+e.message);}
+}
+const substratePresets={
+ coco70:['coco_mix','Kokos 70 %, Perlit 30 %'],
+ peat60:['peat_mix','Torf 60 %, Perlit 20 %, Vermiculit 20 %'],
+ coco50:['coco_mix','Kokos 50 %, Perlit 17 %, Vermiculit 17 %, Wurmhumus 16 %'],
+ cocopeat:['coco_mix','Kokos 60 %, Torf 30 %, Perlit 10 %'],
+ soilcompost:['compost_mix','Torf 60 %, Perlit 30 %, Kompost 10 %'],
+ living:['living_soil',''],
+ rockwool:['rockwool','Steinwolle 100 %']
+};
+function useSubstratePreset(){
+ const preset=substratePresets[$('plantMixPreset')?.value];
+ if(!preset)return;
+ $('plantSubstrate').value=preset[0];
+ if(preset[1])$('plantComposition').value=preset[1];
+ // Do not infer pre-fertilization from ingredients or overwrite the operator's feeding strategy.
+}
+function editRoomPlant(id){
+ const p=growJournal.plants.find(x=>x.id===id);if(!p)return;
+ const fields={plantEditId:p.id,plantName:p.name,plantCrop:p.crop,plantPhase:p.phase,plantSubstrate:p.substrate_type,
+ plantComposition:p.substrate_components,plantPreFert:p.substrate_pre_fertilized,plantNutrition:p.nutrition_plan,
+ plantContainer:p.container_type,plantVolume:p.container_volume_l};
+ Object.entries(fields).forEach(([key,val])=>{if($(key))$(key).value=val??'';});
+ $('roomPlantForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resetRoomPlantForm(){
+ $('roomPlantForm')?.reset();text('plantFormError','');
+ $('plantEditId').value='';
+}
+async function saveRoomPlant(e){
+ e.preventDefault();if(!growJournal.roomId)return;
+ const data={name:$('plantName').value.trim(),crop:$('plantCrop').value.trim(),phase:$('plantPhase').value,
+  substrate_type:$('plantSubstrate').value,substrate_components:$('plantComposition').value.trim(),
+  substrate_pre_fertilized:$('plantPreFert').value,nutrition_plan:$('plantNutrition').value,
+  container_type:$('plantContainer').value,
+  container_volume_l:$('plantVolume').value?Number($('plantVolume').value):null};
+ const id=$('plantEditId').value;
+ const old=growJournal.plants.find(p=>p.id===id);
+ const payload={...old,...data};
+ delete payload.id;delete payload.room_id;delete payload.created_at;delete payload.updated_at;
+ try{
+  if(!data.name||!data.crop||!data.substrate_type||!data.substrate_components||!data.substrate_pre_fertilized||
+     !data.nutrition_plan||!data.container_type)throw Error('Pflanze, Phase, Substrat, Vordüngung, Düngekonzept und Topf sind Pflicht.');
+  const path='/api/v1/rooms/'+encodeURIComponent(growJournal.roomId)+'/plants'+(id?'/'+encodeURIComponent(id):'');
+  await journalRequest(id?'PUT':'POST',path,payload);
+  resetRoomPlantForm();await loadRoomPlants();await loadJournal();await loadClimateOverview();
+  notify('Pflanzenprofil gespeichert');
+ }catch(err){text('plantFormError','Pflanze konnte nicht gespeichert werden: '+err.message);}
+}
 function openJournalForm(id=null){
  const row=growJournal.entries.find(x=>x.id===id);
+ if(!growJournal.plants.some(p=>p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized)){notify('Zuerst Pflanzenprofil mit Phase, Substrat, Topf und Düngung vollständig ausfüllen.');return;}
  growJournal.editingId=row?.id||null;
  const form=$('journalForm');form.reset();
  $('journalCategory').value=row?.category||'observation';
  $('journalTitle').value=row?.title||'';
  $('journalText').value=row?.text||'';
  $('journalPhoto').disabled=!!row;
+ const eligible=growJournal.plants.filter(p=>p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized);
+ $('journalPlant').innerHTML='<option value="">Pflanze wählen</option>'+eligible.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.phase)+'</option>').join('');
+ $('journalPlant').value=row?.plant_id||'';
  text('journalDialogTitle',row?'Eintrag bearbeiten':'Neuer Growbucheintrag');
  text('journalError','');
  if(!growJournal.roomId){notify('Erst einen Raum auswählen');return;}
@@ -568,15 +762,16 @@ async function saveJournal(event){
  if(!growJournal.roomId)return;
  const button=$('journalSave');button.disabled=true;
  text('journalError','');
- const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim()};
+ const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim(),plant_id:$('journalPlant').value};
  try{
   if(!payload.title)throw Error('Bitte einen Titel eingeben.');
+  if(!payload.plant_id)throw Error('Bitte zuerst eine Pflanze auswählen.');
   const photo=$('journalPhoto').files[0];
   if(photo&&!growJournal.editingId){
    if(!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Nur JPG, PNG oder WebP erlaubt.');
    if(photo.size>8*1024*1024)throw Error('Foto größer als 8 MiB.');
    const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photo)});
-   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
+   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,plant_id:payload.plant_id,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
   }else if(growJournal.editingId){
    await journalRequest('PUT',journalPath()+'/journal/'+encodeURIComponent(growJournal.editingId),payload);
   }else{
@@ -620,11 +815,12 @@ document.addEventListener('click',e=>{
   if(confirm('Firmware auf dem XIAO ESP32-C3 aktualisieren? Dies startet das USB-Flashen. Vorhandene Kalibrierung wird anschließend erneut geprüft. USB bis zum Abschluss nicht abziehen.'))soilCommand(soilFlash.dataset.soilFlash,'flash',{board:'seeed_xiao_esp32c3',confirmed:true});
   return;
  }
+ const plantEdit=e.target.closest('[data-plant-edit]');if(plantEdit){editRoomPlant(plantEdit.dataset.plantEdit);return;}
  const create=e.target.closest('[data-create-room]');if(create){createGrowRoom();return;}
  const archive=e.target.closest('[data-room-delete]');if(archive){archiveGrowRoom(archive.dataset.roomDelete);return;}
  const restore=e.target.closest('[data-room-restore]');if(restore){restoreGrowRoom(restore.dataset.roomRestore);return;}
  const manage=e.target.closest('[data-room-manage]');if(manage){manageRoomDevices(manage.dataset.roomManage);return;}
- const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');loadJournal();return;}
+ const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');return;}
  const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
  const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
  const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
@@ -645,6 +841,11 @@ document.addEventListener('submit',async e=>{
  if(assign){e.preventDefault();const data=new FormData(assign);assign.dataset.editing='false';await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
 });
 document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
+$('climateRoomSelect')?.addEventListener('change',loadClimateHistory);
+$('climateTimeSelect')?.addEventListener('change',loadClimateHistory);
+$('roomPlantForm')?.addEventListener('submit',saveRoomPlant);
+$('plantFormReset')?.addEventListener('click',resetRoomPlantForm);
+$('plantMixPreset')?.addEventListener('change',useSubstratePreset);
 $('journalForm')?.addEventListener('submit',saveJournal);
 $('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
 $('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
@@ -656,6 +857,7 @@ $('roomPicker')?.addEventListener('change',async e=>{
  await Promise.all([loadJournal(),loadRecentEvents()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+setInterval(()=>{if(!document.hidden)loadClimateOverview();},30000);
 setInterval(()=>{if(!document.hidden&&state.page==='devices')loadSoilUsb();},6000);
 
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
