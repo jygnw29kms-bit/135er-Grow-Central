@@ -55,8 +55,9 @@ Bereits identische Versionen, darunter `app/rooms.py`, `app/grow_photos.py`, `ap
 - Die Original-Git-Objekthashes wurden für die übernommene Pi-Laufzeit, Weboberfläche, neue HomeKit-/Mars-Hydro-Dateien und PWA-Icons bestätigt.
 - Python-Module und Shell-Dateien bestanden die Syntaxprüfung in einer separaten QA-Kopie.
 - Gezielt korrigierte Integrationssuite: **50 bestanden**.
-- Vollständige Suite: **506 bestanden, 3 Fehler** vor letzter Korrektur; darunter zwei native Mosquitto-Tests mit einem Berechtigungsproblem der root-basierten Testumgebung. Dieselben Broker-Tests unter Benutzer `mosquitto`: **13 bestanden**.
-- Nachführung der Firmwareversionsprüfung und abschließende Gesamtsuite sind erforderlich, um den Endstand abschließend freizugeben.
+- Abschließende Gesamtsuite in isolierter Pi-QA-Kopie: **507 bestanden, 2 native Broker-Tests unter root bewusst ausgenommen**, zusätzlich **26 Untertests bestanden**.
+- Beide nativen Broker-Testdateien unter dem Systembenutzer `mosquitto`: **13 bestanden**. Die ursprünglichen Ausfälle wurden durch Dateirechte temporärer root-Testverzeichnisse verursacht, nicht durch einen fehlerhaften produktiven Broker.
+- Der abschließende direkte Git-Blobvergleich zeigte **758 identische Dateien**, **102 nur in Git vorhandene Dateien** und **17 erklärte Dokumentations-/Test-/Sicherheitsunterschiede**. Kein offener ungeklärter Quellcode-Diff in den geprüften Pi-Laufzeitpfaden.
 - Quellscan der geänderten Dateien auf private Schlüssel und typische eingebettete Tokenmuster: keine Treffer bei den verwendeten Prüfregeln. Dies ist kein vollständiger Secrets-Audit.
 
 ## Abgrenzung
