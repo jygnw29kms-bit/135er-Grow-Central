@@ -109,8 +109,9 @@ function setMetrics(fan,lamp){
  text('lightValue',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—');
  text('tempAge',f?'Frischer BLE-Wert · '+n((fan.age_ms||0)/1000,1)+' s alt':'Kein frischer Sensorwert');
  let tiles=$('liveTiles').cloneNode(true);
+ // Preserve the value-to-sensor association even when tiles are reordered.
+ // The soil value is updated separately from the selected climate room.
  tiles.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
- tiles.querySelectorAll('.metric strong').forEach((e,i)=>e.textContent=[f?n(f.temperature_c,1)+' °C':'—',f?n(f.humidity_rh,1)+' % rF':'—',f?n(f.rpm)+' RPM':'—',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—'][i]);
  $('climateTiles').replaceChildren(tiles);
  updateSoilTiles();
  const overlay=f?'🌡 '+n(f.temperature_c,1)+' °C    ◇ '+n(f.humidity_rh,1)+' % rF':'Keine aktuellen Klimamesswerte';
