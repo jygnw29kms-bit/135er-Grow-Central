@@ -135,7 +135,10 @@
 <form id="gcRoomCreateForm" class="gc-room-create-form">
 <label>Raumname<input id="gcRoomName" required maxlength="80" placeholder="z. B. Growzelt 2"></label>
 <label>Raumtyp<select id="gcRoomKind"><option value="grow_tent">Growzelt</option><option value="grow_room">Growraum</option><option value="drying">Trocknung</option><option value="storage">Lager</option><option value="other">Sonstige</option></select></label>
-<button type="submit" class="primary-btn">Raum und Growbuch anlegen</button></form>
+<fieldset class="gc-new-room-devices"><legend>Geräte sofort diesem Raum zuordnen</legend>
+<label><input id="gcNewRoomLamp" type="checkbox"> FC3000 · Licht</label>
+<label><input id="gcNewRoomFan" type="checkbox"> DF150-M · Abluft</label>
+</fieldset><button type="submit" class="primary-btn">Raum und Growbuch anlegen</button></form>
 <p class="desc">Das Growbuch wird automatisch über die Raum-ID geführt. Einträge, Pflanzen und Fotos sind dadurch vom ersten Tag an zugeordnet.</p><p id="gcRoomCreateStatus" role="status"></p></article>
 <article class="panel"><header class="panelhead"><h3>Geräte dem Raum zuordnen</h3></header>
 <p class="desc">Die Zuordnung verändert keine Lampen- oder Lüfterleistung. Bereits zugeordnete Geräte können über den zugehörigen Raum erkannt werden.</p>
