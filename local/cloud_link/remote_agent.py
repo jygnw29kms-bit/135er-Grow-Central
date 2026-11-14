@@ -17,7 +17,7 @@ async def session():
   raise RuntimeError("unapproved cloud origin")
  identity=ensure_identity()
  if not identity.device_id:raise RuntimeError("device not paired")
- async with httpx.AsyncClient(timeout=12,trust_env=False,transport=httpx.AsyncHTTPTransport(local_address="0.0.0.0")) as client:
+ async with httpx.AsyncClient(timeout=12,trust_env=False,transport=httpx.AsyncHTTPTransport(local_address="0.0.0.0")) as client:  # nosec B104 - outbound source binding, never a listener
   r=await client.post(URL+"/api/v2/device/challenge",json={"device_id":identity.device_id})
   r.raise_for_status()
   nonce=r.json()["nonce"]
