@@ -188,3 +188,4 @@ main{min-width:0}
 .power-action.on{background:#145336;color:#92f6bb;border-color:#58db93;box-shadow:0 0 14px #4beb8940}
 .power-action:hover:not(:disabled){border-color:#9beab6}
 .control-buttons .apply{white-space:nowrap}
+@media(max-width:820px){.control-actions{flex-wrap:wrap}.control-buttons{margin-left:auto}}
