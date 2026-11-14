@@ -424,7 +424,7 @@ function displayRemote(message){
   $('systemDisplay').replaceChildren(
    textRow('Cloud-Kopplung',info.pairing?.status==='paired'?'Gekoppelt':'Prüfe …'),
    textRow('Cloud-Steuerkanal','Verschlüsselt'),
-   textRow('Fernschalten','Deaktiviert')
+   textRow('Mars-Hydro-Fernsteuerung','Bestätigung erforderlich')
   );break;
  }
  $('remoteState').textContent='LIVE · '+new Date().toLocaleTimeString('de-DE');
