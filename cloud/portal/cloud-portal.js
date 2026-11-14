@@ -233,9 +233,10 @@ function renderHistory(data){
 function displayRemote(message){
  if(!message.ok){$('remoteState').textContent='Lesezugriff: '+(message.error||'Fehler');return}
  const info=message.data||{};
- if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/journal$/.test(message.path)){renderJournal(info);return}
- if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/plants$/.test(message.path)){return}
- if(/^\\/api\\/v1\\/rooms\\/[a-zA-Z0-9_-]+\\/events\\?limit=7$/.test(message.path)){return}
+ if(typeof message.path==='string'&&message.path.startsWith('/api/v1/rooms/')){
+  if(message.path.endsWith('/journal')){renderJournal(info);return}
+  if(message.path.endsWith('/plants')||message.path.endsWith('/events?limit=7'))return;
+ }
  switch(message.path){
  case '/api/mars-hydro/ble/fast-fan-status':
   latestRemote.fan=info.fresh?info.latest:null;renderTelemetry();break;
