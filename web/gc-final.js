@@ -320,7 +320,7 @@ async function detectAccessMode(){
    if(fromCloud){
      accessMode.local=false;
      text('networkMode','Cloud');text('cloudAccessMode','HTTPS-Cloudzugang');
-     text('cloudRemoteStatus','Fernkanal separat prüfen');
+     // The authenticated cloudRefresh result owns the actual remote-channel status.
      return;
    }
    const result=await fetch('/api/health',{cache:'no-store',credentials:'same-origin',signal:controller.signal});
