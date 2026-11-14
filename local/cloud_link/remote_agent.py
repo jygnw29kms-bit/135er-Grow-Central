@@ -36,6 +36,18 @@ async def session():
   async with httpx.AsyncClient(timeout=8,trust_env=False) as local:
    await serve(ws,local)
   return
+CONTROL_PATHS={
+ "lamp":"/api/mars-hydro/ble/fast-lamp-control",
+ "fan":"/api/mars-hydro/ble/fast-fan-control",
+}
+def validate_control(req):
+ kind=req.get("kind");action=req.get("action");value=req.get("value")
+ if kind not in CONTROL_PATHS or type(value) is not int or req.get("confirm_physical_change") is not True:
+  return None
+ if action=="power" and value in (0,1):return CONTROL_PATHS[kind]
+ if kind=="lamp" and action=="brightness" and 10<=value<=100:return CONTROL_PATHS[kind]
+ if kind=="fan" and action=="speed" and 25<=value<=100:return CONTROL_PATHS[kind]
+ return None
 READ_PATHS={
  "/api/health",
  "/api/mars-hydro/ble/fast-fan-status",
@@ -52,6 +64,35 @@ async def serve(ws,local):
   if not isinstance(req,dict):continue
   request_id=req.get("request_id")
   if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
+  if req.get("type")=="control":
+   path=validate_control(req)
+   if not path:
+    await ws.send(json.dumps({"type":"control_result","request_id":request_id,
+                              "ok":False,"error":"invalid_or_unconfirmed_control"}))
+    continue
+   try:
+    kind=req["kind"]
+    status_path="/api/mars-hydro/ble/fast-"+kind+"-status"
+    state=await local.get(LOCAL_API+status_path,headers=local_headers(),timeout=8)
+    state.raise_for_status()
+    status=state.json()
+    if not status.get("fresh") or not status.get("latest"):
+     raise RuntimeError("stale_device_status")
+    if req["action"]!="power" and not status["latest"].get("power_on"):
+     raise RuntimeError("device_power_off")
+    body={"action":req["action"],"value":req["value"],"confirm_physical_change":True}
+    result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=22)
+    result.raise_for_status()
+    reply=result.json()
+    if not reply.get("device_report_confirmed"):
+     raise RuntimeError("physical_confirmation_missing")
+    response={"type":"control_result","request_id":request_id,"ok":True,
+              "device_report_confirmed":True,"kind":kind,"action":req["action"]}
+   except Exception as exc:
+    response={"type":"control_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="camera_frame":
    try:
     r=await local.get(LOCAL_API+"/api/v1/camera/snapshot/cloud-preview",
