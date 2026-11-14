@@ -137,22 +137,14 @@ async def create_grow_photo(body: GrowPhotoCreate):
     raw, ext, media_type = _decode_image(body.image_data_url)
     state = rooms.load_state()
     rooms.room_or_404(state, body.room_id)
-    plant = None
-    if body.plant_id:
-        plant = rooms.plant_or_404(state, body.plant_id)
-        if plant.get("room_id") != body.room_id:
-            raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    plant = rooms.require_journal_plant(state, body.room_id, body.plant_id)
 
     photo_id = rooms.new_id("photo")
     target = _store_photo(raw, photo_id, ext)
     try:
         with rooms.edit_state() as current:
             rooms.room_or_404(current, body.room_id)
-            plant = None
-            if body.plant_id:
-                plant = rooms.plant_or_404(current, body.plant_id)
-                if plant.get("room_id") != body.room_id:
-                    raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+            plant = rooms.require_journal_plant(current, body.room_id, body.plant_id)
             snapshot = rooms.live_room_snapshot(body.room_id, current)
             clean_tags = list(dict.fromkeys(tag.strip()[:40] for tag in body.tags if tag.strip()))[:20]
             created_at = rooms.now_iso()
