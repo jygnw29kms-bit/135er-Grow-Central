@@ -5,7 +5,7 @@ const text=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=0)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false};
-const pages={home:'Übersicht',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
+const pages={home:'Dashboard',growbook:'Growbuch',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
 let timer=0;
 function notify(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>e.classList.remove('show'),4200);}
 async function api(url,body){
@@ -25,6 +25,7 @@ function page(id){
  document.title='Grow Central · '+pages[id];
  updateCamera();
  if(id==='rooms')loadRooms();
+ if(id==='growbook')loadJournal();
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
  if(id==='cloud')cloudRefresh();
@@ -33,8 +34,17 @@ function page(id){
  window.scrollTo(0,0);
 }
 function controlMarkup(kind){
- const lamp=kind==='lamp',title=lamp?'FC3000':'DF150-M';
- return '<article class="control" data-control="'+kind+'"><div class="controlhead"><div class="name"><div class="device-photo"><img src="/static/'+(lamp?'mars-fc3000-official.jpg':'mars-df150m-official.jpg')+'" alt="'+(lamp?'Mars Hydro FC3000':'Mars Hydro DF150-M')+'" loading="lazy"></div><div><h3>'+title+'</h3><small>Mars Hydro · '+(lamp?'Licht':'Abluft')+'</small></div></div><button class="switch" data-power="'+kind+'" type="button">—</button></div><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüfterstufe')+'</span><strong data-level-label="'+kind+'">—</strong></div><input aria-label="'+(lamp?'Helligkeit FC3000':'Lüfterstufe DF150-M')+'" data-slider="'+kind+'" class="slider" type="range" min="'+(lamp?10:25)+'" max="100" step="1" value="'+(lamp?10:25)+'"><div class="ctlrow"><span data-status-label="'+kind+'">Prüfe Verbindung …</span><button class="apply" data-apply="'+kind+'" type="button">Übernehmen</button></div><div class="ctlfoot"><span>'+(lamp?'Status: ':'Drehzahl: ')+'<b data-live-detail="'+kind+'">—</b></span><span data-read-age="'+kind+'">—</span></div><div class="ctlmsg" data-control-msg="'+kind+'"></div></article>';
+ const lamp=kind==='lamp',model=lamp?'FC3000':'DF150-M';
+ const src=lamp?'/static/mars-fc3000-hires.jpg':'/static/mars-df150m-hires.jpg';
+ return '<article class="control" data-control="'+kind+'">'+
+  '<div class="controlhead"><div class="name"><h3>Mars Hydro '+model+'</h3><small>'+(lamp?'LED Grow Light':'Inline-Lüfter · BLE')+'</small></div>'+
+  '<button class="switch" type="button" data-power="'+kind+'" aria-label="'+model+' ein- oder ausschalten">Status —</button></div>'+
+  '<div class="control-image"><img src="'+src+'" alt="Original Mars Hydro '+model+'" loading="lazy" decoding="async"></div>'+
+  '<div class="control-bottom"><div class="ctlrow"><span>'+(lamp?'Helligkeit':'Lüftergeschwindigkeit')+'</span><strong data-level-label="'+kind+'">—</strong></div>'+
+  '<input class="slider" aria-label="'+model+' Sollstufe" data-slider="'+kind+'" type="range" min="'+(lamp?10:25)+'" max="100" value="'+(lamp?10:25)+'" step="1">'+
+  '<div class="ctlrow"><span data-status-label="'+kind+'">Prüfe …</span><button class="apply" type="button" data-apply="'+kind+'">Übernehmen</button></div></div>'+
+  '<div class="ctlfoot"><span>'+(lamp?'Status:':'Drehzahl:')+' <b data-live-detail="'+kind+'">—</b></span><span data-read-age="'+kind+'">—</span></div>'+
+  '<div class="ctlmsg" data-control-msg="'+kind+'"></div></article>';
 }
 function renderControls(){
  $('controlMount').innerHTML='<div class="controls">'+controlMarkup('lamp')+controlMarkup('fan')+'</div>';
@@ -126,16 +136,28 @@ async function switchSmart(id){
 async function loadHomekit(){
  try{
   const d=await api('/api/v1/homekit/status');state.hk=d;
-  text('homekitRow',d.paired?'Gekoppelt':d.running?'Bereit zur Kopplung':'Nicht verbunden');
+  text('homekitRow',d.paired?'Verbunden':d.running?'Bereit':'Getrennt');
+ text('homeLinkStatus',d.paired?'Verbunden':d.running?'Bereit':'Nicht verbunden');
   $('hkData').innerHTML='<div class="statusrow"><span>Kopplung</span><strong>'+(d.paired?'Verbunden':'Nicht verbunden')+'</strong></div><div class="statusrow"><span>Veröffentlichte Geräte</span><strong>'+n(d.accessories_exported??0)+'</strong></div>'+ (d.accessories||[]).map(a=>'<div class="statusrow"><span>'+esc(a.name)+'</span><strong>'+esc((a.services||[]).join(' · '))+'</strong></div>').join('');
  }catch(e){text('homekitRow','Nicht erreichbar');text('hkData','Bridge-Status nicht erreichbar');}
 }
 async function loadRooms(){
- try{const d=await api('/api/v1/rooms');const rows=d.rooms||[];
- $('roomData').innerHTML=rows.length?rows.map(r=>'<article class="panel"><h3>'+esc(r.name||'Unbenannter Raum')+'</h3><p class="desc">Grow-Central Raum · '+esc(r.id)+'</p></article>').join(''):'<article class="panel"><p>Keine Räume angelegt.</p></article>';
- text('currentRoom',rows.length?(rows[0].name||'Growzelt'):'Growzelt');
- text('heroRoom',rows.length?'RAUM: '+(rows[0].name||'Growzelt'):'KEIN RAUM EINGERICHTET');
- }catch(e){text('roomData','Raumliste derzeit nicht erreichbar');}
+ try{
+  const data=await api('/api/v1/rooms'),rooms=data.rooms||[];
+  state.rooms=rooms;
+  const selector=$('roomPicker');
+  const previous=growJournal.roomId;
+  if(selector){
+   selector.replaceChildren();
+   for(const room of rooms){const option=document.createElement('option');option.value=room.id;option.textContent=room.name;selector.add(option);}
+  }
+  growJournal.roomId=rooms.some(x=>x.id===previous)?previous:rooms[0]?.id||null;
+  if(selector&&growJournal.roomId)selector.value=growJournal.roomId;
+  const selected=rooms.find(x=>x.id===growJournal.roomId);
+  text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
+  $('roomData').innerHTML=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p></article>').join(''):'<article class="panel"><p>Es ist noch kein Raum angelegt.</p></article>';
+  await Promise.all([loadJournal(),loadRecentEvents()]);
+ }catch(e){text('roomData','Raumdaten nicht erreichbar');text('recentEvents','Raumdaten nicht erreichbar');}
 }
 async function loadHistory(){
  try{const d=await api('/api/mars-history/summary');const rows=d.latest||[];
@@ -187,7 +209,7 @@ async function cameraLoad(){
   const select=$('cameraMode');
   if(select){const chosen=cam.resolution;select.replaceChildren();
     for(const mode of cam.modes){const op=document.createElement('option');op.value=mode.width+'x'+mode.height;op.textContent=mode.width+' × '+mode.height;select.append(op);}
-    select.value=chosen&&[...select.options].some(o=>o.value===chosen)?chosen:'640x480';
+    select.value=chosen&&[...select.options].some(o=>o.value===chosen)?chosen:([ ...select.options].some(o=>o.value==='1280x720')?'1280x720':(select.options[0]?.value||''));
     cam.resolution=select.value;
   }
   text('cameraSettingsStatus',device.name+' · '+cam.modes.length+' unterstützte Auflösungen');
@@ -314,6 +336,8 @@ async function cloudRefresh(){
   $('cloudState').classList.toggle('good',reachable);
   $('cloudState').classList.toggle('bad',!reachable);
   cloudPairDisplay(result.pairing||{});
+  text('cloudLinkRow',result.connected?'Verbunden':'Getrennt');
+  text('cloudHomeStatus',result.connected?'Verbunden':'Getrennt');
  }catch(e){text('cloudState','Nicht erreichbar');text('cloudFeedback','Cloud-Status konnte nicht geladen werden: '+e.message);}
 }
 async function cloudPairStart(){
@@ -340,7 +364,174 @@ $('cloudPairRefresh')?.addEventListener('click',cloudRefresh);
 $('cloudPairCancel')?.addEventListener('click',cloudPairCancel);
 setInterval(()=>{if(!document.hidden&&state.page==='cloud')cloudRefresh();},10000);
 
-renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();
+// Final Master: inline scalable SVG icons, no icon fonts or raster scaling.
+const svgPaths={
+home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
+layers:'<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
+thermometer:'<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 11v7"/>',
+droplets:'<path d="M12 2C10 5 5 10 5 14a7 7 0 0 0 14 0c0-4-5-9-7-12z"/>',
+fan:'<path d="M12 12c-4-9-8-8-8-4 0 2 2 4 8 4zm0 0c9-4 8-8 4-8-2 0-4 2-4 8zm0 0c4 9 8 8 8 4 0-2-2-4-8-4zm0 0c-9 4-8 8-4 8 2 0 4-2 4-8z"/><circle cx="12" cy="12" r="2"/>',
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+camera:'<rect x="2" y="5" width="15" height="14" rx="2"/><path d="m17 10 5-3v10l-5-3"/><circle cx="9" cy="12" r="3"/>',
+book:'<path d="M12 6C9 4 5 4 2 5v14c4-1 7 0 10 2 3-2 6-3 10-2V5c-3-1-7-1-10 1z"/><path d="M12 6v15"/>',
+grid:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
+house:'<path d="m3 11 9-8 9 8v10H3z"/><path d="M9 21v-7h6v7"/>',
+cloud:'<path d="M5 19a5 5 0 0 1-1-10 8 8 0 0 1 15 1 4 4 0 0 1-1 9z"/>',
+settings:'<circle cx="12" cy="12" r="3"/><path d="M9 2h6l1 3 2 1 3-1 2 5-3 2v2l3 2-2 5-3-1-2 1-1 3H9l-1-3-2-1-3 1-2-5 3-2v-2L1 10l2-5 3 1 2-1z"/>',
+wifi:'<path d="M2 8a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0m-11 4a5 5 0 0 1 8 0"/><circle cx="12" cy="20" r="1"/>',
+history:'<path d="M3 12a9 9 0 1 0 3-7"/><path d="M3 3v5h5M12 7v5l4 3"/>'
+};
+function renderIcons(root=document){
+ root.querySelectorAll('[data-icon]').forEach(el=>{
+  const paths=svgPaths[el.dataset.icon];if(!paths)return;
+  el.innerHTML='<svg class="gc-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">'+paths+'</svg>';
+ });
+}
+const growJournal={roomId:null,entries:[],selectedId:null,tab:'entries',editingId:null,loading:false,sequence:0,plants:[]};
+const catLabels={note:'Notiz',watering:'Bewässerung',feeding:'Düngung',training:'Training',defoliation:'Entlaubung',pest:'Schädlingskontrolle',flowering:'Blüte',photo:'Foto',observation:'Beobachtung',diagnosis:'Diagnose',repotting:'Umtopfen',harvest:'Ernte',other:'Sonstiges'};
+const niceDate=value=>{const time=new Date(value||'');return isNaN(time)?'Ohne Datum':time.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
+const shortDate=value=>{const time=new Date(value||'');return isNaN(time)?'—':time.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});};
+function journalPath(){return growJournal.roomId?'/api/v1/rooms/'+encodeURIComponent(growJournal.roomId):null;}
+async function loadJournal(){
+ const root=journalPath();
+ if(!root){$('journalPreview').innerHTML='<p class="empty-text">Zuerst einen Raum auswählen.</p>';text('journalFullList','Kein Raum gewählt.');return;}
+ const seq=++growJournal.sequence;
+ try{
+  const [journal,plants]=await Promise.all([api(root+'/journal'),api(root+'/plants')]);
+  if(seq!==growJournal.sequence)return;
+  growJournal.entries=(journal.entries||[]).slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  growJournal.plants=plants.plants||[];
+  if(!growJournal.entries.find(x=>x.id===growJournal.selectedId))growJournal.selectedId=growJournal.entries[0]?.id||null;
+  renderJournal();
+ }catch(e){$('journalPreview').innerHTML='<p class="empty-text">Growbuch nicht erreichbar: '+esc(e.message)+'</p>';text('journalFullList','Growbuchdaten konnten nicht geladen werden.');}
+}
+function journalEntryPreview(row){
+ return '<button type="button" class="journal-entry '+(row.id===growJournal.selectedId?'active':'')+'" data-journal-select="'+esc(row.id)+'">'+
+ '<span>'+esc(catLabels[row.category]||row.category||'Eintrag')+'</span><small>'+shortDate(row.created_at)+'</small><span aria-hidden="true">›</span></button>';
+}
+function journalEntryDetail(row){
+ if(!row)return '<p class="empty-text">Noch keine Einträge vorhanden. Über „Eintrag“ kannst du die erste Beobachtung anlegen.</p>';
+ const safeId=esc(row.id);
+ const photo=row.photo_id?'<img class="journal-photo" src="/api/v1/grow-photos/'+encodeURIComponent(row.photo_id)+'" alt="Foto des Growbucheintrags" loading="lazy">':'';
+ const editor=row.photo_id?'':'<button type="button" data-journal-edit="'+safeId+'">Bearbeiten</button>';
+ return '<header><h4>'+esc(row.title||catLabels[row.category]||'Eintrag')+'</h4><div class="toolbar">'+editor+
+ '<button type="button" data-journal-delete="'+safeId+'">Löschen</button></div></header>'+
+ '<small>'+niceDate(row.created_at)+' · '+esc(catLabels[row.category]||row.category||'')+'</small>'+
+ '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+photo;
+}
+function renderJournal(){
+ const entries=growJournal.entries;
+ const active=growJournal.tab;
+ document.querySelectorAll('[data-journal-tab]').forEach(b=>b.classList.toggle('active',b.dataset.journalTab===active));
+ let filtered=entries;
+ if(active==='notes')filtered=entries.filter(x=>['note','observation'].includes(x.category));
+ if(active==='phases'){
+  const plants=growJournal.plants;
+  $('journalPreview').innerHTML=plants.length?plants.map(x=>'<div class="journal-entry"><span>'+esc(x.name)+'</span><small>'+esc(x.phase||'Keine Phase')+'</small></div>').join(''):'<p class="empty-text">Noch keine Pflanzen erfasst.</p>';
+  $('journalSelected').innerHTML='<h4>Pflanzenphasen</h4><p>Hier werden ausschließlich die tatsächlich angelegten Pflanzen und deren gespeicherte Phasen angezeigt.</p>';
+ }else if(active==='overview'){
+  $('journalPreview').innerHTML='<div class="journal-entry"><span>Journal</span><small>'+entries.length+' Einträge</small></div><div class="journal-entry"><span>Pflanzen</span><small>'+growJournal.plants.length+' vorhanden</small></div>';
+  $('journalSelected').innerHTML='<h4>Grow-Übersicht</h4><p>'+entries.length+' dokumentierte Einträge in diesem Raum. '+growJournal.plants.length+' Pflanzen hinterlegt.</p>';
+ }else{
+  $('journalPreview').innerHTML=filtered.length?filtered.slice(0,8).map(journalEntryPreview).join(''):'<p class="empty-text">Noch keine '+(active==='notes'?'Notizen':'Growbucheinträge')+' gespeichert.</p>';
+  const row=filtered.find(x=>x.id===growJournal.selectedId)||filtered[0]||null;
+  $('journalSelected').innerHTML=journalEntryDetail(row);
+ }
+ const full=$('journalFullList');
+ if(full)full.innerHTML=entries.length?entries.map(row=>'<article class="journal-item"><h4>'+esc(catLabels[row.category]||row.category||'')+' · '+esc(row.title)+'</h4><small>'+niceDate(row.created_at)+'</small><p>'+esc(row.text||row.note||'')+'</p>'+ (row.photo_id?'<img class="journal-photo" src="/api/v1/grow-photos/'+encodeURIComponent(row.photo_id)+'" alt="Growfoto" loading="lazy">':'')+
+ '<div class="toolbar">'+(row.photo_id?'':'<button class="subtle" data-journal-edit="'+esc(row.id)+'">Bearbeiten</button>')+'<button class="subtle" data-journal-delete="'+esc(row.id)+'">Löschen</button></div></article>').join(''):'<p class="empty-text">Keine Einträge vorhanden. Nutze „Neuer Eintrag“.</p>';
+}
+
+function openJournalForm(id=null){
+ const row=growJournal.entries.find(x=>x.id===id);
+ growJournal.editingId=row?.id||null;
+ const form=$('journalForm');form.reset();
+ $('journalCategory').value=row?.category||'observation';
+ $('journalTitle').value=row?.title||'';
+ $('journalText').value=row?.text||'';
+ $('journalPhoto').disabled=!!row;
+ text('journalDialogTitle',row?'Eintrag bearbeiten':'Neuer Growbucheintrag');
+ text('journalError','');
+ if(!growJournal.roomId){notify('Erst einen Raum auswählen');return;}
+ $('journalDialog').showModal();
+}
+async function journalRequest(method,path,body){
+ const opts={method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'}};
+ if(body!==undefined)opts.body=JSON.stringify(body);
+ const response=await fetch(path,opts);
+ let data={};try{data=await response.json();}catch{}
+ if(!response.ok)throw new Error(typeof data?.detail==='string'?data.detail:'HTTP '+response.status);
+ return data;
+}
+async function saveJournal(event){
+ event.preventDefault();
+ if(!growJournal.roomId)return;
+ const button=$('journalSave');button.disabled=true;
+ text('journalError','');
+ const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim()};
+ try{
+  if(!payload.title)throw Error('Bitte einen Titel eingeben.');
+  const photo=$('journalPhoto').files[0];
+  if(photo&&!growJournal.editingId){
+   if(!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Nur JPG, PNG oder WebP erlaubt.');
+   if(photo.size>8*1024*1024)throw Error('Foto größer als 8 MiB.');
+   const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photo)});
+   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
+  }else if(growJournal.editingId){
+   await journalRequest('PUT',journalPath()+'/journal/'+encodeURIComponent(growJournal.editingId),payload);
+  }else{
+   await api(journalPath()+'/journal',payload);
+  }
+  $('journalDialog').close();growJournal.editingId=null;
+  await loadJournal();await loadRecentEvents();
+  notify('Growbucheintrag gespeichert');
+ }catch(e){text('journalError','Speichern fehlgeschlagen: '+e.message);}
+ finally{button.disabled=false;}
+}
+async function deleteJournal(id){
+ const row=growJournal.entries.find(x=>x.id===id);
+ if(!row||!confirm('Diesen Growbucheintrag wirklich löschen?'))return;
+ try{
+  const path=row.photo_id?'/api/v1/grow-photos/'+encodeURIComponent(row.photo_id):journalPath()+'/journal/'+encodeURIComponent(id);
+  await journalRequest('DELETE',path);
+  await loadJournal();await loadRecentEvents();
+  notify('Eintrag gelöscht');
+ }catch(e){notify('Löschen fehlgeschlagen: '+e.message);}
+}
+async function loadRecentEvents(){
+ const root=journalPath();if(!root)return;
+ try{
+  const result=await api(root+'/events?limit=7');
+  const entries=result.events||[];
+  $('recentEvents').innerHTML=entries.length?entries.map(x=>{
+   const time=new Date(x.created_at||x.timestamp||'');
+   const dateText=isNaN(time)?'—':time.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+   const label=catLabels[x.type]||x.type||'Ereignis';
+   const note=x.note||label;
+   return '<div class="recent-event"><time>'+dateText+'</time><span>'+esc(note)+'</span></div>';
+  }).join(''):'<p class="empty-text">Noch keine Grow-Ereignisse vorhanden.</p>';
+ }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
+}
+document.addEventListener('click',e=>{
+ const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
+ const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
+ const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
+ const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
+ const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
+});
+$('journalForm')?.addEventListener('submit',saveJournal);
+$('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
+$('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
+$('roomPicker')?.addEventListener('change',async e=>{
+ growJournal.roomId=e.target.value;
+ const row=(state.rooms||[]).find(x=>x.id===growJournal.roomId);
+ text('currentRoom',row?.name||'—');text('heroRoom',row?.name||'—');
+ growJournal.selectedId=null;
+ await Promise.all([loadJournal(),loadRecentEvents()]);
+});
+setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+
+renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
 cameraLoad();
 
 })();

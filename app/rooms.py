@@ -1111,3 +1111,33 @@ def install(app) -> None:
 
     app.router.add_event_handler("startup", start_room_capture)
     app.router.add_event_handler("shutdown", stop_room_capture)
+
+@router.put("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
+async def update_room_journal(room_id: str, entry_id: str, body: JournalEntry):
+    """Edit a real room journal entry. Photo entries retain their photo metadata."""
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = next((entry for entry in state["room_journal"]
+                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
+        if row is None:
+            raise HTTPException(404, "Growbucheintrag nicht gefunden")
+        if row.get("photo_id"):
+            raise HTTPException(409, "Fotoeinträge werden über das Fotoarchiv bearbeitet")
+        row.update(body.model_dump())
+        row["updated_at"] = now_iso()
+        return row
+
+
+@router.delete("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
+async def delete_room_journal(room_id: str, entry_id: str):
+    """Remove a journal entry without removing immutable historical events."""
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = next((entry for entry in state["room_journal"]
+                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
+        if row is None:
+            raise HTTPException(404, "Growbucheintrag nicht gefunden")
+        if row.get("photo_id"):
+            raise HTTPException(409, "Fotoeintrag über Fotoarchiv löschen")
+        state["room_journal"] = [entry for entry in state["room_journal"] if entry.get("id") != entry_id]
+        return {"ok": True}
