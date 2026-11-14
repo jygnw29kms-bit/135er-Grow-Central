@@ -51,8 +51,22 @@ async def serve(ws,local):
   except (ValueError,TypeError):continue
   if not isinstance(req,dict):continue
   request_id=req.get("request_id")
-  if req.get("type")!="read" or not isinstance(request_id,str) or len(request_id)>64:
+  if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
+  if req.get("type")=="camera_frame":
+   try:
+    r=await local.get(LOCAL_API+"/api/v1/camera/snapshot?width=320&height=240",
+       headers=local_headers(),timeout=17)
+    if not r.is_success:raise ValueError("camera_http_"+str(r.status_code))
+    if r.headers.get("content-type","").split(";")[0]!="image/jpeg":raise ValueError("invalid_image_format")
+    if not 1000<=len(r.content)<=145000:raise ValueError("image_size_out_of_bounds")
+    response={"type":"camera_result","request_id":request_id,"ok":True,
+              "image":"data:image/jpeg;base64,"+base64.b64encode(r.content).decode()}
+   except Exception as exc:
+    response={"type":"camera_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__}
+   await ws.send(json.dumps(response))
    continue
+  if req.get("type")!="read":continue
   path=req.get("path")
   if path not in READ_PATHS:
    response={"type":"read_result","request_id":request_id,"ok":False,"error":"path_not_allowed"}
