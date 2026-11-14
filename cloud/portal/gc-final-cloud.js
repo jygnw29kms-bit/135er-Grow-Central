@@ -72,12 +72,20 @@ function setMetrics(fan,lamp){
  const f=fan?.fresh?fan.latest:null,l=lamp?.fresh?lamp.latest:null;
  text('tempValue',f&&Number.isFinite(f.temperature_c)?n(f.temperature_c,1)+' °C':'—');
  text('humidityValue',f&&Number.isFinite(f.humidity_rh)?n(f.humidity_rh,1)+' % rF':'—');
- text('rpmValue',f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—');
+ const rpmLabel=f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—';
+ text('rpmValue',rpmLabel);
+ const rpmTile=$('rpmValue')?.closest('.metric');
+ if(rpmTile){
+  const hint=rpmTile.querySelector('small');
+  if(hint)hint.textContent=f?.power_on&&f.rpm===0
+   ?'Sanftanlauf · Ist-Drehzahl läuft verzögert nach'
+   :'Ist-Drehzahl · BLE-Messwert';
+ }
  text('lightValue',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—');
  text('tempAge',f?'Frischer BLE-Wert · '+n((fan.age_ms||0)/1000,1)+' s alt':'Kein frischer Sensorwert');
  let tiles=$('liveTiles').cloneNode(true);
  tiles.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
- tiles.querySelectorAll('.metric strong').forEach((e,i)=>e.textContent=[f?n(f.temperature_c,1)+' °C':'—',f?n(f.humidity_rh,1)+' % rF':'—',f?n(f.rpm)+' RPM':'—',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—'][i]);
+ tiles.querySelectorAll('.metric strong').forEach((e,i)=>e.textContent=[f?n(f.temperature_c,1)+' °C':'—',f?n(f.humidity_rh,1)+' % rF':'—',rpmLabel,l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—'][i]);
  $('climateTiles').replaceChildren(tiles);
  const overlay=f?'🌡 '+n(f.temperature_c,1)+' °C    ◇ '+n(f.humidity_rh,1)+' % rF':'Keine aktuellen Klimamesswerte';
  document.querySelectorAll('.osdClimate').forEach(e=>e.textContent=overlay);
