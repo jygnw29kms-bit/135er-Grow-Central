@@ -64,6 +64,30 @@ async def serve(ws,local):
   if not isinstance(req,dict):continue
   request_id=req.get("request_id")
   if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
+  if req.get("type")=="journal_create":
+   room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
+   valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
+      and isinstance(title,str) and 1<=len(title.strip())<=120
+      and isinstance(note,str) and len(note)<=5000
+      and category in {"note","observation","watering","feeding","training","other"}
+      and req.get("confirm_write") is True)
+   if not valid:
+    await ws.send(json.dumps({"type":"journal_result","request_id":request_id,"ok":False,
+                              "error":"invalid_journal_entry"}))
+    continue
+   try:
+    path="/api/v1/rooms/"+room_id+"/journal"
+    body={"title":title.strip(),"text":note,"category":category}
+    result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
+    result.raise_for_status()
+    entry=result.json()
+    response={"type":"journal_result","request_id":request_id,"ok":True,"room_id":room_id,
+              "entry_id":str(entry.get("id",""))[:128]}
+   except Exception as exc:
+    response={"type":"journal_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="control":
    path=validate_control(req)
    if not path:
