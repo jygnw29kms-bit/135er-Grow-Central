@@ -1,7 +1,7 @@
 # Grow Central: GUI-Bereinigung und Funktionsinventar (13.11.2026)
 
 ## Verbindliche Architektur
-Eine GUI: web/gc-final.html, gc-final.css, gc-final.js über /ui. Dieselbe Oberfläche für Desktop und PWA, offizielles Branding und App-Icons. Login und First Boot sind separate Sicherheitsabläufe, keine Grow-Control-Oberflächen.
+Eine GUI: web/gc-final.html, gc-final.css, gc-final.js über /ui. Dieselbe Oberfläche für Desktop und PWA, offizielles Branding und App-Icons. Login und First Boot sind separate Sicherheitsabläufe, keine Grow-Central-Oberflächen.
 
 ## Bestätigte Funktionen
 - Mars Hydro FC3000: BLE dauerhaft, Ein/Aus, Helligkeit 10–100 %, Status; HomeKit Ein/Aus nach Feedback-Fix vom Nutzer bestätigt.
