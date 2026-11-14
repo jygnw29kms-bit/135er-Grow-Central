@@ -104,7 +104,7 @@ def test_phase_change_is_persisted_as_timeline_event(tmp_path, monkeypatch):
 
 def test_plant_journal_gets_snapshot_and_shared_event(tmp_path, monkeypatch):
     _seed_room(tmp_path, monkeypatch)
-    plant = asyncio.run(rooms.create_plant("room_1", rooms.PlantCreate(name="Pflanze C")))
+    plant = asyncio.run(rooms.create_plant("room_1", rooms.PlantCreate(name="Pflanze C", crop="Tomate", phase="vegetative", substrate_type="peat_mix", substrate_components="Torf 60 %, Perlit 40 %", substrate_pre_fertilized="no", nutrition_plan="organic", container_type="plastic")))
     with rooms.edit_state() as state:
         rooms.append_sensor(state, "room_1", {
             "temperature_c": 25.0,
