@@ -4,13 +4,13 @@
 
 # 135er-Grow Central
 
-## Entwicklungsstopp Raspberry Pi · 14. November 2026
+## Raspberry-Pi-Bestandsaufnahme und Git-Abgleich · 14. November 2026
 
-**Anweisung des Betreibers:** Sämtliche Entwicklungsarbeiten am Grow-Central-Pi sind bis zur ausdrücklichen Wiederfreigabe eingestellt. Keine neuen Features, Builds, Deployments, Hardwareexperimente oder automatisierten Entwicklungsänderungen am Pi. Laufende Betriebs-, Sensor-, Steuerungs- und Fernwartungsdienste dürfen weiterlaufen; keine unnötigen Dienststopps oder Reboots.
+**Aktualisierung am 14.11.2026:** Der Betreiber hat den Entwicklungsstopp ausdrücklich aufgehoben. Grow Central darf weiterentwickelt, getestet und kontrolliert deployed werden. Die zuvor erstellte Bestandsaufnahme bleibt eine historische Momentaufnahme, nicht der aktuelle Arbeitsauftrag. Laufenden Betrieb, Sensorik und Fernwartung bei Änderungen schützen.
 
 **Sicherungsstand:** Das öffentliche GitHub-Repository dokumentiert den zuletzt bekannten Quellstand. Bei der Live-Prüfung am 14.11.2026 war `135er-grow-central` über MeshCentral erreichbar. Die produktive Installation unter `/opt/135er-grow-central` besitzt **kein Git-Arbeitsverzeichnis**; deshalb ist ein vollständiger Abgleich/Push sämtlicher lokal installierter Dateien und lokaler Änderungen **nicht verifiziert**. Der historische Image-Candidate bleibt Build 461 (`alpha-0.7.5`), kein neu validiertes Image. Keine Credentials, privaten Konfigurationen, Schlüssel, Datenbankinhalte oder lokalen Logs öffentlich committen.
 
-**Offen vor einer endgültigen Archivierung:** Version/Dateiinventar des Pi mit dem GitHub-Quellstand vergleichen, erforderliche nicht-sensitive Änderungen kontrolliert übertragen, Commit und Hardwareabbild prüfen. Bis dahin gilt **Entwicklungsstopp bestätigt, vollständige lokale Pi-Sicherung nicht bestätigt**.
+**Git-Abgleich:** Ausgewählte tatsächliche Pi-Quelldateien einschließlich Raum-/Growbuch, Fotojournal, Mars-Hydro-Code und Final-Master-Weboberfläche wurden auf Branch [`archive/pi-live-2026-11-14`](https://github.com/jygnw29kms-bit/135er-Grow-Central/tree/archive/pi-live-2026-11-14/pi-snapshots/2026-11-14) gesichert. Der installierte Pi-Quellstand ist `be24ba9097c2e98eb1e3f302b5992c004d2e6e29`, Build `operator-be24ba9097c2-base508`. Der GitHub-`master` enthält bereits neuere Änderungen; eine pauschale Überschreibung ist nicht zulässig. Ein vollständiger Dateivergleich und Hardwareabbild sind weiter offen. **Entwicklung ist freigegeben.**
 
 
 > **Vollständig Open Source.** Entwicklung, Quellcode, Dokumentation, Images und veröffentlichbare technische Komponenten werden transparent über dieses Repository bereitgestellt.
