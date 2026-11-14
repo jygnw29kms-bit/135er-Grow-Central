@@ -69,6 +69,38 @@ function setControls(kind,status){
  setAll('[data-live-detail="'+kind+'"]',!active?'—':kind==='lamp'?(latest.power_on?'Eingeschaltet':'Ausgeschaltet'):n(latest.rpm)+' RPM');
  setAll('[data-read-age="'+kind+'"]',active&&Number.isFinite(status.age_ms)?n(status.age_ms/1000,1)+' s alt':active?'Live':'Kein aktueller Wert');
 }
+const soilTileState={dashboard:{value:'—',detail:'Warte auf Bodensensor',valid:false},climate:{value:'—',detail:'Warte auf Bodensensor',valid:false}};
+function soilTileReading(room){
+ const snapshot=room?.snapshot;
+ if(!snapshot)return {value:'—',detail:'Keine Messung im gewählten Raum',valid:false};
+ const status=snapshot.soil_measurement_status;
+ if(status==='sensor_fault')return {value:'—',detail:'Sensorfehler · Messung ungültig',valid:false};
+ if(status==='out_of_calibration_range')return {value:'—',detail:'Außerhalb der Kalibrierung',valid:false};
+ if(snapshot.soil_calibration_status==='required'||snapshot.soil_calibration_status==='calibration_required')
+  return {value:'—',detail:'Kalibrierung erforderlich',valid:false};
+ const age=Date.now()-Date.parse(snapshot.timestamp||'');
+ if(!Number.isFinite(age)||age<0||age>15*60*1000)
+  return {value:'—',detail:'Messung veraltet oder nicht verfügbar',valid:false};
+ const value=snapshot.soil_moisture_percent;
+ if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>100)
+  return {value:'—',detail:'Kein gültiger Messwert',valid:false};
+ return {value:n(value,1)+' %',detail:'Bodensensor · '+Math.floor(age/60000)+' Min. alt',valid:true};
+}
+function updateSoilTiles(){
+ const home=soilTileState.dashboard;
+ const climate=soilTileState.climate;
+ text('dashboardSoilValue',home.value);
+ text('dashboardSoilDetail',home.detail);
+ const dashboard=$('dashboardSoilTile');
+ if(dashboard)dashboard.dataset.sensorValid=String(home.valid);
+ const tile=$('climateTiles')?.querySelector('.metric-soil');
+ if(tile){
+  const value=tile.querySelector('strong'),detail=tile.querySelector('small');
+  if(value)value.textContent=climate.value;
+  if(detail)detail.textContent=climate.detail;
+  tile.dataset.sensorValid=String(climate.valid);
+ }
+}
 function setMetrics(fan,lamp){
  const f=fan?.fresh?fan.latest:null,l=lamp?.fresh?lamp.latest:null;
  text('tempValue',f&&Number.isFinite(f.temperature_c)?n(f.temperature_c,1)+' °C':'—');
@@ -80,6 +112,7 @@ function setMetrics(fan,lamp){
  tiles.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
  tiles.querySelectorAll('.metric strong').forEach((e,i)=>e.textContent=[f?n(f.temperature_c,1)+' °C':'—',f?n(f.humidity_rh,1)+' % rF':'—',f?n(f.rpm)+' RPM':'—',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—'][i]);
  $('climateTiles').replaceChildren(tiles);
+ updateSoilTiles();
  const overlay=f?'🌡 '+n(f.temperature_c,1)+' °C    ◇ '+n(f.humidity_rh,1)+' % rF':'Keine aktuellen Klimamesswerte';
  document.querySelectorAll('.osdClimate').forEach(e=>e.textContent=overlay);
  text('climateDetails',f?'DF150-M · reale BLE-Messung, '+n((fan.age_ms||0)/1000,1)+' s alt.':'Keine frischen DF150-M-Messwerte.');
@@ -337,27 +370,31 @@ async function loadClimateOverview(){
   text('homePhaseClimate','');
   $('homePhaseClimate').innerHTML=climateJudgementMarkup(all);
   $('climatePhasePanel').innerHTML=climateJudgementMarkup(all);
-  const picked=$('climateRoomSelect')?.value;
-  const room=rooms.find(r=>r.room_id===picked)||first;
-  const soil=room?.snapshot?.soil_moisture_percent;
-  const captured=Date.parse(room?.snapshot?.timestamp||'');
-  const fresh=Number.isFinite(captured)&&Date.now()-captured>=0&&Date.now()-captured<=15*60*1000;
-  const validCalibration=room?.snapshot?.soil_calibration_status!=='required';
-  const show=Number.isFinite(soil)&&fresh&&validCalibration;
+  const dashboardRoom=rooms.find(r=>r.room_id===growJournal.roomId);
+  const climateRoom=rooms.find(r=>r.room_id===$('climateRoomSelect')?.value)||dashboardRoom||first;
+  soilTileState.dashboard=soilTileReading(dashboardRoom);
+  soilTileState.climate=soilTileReading(climateRoom);
+  updateSoilTiles();
+  const room=dashboardRoom;
+  const show=soilTileState.dashboard.valid;
   $('homeSoilPanel').hidden=!show;
   if(show){
-   text('homeSoilValue',n(soil,1)+' %');
-   text('homeSoilSource',room.room_name+' · reale Messung · '+Math.round((Date.now()-captured)/60000)+' Min. alt');
+   text('homeSoilValue',soilTileState.dashboard.value);
+   text('homeSoilSource',room.room_name+' · '+soilTileState.dashboard.detail);
   }
-  const status=room?.snapshot?.soil_measurement_status;
+  const status=climateRoom?.snapshot?.soil_measurement_status;
   const unavailable=status==='sensor_fault'?'Sensorfehler: ADC-Signal instabil. Messung ungültig.':
     status==='out_of_calibration_range'?'Bodensensor außerhalb des kalibrierten Bereichs. Messung ungültig.':
-    'Kein frischer, kalibrierter und einem aktiven Raum zugeordneter Bodensensorwert.';
-  text('climateSoilValue',show?room.room_name+' · '+n(soil,1)+' % · gemessen':unavailable);
+    soilTileState.climate.detail;
+  text('climateSoilValue',soilTileState.climate.valid?
+    climateRoom.room_name+' · '+soilTileState.climate.value+' · gemessen':unavailable);
  }catch(e){
   text('homePhaseClimate','Klimabewertung nicht erreichbar.');
   text('climatePhasePanel','Klimabewertung nicht erreichbar: '+e.message);
   $('homeSoilPanel').hidden=true;
+  soilTileState.dashboard={value:'—',detail:'Messung nicht erreichbar',valid:false};
+  soilTileState.climate={value:'—',detail:'Messung nicht erreichbar',valid:false};
+  updateSoilTiles();
   text('climateSoilValue','Bodenfeuchte derzeit nicht erreichbar.');
  }
 }
@@ -904,7 +941,7 @@ document.addEventListener('submit',async e=>{
  if(assign){e.preventDefault();const data=new FormData(assign);assign.dataset.editing='false';await soilCommand(assign.dataset.soilAssign,'assign',{name:String(data.get('name')||''),room_id:String(data.get('room_id')||''),confirmed:true});}
 });
 document.addEventListener('change',e=>{if(e.target.matches('[data-room-device]'))roomDeviceChange(e.target);});
-$('climateRoomSelect')?.addEventListener('change',loadClimateHistory);
+$('climateRoomSelect')?.addEventListener('change',()=>{loadClimateHistory();loadClimateOverview();});
 $('climateTimeSelect')?.addEventListener('change',loadClimateHistory);
 $('roomPlantForm')?.addEventListener('submit',saveRoomPlant);
 $('plantFormReset')?.addEventListener('click',resetRoomPlantForm);
@@ -919,7 +956,7 @@ $('roomPicker')?.addEventListener('change',async e=>{
  const row=(state.rooms||[]).find(x=>x.id===growJournal.roomId);
  text('currentRoom',row?.name||'—');text('heroRoom',row?.name||'—');
  growJournal.selectedId=null;
- await Promise.all([loadJournal(),loadRecentEvents()]);
+ await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
 setInterval(()=>{if(!document.hidden)loadClimateOverview();},30000);
