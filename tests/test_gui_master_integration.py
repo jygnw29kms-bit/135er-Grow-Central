@@ -16,7 +16,8 @@ def test_master_and_room_workspace_routes_remain_distinct(monkeypatch, tmp_path)
 
     master = client.get('/ui')
     assert master.status_code == 200
-    assert 'class="app-shell master-shell"' in master.text
+    assert 'class="shell"' in master.text
+    assert 'id="journalDialog"' in master.text
     assert 'id="roomDialog"' not in master.text
     workspace = client.get('/rooms?room=example&tab=sensors')
     assert workspace.status_code == 200
