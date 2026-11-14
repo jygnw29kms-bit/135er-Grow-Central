@@ -140,3 +140,12 @@ Bitte veröffentliche keine Zugangsdaten, API-Schlüssel, Tokens, privaten Zerti
 ## English summary
 
 135er-Grow Central is a fully open-source, local-first Raspberry Pi platform for grow monitoring, device control and automation. The public repository is the canonical project reference for source code, documentation and publishable releases. Build 461 is a historical `alpha-0.7.5` hardware-test candidate; until hardware validation is complete, new Pi images are owner-only and are never published as public releases or artifacts.
+
+
+## Verbindlicher Final Master: Lokal und Cloud
+
+**Eine Oberfläche für alle Zugriffswege.** Die Pi-PWA unter `/ui` und der authentifizierte Cloud-Final-Master dürfen keine eigenständig entwickelten Dashboard-Varianten darstellen. Reihenfolge, Bezeichnungen, Layout und Zustandssemantik der Messwertkacheln bleiben identisch: **Temperatur → Luftfeuchte → Bodenfeuchte → Lichtstufe → Lüfterdrehzahl**. Cloud und lokaler Zugriff unterscheiden sich nur in Transport, Authentifizierung und tatsächlicher Live-Datenverfügbarkeit. Keine erfundenen Messwerte bei veralteten oder fehlerhaften Sensoren.
+
+**Quellvertrag:** `web/gc-final.html` ist die maßgebliche Vorlage für die gemeinsamen Telemetrie-Kacheln. `cloud/portal/cloud-master.html` muss denselben `#liveTiles`-Block enthalten. Der CI-Test `tests/test_final_master_cloud_parity.py` überwacht diese Identität und die kulturübergreifende Phasen- und Bodenfeuchteanzeige. Die Cloud-spezifische API-Brücke (`cloud-master-bridge.js`) bleibt getrennt, damit keine Cloud-Zugangsdaten in das iFrame gelangen. Änderungen an gemeinsamen UI-Bausteinen müssen beide Clients und die zugehörigen Cache-Versionen aktualisieren.
+
+**Betrieb:** Git-Merge bedeutet nicht automatisch Live-Deployment. Das öffentliche Cloud-Portal auf dem Plesk-Server muss separat aus `cloud/portal/` deployed und anhand der HTTP-Antworten kontrolliert werden. Der Pi bleibt dabei unverändert. Nicht verifizierte Rootserver-Deployments gelten nicht als abgeschlossen.
