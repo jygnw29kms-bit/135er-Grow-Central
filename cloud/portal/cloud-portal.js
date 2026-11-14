@@ -40,7 +40,7 @@ function masterToggle(){
  if(masterVisible){
   cameraStop();
   const iframe=$('masterFrame');
-  if(iframe.getAttribute('src')!=='/cloud-master.html')iframe.src='/cloud-master.html';
+  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-final-2')iframe.src='/cloud-master.html?v=20261114-final-2';
   masterStatus('Originale Final-Master-GUI wird geladen …');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
