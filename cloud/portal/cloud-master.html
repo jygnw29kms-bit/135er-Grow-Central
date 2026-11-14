@@ -77,7 +77,28 @@
  <header class="panelhead"><h3>Einträge und Beobachtungen</h3><button class="primary-btn" data-add-journal>＋ Neuer Eintrag</button></header>
  <div id="journalFullList" class="journal-full-list">Lade Growbuch …</div>
 </article>
+<section id="plantWikiExtension" class="gc-plant-wiki">
+<article class="panel"><header class="panelhead"><h3>Pflanzen im ausgewählten Raum</h3><div class="gc-plant-actions"><button type="button" id="plantRefresh" class="subtle">Aktualisieren</button><button type="button" id="plantAdd" class="primary-btn">＋ Pflanze anlegen</button></div></header>
+<div id="plantCards" class="gc-plant-cards">Pflanzen werden geladen …</div></article>
+<article class="panel"><header class="panelhead"><h3>Cannabis · Anbau-Wiki</h3><span class="gc-wiki-pill">Kulturprofil</span></header>
+<p class="desc">Pflanzenkunde, Entwicklungsphasen, Beobachtung und Dokumentation. Cannabis ist eines von vielen Kulturprofilen in Grow Central.</p>
+<div id="cannabisWikiSections" class="gc-wiki-sections"></div>
+<div class="gc-wiki-sources"><strong>Fachquellen</strong>
+<a href="https://inspection.canada.ca/en/plant-varieties/plants-novel-traits/applicants/directive-94-08/biology-documents/cannabis-sativa" target="_blank" rel="noopener noreferrer">Canadian Food Inspection Agency · Biologie</a>
+<a href="https://gardening.usask.ca/gardening-advice/sorted-by-plant/cannabis.php" target="_blank" rel="noopener noreferrer">University of Saskatchewan · Wachstum</a>
+<a href="https://gardening.usask.ca/articles-and-lists/articles-cannabis/articles-growth-cycle/flowering.php" target="_blank" rel="noopener noreferrer">University of Saskatchewan · Blüte</a></div></article></section>
 </section>
+<dialog id="plantDialog" class="journal-dialog"><form id="plantForm">
+<header><h2 id="plantDialogTitle">Pflanze anlegen</h2><button type="button" class="icon-button" id="plantCancel" aria-label="Schließen">✕</button></header>
+<label>Name<input id="plantName" required maxlength="80" placeholder="z. B. Pflanze 1"></label>
+<label>Sorte / Kultur<input id="plantStrain" maxlength="120" placeholder="z. B. Tomate, Basilikum, Cannabis-Sorte"></label>
+<label>Typ<select id="plantType"><option value="other">Sonstige</option><option value="automatic">Automatisch</option><option value="feminized">Feminisiert</option><option value="mother">Mutterpflanze</option><option value="clone">Steckling</option></select></label>
+<label>Phase<select id="plantPhase"><option value="germination">Keimung</option><option value="seedling">Sämling</option><option value="vegetative" selected>Wachstum</option><option value="flowering">Blüte</option><option value="flush">Endphase</option><option value="finish">Reife</option><option value="harvest">Ernte</option><option value="completed">Abgeschlossen</option><option value="other">Sonstige</option></select></label>
+<label>Startdatum<input type="date" id="plantStartDate"></label>
+<label>Notizen<textarea id="plantNotes" rows="4" maxlength="2000"></textarea></label>
+<div id="plantError" class="form-error" role="alert"></div>
+<footer><button type="submit" id="plantSave" class="primary-btn">Speichern</button></footer>
+</form></dialog>
 <dialog id="journalDialog" class="journal-dialog"><form id="journalForm">
  <header><h2 id="journalDialogTitle">Growbucheintrag</h2><button type="button" class="icon-button" id="journalClose" aria-label="Schließen">✕</button></header>
  <label>Kategorie<select id="journalCategory" required><option value="observation">Beobachtung</option><option value="watering">Bewässerung</option><option value="feeding">Düngung</option><option value="training">Training</option><option value="repotting">Umtopfen</option><option value="photo">Foto / Dokumentation</option><option value="diagnosis">Diagnose</option><option value="harvest">Ernte</option><option value="note">Notiz</option></select></label>
@@ -125,4 +146,4 @@
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
 </div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="growbook">▣<small>Growbuch</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-safeui-4"></script></body></html>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261114-safeui-4"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-1"></script></body></html>
