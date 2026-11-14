@@ -123,7 +123,7 @@ async function loadSmart(force=false){
   const st=x.state||{},approved=!!x.approved,online=!!x.online;
   const subtitle=(x.adapter==='fritz'?'AVM FRITZ!':'TP-Link Tapo')+' · '+(online?'Online':approved?'Nicht erreichbar':'Nicht freigegeben');
   const values=[st.temperature_c!=null?n(st.temperature_c,1)+' °C':null,st.power_w!=null?n(st.power_w,1)+' W':null,st.energy_wh!=null?n(st.energy_wh/1000,2)+' kWh':null].filter(Boolean).join(' · ');
-  return '<div class="smartitem"><div><b>'+esc(x.name)+'</b><small>'+esc(subtitle)+(values?' · '+esc(values):'')+'</small></div><div class="right"><button data-smart-id="'+esc(x.id)+'" '+(!approved||!x.writable||!online?'disabled':'')+' class="'+(st.on?'on':'')+'">'+(st.on===true?'Ein':st.on===false?'Aus':'Status —')+'</button></div></div>';
+  return '<div class="smartitem"><div><b>'+esc(x.name)+'</b><small>'+esc(subtitle)+(values?' · '+esc(values):'')+'</small></div><div class="right"><button data-smart-id="'+esc(x.id)+'" '+'disabled title="Fernschalten von FRITZ!/Tapo im Cloudmodus noch nicht freigegeben"'+' class="'+(st.on?'on':'')+'">'+(st.on===true?'Ein':st.on===false?'Aus':'Status —')+'</button></div></div>';
  }).join('');
  $('smartDevices').innerHTML=html;$('smartPreview').innerHTML=html;
  }catch(e){const m='FRITZ!/Tapo-Daten derzeit nicht erreichbar';$('smartDevices').textContent=m;$('smartPreview').textContent=m;}
@@ -234,8 +234,8 @@ function cameraInput(c){
 async function cameraLoadControls(){
  try{
   const d=await api('/api/v1/camera/controls?camera_id='+encodeURIComponent(cam.cameraId||'cam0'));
-  const controls=(d.controls||[]).filter(c=>c.writable);
-  $('cameraControls').innerHTML=controls.length?controls.map(cameraInput).join(''):'<p>Keine veränderbaren Kameraeinstellungen vorhanden.</p>';
+  const controls=[]; // Cloud: Kameraeinstellungen bleiben nur lokal schreibbar.
+  $('cameraControls').innerHTML=controls.length?controls.map(cameraInput).join(''):'<p>Kameraeinstellungen sind im Cloudmodus aus Sicherheitsgründen nur lesbar. Einstellungen am lokalen Grow-Pi ändern.</p>';
   cam.settingsLoaded=true;
   text('cameraSettingsStatus',controls.length+' verfügbare Kameraeinstellungen');
  }catch(e){text('cameraSettingsStatus','Bildeinstellungen nicht verfügbar: '+e.message);}
@@ -324,8 +324,9 @@ function cloudPairDisplay(pair){
    else{link.hidden=true;}
   }catch{link.hidden=true;}
  }
- $('cloudPairStart').hidden=linked||pending;
- $('cloudPairCancel').hidden=!pending;
+ $('cloudPairStart').hidden=true;
+ $('cloudPairCancel').hidden=true;
+ text('cloudFeedback','Gerätekopplung erfolgt direkt am Grow-Pi. Die Cloud zeigt hier nur den bestehenden Status.');
 }
 async function cloudRefresh(){
  try{
