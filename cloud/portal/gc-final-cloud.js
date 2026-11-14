@@ -65,14 +65,14 @@ function setControls(kind,status){
  });
  if(!state.sliderEdit[kind])setAll('[data-level-label="'+kind+'"]',percent==null?'—':n(percent)+' %');
  setAll('[data-status-label="'+kind+'"]',active?'BLE live · '+(latest.power_on?'Ein':'Aus'):(status?.connected?'Warte auf Messung':'Nicht verbunden'));
- setAll('[data-live-detail="'+kind+'"]',!active?'—':kind==='lamp'?(latest.power_on?'Eingeschaltet':'Ausgeschaltet'):n(latest.rpm)+' RPM');
+ setAll('[data-live-detail="'+kind+'"]',!active?'—':!latest.power_on?'Aus':kind==='lamp'?'Eingeschaltet':n(latest.rpm)+' RPM');
  setAll('[data-read-age="'+kind+'"]',active&&Number.isFinite(status.age_ms)?n(status.age_ms/1000,1)+' s alt':active?'Live':'Kein aktueller Wert');
 }
 function setMetrics(fan,lamp){
  const f=fan?.fresh?fan.latest:null,l=lamp?.fresh?lamp.latest:null;
  text('tempValue',f&&Number.isFinite(f.temperature_c)?n(f.temperature_c,1)+' °C':'—');
  text('humidityValue',f&&Number.isFinite(f.humidity_rh)?n(f.humidity_rh,1)+' % rF':'—');
- const rpmLabel=f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—';
+ const rpmLabel=f&&!f.power_on?'Aus':f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—';
  text('rpmValue',rpmLabel);
  const rpmTile=$('rpmValue')?.closest('.metric');
  if(rpmTile){
