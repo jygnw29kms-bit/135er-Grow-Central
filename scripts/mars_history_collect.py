@@ -58,10 +58,10 @@ async def run():
     for attempt in range(2):
         found=await BleakScanner.discover(timeout=7)
         devices.update({x.name:x for x in found if x.name in (FAN_ID,LAMP_ID)})
-        if FAN_ID in devices and LAMP_ID in devices:
+        if FAN_ID in devices:
             break
     total=0
-    for name,kind in ((FAN_ID,"fan"),(LAMP_ID,"lamp")):
+    for name,kind in ((FAN_ID,"fan"),):
         if name in devices:total+=await observe(devices[name],kind)
         else:print(kind+"_not_advertising",flush=True)
     print("saved_points",total,flush=True)
