@@ -109,7 +109,7 @@ async def serve(ws,local):
    continue
   if req.get("type")!="read":continue
   path=req.get("path")
-  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events)(\\?limit=[0-9]{1,3})?",path)
+  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events)(\?limit=[0-9]{1,3})?",path)
   if path not in READ_PATHS and not is_room_path:
    response={"type":"read_result","request_id":request_id,"ok":False,"error":"path_not_allowed"}
   else:
