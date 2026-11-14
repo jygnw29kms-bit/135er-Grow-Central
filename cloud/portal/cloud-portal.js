@@ -73,6 +73,7 @@ function masterHandleResult(data){
   if(data.type==='camera_result'||data.type==='photo_frame_result')masterReply(data.request_id,200,{image:data.image});
   else if(data.type==='control_result')masterReply(data.request_id,200,{device_report_confirmed:data.device_report_confirmed,kind:data.kind});
   else if(data.type==='photo_result')masterReply(data.request_id,200,{photo_id:data.photo_id,ok:true});
+  else if(data.type==='plant_result')masterReply(data.request_id,200,{id:data.plant_id,ok:true});
   else masterReply(data.request_id,200,data.data||{ok:true,entry_id:data.entry_id});
  }else masterReply(data.request_id,503,{detail:data.error||'Keine Gerätebestätigung'});
  return true;
@@ -135,6 +136,21 @@ window.addEventListener('message',event=>{
    room_id:payload.room_id,title:payload.title||'Foto',note:payload.note||'',
    tags:Array.isArray(payload.tags)?payload.tags:[],image_data_url:payload.image_data_url,
    confirm_write:true}));return;
+ }
+ if((method==='POST'||method==='PUT')&&
+  /^\/api\/v1\/rooms\/room_[A-Za-z0-9_-]+\/plants(?:\/plant_[A-Za-z0-9_-]+)?$/.test(msg.path)){
+  const parts=msg.path.split('/'),room_id=parts[4],plant_id=parts[6];
+  const valid=typeof payload.name==='string'&&payload.name.trim().length>0&&payload.name.length<=80&&
+    (method==='POST'?!plant_id:!!plant_id);
+  if(!valid){masterReply(msg.id,400,{detail:'Ungültige Pflanzendaten'});return}
+  if(!window.confirm((method==='POST'?'Pflanze anlegen':'Pflanze ändern')+' auf dem Grow-Pi?')){
+   masterReply(msg.id,409,{detail:'Nicht bestätigt'});return;
+  }
+  trackMaster(msg.id);
+  remoteSocket.send(JSON.stringify({type:method==='POST'?'plant_create':'plant_update',
+   request_id:msg.id,room_id,plant_id,name:payload.name,strain:payload.strain||'',
+   plant_type:payload.plant_type||'other',start_date:payload.start_date||'',
+   phase:payload.phase||'vegetative',notes:payload.notes||'',confirm_write:true}));return;
  }
  masterReply(msg.id,403,{detail:'Diese Funktion ist im Cloudmodus noch nicht freigegeben'});
 });
@@ -435,7 +451,7 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
-  if(['read_result','control_result','journal_result','camera_result','photo_result','photo_frame_result'].includes(data.type)&&masterHandleResult(data))return;
+  if(['read_result','control_result','journal_result','camera_result','photo_result','photo_frame_result','plant_result'].includes(data.type)&&masterHandleResult(data))return;
   if(data.type==='journal_result'){journalResult(data);return}
   if(data.type==='control_result'){controlResult(data);return}
   if(data.type==='camera_result'){
