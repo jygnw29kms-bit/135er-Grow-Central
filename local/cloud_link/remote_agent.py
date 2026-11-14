@@ -67,6 +67,50 @@ async def serve(ws,local):
   if not isinstance(req,dict):continue
   request_id=req.get("request_id")
   if not isinstance(request_id,str) or not 1<=len(request_id)<=64:continue
+  if req.get("type")=="photo_create":
+   room_id=req.get("room_id");image=req.get("image_data_url");title=req.get("title","Foto")
+   note=req.get("note","");tags=req.get("tags",[])
+   valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
+     and isinstance(image,str) and image.startswith("data:image/jpeg;base64,")
+     and 1000<=len(image)<=180000 and isinstance(title,str) and 1<=len(title)<=120
+     and isinstance(note,str) and len(note)<=5000 and isinstance(tags,list)
+     and len(tags)<=20 and all(isinstance(t,str) and len(t)<=40 for t in tags)
+     and req.get("confirm_write") is True)
+   if not valid:
+    await ws.send(json.dumps({"type":"photo_result","request_id":request_id,
+                              "ok":False,"error":"invalid_photo_upload"}))
+    continue
+   try:
+    result=await local.post(LOCAL_API+"/api/v1/grow-photos",headers=local_headers(),
+      json={"room_id":room_id,"title":title,"note":note,"tags":tags,"image_data_url":image},
+      timeout=20)
+    result.raise_for_status();photo=result.json()
+    response={"type":"photo_result","request_id":request_id,"ok":True,
+              "photo_id":str(photo.get("photo_id",""))[:128]}
+   except Exception as exc:
+    response={"type":"photo_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
+  if req.get("type")=="photo_frame":
+   photo_id=req.get("photo_id")
+   if not isinstance(photo_id,str) or not re.fullmatch(r"photo_[a-zA-Z0-9_-]{1,100}",photo_id):
+    await ws.send(json.dumps({"type":"photo_frame_result","request_id":request_id,
+                              "ok":False,"error":"invalid_photo_id"}));continue
+   try:
+    r=await local.get(LOCAL_API+"/api/v1/grow-photos/"+photo_id,
+       headers=local_headers(),timeout=10)
+    r.raise_for_status()
+    mime=r.headers.get("content-type","").split(";")[0]
+    if mime not in {"image/jpeg","image/png","image/webp"} or len(r.content)>145000:
+     raise RuntimeError("photo_preview_unavailable")
+    response={"type":"photo_frame_result","request_id":request_id,"ok":True,
+      "image":"data:"+mime+";base64,"+base64.b64encode(r.content).decode()}
+   except Exception as exc:
+    response={"type":"photo_frame_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="journal_create":
    room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
