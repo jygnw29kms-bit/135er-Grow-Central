@@ -154,6 +154,13 @@ class GrowCentralEsp32Provider(DeviceProvider):
         if isinstance(diagnostics, dict):
             fields = {"raw", "median", "filtered_raw", "min", "max", "sigma", "quality", "moisture_state", "sensor_ok", "air_raw", "water_raw", "substrate_raw", "rssi_dbm", "uptime_ms", "firmware", "hostname", "ip", "camera_ready", "sd_ready", "sd_total_mb", "sd_free_mb", "resolution"}
             state["meta"] = {k: v for k, v in diagnostics.items() if k in fields and isinstance(v, (str, int, float, bool)) and (not isinstance(v, float) or math.isfinite(v))}
+        # Sensor fault diagnostics come from the signed sensor state. Never
+        # turn an unstable/missing ADC sample into a seemingly valid 100 %.
+        # Preserve identity and diagnostics; invalidate the engineering value.
+        sensor_meta = state.get("meta", {})
+        if sensor_meta.get("sensor_ok") is False or sensor_meta.get("moisture_state") == "SENSOR_FAULT" or sensor_meta.get("quality") == "POOR":
+            state["soil_moisture"] = None
+            sensor_meta["measurement_status"] = "sensor_fault"
         firmware = state.get('meta', {}).get('firmware') if isinstance(state.get('meta'), dict) else None
         if 'soil_moisture' in state:
             try:
@@ -165,7 +172,23 @@ class GrowCentralEsp32Provider(DeviceProvider):
                 meta['calibration_status'] = 'valid'
                 meta['calibrated_at'] = calibration['calibrated_at']
                 filtered_raw = meta.get('filtered_raw')
-                if type(filtered_raw) in (int, float) and math.isfinite(float(filtered_raw)):
+                # Do not reinterpret a signed sensor fault as a valid result.
+                # Server-side recalculation is permissible only for healthy
+                # sensors and raw ADC values within their calibrated endpoints.
+                bounds = calibration.get('points') or {}
+                air = bounds.get('air_raw')
+                wet = bounds.get('wet_raw')
+                raw_in_range = (type(filtered_raw) in (int, float)
+                    and math.isfinite(float(filtered_raw))
+                    and type(air) in (int, float) and type(wet) in (int, float)
+                    and min(air, wet) <= filtered_raw <= max(air, wet))
+                if meta.get("measurement_status") == "sensor_fault":
+                    meta["calibration_status"] = "valid"
+                    state["soil_moisture"] = None
+                elif type(filtered_raw) in (int, float) and not raw_in_range:
+                    meta["measurement_status"] = "out_of_calibration_range"
+                    state["soil_moisture"] = None
+                elif raw_in_range:
                     reported = state.get('soil_moisture')
                     metrics = derive_soil_reference_metrics(float(filtered_raw), calibration['points'])
                     state['soil_moisture'] = metrics['soil_moisture_percent']
