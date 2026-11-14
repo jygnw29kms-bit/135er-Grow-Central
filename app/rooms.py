@@ -242,6 +242,36 @@ class PlantCreate(BaseModel):
     expected_phase_days: int | None = Field(default=None, ge=1, le=365)
     profile_id: str | None = Field(default=None, max_length=80)
     notes: str = Field(default="", max_length=2000)
+    substrate_type: Literal["", "peat_mix", "coco_mix", "living_soil", "compost_mix", "mineral_mix", "rockwool", "hydroponic", "custom"] = ""
+    substrate_components: str = Field(default="", max_length=500)
+    substrate_pre_fertilized: Literal["", "yes", "no", "unknown"] = ""
+    nutrition_plan: Literal["", "organic", "mineral", "mixed", "none_planned", "undecided"] = ""
+    container_type: Literal["", "plastic", "fabric", "air_pruning", "self_watering", "high_tech", "hydro_system", "other"] = ""
+    container_volume_l: float | None = Field(default=None, gt=0, le=10000)
+
+
+def plant_ready_for_journal(plant: dict[str, Any]) -> bool:
+    return all((
+        bool(str(plant.get("name") or "").strip()),
+        bool(str(plant.get("crop") or "").strip()),
+        bool(str(plant.get("phase") or "").strip()),
+        bool(str(plant.get("substrate_type") or "").strip()),
+        bool(str(plant.get("substrate_components") or "").strip()),
+        plant.get("substrate_pre_fertilized") in {"yes", "no", "unknown"},
+        plant.get("nutrition_plan") in {"organic", "mineral", "mixed", "none_planned", "undecided"},
+        bool(str(plant.get("container_type") or "").strip()),
+    ))
+
+
+def require_journal_plant(state: dict[str, Any], room_id: str, plant_id: str | None) -> dict[str, Any]:
+    if not plant_id:
+        raise HTTPException(422, "Vor einem Growbucheintrag eine Pflanze mit Phase, Substrat, Topf und Düngung auswählen.")
+    plant = plant_or_404(state, plant_id)
+    if plant.get("room_id") != room_id:
+        raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    if not plant_ready_for_journal(plant):
+        raise HTTPException(422, "Pflanzenprofil vervollständigen: Kultur, Phase, Substrat/Zusammensetzung, Topf und Düngung.")
+    return plant
 
 
 class SensorSample(BaseModel):
