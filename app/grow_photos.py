@@ -153,7 +153,7 @@ async def create_grow_photo(body: GrowPhotoCreate):
                 plant = rooms.plant_or_404(current, body.plant_id)
                 if plant.get("room_id") != body.room_id:
                     raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
-            snapshot = rooms._latest_sensor_snapshot(current, body.room_id)
+            snapshot = rooms.live_room_snapshot(body.room_id, current)
             clean_tags = list(dict.fromkeys(tag.strip()[:40] for tag in body.tags if tag.strip()))[:20]
             created_at = rooms.now_iso()
             row = {
@@ -171,6 +171,7 @@ async def create_grow_photo(body: GrowPhotoCreate):
                 "phase": plant.get("phase") if plant else None,
                 "cycle_day": _cycle_day(plant),
                 "sensor_snapshot": snapshot,
+                "device_ids": sorted(snapshot.get("devices", {})),
                 "created_at": created_at,
             }
             if body.plant_id:
