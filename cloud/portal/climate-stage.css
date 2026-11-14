@@ -6,8 +6,15 @@
 .gc-range-item{margin:14px 0 20px}
 .gc-range-title{display:flex;justify-content:space-between;gap:8px;margin-bottom:9px}
 .gc-range-title span{font-weight:600;font-variant-numeric:tabular-nums}
-.gc-range-track{height:14px;position:relative;border-radius:20px;background:linear-gradient(90deg,#ad3339 0%,#ddba3f 17%,#9ad6aa 50%,#ddba3f 83%,#ad3339 100%);overflow:visible}
-.gc-range-good{position:absolute;top:0;bottom:0;background:#26ad68;border-radius:3px}
+.gc-range-track{height:14px;position:relative;border-radius:20px;background:#263b30;overflow:visible}
+.gc-range-segment{position:absolute;top:0;bottom:0}
+.gc-range-segment.good{background:#29ae6b}
+.gc-range-segment.warning{background:#e2bc42}
+.gc-range-segment.danger{background:#b84148}
+.gc-range-segment:first-child{border-radius:20px 0 0 20px}
+.gc-range-segment:last-of-type{border-radius:0 20px 20px 0}
+.gc-range-ticks{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#a9cbb6;margin-top:8px}
+.gc-range-ticks span:nth-child(2){color:#67db9c;font-weight:600;text-align:center}
 .gc-range-pointer{position:absolute;top:-5px;width:4px;height:24px;border-radius:4px;background:#fff;box-shadow:0 0 0 2px #071510,0 0 8px #000;transform:translateX(-50%)}
 .gc-range-pointer.good{box-shadow:0 0 0 2px #27da83,0 0 7px #27da83}
 .gc-range-pointer.warning{box-shadow:0 0 0 2px #e9c447,0 0 7px #e9c447}
