@@ -132,7 +132,7 @@ async def serve(ws,local):
    valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
      and isinstance(name,str) and 1<=len(name.strip())<=80
      and isinstance(strain,str) and len(strain)<=120
-     and isinstance(start_date,str) and (not start_date or re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}",start_date))
+     and isinstance(start_date,str) and (not start_date or re.fullmatch(r"\d{4}-\d{2}-\d{2}",start_date))
      and isinstance(notes,str) and len(notes)<=2000
      and plant_type in ("automatic","feminized","mother","clone","other")
      and phase in ("germination","seedling","vegetative","flowering","flush","finish","harvest","completed","other")
