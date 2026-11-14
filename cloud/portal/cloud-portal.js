@@ -142,7 +142,7 @@ function cameraStart(){
  }
  cameraActive=true;$('cameraStart').hidden=true;$('cameraStop').hidden=false;
  $('cameraStatus').textContent='Lade erstes Kamerabild …';
- cameraPoll();cameraTimer=setInterval(cameraPoll,12000);
+ cameraPoll();cameraTimer=setInterval(cameraPoll,2500);
 }
 $('cameraStart')?.addEventListener('click',cameraStart);
 $('cameraStop')?.addEventListener('click',cameraStop);
