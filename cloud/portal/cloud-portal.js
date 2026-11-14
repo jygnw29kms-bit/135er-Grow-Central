@@ -2,6 +2,7 @@
 const $=id=>document.getElementById(id);
 let accessToken='',refreshToken='';
 let reconnectTimer=null,reconnectAttempts=0;
+let currentDeviceId=null;
 async function listDevices(){
  const res=await fetch('/api/v2/account/devices',{headers:{Authorization:'Bearer '+accessToken},cache:'no-store'});
  if(!res.ok)throw Error('Geräteliste HTTP '+res.status);
@@ -15,7 +16,11 @@ async function listDevices(){
   card.append(name,status);target.append(card);
  }
  if(!devices.length)target.textContent='Noch keine aktiven Geräte gekoppelt.';
- if(devices.length)remoteOpen(devices[0].id);else remoteClose();
+ if(!devices.length){remoteClose();return;}
+ const selected=devices[0].id;
+ if(selected===currentDeviceId&&remoteSocket&&(remoteSocket.readyState===WebSocket.OPEN||remoteSocket.readyState===WebSocket.CONNECTING)){
+  refreshDeviceData();
+ }else remoteOpen(selected);
 }
 $('form').addEventListener('submit',async event=>{
  event.preventDefault();$('msg').textContent='Anmeldung wird geprüft …';
@@ -201,6 +206,7 @@ function scheduleReconnect(deviceId,code=0){
  },delay);
 }
 function remoteClose(){
+ currentDeviceId=null;
  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}
  for(const [id,timer] of masterPending){clearTimeout(timer);masterReply(id,503,{detail:'Verbindung geschlossen'});}
  masterPending.clear();
@@ -408,9 +414,18 @@ function displayRemote(message){
  $('remoteState').textContent='LIVE · '+new Date().toLocaleTimeString('de-DE');
 }
 const pendingRemote=new Map();
+function refreshDeviceData(){
+ if(!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN)return;
+ for(const path of ['/api/mars-hydro/ble/fast-fan-status','/api/mars-hydro/ble/fast-lamp-status','/api/v1/rooms','/api/mars-history/summary','/api/cloud/status']){
+  const id=crypto.randomUUID();
+  pendingRemote.set(id,path);
+  remoteSocket.send(JSON.stringify({type:'read',request_id:id,path}));
+ }
+}
 function remoteOpen(deviceId){
  remoteClose();
  if(!deviceId||!accessToken)return;
+ currentDeviceId=deviceId;
  const panel=$('remoteDashboard');panel.hidden=false;
  $('remoteState').textContent='Authentifiziere Gerätekanal …';
  const socket=new WebSocket('wss://'+location.host+'/api/v2/remote/connect');
@@ -436,15 +451,10 @@ function remoteOpen(deviceId){
   if(data.type==='auth_ok'){
    if(!data.device_online){$('remoteState').textContent='Grow-Pi ist offline';socket.close();return}
    reconnectAttempts=0;
-   const poll=()=>{
-    pendingRemote.clear();
-    if(socket.readyState!==WebSocket.OPEN)return;
-    for(const path of ['/api/mars-hydro/ble/fast-fan-status','/api/mars-hydro/ble/fast-lamp-status','/api/v1/rooms','/api/mars-history/summary','/api/cloud/status']){
-     const id=crypto.randomUUID();pendingRemote.set(id,path);
-     socket.send(JSON.stringify({type:'read',request_id:id,path}));
-    }
-   };
-   poll();remoteInterval=setInterval(poll,15000);if(!masterVisible)masterToggle();return;
+   refreshDeviceData();
+   remoteInterval=setInterval(refreshDeviceData,15000);
+   if(!masterVisible)masterToggle();
+   return;
   }
   if(data.type==='read_result'){
    const path=pendingRemote.get(data.request_id);
