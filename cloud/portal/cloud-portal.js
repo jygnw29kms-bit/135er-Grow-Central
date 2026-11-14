@@ -33,6 +33,7 @@ function remoteClose(){
  if(remoteInterval){clearInterval(remoteInterval);remoteInterval=null}
  if(remoteSocket){remoteSocket.close();remoteSocket=null}
  pendingRemote.clear()
+ if($('remoteTiles'))$('remoteTiles').replaceChildren();
  const panel=$('remoteDashboard');if(panel)panel.hidden=true;
 }
 function remoteTile(label,value){
