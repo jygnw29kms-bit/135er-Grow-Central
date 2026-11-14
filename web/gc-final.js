@@ -321,7 +321,11 @@ async function loadClimateOverview(){
    text('homeSoilValue',n(soil,1)+' %');
    text('homeSoilSource',room.room_name+' · reale Messung · '+Math.round((Date.now()-captured)/60000)+' Min. alt');
   }
-  text('climateSoilValue',show?room.room_name+' · '+n(soil,1)+' % · gemessen':'Kein frischer, kalibrierter und einem aktiven Raum zugeordneter Bodensensorwert.');
+  const status=room?.snapshot?.soil_measurement_status;
+  const unavailable=status==='sensor_fault'?'Sensorfehler: ADC-Signal instabil. Messung ungültig.':
+    status==='out_of_calibration_range'?'Bodensensor außerhalb des kalibrierten Bereichs. Messung ungültig.':
+    'Kein frischer, kalibrierter und einem aktiven Raum zugeordneter Bodensensorwert.';
+  text('climateSoilValue',show?room.room_name+' · '+n(soil,1)+' % · gemessen':unavailable);
  }catch(e){
   text('homePhaseClimate','Klimabewertung nicht erreichbar.');
   text('climatePhasePanel','Klimabewertung nicht erreichbar: '+e.message);
