@@ -1261,11 +1261,13 @@ async def capture_room_sensors_once() -> int:
             calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
             sensor_faults = [str((row.get('meta') or {}).get('measurement_status') or '')
                              for row in states if isinstance(row.get('meta'), dict)]
-            if any(value in {'sensor_fault', 'out_of_calibration_range'} for value in sensor_faults):
-                payload['soil_measurement_status'] = 'sensor_fault' if 'sensor_fault' in sensor_faults else 'out_of_calibration_range'
-                # Never include another device's soil measurement when a
-                # trusted soil sensor in this room explicitly reports a fault.
-                payload['soil_moisture_percent'] = None
+            if payload.get('soil_moisture_percent') is None and any(
+                value in {'sensor_fault', 'out_of_calibration_range'} for value in sensor_faults
+            ):
+                # Preserve readings of other healthy soil sensors in this room.
+                payload['soil_measurement_status'] = (
+                    'sensor_fault' if 'sensor_fault' in sensor_faults else 'out_of_calibration_range'
+                )
             if payload.get("soil_substrate_delta_pp") is not None:
                 payload["soil_substrate_state"] = classify_soil_substrate_delta(float(payload["soil_substrate_delta_pp"]))
             if any(value == 'valid' for value in calibration_states):
