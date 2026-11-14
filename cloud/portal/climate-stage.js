@@ -1,17 +1,17 @@
 /* Grow Central: indicative, stage-specific climate reference ranges.
    Only active when the user chooses a cannabis stage; no guessed plant identity.
-   References: Cannabis Workforce Initiative 2023; Conviron 2017.
+   References: University of Saskatchewan cannabis seedling/vegetative/flowering guidance; phase-dependent orientation.
 */
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
 const root=$('stageClimate');if(!root)return;
 const stages={
- germination:{label:'Keimung / Sämling',t:[21,27],h:[65,80]},
- seedling:{label:'Sämling / Steckling',t:[21,27],h:[65,80]},
- vegetative:{label:'Wachstum',t:[23,28],h:[55,70]},
- flowering:{label:'Blüte',t:[21,27],h:[40,60]},
- finish:{label:'Späte Blüte / Reife',t:[20,26],h:[40,55]}
+ germination:{label:'Keimung / Sämling',t:[21,27],h:[60,70]},
+ seedling:{label:'Sämling / Steckling',t:[21,27],h:[60,70]},
+ vegetative:{label:'Wachstum',t:[21,26],h:[50,60]},
+ flowering:{label:'Blüte',t:[21,26],h:[45,55]},
+ finish:{label:'Späte Blüte / Reife',t:[21,26],h:[35,45]}
 };
 const phases={germination:'germination',seedling:'seedling',vegetative:'vegetative',flowering:'flowering',flush:'finish',finish:'finish',harvest:'finish'};
 const select=$('stageClimateSelect'),source=$('stageClimateSource'),items=$('stageClimateRows');
