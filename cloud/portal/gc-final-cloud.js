@@ -171,8 +171,8 @@ function updateCamera(force=false){
  document.querySelectorAll('.camframe img').forEach(img=>img.remove());
  state.activeCam=target;
  if(target){
- const container=$(target),img=document.createElement('img');img.alt='Growzelt Live-Kamera';img.loading='eager';img.onerror=()=>{img.remove();container.querySelector('.camblank').textContent='Kamera derzeit nicht verfügbar';container.querySelector('.camblank').style.display='block';};
- container.prepend(img);img.src='/api/v1/camera/stream'+(cam.resolution&&cam.cameraId?'?camera_id='+encodeURIComponent(cam.cameraId)+'&width='+encodeURIComponent(cam.resolution.split('x')[0])+'&height='+encodeURIComponent(cam.resolution.split('x')[1]):'');
+ const container=$(target),img=document.createElement('img');img.alt='Growzelt Live-Kamera';img.loading='eager';img.onerror=()=>{container.querySelector('.camblank').textContent='Kamerabild wird erneut geladen';container.querySelector('.camblank').style.display='block';};
+ container.prepend(img);img.dataset.cloudCamera='1';img.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
  container.querySelector('.camblank').style.display='none';
  }
 }
