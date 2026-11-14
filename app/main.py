@@ -68,6 +68,8 @@ class ConnectBody(BaseModel):
 
 class SpeedBody(BaseModel):
     percent: int = Field(ge=0, le=100)
+
+
 class RawBody(BaseModel):
     uuid: str = Field(min_length=4, max_length=64, pattern=r"^[0-9a-fA-F-]+$")
     hex: str = Field(min_length=2, max_length=383, pattern=r"^[0-9a-fA-F\s]+$")
@@ -133,8 +135,6 @@ async def config():
         "smarthome_enabled": os.getenv("GC_SMARTHOME_ENABLED", "true").lower() == "true",
         "cloud_enabled": os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true",
         "mars_hydro": public_hardware_profile(),
-    }
-"mars_hydro": public_hardware_profile(),
     }
 
 
@@ -204,7 +204,7 @@ async def discover(timeout: float = 7.0):
     adapter = adapter_diagnostics()
     found = {}
     attempts = 0
-try:
+    try:
         # Keep the legacy device browser compatible while reporting actionable
         # BlueZ diagnostics and retrying intermittently advertising peripherals.
         for _ in range(2):
@@ -274,7 +274,7 @@ async def disconnect():
 async def services():
     if not client or not client.is_connected:
         raise HTTPException(409, "not connected")
-return {"services": [{"uuid": service.uuid, "characteristics": [{"uuid": c.uuid, "properties": list(c.properties), "handle": c.handle} for c in service.characteristics]} for service in client.services]}
+    return {"services": [{"uuid": service.uuid, "characteristics": [{"uuid": c.uuid, "properties": list(c.properties), "handle": c.handle} for c in service.characteristics]} for service in client.services]}
 
 
 @app.post("/api/notify/start", dependencies=[Depends(require_write_auth)])
@@ -344,6 +344,8 @@ async def raw(body: RawBody):
 @app.get("/api/df100m/status")
 async def df100m_status_alias():
     return _status_payload()
+
+
 @app.get("/api/df100m/discover", dependencies=[Depends(require_write_auth)])
 async def df100m_discover_alias(timeout: float = 7.0):
     return await discover(timeout)
@@ -360,7 +362,5 @@ async def df100m_services_alias():
 
 
 @app.post("/api/df100m/speed", dependencies=[Depends(require_write_auth)])
-async def df100m_speed_alias(percent: int):
-    return await speed(SpeedBody(percent=percent))
 async def df100m_speed_alias(percent: int):
     return await speed(SpeedBody(percent=percent))
