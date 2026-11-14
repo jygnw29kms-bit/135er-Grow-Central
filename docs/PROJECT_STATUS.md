@@ -1,11 +1,11 @@
 # Project Status – 135er-Grow Central
 
 - **Stand:** 14. November 2026
-- **Projektmodus:** **Entwicklungsstopp für den Grow-Central-Pi auf Betreiberanweisung**
+- **Projektmodus:** **Entwicklung freigegeben; Pi/Git-Abgleich läuft**
 - **Repository:** `jygnw29kms-bit/135er-Grow-Central`, Branch `master`
 - **Version letzter dokumentierter Kandidat:** `alpha-0.7.5`, Build 461, `CANDIDATE`
 - **Hardwarevalidierung:** Vollständige reale Abnahme nicht bestätigt
-- **Sicherung:** GitHub-Dokumentationsstand aktualisiert; **lokal installierte Pi-Dateien noch nicht vollständig in Git abgeglichen**
+- **Sicherung:** **Pi-Quellcode-Snapshot teilweise im Archivbranch gesichert; vollständiger Abgleich offen**
 
 ## Live-Prüfung am 14.11.2026
 
@@ -13,12 +13,12 @@ Der über MeshCentral erreichbare Host `135er-grow-central` (Debian 13) meldete 
 
 Vorhandene systemd-Timer: `grow-central-healthcheck.timer`, `grow-central-remote-watchdog.timer` und `grow-central-history-backup.timer`. Das sind Betriebs-/Wartungsfunktionen, keine nachgewiesenen Entwicklungsjobs. Sie werden durch die Dokumentationssicherung nicht deaktiviert.
 
-## Entwicklungsstopp und Bewahrung
+## Entwicklungsbetrieb und Abgleich
 
-1. Keine Weiterentwicklung, automatisierten Builds, neuen Flash-Images, Deployments oder experimentellen Steuerungsänderungen am Grow-Central-Pi bis zur Freigabe.
+1. Der Betreiber hat den zuvor angeordneten Entwicklungsstopp am 14.11.2026 ausdrücklich aufgehoben. Entwicklung, Tests und kontrollierte Deployments sind wieder freigegeben; technische Validierung und Schutz des laufenden Systems bleiben erforderlich.
 2. Bestehenden Betrieb und den sicheren Fernwartungsweg nicht abschalten.
 3. Keine lokalen Geheimnisse, API-Tokens, Zugangsdaten, privaten Zertifikate, Logs oder Datenbankinhalte in das öffentliche Repository übernehmen.
-4. GitHub bleibt Dokumentations- und Quellreferenz. Ein vollständiger Dateivergleich sowie die Sicherung eventueller nicht-sensitiver Pi-Abweichungen stehen noch aus.
+4. GitHub bleibt Dokumentations- und Quellreferenz. Ein selektiver Quellcode-Snapshot des Pi liegt unter `pi-snapshots/2026-11-14/` im Branch `archive/pi-live-2026-11-14`. Ein vollständiger Dateivergleich bleibt offen.
 5. Die Test- und Releasepläne vom 12./13. November bleiben historische Planung; nicht als durchgeführt kennzeichnen.
 
 ## Letzter belegter Funktions-/Release-Stand
