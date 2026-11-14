@@ -151,8 +151,8 @@ async function loadSoilUsb(){
    const network=d.mqtt_connected?'MQTT verbunden':d.wifi_configured?'WLAN gespeichert · MQTT offline':'Netzwerk nicht eingerichtet';
    const actions='<button type="button" class="subtle" data-soil-inspect="'+id+'">Identität prüfen</button>'+
       (d.state==='NEEDS_FIRMWARE'&&found.firmware_ready?'<button type="button" class="subtle" data-soil-flash="'+id+'">Firmware '+esc(found.firmware_version)+' installieren</button>':'')+
-      (d.public_key&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN','READY'].includes(d.state)?'<button type="button" class="subtle" data-soil-connect="'+id+'">Verbindung prüfen</button>':'');
-   const canNetwork=d.public_key&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN'].includes(d.state);
+      (d.device_id&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN','READY'].includes(d.state)?'<button type="button" class="subtle" data-soil-connect="'+id+'">Verbindung prüfen</button>':'');
+   const canNetwork=d.device_id&&d.calibration_ready&&['NETWORK','ERROR','ASSIGN'].includes(d.state);
    const hosts=(soilOnboard.broker?.hosts||[]).filter(v=>/^\d{1,3}(?:\.\d{1,3}){3}$/.test(v));
    const defaultHost=hosts[0]||'';
    const wifiForm=canNetwork?'<form data-soil-network="'+id+'"><label>WLAN-Name (2,4 GHz)<input name="ssid" maxlength="32" autocomplete="off" required placeholder="WLAN-Name"></label>'+
