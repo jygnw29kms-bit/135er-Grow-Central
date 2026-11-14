@@ -29,7 +29,32 @@ $('refresh').addEventListener('click',()=>listDevices().catch(error=>$('summary'
 $('logout').addEventListener('click',()=>{remoteClose();accessToken='';$('account').hidden=true;$('login').hidden=false;$('msg').textContent='Abgemeldet.';});
 // Authenticated read-only telemetry. Never sends power, fan or light commands.
 let remoteSocket=null,remoteInterval=null,remoteRequest=0;
+let cameraTimer=null,cameraActive=false,cameraPending=false;
+function cameraStop(){
+ cameraActive=false;cameraPending=false;
+ if(cameraTimer){clearInterval(cameraTimer);cameraTimer=null}
+ const img=$('remoteCameraImage');if(img){img.removeAttribute('src');img.hidden=true}
+ if($('cameraStart'))$('cameraStart').hidden=false;
+ if($('cameraStop'))$('cameraStop').hidden=true;
+ if($('cameraStatus'))$('cameraStatus').textContent='Kameravorschau beendet.';
+}
+function cameraPoll(){
+ if(!cameraActive||cameraPending||!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN)return;
+ cameraPending=true;
+ remoteSocket.send(JSON.stringify({type:'camera_frame',request_id:crypto.randomUUID()}));
+}
+function cameraStart(){
+ if(!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN){
+  $('cameraStatus').textContent='Gerätekanal noch nicht verbunden.';return
+ }
+ cameraActive=true;$('cameraStart').hidden=true;$('cameraStop').hidden=false;
+ $('cameraStatus').textContent='Lade erstes Kamerabild …';
+ cameraPoll();cameraTimer=setInterval(cameraPoll,12000);
+}
+$('cameraStart')?.addEventListener('click',cameraStart);
+$('cameraStop')?.addEventListener('click',cameraStop);
 function remoteClose(){
+ cameraStop();
  if(remoteInterval){clearInterval(remoteInterval);remoteInterval=null}
  if(remoteSocket){remoteSocket.close();remoteSocket=null}
  pendingRemote.clear()
@@ -122,6 +147,16 @@ function remoteOpen(deviceId){
  });
  socket.addEventListener('message',event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
+  if(data.type==='camera_result'){
+   cameraPending=false;
+   if(!cameraActive)return;
+   if(data.ok&&typeof data.image==='string'&&data.image.startsWith('data:image/jpeg;base64,')&&data.image.length<220000){
+    const img=$('remoteCameraImage');
+    img.src=data.image;img.hidden=false;
+    $('cameraStatus').textContent='Bild aktualisiert · '+new Date().toLocaleTimeString('de-DE');
+   }else{$('cameraStatus').textContent='Kamera derzeit nicht verfügbar: '+(data.error||'Keine Bilddaten')}
+   return;
+  }
   if(data.type==='auth_ok'){
    if(!data.device_online){$('remoteState').textContent='Grow-Pi ist offline';return}
    const poll=()=>{
@@ -143,6 +178,6 @@ function remoteOpen(deviceId){
    $('remoteState').textContent='Grow-Pi-Gerätekanal offline';
   }
  });
- socket.addEventListener('close',()=>{if(remoteSocket===socket){$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null}});
+ socket.addEventListener('close',()=>{if(remoteSocket===socket){cameraStop();$('remoteState').textContent='Cloud-Fernkanal unterbrochen';if(remoteInterval)clearInterval(remoteInterval);remoteInterval=null}});
  socket.addEventListener('error',()=>{$('remoteState').textContent='WebSocket-Verbindung fehlgeschlagen'});
 }
