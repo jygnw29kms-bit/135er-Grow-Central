@@ -5,7 +5,7 @@ const text=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=0)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false};
-const pages={home:'Übersicht',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',more:'Mehr'};
+const pages={home:'Übersicht',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
 let timer=0;
 function notify(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>e.classList.remove('show'),4200);}
 async function api(url,body){
@@ -27,6 +27,7 @@ function page(id){
  if(id==='rooms')loadRooms();
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
+ if(id==='cloud')cloudRefresh();
  if(id==='more')api('/api/health').then(x=>text('aboutVersion',x.version||'—')).catch(()=>text('aboutVersion','Nicht verfügbar'));
  if(id==='devices')loadSmart(true);
  window.scrollTo(0,0);
@@ -238,6 +239,65 @@ document.addEventListener('click',e=>{
  const b=e.target.closest('[data-camera-apply]');
  if(b)cameraApply(b.dataset.cameraApply);
 });
+
+let cloudBusy=false;
+function cloudPairDisplay(pair){
+ const status=pair?.status||'not_started';
+ const linked=status==='paired';
+ const pending=status==='authorization_pending';
+ text('cloudPairState',linked?'Mit Cloud-Konto verbunden':pending?'Freigabe ausstehend':status==='not_started'?'Noch nicht zugeordnet':status);
+ const code=$('cloudPairCodeBox');
+ if(code)code.hidden=!pending;
+ text('cloudPairCode',pending?(pair.user_code||'—'):'—');
+ text('cloudExpiry',pending&&pair.expires_at?'Gültig bis '+new Date(Number(pair.expires_at)*1000).toLocaleTimeString('de-DE'):'');
+ const href=String(pair?.verification_uri_complete||pair?.verification_uri||'');
+ const link=$('cloudPairUrl');
+ if(link){
+  try{
+   const u=new URL(href);
+   if(u.protocol==='https:'&&u.hostname==='135ercloud.grow-central.de'){link.href=u.href;link.hidden=!pending;}
+   else{link.hidden=true;}
+  }catch{link.hidden=true;}
+ }
+ $('cloudPairStart').hidden=linked||pending;
+ $('cloudPairCancel').hidden=!pending;
+}
+async function cloudRefresh(){
+ try{
+  const result=await api('/api/cloud/status');
+  text('cloudServer',result.host||'Nicht konfiguriert');
+  text('cloudDetail',result.detail||'Keine Statusmeldung');
+  const reachable=result.connected===true;
+  text('cloudState',reachable?'Cloud-Server online':'Cloud-Verbindung getrennt');
+  $('cloudState').classList.toggle('good',reachable);
+  $('cloudState').classList.toggle('bad',!reachable);
+  cloudPairDisplay(result.pairing||{});
+ }catch(e){text('cloudState','Nicht erreichbar');text('cloudFeedback','Cloud-Status konnte nicht geladen werden: '+e.message);}
+}
+async function cloudPairStart(){
+ if(cloudBusy)return;
+ cloudBusy=true;$('cloudPairStart').disabled=true;
+ text('cloudFeedback','Erstelle sicheren Kopplungscode …');
+ try{
+  const result=await api('/api/cloud/pair/start',{name:'Grow Central Grow-Pi'});
+  if(result.status==='already_paired'){text('cloudFeedback','Dieses Gerät ist bereits zugeordnet.');}
+  else{text('cloudFeedback','Code im Cloud-Konto bestätigen. Danach wird die Zuordnung automatisch übernommen.');}
+  cloudPairDisplay(result);await cloudRefresh();
+ }catch(e){text('cloudFeedback','Kopplung fehlgeschlagen: '+e.message);}
+ finally{cloudBusy=false;$('cloudPairStart').disabled=false;}
+}
+async function cloudPairCancel(){
+ if(cloudBusy)return;
+ cloudBusy=true;
+ try{await api('/api/cloud/pair/cancel',{});text('cloudFeedback','Kopplung abgebrochen.');await cloudRefresh();}
+ catch(e){text('cloudFeedback','Abbruch fehlgeschlagen: '+e.message);}
+ finally{cloudBusy=false;}
+}
+$('cloudPairStart')?.addEventListener('click',cloudPairStart);
+$('cloudPairRefresh')?.addEventListener('click',cloudRefresh);
+$('cloudPairCancel')?.addEventListener('click',cloudPairCancel);
+setInterval(()=>{if(!document.hidden&&state.page==='cloud')cloudRefresh();},10000);
+
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();
 cameraLoad();
 
