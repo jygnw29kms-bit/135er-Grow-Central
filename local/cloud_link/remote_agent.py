@@ -125,6 +125,40 @@ async def serve(ws,local):
               "error":type(exc).__name__}
    await ws.send(json.dumps(response))
    continue
+  if req.get("type") in ("plant_create","plant_update"):
+   room_id=req.get("room_id");name=req.get("name");plant_id=req.get("plant_id")
+   plant_type=req.get("plant_type","other");phase=req.get("phase","vegetative")
+   strain=req.get("strain","");start_date=req.get("start_date","");notes=req.get("notes","")
+   valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
+     and isinstance(name,str) and 1<=len(name.strip())<=80
+     and isinstance(strain,str) and len(strain)<=120
+     and isinstance(start_date,str) and (not start_date or re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}",start_date))
+     and isinstance(notes,str) and len(notes)<=2000
+     and plant_type in ("automatic","feminized","mother","clone","other")
+     and phase in ("germination","seedling","vegetative","flowering","flush","finish","harvest","completed","other")
+     and req.get("confirm_write") is True)
+   if req["type"]=="plant_update":
+    valid=valid and isinstance(plant_id,str) and re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id)
+   if not valid:
+    await ws.send(json.dumps({"type":"plant_result","request_id":request_id,"ok":False,
+                              "error":"invalid_plant_data"}));continue
+   try:
+    path="/api/v1/rooms/"+room_id+"/plants"
+    if req["type"]=="plant_update":path+="/"+plant_id
+    body={"name":name.strip(),"strain":strain,"plant_type":plant_type,
+          "start_date":start_date,"phase":phase,"notes":notes}
+    if req["type"]=="plant_create":
+     result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=12)
+    else:
+     result=await local.put(LOCAL_API+path,headers=local_headers(),json=body,timeout=12)
+    result.raise_for_status();plant=result.json()
+    response={"type":"plant_result","request_id":request_id,"ok":True,
+              "room_id":room_id,"plant_id":str(plant.get("id",""))[:128]}
+   except Exception as exc:
+    response={"type":"plant_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="journal_create":
    room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
