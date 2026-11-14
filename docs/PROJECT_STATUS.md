@@ -1,7 +1,12 @@
 # Project Status – 135er-Grow Central
 
+## Entwicklungsfreigabe und Pi-Abgleich · 14. November 2026
+
+**Der zuvor angeordnete Entwicklungsstopp wurde vom Betreiber ausdrücklich aufgehoben.** Weiterentwicklung und Tests sind wieder freigegeben. Der tatsächlich installierte Pi-Stand wird in `archive/pi-live-2026-11-14` unter `pi-snapshots/2026-11-14/` quellenbezogen archiviert und mit `master` abgeglichen. Nicht veröffentlichbare Betriebsdaten, Schlüssel und Zugangsdaten bleiben ausgeschlossen. Der Archivstand ist kein vollständig verifiziertes Systemabbild und kein Release.
+
+
 - **Stand:** 14. November 2026
-- **Projektmodus:** **Entwicklung freigegeben; Pi/Git-Abgleich läuft**
+- **Projektmodus:** Weiterentwicklung freigegeben; Pi/Git-Abgleich läuft
 - **Repository:** `jygnw29kms-bit/135er-Grow-Central`, Branch `master`
 - **Version letzter dokumentierter Kandidat:** `alpha-0.7.5`, Build 461, `CANDIDATE`
 - **Hardwarevalidierung:** Vollständige reale Abnahme nicht bestätigt
