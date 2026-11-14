@@ -68,8 +68,6 @@ class ConnectBody(BaseModel):
 
 class SpeedBody(BaseModel):
     percent: int = Field(ge=0, le=100)
-
-
 class RawBody(BaseModel):
     uuid: str = Field(min_length=4, max_length=64, pattern=r"^[0-9a-fA-F-]+$")
     hex: str = Field(min_length=2, max_length=383, pattern=r"^[0-9a-fA-F\s]+$")
@@ -136,14 +134,3 @@ async def config():
         "cloud_enabled": os.getenv("GC_CLOUD_ENABLED", "false").lower() == "true",
         "mars_hydro": public_hardware_profile(),
     }
-
-
-@app.get("/api/status")
-async def status():
-    return _status_payload()
-
-
-def _classify_ble_name(name: str) -> str:
-    if is_mars_hydro_ble_candidate(name, NAME_HINT):
-        return "df100m_candidate"
-    return "generic_ble"
