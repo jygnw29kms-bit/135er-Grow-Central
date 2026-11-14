@@ -2,13 +2,13 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#071411"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Grow Central · Steuerung</title><link rel="icon" href="/static/brand-mark.png"><link rel="apple-touch-icon" href="/static/gc-icon-192.png">
-<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-cloud-06"></head>
+<link rel="manifest" href="/static/gc-manifest.webmanifest"><link rel="stylesheet" href="/static/gc-final.css?v=20261114-auto-07"></head>
 <body><div class="shell">
 <aside class="sidebar"><a class="brand" href="/ui" aria-label="Grow Central"><img src="/static/brand-logo.png" alt="Grow Central"><small>ENVIRONMENT SYSTEM  //  GC-OS</small></a>
 <nav id="nav" aria-label="Hauptnavigation"><button data-page="home" class="selected"><span>⌂</span> Übersicht</button><button data-page="devices"><span>▣</span> Geräte</button><button data-page="climate"><span>♧</span> Klima</button><button data-page="camera"><span>▧</span> Kamera</button><button data-page="history"><span>▥</span> Verlauf</button><button data-page="rooms"><span>◇</span> Räume</button><button data-page="homekit"><span>⌂</span> Apple Home</button><button data-page="cloud"><span>☁</span> Cloud</button><button data-page="more"><span>⚙</span> Mehr</button></nav>
 <div class="sidefoot"><span id="coreStatus" class="status-dot">Verbinde …</span><small>Grow Central · Local First</small></div></aside>
 <main><header class="topbar"><div><div class="eyebrow">GC-OS / CONTROL</div><h1 id="pageTitle">Übersicht</h1></div>
-<div class="headright"><span id="currentRoom" class="roompill">Growzelt</span><span id="clock" class="clock">—</span><span id="systemBadge" class="pill">Prüfe …</span></div></header>
+<div class="headright"><span id="currentRoom" class="roompill">Growzelt</span><span id="clock" class="clock">—</span><span id="networkMode" class="pill" title="Automatische Erreichbarkeitsprüfung">Verbindung prüfen …</span><span id="systemBadge" class="pill">Prüfe …</span></div></header>
 <div class="content">
 <section id="home" class="page active">
 <div class="hero" aria-label="Grow Central Start">
@@ -41,26 +41,4 @@
 <section id="cloud" class="page">
 <div class="intro"><h2>Grow Central Cloud</h2><p>Deinen Grow-Pi sicher mit deinem Cloud-Konto verbinden. Keine Routerfreigabe nötig.</p></div>
 <article class="panel gc-cloud-panel">
-<div class="panelhead"><div><h3>Cloud-Verbindung</h3><p id="cloudDetail">Cloud-Verbindung wird geprüft …</p></div><span id="cloudState" class="pill">Prüfe …</span></div>
-<div class="statusrow"><span>Cloud-Server</span><strong id="cloudServer">—</strong></div>
-<div class="statusrow"><span>Gerätefreigabe</span><strong id="cloudPairState">—</strong></div>
-<div id="cloudPairCodeBox" class="cloud-pair-box" hidden>
-<p class="desc">Einmaliger Kopplungscode, in deinem persönlichen Cloud-Konto bestätigen:</p>
-<div id="cloudPairCode" class="cloud-code" aria-label="Kopplungscode">—</div>
-<p id="cloudExpiry" class="desc"></p>
-<a id="cloudPairUrl" class="cloud-action" href="https://135ercloud.grow-central.de/pair" rel="noopener noreferrer" target="_blank">Anmelden und Gerät bestätigen</a>
-</div>
-<div class="cloud-actions">
-<button id="cloudPairStart" type="button" class="cloud-action">Gerät mit Cloud verbinden</button>
-<button id="cloudPairRefresh" type="button" class="subtle">Status aktualisieren</button>
-<button id="cloudPairCancel" type="button" class="subtle" hidden>Kopplung abbrechen</button>
-</div>
-<p id="cloudFeedback" class="desc" role="status" aria-live="polite">Eine bestehende Statusverbindung ist noch keine Gerätefreigabe oder Fernsteuerung.</p>
-</article>
-<article class="panel" style="margin-top:16px"><h3>Fernzugriff</h3><p class="desc">Die Anmeldung und Kopplung erfolgen verschlüsselt über die Grow-Central-Cloud. Die Freigabe eines Geräts ist Voraussetzung für den Zugriff von unterwegs. Ob der Fernzugriffskanal bereitsteht, wird separat geprüft.</p></article>
-</section>
-<section id="more" class="page"><div class="intro"><h2>SYSTEM & INTEGRATIONEN</h2><p>Eine Anwendung. Alle bestätigten Geräte und Schnittstellen.</p></div>
-<article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
-<article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
-</div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="history">▥<small>Verlauf</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/gc-final.js?v=20261114-cloud-06"></script></body></html>
+<div class="panelhead"><div><h3>Cloud-Verbindung</h3><p id="cloudDetail">Cloud-Verbindung wird geprüft …</p></div><span id="cloudState" class="pill">Prüfe â
