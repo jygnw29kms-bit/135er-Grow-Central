@@ -35,7 +35,7 @@ function page(id){
 }
 function controlMarkup(kind){
  const lamp=kind==='lamp',model=lamp?'FC3000':'DF150-M';
- const src=lamp?'/static/mars-fc3000-hires.jpg':'/static/mars-df150m-hires.jpg';
+ const src=lamp?'/static/mars-fc3000-transparent.png':'/static/mars-df150m-hires.jpg';
  return '<article class="control" data-control="'+kind+'">'+
   '<div class="controlhead"><div class="name"><h3>Mars Hydro '+model+'</h3><small>'+(lamp?'LED Grow Light':'Inline-Lüfter · BLE')+'</small></div>'+
   '<button class="switch" type="button" data-power="'+kind+'" aria-label="'+model+' ein- oder ausschalten">Status —</button></div>'+
@@ -498,40 +498,3 @@ async function deleteJournal(id){
   notify('Eintrag gelöscht');
  }catch(e){notify('Löschen fehlgeschlagen: '+e.message);}
 }
-async function loadRecentEvents(){
- const root=journalPath();if(!root)return;
- try{
-  const result=await api(root+'/events?limit=7');
-  const entries=result.events||[];
-  $('recentEvents').innerHTML=entries.length?entries.map(x=>{
-   const time=new Date(x.created_at||x.timestamp||'');
-   const dateText=isNaN(time)?'—':time.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-   const label=catLabels[x.type]||x.type||'Ereignis';
-   const note=x.note||label;
-   return '<div class="recent-event"><time>'+dateText+'</time><span>'+esc(note)+'</span></div>';
-  }).join(''):'<p class="empty-text">Noch keine Grow-Ereignisse vorhanden.</p>';
- }catch(e){text('recentEvents','Verlauf derzeit nicht erreichbar.');}
-}
-document.addEventListener('click',e=>{
- const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
- const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
- const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
- const edit=e.target.closest('[data-journal-edit]');if(edit){openJournalForm(edit.dataset.journalEdit);return;}
- const del=e.target.closest('[data-journal-delete]');if(del){deleteJournal(del.dataset.journalDelete);}
-});
-$('journalForm')?.addEventListener('submit',saveJournal);
-$('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
-$('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
-$('roomPicker')?.addEventListener('change',async e=>{
- growJournal.roomId=e.target.value;
- const row=(state.rooms||[]).find(x=>x.id===growJournal.roomId);
- text('currentRoom',row?.name||'—');text('heroRoom',row?.name||'—');
- growJournal.selectedId=null;
- await Promise.all([loadJournal(),loadRecentEvents()]);
-});
-setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
-
-renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
-cameraLoad();
-
-})();
