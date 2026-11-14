@@ -430,7 +430,7 @@ async def _camera_stream_watchdog(token: object, process: asyncio.subprocess.Pro
             log.warning("Camera watchdog: no complete JPEG for %.1fs; terminating stalled ffmpeg pid=%s",
                         time.monotonic() - heartbeat["last_frame"], process.pid)
             append_audit("camera.stream.watchdog", reason="missing_frames", pid=process.pid)
-            await _stop_active_stream("watchdog_missing_frames")
+            await _stop_active_stream("watchdog_missing_frames", expected_token=token)
             return
 
 
@@ -454,9 +454,11 @@ async def _terminate_process(process: asyncio.subprocess.Process | None) -> None
             log.error("Camera ffmpeg pid=%s did not exit after SIGKILL", getattr(process, "pid", "?"))
 
 
-async def _stop_active_stream(reason: str) -> bool:
+async def _stop_active_stream(reason: str, *, expected_token: object | None = None) -> bool:
     global _ACTIVE_STREAM_TOKEN, _ACTIVE_STREAM_PROCESS
     async with _STREAM_STATE_LOCK:
+        if expected_token is not None and _ACTIVE_STREAM_TOKEN is not expected_token:
+            return False
         token = _ACTIVE_STREAM_TOKEN
         process = _ACTIVE_STREAM_PROCESS
         _ACTIVE_STREAM_TOKEN = None
