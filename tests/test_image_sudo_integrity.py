@@ -21,7 +21,7 @@ def test_published_pristine_image_rechecks_sudo_integrity():
 def test_release_notes_match_current_sensor_commissioning():
     assert 'python scripts/package-sensor-firmware.py' in WORKFLOW
     assert '"version": "0.5.3"' in Path('firmware/gc-soil-node/dist/manifest.json').read_text(encoding='utf-8')
-    assert 'FRESH_SUBSTRATE_CC' in WORKFLOW
-    assert 'BLE remains a secure Recovery/Service path' in WORKFLOW
+    assert 'python -m platformio run -d firmware/gc-soil-node' in WORKFLOW
+    assert 'OPERATOR-ONLY POLICY' in WORKFLOW
     assert 'firmware 0.4.1' not in WORKFLOW
     assert 'BLE credential provisioning is not implemented' not in WORKFLOW
