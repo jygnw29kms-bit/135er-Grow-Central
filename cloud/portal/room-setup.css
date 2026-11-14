@@ -1,0 +1,11 @@
+.gc-room-create-form{display:grid;grid-template-columns:1.4fr 1fr auto;gap:12px;align-items:end}
+.gc-room-create-form label{display:grid;gap:5px;font-size:12px;color:#bcd8c4}
+.gc-room-create-form input,.gc-room-create-form select{background:#10281c;color:#e6f6eb;border:1px solid #40785b;padding:11px;border-radius:8px;font:inherit}
+.gc-room-create-form button{min-height:43px}
+.gc-assignment-row{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #315a43}
+.gc-assignment-row div{display:flex;flex-direction:column;gap:5px}
+.gc-assignment-row strong{font-size:14px}
+.gc-assignment-row small{color:#97c6a8}
+.gc-assignment-row button{white-space:nowrap}
+#gcRoomCreateStatus,#gcRoomDevicesStatus{font-size:12px;color:#a7e5bf}
+@media(max-width:700px){.gc-room-create-form{grid-template-columns:1fr}.gc-assignment-row{align-items:start;flex-wrap:wrap}}
