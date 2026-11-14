@@ -1,6 +1,6 @@
 /* Grow Central PWA: shell only; live measurements and commands always network-only. */
-const CACHE='gc-shell-20261114-climate-growbook-1';
-const SHELL=['/static/gc-final.css?v=20261114-master-13','/static/gc-final.js?v=20261114-climate-growbook-1','/static/mars-fc3000-transparent.png','/static/mars-df150m-hires.jpg','/static/gc-hero-leaf.jpg','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
+const CACHE='gc-shell-20261114-soil-fault-1';
+const SHELL=['/static/gc-final.css?v=20261114-master-13','/static/gc-final.js?v=20261114-soil-fault-1','/static/mars-fc3000-transparent.png','/static/mars-df150m-hires.jpg','/static/gc-hero-leaf.jpg','/static/brand-mark.png','/static/brand-logo.png','/static/gc-icon-192.png','/static/gc-icon-512.png','/static/gc-manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
