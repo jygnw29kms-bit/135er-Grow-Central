@@ -1,0 +1,23 @@
+{
+  "version": "0.5.3",
+  "chip": "esp32c3",
+  "model": "GC-SOIL-XIAO-C3-HW390",
+  "files": {
+    "bootloader.bin": {
+      "offset": 0,
+      "sha256": "30d47ab1f344cfa69f6b2f718ffa72fc7baea6db047eaabefea162db29e6821c"
+    },
+    "partitions.bin": {
+      "offset": 32768,
+      "sha256": "e7b020b1aebdeb1f5e49770080c1d45aa1a79c4b4d468a309b3a8f6fc5039ae2"
+    },
+    "boot_app0.bin": {
+      "offset": 57344,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    "firmware.bin": {
+      "offset": 65536,
+      "sha256": "07b5daa279be6e94ea3ca0dde0d1f114305124381160fcbfe9a4780772c2b746"
+    }
+  }
+}
