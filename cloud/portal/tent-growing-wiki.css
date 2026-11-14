@@ -1,0 +1,20 @@
+#cannabisWikiSections{display:block}
+.gc-wiki-toolbar{display:grid;grid-template-columns:minmax(160px,2fr) minmax(120px,1fr) auto;gap:10px;align-items:center;margin:12px 0 18px}
+.gc-wiki-toolbar input,.gc-wiki-toolbar select{background:#0b2219;color:#dff5e5;border:1px solid #3d7356;border-radius:8px;padding:11px;font:inherit;min-width:0}
+.gc-wiki-count{white-space:nowrap;color:#a5cbb3;font-size:12px}
+.gc-wiki-articles{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
+.gc-wiki-articles details{align-self:start;margin:0;background:linear-gradient(135deg,#13271f,#0c1b15);border:1px solid #426853;border-radius:11px;padding:0;overflow:hidden}
+.gc-wiki-articles details[open]{border-color:#71b68b}
+.gc-wiki-articles summary{padding:15px 17px;cursor:pointer;list-style:none;display:grid;gap:5px}
+.gc-wiki-articles summary::-webkit-details-marker{display:none}
+.gc-wiki-articles summary small{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#83cba4}
+.gc-wiki-articles summary strong{font-size:15px;color:#e5f5eb;font-weight:600}
+.gc-wiki-articles summary:focus-visible{outline:2px solid #91e4ae;outline-offset:-2px}
+.gc-wiki-content{padding:0 17px 17px;color:#c9dfd1;font-size:13px;line-height:1.65}
+.gc-wiki-content p{margin:8px 0 13px}
+.gc-wiki-content h5{font-size:12px;color:#91e5b4;margin:15px 0 6px}
+.gc-wiki-content ul{margin:0 0 10px;padding-left:20px}
+.gc-wiki-content li{margin:6px 0}
+.gc-wiki-references{font-size:11px;border-top:1px solid #355a46;padding-top:10px}
+.gc-wiki-references a{color:#b8efd0;text-decoration:underline;margin:0 3px}
+@media(max-width:670px){.gc-wiki-toolbar{grid-template-columns:1fr 1fr}.gc-wiki-toolbar input{grid-column:1/-1}.gc-wiki-count{text-align:right}.gc-wiki-articles{grid-template-columns:1fr}}
