@@ -97,7 +97,7 @@
  document.addEventListener('DOMContentLoaded',()=>{
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});
   inspectCamera();
-  cameraTimer=setInterval(()=>{inspectCamera();frameRequest()},12000);
+  cameraTimer=setInterval(()=>{inspectCamera();frameRequest()},2500);
  });
  window.addEventListener('message',event=>{
   if(event.origin!==origin||event.source!==window.parent)return;
