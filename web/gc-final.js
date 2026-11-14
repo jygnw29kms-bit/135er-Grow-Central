@@ -66,7 +66,7 @@ function setControls(kind,status){
  });
  if(!state.sliderEdit[kind])setAll('[data-level-label="'+kind+'"]',percent==null?'—':n(percent)+' %');
  setAll('[data-status-label="'+kind+'"]',active?'BLE live · '+(latest.power_on?'Ein':'Aus'):(status?.connected?'Warte auf Messung':'Nicht verbunden'));
- setAll('[data-live-detail="'+kind+'"]',!active?'—':kind==='lamp'?(latest.power_on?'Eingeschaltet':'Ausgeschaltet'):n(latest.rpm)+' RPM');
+ setAll('[data-live-detail="'+kind+'"]',!active?'—':kind==='lamp'?(latest.power_on?'Eingeschaltet':'Ausgeschaltet'):latest.power_on===false?'AUS':Number.isFinite(latest.rpm)?n(latest.rpm)+' RPM':'—');
  setAll('[data-read-age="'+kind+'"]',active&&Number.isFinite(status.age_ms)?n(status.age_ms/1000,1)+' s alt':active?'Live':'Kein aktueller Wert');
 }
 const soilTileState={dashboard:{value:'—',detail:'Warte auf Bodensensor',valid:false},climate:{value:'—',detail:'Warte auf Bodensensor',valid:false}};
@@ -105,7 +105,7 @@ function setMetrics(fan,lamp){
  const f=fan?.fresh?fan.latest:null,l=lamp?.fresh?lamp.latest:null;
  text('tempValue',f&&Number.isFinite(f.temperature_c)?n(f.temperature_c,1)+' °C':'—');
  text('humidityValue',f&&Number.isFinite(f.humidity_rh)?n(f.humidity_rh,1)+' % rF':'—');
- text('rpmValue',f&&Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—');
+ text('rpmValue',!f?'—':f.power_on===false?'AUS':Number.isFinite(f.rpm)?n(f.rpm)+' RPM':'—');
  text('lightValue',l?(l.power_on?n(l.brightness_percent)+' %':'Aus'):'—');
  text('tempAge',f?'Frischer BLE-Wert · '+n((fan.age_ms||0)/1000,1)+' s alt':'Kein frischer Sensorwert');
  let tiles=$('liveTiles').cloneNode(true);
