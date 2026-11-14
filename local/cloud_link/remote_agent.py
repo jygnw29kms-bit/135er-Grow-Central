@@ -1,7 +1,7 @@
 """Grow Central paired and authenticated outbound-only device presence.
 No remote device operations are accepted in this phase.
 """
-import asyncio,base64,json,logging,os,time
+import asyncio,base64,json,logging,os,time,socket
 from urllib.parse import urlparse
 import httpx
 from websockets.asyncio.client import connect
@@ -16,7 +16,7 @@ async def session():
   raise RuntimeError("unapproved cloud origin")
  identity=ensure_identity()
  if not identity.device_id:raise RuntimeError("device not paired")
- async with httpx.AsyncClient(timeout=12,trust_env=False) as client:
+ async with httpx.AsyncClient(timeout=12,trust_env=False,transport=httpx.AsyncHTTPTransport(local_address="0.0.0.0")) as client:
   r=await client.post(URL+"/api/v2/device/challenge",json={"device_id":identity.device_id})
   r.raise_for_status()
   nonce=r.json()["nonce"]
@@ -24,8 +24,9 @@ async def session():
  payload=f"GCLOUD2\n{identity.device_id}\n{nonce}\n{timestamp}".encode()
  auth={"type":"auth","device_id":identity.device_id,"nonce":nonce,"timestamp":timestamp,
        "signature":b64(identity.private_key.sign(payload))}
+ ipv4=socket.getaddrinfo(parsed.hostname,443,socket.AF_INET,socket.SOCK_STREAM)[0][4][0]
  async with connect(URL.replace("https://","wss://",1)+"/api/v2/device/connect",
-                    open_timeout=12,ping_interval=20,ping_timeout=15,max_size=262144) as ws:
+                    host=ipv4,port=443,open_timeout=12,ping_interval=20,ping_timeout=15,max_size=262144) as ws:
   await ws.send(json.dumps(auth))
   result=json.loads(await asyncio.wait_for(ws.recv(),timeout=12))
   if result.get("type")!="auth_ok" or result.get("device_id")!=identity.device_id:
