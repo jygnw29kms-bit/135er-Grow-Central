@@ -108,7 +108,7 @@ def test_room_devices_includes_native_gc_soil_node(tmp_path, monkeypatch):
 
 def test_native_gc_soil_node_can_be_assigned_to_room(tmp_path, monkeypatch):
     from types import SimpleNamespace
-    monkeypatch.setattr(rooms, "TrustStore", lambda: SimpleNamespace(require_trusted=lambda _id: {"status": "TRUSTED"}))
+    monkeypatch.setattr(rooms, "TrustStore", lambda: SimpleNamespace(require_trusted=lambda _id: {"status": "TRUSTED"}, set_room_id=lambda *_args, **_kwargs: True))
     monkeypatch.setattr(rooms, "DATA_FILE", tmp_path / "rooms.json")
     monkeypatch.setenv("GC_SMARTHOME_DEVICE_CONFIG", str(tmp_path / "devices.json"))
     monkeypatch.setattr(rooms, "_native_gc_devices", _native_soil_nodes)
