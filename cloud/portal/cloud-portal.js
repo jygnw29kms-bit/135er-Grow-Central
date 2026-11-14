@@ -171,6 +171,16 @@ async function renewAccess(){
 }
 function scheduleReconnect(deviceId,code=0){
  if(!accessToken||!deviceId||reconnectTimer)return;
+ if(code===4403){
+  accessToken='';refreshToken='';
+  masterStatus('Gerätefreigabe nicht mehr gültig');
+  if($('masterFrame'))$('masterFrame').src='about:blank';
+  if($('masterMount'))$('masterMount').hidden=true;
+  masterVisible=false;
+  $('account').hidden=true;$('login').hidden=false;
+  $('msg').textContent='Die Gerätefreigabe wurde entzogen. Bitte erneut anmelden und Geräteliste prüfen.';
+  return;
+ }
  const delay=Math.min(30000,2000*Math.pow(2,Math.min(reconnectAttempts++,4)));
  masterStatus('Cloud-Verbindung unterbrochen · neuer Verbindungsversuch läuft');
  reconnectTimer=setTimeout(async()=>{
@@ -178,7 +188,14 @@ function scheduleReconnect(deviceId,code=0){
   if(!accessToken)return;
   if(code===4401){
    const renewed=await renewAccess();
-   if(!renewed){masterStatus('Cloud-Sitzung abgelaufen · bitte neu anmelden');return}
+   if(!renewed){
+    accessToken='';refreshToken='';
+    if($('masterFrame'))$('masterFrame').src='about:blank';
+    if($('masterMount'))$('masterMount').hidden=true;
+    $('account').hidden=true;$('login').hidden=false;
+    $('msg').textContent='Cloud-Sitzung abgelaufen. Bitte erneut anmelden.';
+    return;
+   }
   }
   remoteOpen(deviceId);
  },delay);
