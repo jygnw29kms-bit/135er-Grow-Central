@@ -240,6 +240,48 @@ document.addEventListener('click',e=>{
  if(b)cameraApply(b.dataset.cameraApply);
 });
 
+const accessMode={local:false,remote:false,lastCheck:0,busy:false};
+async function detectAccessMode(){
+ if(accessMode.busy)return;
+ accessMode.busy=true;
+ const fromCloud=location.protocol==='https:'&&location.hostname==='135ercloud.grow-central.de';
+ const localOrigin=location.hostname.endsWith('.local')||location.hostname==='localhost'||location.hostname.startsWith('192.168.')||location.hostname.startsWith('10.');
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),2200);
+ try{
+   if(!navigator.onLine){
+     accessMode.local=false;accessMode.remote=false;
+     text('networkMode','Offline');text('cloudAccessMode','Keine Netzwerkverbindung');
+     text('cloudRemoteStatus','Nicht erreichbar');return;
+   }
+   if(fromCloud){
+     accessMode.local=false;
+     text('networkMode','Cloud');text('cloudAccessMode','HTTPS-Cloudzugang');
+     text('cloudRemoteStatus','Fernkanal separat prüfen');
+     return;
+   }
+   const result=await fetch('/api/health',{cache:'no-store',credentials:'same-origin',signal:controller.signal});
+   const type=result.headers.get('content-type')||'';
+   const data=type.includes('json')?await result.json():{};
+   accessMode.local=result.ok&&data&&typeof data==='object'&&data.status!=='error';
+   text('networkMode',accessMode.local?'Direkt · Heimnetz':'Lokal nicht erreichbar');
+   text('cloudAccessMode',accessMode.local?'Lokaler Grow-Pi':'Lokale Verbindung unterbrochen');
+   text('cloudRemoteStatus',accessMode.local?'Cloud-Fernkanal noch nicht abgenommen':'Nicht verfügbar');
+   if(!accessMode.local&&localOrigin)text('cloudFeedback','Lokaler Zugriff unterbrochen. Der HTTPS-Fernzugriff ist noch nicht freigegeben.');
+ }catch(e){
+   accessMode.local=false;
+   text('networkMode','Verbindung getrennt');
+   text('cloudAccessMode','Grow-Pi nicht erreichbar');
+   text('cloudRemoteStatus','Nicht verfügbar');
+ }finally{
+   clearTimeout(timeout);accessMode.lastCheck=Date.now();accessMode.busy=false;
+ }
+}
+window.addEventListener('online',detectAccessMode);
+window.addEventListener('offline',detectAccessMode);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)detectAccessMode();});
+setInterval(()=>{if(!document.hidden)detectAccessMode();},12000);
+
 let cloudBusy=false;
 function cloudPairDisplay(pair){
  const status=pair?.status||'not_started';
@@ -298,7 +340,7 @@ $('cloudPairRefresh')?.addEventListener('click',cloudRefresh);
 $('cloudPairCancel')?.addEventListener('click',cloudPairCancel);
 setInterval(()=>{if(!document.hidden&&state.page==='cloud')cloudRefresh();},10000);
 
-renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();
+renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();
 cameraLoad();
 
 })();
