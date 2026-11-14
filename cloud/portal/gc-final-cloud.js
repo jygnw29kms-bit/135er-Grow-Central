@@ -426,7 +426,10 @@ function journalEntryDetail(row){
  return '<header><h4>'+esc(row.title||catLabels[row.category]||'Eintrag')+'</h4><div class="toolbar">'+editor+
  '<button type="button" data-journal-delete="'+safeId+'">Löschen</button></div></header>'+
  '<small>'+niceDate(row.created_at)+' · '+esc(catLabels[row.category]||row.category||'')+'</small>'+
- '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+photo;
+ '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+
+ (row.plant_id?'<p class="desc">Pflanze: '+esc(growJournal.plants.find(p=>p.id===row.plant_id)?.name||row.plant_id)+'</p>':'<p class="desc">Allgemeiner Raumeintrag</p>')+
+ (row.sensor_snapshot?.captured_at?'<p class="desc">Mess-Snapshot: '+esc(niceDate(row.sensor_snapshot.captured_at))+'</p>':'')+
+ (row.sensor_snapshot?.devices?Object.entries(row.sensor_snapshot.devices).map(([key,d])=>'<p class="desc">'+esc(key)+': '+esc(d.temperature_c!=null?d.temperature_c+' °C · '+d.humidity_rh+' % rF':d.power_on?'Licht an':'Licht aus')+'</p>').join(''):'')+photo;
 }
 function renderJournal(){
  const entries=growJournal.entries;
@@ -459,6 +462,15 @@ function openJournalForm(id=null){
  $('journalTitle').value=row?.title||'';
  $('journalText').value=row?.text||'';
  $('journalPhoto').disabled=!!row;
+ const plantSelect=$('journalPlant');
+ if(plantSelect){
+  plantSelect.replaceChildren();
+  const blank=document.createElement('option');blank.value='';blank.textContent='Allgemeiner Raumeintrag';plantSelect.append(blank);
+  for(const plant of growJournal.plants){
+   const option=document.createElement('option');option.value=plant.id;option.textContent=plant.name;plantSelect.append(option);
+  }
+  plantSelect.value=row?.plant_id||'';
+ }
  text('journalDialogTitle',row?'Eintrag bearbeiten':'Neuer Growbucheintrag');
  text('journalError','');
  if(!growJournal.roomId){notify('Erst einen Raum auswählen');return;}
@@ -477,7 +489,7 @@ async function saveJournal(event){
  if(!growJournal.roomId)return;
  const button=$('journalSave');button.disabled=true;
  text('journalError','');
- const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim()};
+ const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim(),plant_id:$('journalPlant')?.value||null};
  try{
   if(!payload.title)throw Error('Bitte einen Titel eingeben.');
   const photo=$('journalPhoto').files[0];
@@ -485,7 +497,7 @@ async function saveJournal(event){
    if(!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Nur JPG, PNG oder WebP erlaubt.');
    if(photo.size>8*1024*1024)throw Error('Foto größer als 8 MiB.');
    const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photo)});
-   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
+   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,plant_id:payload.plant_id,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
   }else if(growJournal.editingId){
    await journalRequest('PUT',journalPath()+'/journal/'+encodeURIComponent(growJournal.editingId),payload);
   }else{
