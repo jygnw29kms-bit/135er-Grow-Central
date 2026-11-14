@@ -81,6 +81,7 @@
 <dialog id="journalDialog" class="journal-dialog"><form id="journalForm">
  <header><h2 id="journalDialogTitle">Growbucheintrag</h2><button type="button" class="icon-button" id="journalClose" aria-label="Schließen">✕</button></header>
  <label>Kategorie<select id="journalCategory" required><option value="observation">Beobachtung</option><option value="watering">Bewässerung</option><option value="feeding">Düngung</option><option value="training">Training</option><option value="repotting">Umtopfen</option><option value="photo">Foto / Dokumentation</option><option value="diagnosis">Diagnose</option><option value="harvest">Ernte</option><option value="note">Notiz</option></select></label>
+ <label>Pflanze (optional)<select id="journalPlant"><option value="">Gesamter Raum / alle Pflanzen</option></select></label>
  <label>Titel<input id="journalTitle" name="title" maxlength="120" required placeholder="Was wurde gemacht?"></label>
  <label>Notizen<textarea id="journalText" rows="5" maxlength="5000" placeholder="Beobachtungen, Mengen, Maßnahmen …"></textarea></label>
 <label>Foto (optional, JPEG/PNG/WebP · max. 8 MiB)<input id="journalPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
@@ -96,7 +97,7 @@
 </div><div id="cameraSettingsPanel" hidden><div id="cameraControls" class="camera-controls"></div><p id="cameraSettingsStatus" class="desc">Nur tatsächlich von der C920 unterstützte Einstellungen.</p></div>
 <p class="desc">Einstellungen werden nur nach Bestätigung an die angeschlossene Kamera übertragen.</p></article></section>
 <section id="history" class="page"><div class="intro"><h2>Verlauf und Archiv</h2><p>Dokumentierte historische Messwerte, keine beispielhaften Kurven.</p></div><article class="panel"><h3>Letzte gespeicherte Werte</h3><div id="historyData">Lade Archiv …</div></article></section>
-<section id="rooms" class="page"><div class="intro"><h2>Räume</h2><p>Deine tatsächlichen Grow-Central-Räume.</p></div><div id="roomData" class="stack">Lade Räume …</div></section>
+<section id="rooms" class="page"><div class="intro"><h2>Räume</h2><p>Deine tatsächlichen Grow-Central-Räume. Geräte zuordnen, Raum-Growbuch öffnen und neue Räume anlegen.</p><button type="button" class="primary-btn" data-create-room>＋ Raum anlegen</button></div><div id="roomData" class="stack">Lade Räume …</div></section>
 <section id="homekit" class="page"><div class="intro"><h2>Apple Home</h2><p>HomeKit-Bridge, Lampensteuerung, Abluft und Klimawerte.</p></div><article class="panel"><h3>Bridge-Status</h3><div id="hkData">Lade Bridge …</div></article></section>
 <section id="cloud" class="page">
 <div class="intro"><h2>Grow Central Cloud</h2><p>Deinen Grow-Pi sicher mit deinem Cloud-Konto verbinden. Keine Routerfreigabe nötig.</p></div>
