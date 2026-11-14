@@ -25,7 +25,8 @@ function page(id){
  document.title='Grow Central · '+pages[id];
  updateCamera();
  if(id==='rooms')loadRooms();
- if(id==='growbook')loadJournal();
+ if(id==='climate'){loadClimateOverview();loadClimateHistory();}
+ if(id==='growbook'){loadRoomPlants();loadJournal();}
  if(id==='history')loadHistory();
  if(id==='homekit')loadHomekit();
  if(id==='cloud')cloudRefresh();
@@ -216,6 +217,7 @@ async function loadRooms(){
   text('currentRoom',selected?.name||'Kein Raum');text('heroRoom',selected?.name||'Kein Raum');
   const activeMarkup=rooms.length?rooms.map(x=>'<article class="panel"><h3>'+esc(x.name)+'</h3><p class="desc">Pflanzen: '+n(x.plant_count)+' · Geräte: '+n(x.device_count)+'</p><p class="desc">Growbuch ist diesem Raum automatisch zugeordnet.</p><button type="button" class="subtle" data-room-manage="'+esc(x.id)+'">Geräte zuordnen oder freigeben</button><button type="button" class="subtle" data-room-journal="'+esc(x.id)+'">Growbuch öffnen</button><button type="button" class="subtle" data-room-delete="'+esc(x.id)+'">Raum löschen (rückgängig)</button><div id="roomDevices-'+esc(x.id)+'"></div></article>').join(''):'<article class="panel"><p>Es ist noch kein aktiver Raum angelegt.</p></article>';
   const archived=data.archived_rooms||[];
+  if(state.page==='climate')renderClimateRoomChoices();
   const archivedMarkup=archived.length?'<section class="panel"><h3>Archivierte Räume</h3><p class="desc">Pflanzen, Fotos, Growbuch und Messhistorie bleiben erhalten. Geräte werden nicht automatisch erneut zugewiesen.</p>'+archived.map(r=>'<div class="statusrow"><span>'+esc(r.name)+'</span><button type="button" class="subtle" data-room-restore="'+esc(r.id)+'">Wiederherstellen</button></div>').join('')+'</section>':'';
   $('roomData').innerHTML=activeMarkup+archivedMarkup;
   await Promise.all([loadJournal(),loadRecentEvents()]);
@@ -501,6 +503,7 @@ async function loadJournal(){
   if(seq!==growJournal.sequence)return;
   growJournal.entries=(journal.entries||[]).slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
   growJournal.plants=plants.plants||[];
+  renderRoomPlantProfiles();
   if(!growJournal.entries.find(x=>x.id===growJournal.selectedId))growJournal.selectedId=growJournal.entries[0]?.id||null;
   renderJournal();
  }catch(e){$('journalPreview').innerHTML='<p class="empty-text">Growbuch nicht erreichbar: '+esc(e.message)+'</p>';text('journalFullList','Growbuchdaten konnten nicht geladen werden.');}
@@ -544,12 +547,16 @@ function renderJournal(){
 
 function openJournalForm(id=null){
  const row=growJournal.entries.find(x=>x.id===id);
+ if(!growJournal.plants.some(p=>p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized)){notify('Zuerst Pflanzenprofil mit Phase, Substrat, Topf und Düngung vollständig ausfüllen.');return;}
  growJournal.editingId=row?.id||null;
  const form=$('journalForm');form.reset();
  $('journalCategory').value=row?.category||'observation';
  $('journalTitle').value=row?.title||'';
  $('journalText').value=row?.text||'';
  $('journalPhoto').disabled=!!row;
+ const eligible=growJournal.plants.filter(p=>p.crop&&p.phase&&p.substrate_type&&p.substrate_components&&p.container_type&&p.nutrition_plan&&p.substrate_pre_fertilized);
+ $('journalPlant').innerHTML='<option value="">Pflanze wählen</option>'+eligible.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.phase)+'</option>').join('');
+ $('journalPlant').value=row?.plant_id||'';
  text('journalDialogTitle',row?'Eintrag bearbeiten':'Neuer Growbucheintrag');
  text('journalError','');
  if(!growJournal.roomId){notify('Erst einen Raum auswählen');return;}
@@ -568,15 +575,16 @@ async function saveJournal(event){
  if(!growJournal.roomId)return;
  const button=$('journalSave');button.disabled=true;
  text('journalError','');
- const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim()};
+ const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim(),plant_id:$('journalPlant').value};
  try{
   if(!payload.title)throw Error('Bitte einen Titel eingeben.');
+  if(!payload.plant_id)throw Error('Bitte zuerst eine Pflanze auswählen.');
   const photo=$('journalPhoto').files[0];
   if(photo&&!growJournal.editingId){
    if(!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Nur JPG, PNG oder WebP erlaubt.');
    if(photo.size>8*1024*1024)throw Error('Foto größer als 8 MiB.');
    const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photo)});
-   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
+   await api('/api/v1/grow-photos',{room_id:growJournal.roomId,plant_id:payload.plant_id,title:payload.title,note:payload.text,tags:[payload.category],image_data_url:dataUrl});
   }else if(growJournal.editingId){
    await journalRequest('PUT',journalPath()+'/journal/'+encodeURIComponent(growJournal.editingId),payload);
   }else{
@@ -624,7 +632,7 @@ document.addEventListener('click',e=>{
  const archive=e.target.closest('[data-room-delete]');if(archive){archiveGrowRoom(archive.dataset.roomDelete);return;}
  const restore=e.target.closest('[data-room-restore]');if(restore){restoreGrowRoom(restore.dataset.roomRestore);return;}
  const manage=e.target.closest('[data-room-manage]');if(manage){manageRoomDevices(manage.dataset.roomManage);return;}
- const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');loadJournal();return;}
+ const roombook=e.target.closest('[data-room-journal]');if(roombook){growJournal.roomId=roombook.dataset.roomJournal;page('growbook');return;}
  const add=e.target.closest('[data-add-journal]');if(add){openJournalForm();return;}
  const tab=e.target.closest('[data-journal-tab]');if(tab){growJournal.tab=tab.dataset.journalTab;renderJournal();return;}
  const selected=e.target.closest('[data-journal-select]');if(selected){growJournal.selectedId=selected.dataset.journalSelect;renderJournal();return;}
