@@ -1,0 +1,1218 @@
+"""Room organization, sensor history and grow journals for Grow Central."""
+from __future__ import annotations
+
+import asyncio
+import csv
+import io
+import logging
+from contextlib import contextmanager
+try:
+    import fcntl
+except ImportError:  # Windows test/development hosts
+    fcntl = None
+import json
+import math
+import os
+import tempfile
+import threading
+import uuid
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Iterator, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.security import require_write_auth
+from app.devices.runtime import runtime
+from app.devices.gc_trust import TrustStore
+from app.devices.gc_calibration import classify_soil_substrate_delta
+from app.history_archive import append as history_append
+from app.smarthome.registry import DeviceRegistry
+from app.smarthome.router import device_overview
+
+DATA_FILE = Path(os.getenv("GC_ROOMS_FILE", "/var/lib/135er-grow-central/rooms.json"))
+CAPTURE_INTERVAL_SECONDS = max(60, int(os.getenv("GC_ROOM_CAPTURE_INTERVAL", "300")))
+router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
+_capture_task: asyncio.Task | None = None
+_LOCAL_STATE_LOCK = threading.RLock()
+logger = logging.getLogger(__name__)
+
+
+async def _native_gc_devices(timeout: float = 1.0) -> list[dict[str, Any]]:
+    """Return native Grow-Central ESP32 devices in the room/overview row shape."""
+    try:
+        provider = runtime.get("growcentral_esp32")
+        discovered = await provider.discover(timeout=max(0.1, min(timeout, 3.0)))
+    except Exception:
+        return []
+
+    discovered = [device for device in discovered if (TrustStore().get(device.native_id) or {}).get("status") == "TRUSTED"]
+
+    async def resolve(device) -> dict[str, Any]:
+        online = False
+        state: dict[str, Any] | None = None
+        error: str | None = None
+        try:
+            health = await provider.health(device.native_id)
+            online = health.online
+            if online:
+                state = dict(await provider.state(device.native_id))
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+        return {
+            "id": device.global_id,
+            "name": device.name,
+            "adapter": device.provider_id,
+            "provider_id": device.provider_id,
+            "native_id": device.native_id,
+            "online": online,
+            "error": error,
+            "state": state,
+            "metadata": dict(device.metadata),
+        }
+
+    return list(await asyncio.gather(*(resolve(device) for device in discovered)))
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def new_id(prefix: str) -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+def empty_state() -> dict[str, Any]:
+    return {
+        "rooms": [],
+        "assignments": {},
+        "room_journal": [],
+        "plants": [],
+        "plant_journal": [],
+        "sensor_history": [],
+        "grow_events": [],
+        "grow_profiles": [],
+    }
+
+
+def load_state() -> dict[str, Any]:
+if not DATA_FILE.exists():
+        return empty_state()
+    try:
+        raw = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("invalid rooms database") from exc
+    base = empty_state()
+    if not isinstance(raw, dict):
+        raise RuntimeError("invalid rooms database: expected an object")
+    for key, default in base.items():
+        if key not in raw:
+            continue
+        value = raw[key]
+        if not isinstance(value, type(default)):
+            raise RuntimeError(f"invalid rooms database: {key}")
+        if isinstance(value, list) and any(not isinstance(row, dict) for row in value):
+            raise RuntimeError(f"invalid rooms database: {key} entries")
+        base[key] = value
+    return base
+
+
+@contextmanager
+def _state_lock() -> Iterator[None]:
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = DATA_FILE.with_name(f".{DATA_FILE.name}.lock")
+    fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        if hasattr(os, 'fchmod'):
+            os.fchmod(fd, 0o600)
+        if fcntl is not None:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        else:
+            _LOCAL_STATE_LOCK.acquire()
+        yield
+    finally:
+        if fcntl is None:
+            _LOCAL_STATE_LOCK.release()
+        os.close(fd)
+
+
+def _write_state(state: dict[str, Any]) -> None:
+    fd, temp = tempfile.mkstemp(prefix=f".{DATA_FILE.name}-", dir=DATA_FILE.parent)
+    try:
+        if hasattr(os, 'fchmod'):
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=False, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, DATA_FILE)
+    finally:
+        Path(temp).unlink(missing_ok=True)
+
+
+def save_state(state: dict[str, Any]) -> None:
+    """Replace a complete snapshot. Production mutations should use edit_state."""
+    with _state_lock():
+        _write_state(state)
+
+
+@contextmanager
+def edit_state() -> Iterator[dict[str, Any]]:
+    """Lock the whole read/modify/write operation; never await inside this scope."""
+    with _state_lock():
+        state = load_state()
+        yield state
+        _write_state(state)
+
+
+def room_or_404(state: dict[str, Any], room_id: str) -> dict[str, Any]:
+    row = next((r for r in state["rooms"] if r["id"] == room_id), None)
+    if not row:
+        raise HTTPException(404, "Raum nicht gefunden")
+    return row
+
+
+def plant_or_404(state: dict[str, Any], plant_id: str) -> dict[str, Any]:
+    row = next((r for r in state["plants"] if r["id"] == plant_id), None)
+    if not row:
+        raise HTTPException(404, "Pflanze nicht gefunden")
+    return row
+
+
+def profile_or_404(state: dict[str, Any], profile_id: str) -> dict[str, Any]:
+    row = next((r for r in state["grow_profiles"] if r["id"] == profile_id), None)
+    if not row:
+        raise HTTPException(404, "Grow-Profil nicht gefunden")
+    return row
+
+
+def calc_vpd(temp_c: float | None, rh: float | None) -> float | None:
+    if temp_c is None or rh is None or not (0 <= rh <= 100):
+        return None
+    saturation = 0.6108 * math.exp((17.27 * temp_c) / (temp_c + 237.3))
+    return round(saturation * (1 - rh / 100), 3)
+
+
+class RoomCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+kind: Literal["grow_tent", "grow_room", "drying", "storage", "other"] = "grow_tent"
+    description: str = Field(default="", max_length=1000)
+    target_temperature_c: float | None = Field(default=None, ge=0, le=60)
+    target_humidity_percent: float | None = Field(default=None, ge=0, le=100)
+    light_cycle: str = Field(default="", max_length=32)
+    soil_reference_low_index_percent: float | None = Field(default=None, ge=0, le=300)
+    soil_reference_high_index_percent: float | None = Field(default=None, ge=0, le=300)
+
+    @model_validator(mode="after")
+    def validate_soil_reference_thresholds(self):
+        low = self.soil_reference_low_index_percent
+        high = self.soil_reference_high_index_percent
+        if low is not None and high is not None and low >= high:
+            raise ValueError("untere Soil-Referenzschwelle muss kleiner als die obere sein")
+        return self
+
+
+class RoomUpdate(RoomCreate):
+    pass
+
+
+class DeviceAssignment(BaseModel):
+    device_id: str = Field(min_length=1, max_length=128)
+
+
+class JournalEntry(BaseModel):
+    plant_id: str | None = Field(default=None, max_length=128)
+    category: Literal["note", "watering", "feeding", "training", "defoliation", "pest", "flowering", "photo", "observation", "diagnosis", "repotting", "harvest", "other"] = "note"
+    title: str = Field(min_length=1, max_length=120)
+    text: str = Field(default="", max_length=5000)
+
+
+class PlantCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    crop: str = Field(default="", max_length=80)  # Culture identity; empty for existing unclassified plants
+    strain: str = Field(default="", max_length=120)
+    plant_type: Literal["automatic", "feminized", "mother", "clone", "other"] = "other"
+    start_date: str = Field(default="", max_length=32)
+    phase: Literal["germination", "seedling", "vegetative", "flowering", "flush", "finish", "harvest", "completed", "other"] = "vegetative"
+    phase_started_at: str = Field(default="", max_length=40)
+    expected_phase_days: int | None = Field(default=None, ge=1, le=365)
+    profile_id: str | None = Field(default=None, max_length=80)
+    notes: str = Field(default="", max_length=2000)
+
+
+class SensorSample(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    temperature_c: float | None = Field(default=None, ge=-30, le=80)
+    humidity_percent: float | None = Field(default=None, ge=0, le=100)
+    co2_ppm: float | None = Field(default=None, ge=0, le=100000)
+    soil_moisture_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_temperature_c: float | None = Field(default=None, ge=-30, le=80)
+    ppfd_umol_m2_s: float | None = Field(default=None, ge=0, le=5000)
+    ec_ms_cm: float | None = Field(default=None, ge=0, le=20)
+    ph: float | None = Field(default=None, ge=0, le=14)
+    soil_substrate_reference_percent: float | None = Field(default=None, ge=0, le=100)
+    soil_substrate_index_percent: float | None = Field(default=None, ge=0)
+    soil_substrate_delta_pp: float | None = Field(default=None, ge=-100, le=100)
+    soil_substrate_state: Literal["below_reference", "near_reference", "above_reference"] | None = None
+    power_w: float | None = Field(default=None, ge=0)
+    energy_wh: float | None = Field(default=None, ge=0)
+    source: str = Field(default="manual", max_length=100)
+
+
+PHASE_TYPES = Literal["germination", "seedling", "vegetative", "flowering", "flush", "finish", "harvest", "completed", "other"]
+
+
+class GrowTargets(BaseModel):
+    temperature_c_min: float | None = Field(default=None, ge=0, le=60)
+    temperature_c_max: float | None = Field(default=None, ge=0, le=60)
+    humidity_percent_min: float | None = Field(default=None, ge=0, le=100)
+    humidity_percent_max: float | None = Field(default=None, ge=0, le=100)
+    vpd_kpa_min: float | None = Field(default=None, ge=0, le=5)
+    vpd_kpa_max: float | None = Field(default=None, ge=0, le=5)
+    ppfd_umol_m2_s_min: float | None = Field(default=None, ge=0, le=5000)
+    ppfd_umol_m2_s_max: float | None = Field(default=None, ge=0, le=5000)
+    dli_mol_m2_day_target: float | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def validate_ranges(self):
+        for low_name, high_name in (
+            ("temperature_c_min", "temperature_c_max"),
+            ("humidity_percent_min", "humidity_percent_max"),
+            ("vpd_kpa_min", "vpd_kpa_max"),
+            ("ppfd_umol_m2_s_min", "ppfd_umol_m2_s_max"),
+        ):
+            low, high = getattr(self, low_name), getattr(self, high_name)
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{low_name} darf nicht größer als {high_name} sein")
+        return self
+
+
+class GrowProfilePhase(BaseModel):
+    phase: PHASE_TYPES
+    expected_days: int | None = Field(default=None, ge=1, le=365)
+    targets: GrowTargets = Field(default_factory=GrowTargets)
+
+
+class GrowProfileCreate(BaseModel):
+name: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=1000)
+    phases: list[GrowProfilePhase] = Field(default_factory=list, max_length=20)
+    tasks: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+
+
+GROW_EVENT_TYPES = Literal["watering", "feeding", "repotting", "training", "phase_changed", "photo", "observation", "diagnosis", "harvest", "other"]
+
+
+class GrowEventCreate(BaseModel):
+    type: GROW_EVENT_TYPES = "observation"
+    note: str = Field(default="", max_length=5000)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    source: str = Field(default="user", max_length=80)
+
+
+class PlantDiagnosisRequest(BaseModel):
+    symptoms: list[str] = Field(default_factory=list, max_length=30)
+    affected_zone: Literal["lower", "middle", "upper", "whole", "unknown"] = "unknown"
+    medium: str = Field(default="", max_length=80)
+    note: str = Field(default="", max_length=1000)
+    save_event: bool = True
+
+
+def _latest_sensor_snapshot(state: dict[str, Any], room_id: str) -> dict[str, Any]:
+    latest = next((row for row in reversed(state["sensor_history"]) if row.get("room_id") == room_id), None)
+    if not latest:
+        return {}
+    keys = (
+        "timestamp", "temperature_c", "humidity_percent", "vpd_kpa",
+        "soil_moisture_percent", "soil_temperature_c", "ppfd_umol_m2_s",
+        "ec_ms_cm", "ph", "soil_substrate_reference_percent",
+        "soil_substrate_index_percent", "soil_substrate_delta_pp",
+        "soil_substrate_state", "soil_calibration_status", "power_w", "energy_wh", "source",
+    )
+    return {key: latest[key] for key in keys if latest.get(key) is not None}
+
+
+def _append_grow_event(
+    state: dict[str, Any],
+    room_id: str,
+    *,
+    plant_id: str | None,
+    event_type: str,
+    note: str = "",
+    payload: dict[str, Any] | None = None,
+    source: str = "user",
+) -> dict[str, Any]:
+    row = {
+        "id": new_id("event"),
+        "room_id": room_id,
+        "plant_id": plant_id,
+        "type": event_type,
+        "timestamp": now_iso(),
+        "source": source,
+        "note": note,
+        "payload": dict(payload or {}),
+        "sensor_snapshot": _latest_sensor_snapshot(state, room_id),
+    }
+    state["grow_events"].append(row)
+    state["grow_events"] = state["grow_events"][-50000:]
+    return row
+
+
+def _phase_profile(profile: dict[str, Any] | None, phase: str | None) -> dict[str, Any] | None:
+    if not profile or not phase:
+        return None
+    return next((row for row in profile.get("phases", []) if row.get("phase") == phase), None)
+
+
+def evaluate_vpd(value: float | None, targets: dict[str, Any] | None) -> dict[str, Any]:
+    low = (targets or {}).get("vpd_kpa_min")
+    high = (targets or {}).get("vpd_kpa_max")
+    if value is None or low is None or high is None:
+        return {"status": "unknown", "value": value, "target_min": low, "target_max": high}
+    if value < low:
+        status = "low"
+    elif value > high:
+        status = "high"
+    else:
+        status = "target"
+    return {"status": status, "value": value, "target_min": low, "target_max": high}
+
+
+def _cycle_forecast(plant: dict[str, Any], profile: dict[str, Any] | None) -> dict[str, Any]:
+    raw_start = str(plant.get("start_date") or "").strip()
+    if not raw_start or not profile:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    try:
+        start = date.fromisoformat(raw_start[:10])
+    except ValueError:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    days = sum(int(row.get("expected_days") or 0) for row in profile.get("phases", []))
+    if days <= 0:
+        return {"expected_harvest_from": None, "expected_harvest_to": None, "forecast": True}
+    center = start + timedelta(days=days)
+    spread = max(2, min(14, round(days * 0.05)))
+    return {
+        "expected_harvest_from": (center - timedelta(days=spread)).isoformat(),
+        "expected_harvest_to": (center + timedelta(days=spread)).isoformat(),
+"forecast": True,
+    }
+
+
+@router.get("/grow-profiles")
+async def list_grow_profiles():
+    return {"profiles": load_state()["grow_profiles"]}
+
+
+@router.post("/grow-profiles", dependencies=[Depends(require_write_auth)])
+async def create_grow_profile(body: GrowProfileCreate):
+    with edit_state() as state:
+        row = {"id": new_id("profile"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
+        state["grow_profiles"].append(row)
+        return row
+
+
+@router.put("/grow-profiles/{profile_id}", dependencies=[Depends(require_write_auth)])
+async def update_grow_profile(profile_id: str, body: GrowProfileCreate):
+    with edit_state() as state:
+        row = profile_or_404(state, profile_id)
+        row.update(body.model_dump())
+        row["updated_at"] = now_iso()
+        return row
+
+
+@router.delete("/grow-profiles/{profile_id}", dependencies=[Depends(require_write_auth)])
+async def delete_grow_profile(profile_id: str):
+    with edit_state() as state:
+        profile_or_404(state, profile_id)
+        if any(plant.get("profile_id") == profile_id for plant in state["plants"]):
+            raise HTTPException(409, "Grow-Profil ist noch Pflanzen zugeordnet")
+        state["grow_profiles"] = [row for row in state["grow_profiles"] if row["id"] != profile_id]
+        return {"ok": True}
+
+
+def _is_today(timestamp: str | None) -> bool:
+    if not timestamp:
+        return False
+    try:
+        value = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone().date() == datetime.now().astimezone().date()
+    except ValueError:
+        return False
+
+
+def _parse_light_hours(value: str | None, default: float = 18.0) -> float:
+    raw = str(value or "").strip().lower().replace("h", "")
+    if "/" in raw:
+        raw = raw.split("/", 1)[0]
+    try:
+        hours = float(raw)
+    except (TypeError, ValueError):
+        return default
+    return min(max(hours, 0.0), 24.0)
+
+
+def calculate_daily_dli(samples: list[dict[str, Any]], light_hours: float = 18.0) -> dict[str, Any]:
+    points: list[tuple[datetime, float]] = []
+    for row in samples:
+        value = row.get("ppfd_umol_m2_s")
+        stamp = row.get("timestamp")
+        if value is None or not stamp:
+            continue
+        try:
+            number = float(value)
+            when = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not math.isfinite(number) or number < 0:
+            continue
+        points.append((when, number))
+    points.sort(key=lambda item: item[0])
+    if not points:
+        return {"dli_mol_m2_day": None, "sample_count": 0, "coverage_seconds": 0, "quality": "unavailable", "estimated": False}
+    if len(points) == 1:
+        estimate = points[0][1] * max(light_hours, 0.0) * 3600.0 / 1_000_000.0
+        return {
+            "dli_mol_m2_day": round(estimate, 3),
+            "sample_count": 1,
+            "coverage_seconds": 0,
+            "quality": "estimate",
+            "estimated": True,
+            "assumed_light_hours": light_hours,
+        }
+    max_gap = max(CAPTURE_INTERVAL_SECONDS * 3, 900)
+    total_umol = 0.0
+    coverage = 0.0
+    accepted_segments = 0
+    dropped_segments = 0
+    largest_gap = 0.0
+    for (left_t, left_v), (right_t, right_v) in zip(points, points[1:]):
+        gap = (right_t - left_t).total_seconds()
+        if gap <= 0:
+            continue
+        largest_gap = max(largest_gap, gap)
+if gap > max_gap:
+            dropped_segments += 1
+            continue
+        total_umol += ((left_v + right_v) / 2.0) * gap
+        coverage += gap
+        accepted_segments += 1
+    quality = "continuous" if accepted_segments and dropped_segments == 0 else "partial"
+    return {
+        "dli_mol_m2_day": round(total_umol / 1_000_000.0, 3) if accepted_segments else None,
+        "sample_count": len(points),
+        "coverage_seconds": round(coverage, 1),
+        "largest_gap_seconds": round(largest_gap, 1),
+        "dropped_segments": dropped_segments,
+        "quality": quality if accepted_segments else "insufficient",
+        "estimated": False,
+    }
+
+
+def _today_room_dli(state: dict[str, Any], room: dict[str, Any]) -> dict[str, Any]:
+    rows = [row for row in state["sensor_history"] if row.get("room_id") == room["id"] and _is_today(row.get("timestamp"))]
+    return calculate_daily_dli(rows, _parse_light_hours(room.get("light_cycle")))
+
+
+def _profile_tasks_for_plant(profile: dict[str, Any] | None, plant: dict[str, Any]) -> list[dict[str, Any]]:
+    if not profile:
+        return []
+    phase = plant.get("phase")
+    rows = []
+    for task in profile.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        task_phase = task.get("phase")
+        if task_phase and task_phase != phase:
+            continue
+        rows.append({**task, "plant_id": plant["id"], "plant_name": plant.get("name", "")})
+    return rows
+
+
+@router.get("/today")
+async def today_checkin():
+    state = load_state()
+    profiles = {row["id"]: row for row in state["grow_profiles"]}
+    rooms = []
+    for room in state["rooms"]:
+        room_plants = [plant for plant in state["plants"] if plant.get("room_id") == room["id"]]
+        events = [event for event in state["grow_events"] if event.get("room_id") == room["id"] and _is_today(event.get("timestamp"))]
+        tasks: list[dict[str, Any]] = []
+        plant_status = []
+        snapshot = _latest_sensor_snapshot(state, room["id"])
+        for plant in room_plants:
+            profile = profiles.get(plant.get("profile_id"))
+            tasks.extend(_profile_tasks_for_plant(profile, plant))
+            phase_profile = _phase_profile(profile, plant.get("phase"))
+            targets = (phase_profile or {}).get("targets", {})
+            plant_status.append({
+                "id": plant["id"],
+                "name": plant.get("name", ""),
+                "phase": plant.get("phase"),
+                "profile_id": plant.get("profile_id"),
+                "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
+                "targets": targets,
+            })
+        rooms.append({
+            "id": room["id"],
+            "name": room.get("name", ""),
+            "sensor_snapshot": snapshot,
+            "dli": _today_room_dli(state, room),
+            "plants": plant_status,
+            "tasks": tasks,
+            "events": list(reversed(events[-100:])),
+        })
+    return {
+        "date": datetime.now().astimezone().date().isoformat(),
+        "rooms": rooms,
+        "event_count": sum(len(room["events"]) for room in rooms),
+        "task_count": sum(len(room["tasks"]) for room in rooms),
+    }
+
+
+@router.get("")
+async def list_rooms():
+    state = load_state()
+    counts: dict[str, int] = {}
+    trust = TrustStore()
+    for device_id, room_id in state["assignments"].items():
+        if device_id.startswith("growcentral_esp32:"):
+            native_id = device_id.split(":", 1)[1]
+            if (trust.get(native_id) or {}).get("status") != "TRUSTED":
+                continue
+        counts[room_id] = counts.get(room_id, 0) + 1
+    result = []
+    for room in state["rooms"]:
+        latest = next((x for x in reversed(state["sensor_history"]) if x["room_id"] == room["id"]), None)
+        result.append({**room, "device_count": counts.get(room["id"], 0), "plant_count": sum(1 for p in state["plants"] if p["room_id"] == room["id"]), "latest_sensor": latest})
+    return {"rooms": result}
+
+
+@router.post("", dependencies=[Depends(require_write_auth)])
+async def create_room(body: RoomCreate):
+    with edit_state() as state:
+row = {"id": new_id("room"), **body.model_dump(), "created_at": now_iso(), "updated_at": now_iso()}
+        state["rooms"].append(row)
+        return row
+
+
+@router.put("/{room_id}", dependencies=[Depends(require_write_auth)])
+async def update_room(room_id: str, body: RoomUpdate):
+    with edit_state() as state:
+        row = room_or_404(state, room_id)
+        row.update(body.model_dump()); row["updated_at"] = now_iso()
+        return row
+
+
+@router.delete("/{room_id}", dependencies=[Depends(require_write_auth)])
+async def delete_room(room_id: str):
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        state["rooms"] = [r for r in state["rooms"] if r["id"] != room_id]
+        state["assignments"] = {d: r for d, r in state["assignments"].items() if r != room_id}
+        plant_ids = {p["id"] for p in state["plants"] if p["room_id"] == room_id}
+        state["plants"] = [p for p in state["plants"] if p["room_id"] != room_id]
+        state["room_journal"] = [e for e in state["room_journal"] if e["room_id"] != room_id]
+        state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] not in plant_ids]
+        state["grow_events"] = [e for e in state["grow_events"] if e.get("room_id") != room_id]
+        state["sensor_history"] = [e for e in state["sensor_history"] if e["room_id"] != room_id]
+        return {"ok": True}
+
+
+MARS_DEVICE_IDS = {
+    "mars-hydro:fc3000": {"name": "Mars Hydro FC3000", "adapter": "mars_hydro_ble", "role": "light"},
+    "mars-hydro:df150m": {"name": "Mars Hydro DF150-M", "adapter": "mars_hydro_ble", "role": "ventilation"},
+}
+
+
+def _mars_catalog() -> list[dict[str, Any]]:
+    """Expose locally observed devices, without creating unpaired or fictitious hardware."""
+    from app.mars_fast_lamp import fast_lamp
+    from app.mars_fast_fan import fast_fan
+    return [
+        {"id": "mars-hydro:fc3000", **MARS_DEVICE_IDS["mars-hydro:fc3000"],
+         "connected": bool(fast_lamp.client and fast_lamp.client.is_connected),
+         "fresh": bool(fast_lamp.latest and fast_lamp.at and fast_lamp.client and fast_lamp.client.is_connected and __import__("time").monotonic()-fast_lamp.at < 12)}
+        ,
+        {"id": "mars-hydro:df150m", **MARS_DEVICE_IDS["mars-hydro:df150m"],
+         "connected": bool(fast_fan.client and fast_fan.client.is_connected),
+         "fresh": bool(fast_fan.last and fast_fan.at and fast_fan.client and fast_fan.client.is_connected and __import__("time").monotonic()-fast_fan.at < 12)},
+    ]
+
+
+def live_room_snapshot(room_id: str, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Real, timestamped and source-labelled BLE measurements from assigned equipment."""
+    import time
+    from app.mars_fast_lamp import fast_lamp
+    from app.mars_fast_fan import fast_fan
+    state = state if state is not None else load_state()
+    snapshot = _latest_sensor_snapshot(state, room_id)
+    result: dict[str, Any] = {
+        "captured_at": now_iso(),
+        "room_id": room_id,
+        "historical_snapshot": snapshot or None,
+        "devices": {},
+    }
+    assignments = state["assignments"]
+    if assignments.get("mars-hydro:df150m") == room_id and fast_fan.last and fast_fan.client and fast_fan.client.is_connected:
+        if fast_fan.at and time.monotonic() - fast_fan.at < 12:
+            fan = fast_fan.last[1]
+            result["devices"]["mars-hydro:df150m"] = {
+                "source": "BLE_MZF002", "age_ms": round((time.monotonic()-fast_fan.at)*1000),
+                "temperature_c": fan.get("temperature_c"), "humidity_rh": fan.get("humidity_rh"),
+                "rpm": fan.get("rpm"), "power_on": fan.get("power_on"),
+                "setpoint_percent": fan.get("setpoint_percent"),
+                "measured": ["temperature_c","humidity_rh","rpm"],
+            }
+    if assignments.get("mars-hydro:fc3000") == room_id and fast_lamp.latest and fast_lamp.client and fast_lamp.client.is_connected:
+        if fast_lamp.at and time.monotonic()-fast_lamp.at < 12:
+            lamp = fast_lamp.latest[1]
+            result["devices"]["mars-hydro:fc3000"] = {
+                "source": "BLE_FC3000", "age_ms": round((time.monotonic()-fast_lamp.at)*1000),
+                "power_on": lamp.get("power_on"), "brightness_percent": lamp.get("brightness_percent"),
+                "brightness_is_ppfd": False,
+            }
+    result["device_data_fresh"] = bool(result["devices"])
+    return result
+
+
+@router.get("/{room_id}/live-snapshot")
+async def room_live_snapshot(room_id: str):
+    state=load_state()
+    room_or_404(state,room_id)
+    return live_room_snapshot(room_id,state)
+
+
+@router.get("/{room_id}/devices")
+async def room_devices(room_id: str):
+    state = load_state(); room_or_404(state, room_id)
+    legacy = [
+        {"id": d.id, "name": d.name, "adapter": d.adapter}
+        for d in DeviceRegistry.from_env().list() if not d.id.startswith("growcentral_esp32:")
+    ]
+    native = await _native_gc_devices(timeout=0.8)
+merged: dict[str, dict[str, Any]] = {row["id"]: row for row in legacy}
+    for row in native:
+        merged[row["id"]] = row
+    for row in _mars_catalog():
+        merged[row["id"]] = row
+    devices = []
+    for row in merged.values():
+        device_id = row["id"]
+        devices.append({
+            **row,
+            "assigned": state["assignments"].get(device_id) == room_id,
+            "room_id": state["assignments"].get(device_id),
+        })
+    return {"devices": sorted(devices, key=lambda row: (str(row.get("name") or "").lower(), row["id"]))}
+
+
+@router.post("/{room_id}/devices", dependencies=[Depends(require_write_auth)])
+async def assign_device(room_id: str, body: DeviceAssignment):
+    state = load_state(); room_or_404(state, room_id)
+    if body.device_id.startswith("growcentral_esp32:"):
+        try:
+            TrustStore().require_trusted(body.device_id.split(":", 1)[1])
+        except PermissionError as exc:
+            raise HTTPException(403, "Sensor muss zuerst manuell angenommen werden") from exc
+    exists = body.device_id in MARS_DEVICE_IDS
+    if not exists:
+        try:
+            DeviceRegistry.from_env().get(body.device_id)
+            exists = True
+        except KeyError:
+            native = await _native_gc_devices(timeout=1.2)
+            exists = any(row["id"] == body.device_id for row in native)
+    if not exists:
+        raise HTTPException(404, "Gerät nicht gefunden")
+    with edit_state() as current:
+        room_or_404(current, room_id)
+        current["assignments"][body.device_id] = room_id
+    return {"ok": True, "device_id": body.device_id, "room_id": room_id}
+
+
+@router.delete("/{room_id}/devices/{device_id}", dependencies=[Depends(require_write_auth)])
+async def unassign_device(room_id: str, device_id: str):
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        if state["assignments"].get(device_id) == room_id: state["assignments"].pop(device_id, None)
+        return {"ok": True}
+
+
+@router.get("/{room_id}/journal")
+async def room_journal(room_id: str):
+    state = load_state(); room_or_404(state, room_id)
+    return {"entries": [e for e in reversed(state["room_journal"]) if e["room_id"] == room_id]}
+
+
+@router.post("/{room_id}/journal", dependencies=[Depends(require_write_auth)])
+async def add_room_journal(room_id: str, body: JournalEntry):
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        if body.plant_id:
+            plant = plant_or_404(state, body.plant_id)
+            if plant.get("room_id") != room_id:
+                raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        snapshot = live_room_snapshot(room_id, state)
+        row = {"id": new_id("entry"), "room_id": room_id, **body.model_dump(),
+               "device_ids": sorted(snapshot["devices"]), "sensor_snapshot": snapshot, "created_at": now_iso()}
+        state["room_journal"].append(row)
+        _append_grow_event(state, room_id, plant_id=None, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
+        return row
+
+
+@router.get("/{room_id}/plants")
+async def list_plants(room_id: str):
+    state = load_state(); room_or_404(state, room_id)
+    return {"plants": [p for p in state["plants"] if p["room_id"] == room_id]}
+
+
+@router.post("/{room_id}/plants", dependencies=[Depends(require_write_auth)])
+async def create_plant(room_id: str, body: PlantCreate):
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        values = body.model_dump()
+        if values.get("profile_id"):
+            profile_or_404(state, values["profile_id"])
+        if not values.get("phase_started_at"):
+            values["phase_started_at"] = now_iso()
+        row = {"id": new_id("plant"), "room_id": room_id, **values, "created_at": now_iso(), "updated_at": now_iso()}
+        state["plants"].append(row)
+        _append_grow_event(state, room_id, plant_id=row["id"], event_type="phase_changed", note="Pflanze angelegt", payload={"phase": row["phase"]}, source="system")
+        return row
+
+
+@router.put("/{room_id}/plants/{plant_id}", dependencies=[Depends(require_write_auth)])
+async def update_plant(room_id: str, plant_id: str, body: PlantCreate):
+    with edit_state() as state:
+        room_or_404(state, room_id); row = plant_or_404(state, plant_id)
+        if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        previous_phase = row.get("phase")
+        values = body.model_dump()
+        if values.get("profile_id"):
+            profile_or_404(state, values["profile_id"])
+if values.get("phase") != previous_phase and not values.get("phase_started_at"):
+            values["phase_started_at"] = now_iso()
+        elif not values.get("phase_started_at"):
+            values["phase_started_at"] = row.get("phase_started_at", "")
+        row.update(values); row["updated_at"] = now_iso()
+        if row.get("phase") != previous_phase:
+            _append_grow_event(state, room_id, plant_id=plant_id, event_type="phase_changed", note="Pflanzenphase geändert", payload={"from": previous_phase, "to": row.get("phase")}, source="system")
+        return row
+
+
+@router.delete("/{room_id}/plants/{plant_id}", dependencies=[Depends(require_write_auth)])
+async def delete_plant(room_id: str, plant_id: str):
+    with edit_state() as state:
+        room_or_404(state, room_id); row = plant_or_404(state, plant_id)
+        if row["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        state["plants"] = [p for p in state["plants"] if p["id"] != plant_id]
+        state["plant_journal"] = [e for e in state["plant_journal"] if e["plant_id"] != plant_id]
+        state["grow_events"] = [e for e in state["grow_events"] if e.get("plant_id") != plant_id]
+        return {"ok": True}
+
+
+@router.get("/{room_id}/plants/{plant_id}/grow-status")
+async def plant_grow_status(room_id: str, plant_id: str):
+    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+    if plant["room_id"] != room_id:
+        raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    profile = None
+    if plant.get("profile_id"):
+        profile = next((row for row in state["grow_profiles"] if row["id"] == plant["profile_id"]), None)
+    phase_profile = _phase_profile(profile, plant.get("phase"))
+    snapshot = _latest_sensor_snapshot(state, room_id)
+    targets = (phase_profile or {}).get("targets", {})
+    return {
+        "plant": plant,
+        "profile": profile,
+        "phase_profile": phase_profile,
+        "sensor_snapshot": snapshot,
+        "vpd": evaluate_vpd(snapshot.get("vpd_kpa"), targets),
+        "harvest_window": _cycle_forecast(plant, profile),
+    }
+
+
+def diagnose_plant_health(
+    *,
+    symptoms: list[str],
+    affected_zone: str,
+    medium: str,
+    snapshot: dict[str, Any],
+    targets: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return conservative horticultural hypotheses; never a certain diagnosis."""
+    findings: list[dict[str, Any]] = []
+    normalized = {str(item).strip().lower() for item in symptoms if str(item).strip()}
+
+    def add(code: str, title: str, reason: str, checks: list[str], actions: list[str], confidence: str = "possible"):
+        findings.append({
+            "code": code,
+            "title": title,
+            "confidence": confidence,
+            "reason": reason,
+            "checks": checks,
+            "actions": actions,
+        })
+
+    vpd = snapshot.get("vpd_kpa")
+    vpd_eval = evaluate_vpd(vpd, targets)
+    if vpd_eval["status"] == "high":
+        add(
+            "environment_vpd_high",
+            "Zu trockene Luft / hoher Verdunstungsdruck möglich",
+            f"VPD liegt mit {vpd} kPa über dem hinterlegten Phasenziel.",
+            ["Luftfeuchte- und Temperaturtrend prüfen", "Sensorposition und Kalibrierung prüfen"],
+            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
+            "supported_by_sensor",
+        )
+    elif vpd_eval["status"] == "low":
+        add(
+            "environment_vpd_low",
+            "Zu feuchte Luft / niedriger Verdunstungsdruck möglich",
+            f"VPD liegt mit {vpd} kPa unter dem hinterlegten Phasenziel.",
+            ["Luftfeuchte- und Temperaturtrend prüfen", "Luftbewegung und Sensorposition prüfen"],
+            ["Umgebung schrittweise in den hinterlegten Zielbereich zurückführen"],
+            "supported_by_sensor",
+        )
+
+    soil = snapshot.get("soil_moisture_percent")
+    if isinstance(soil, (int, float)):
+        if soil < 20:
+            add(
+                "soil_moisture_low",
+                "Trockener Wurzelbereich möglich",
+                f"Die gemessene Bodenfeuchte ist mit {soil}% niedrig.",
+                ["Kalibrierstatus des Bodensensors prüfen", "Feuchte an mehreren Stellen gegenprüfen"],
+                ["Bewässerungsbedarf anhand Medium und Pflanzenzustand prüfen"],
+                "supported_by_sensor",
+            )
+        elif soil > 85:
+            add(
+                "soil_moisture_high",
+                "Sehr feuchter Wurzelbereich möglich",
+f"Die gemessene Bodenfeuchte ist mit {soil}% hoch.",
+                ["Kalibrierstatus prüfen", "Drainage und längerfristigen Feuchteverlauf prüfen"],
+                ["Weitere Bewässerung erst nach Plausibilitätsprüfung des Feuchteverlaufs planen"],
+                "supported_by_sensor",
+            )
+
+    if normalized & {"yellow", "yellowing", "gelb", "vergilbung", "chlorosis"}:
+        zone_reason = f"Betroffene Zone: {affected_zone}." if affected_zone != "unknown" else "Betroffene Pflanzenzone wurde nicht eingegrenzt."
+        add(
+            "symptom_chlorosis",
+            "Chlorose / Vergilbung – mehrere Ursachen möglich",
+            zone_reason,
+            ["Muster an alten vs. jungen Blättern vergleichen", "Wurzelraum, pH/EC und Umweltverlauf gegenprüfen, sofern Messwerte vorhanden"],
+            ["Keine Einzelursache annehmen; zuerst Messwerte und Verlauf bestätigen"],
+        )
+    if normalized & {"droop", "drooping", "hanging", "hängend", "haengend", "welk", "wilting"}:
+        add(
+            "symptom_droop",
+            "Hängende oder welke Blätter – Wasserhaushalt oder Umweltstress möglich",
+            f"Medium: {medium or 'nicht angegeben'}; Zone: {affected_zone}.",
+            ["Bodenfeuchteverlauf und Wurzelraum prüfen", "Temperatur/VPD-Verlauf prüfen"],
+            ["Ursache anhand Verlauf eingrenzen, bevor Stellgrößen verändert werden"],
+        )
+
+    if not findings:
+        add(
+            "insufficient_evidence",
+            "Noch keine belastbare Ursache ableitbar",
+            "Die vorhandenen Symptome und Messwerte reichen für eine sinnvolle Eingrenzung noch nicht aus.",
+            ["Symptome genauer beschreiben", "Aktuelle Sensorwerte und Verlauf prüfen", "Foto und betroffene Pflanzenzone dokumentieren"],
+            ["Weitere Beobachtung als Timeline-Ereignis festhalten"],
+            "insufficient",
+        )
+    return findings
+
+
+@router.post("/{room_id}/plants/{plant_id}/diagnosis", dependencies=[Depends(require_write_auth)])
+async def diagnose_plant(room_id: str, plant_id: str, body: PlantDiagnosisRequest):
+    with edit_state() as state:
+        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+        if plant["room_id"] != room_id:
+            raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        profile = next((row for row in state["grow_profiles"] if row["id"] == plant.get("profile_id")), None)
+        phase_profile = _phase_profile(profile, plant.get("phase"))
+        targets = (phase_profile or {}).get("targets", {})
+        snapshot = _latest_sensor_snapshot(state, room_id)
+        findings = diagnose_plant_health(
+            symptoms=body.symptoms,
+            affected_zone=body.affected_zone,
+            medium=body.medium,
+            snapshot=snapshot,
+            targets=targets,
+        )
+        result = {
+            "plant_id": plant_id,
+            "generated_at": now_iso(),
+            "disclaimer": "Mögliche Ursachen, keine sichere Diagnose. Verlauf und Messwerte gegenprüfen.",
+            "sensor_snapshot": snapshot,
+            "findings": findings,
+        }
+        if body.save_event:
+            event = _append_grow_event(
+                state,
+                room_id,
+                plant_id=plant_id,
+                event_type="diagnosis",
+                note=body.note or "Plant-Doctor-Auswertung",
+                payload={
+                    "symptoms": body.symptoms,
+                    "affected_zone": body.affected_zone,
+                    "medium": body.medium,
+                    "findings": findings,
+                },
+                source="plant-doctor",
+            )
+            result["event_id"] = event["id"]
+        return result
+
+
+@router.get("/{room_id}/plants/{plant_id}/journal")
+async def plant_journal(room_id: str, plant_id: str):
+    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+    if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    return {"entries": [e for e in reversed(state["plant_journal"]) if e["plant_id"] == plant_id]}
+
+
+@router.post("/{room_id}/plants/{plant_id}/journal", dependencies=[Depends(require_write_auth)])
+async def add_plant_journal(room_id: str, plant_id: str, body: JournalEntry):
+    with edit_state() as state:
+        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+        if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        snapshot = _latest_sensor_snapshot(state, room_id)
+        row = {"id": new_id("entry"), "plant_id": plant_id, "room_id": room_id, **body.model_dump(), "sensor_snapshot": snapshot, "created_at": now_iso()}
+        state["plant_journal"].append(row)
+        _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.category if body.category in {"watering", "feeding", "training", "photo", "diagnosis", "repotting", "harvest"} else "observation", note=body.text or body.title, payload={"journal_entry_id": row["id"], "title": body.title}, source="journal")
+        return row
+
+
+@router.get("/{room_id}/events")
+async def room_events(room_id: str, limit: int = Query(default=200, ge=1, le=5000)):
+state = load_state(); room_or_404(state, room_id)
+    rows = [e for e in state["grow_events"] if e.get("room_id") == room_id][-limit:]
+    return {"events": list(reversed(rows))}
+
+
+@router.post("/{room_id}/events", dependencies=[Depends(require_write_auth)])
+async def add_room_event(room_id: str, body: GrowEventCreate):
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        return _append_grow_event(state, room_id, plant_id=None, event_type=body.type, note=body.note, payload=body.payload, source=body.source)
+
+
+@router.get("/{room_id}/plants/{plant_id}/events")
+async def plant_events(room_id: str, plant_id: str, limit: int = Query(default=200, ge=1, le=5000)):
+    state = load_state(); room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+    if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+    rows = [e for e in state["grow_events"] if e.get("plant_id") == plant_id][-limit:]
+    return {"events": list(reversed(rows))}
+
+
+@router.post("/{room_id}/plants/{plant_id}/events", dependencies=[Depends(require_write_auth)])
+async def add_plant_event(room_id: str, plant_id: str, body: GrowEventCreate):
+    with edit_state() as state:
+        room_or_404(state, room_id); plant = plant_or_404(state, plant_id)
+        if plant["room_id"] != room_id: raise HTTPException(409, "Pflanze gehört zu einem anderen Raum")
+        return _append_grow_event(state, room_id, plant_id=plant_id, event_type=body.type, note=body.note, payload=body.payload, source=body.source)
+
+
+def append_sensor(state: dict[str, Any], room_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    row = {"id": new_id("sample"), "room_id": room_id, "timestamp": now_iso(), **payload}
+    row["vpd_kpa"] = calc_vpd(row.get("temperature_c"), row.get("humidity_percent"))
+    state["sensor_history"].append(row)
+    state["sensor_history"] = state["sensor_history"][-50000:]
+    # Long-term SQLite archive is independent of the bounded JSON UI cache.
+    # Keep measurements, source and room identity even after browser restarts.
+    try:
+        history_append("room-sensors", {
+            key: value for key, value in row.items()
+            if key in ("temperature_c","humidity_percent","soil_moisture_percent",
+                       "soil_temperature_c","co2_ppm","ppfd_umol_m2_s","ec_ms_cm",
+                       "ph","vpd_kpa","power_w","energy_wh")
+        }, room_id=room_id)
+    except Exception:
+        logger.exception("Permanent sensor history could not be saved")
+    return row
+
+
+@router.get("/{room_id}/sensors")
+async def sensor_history(room_id: str, limit: int = 500):
+    state = load_state(); room_or_404(state, room_id); limit = min(max(limit, 1), 5000)
+    rows = [e for e in state["sensor_history"] if e["room_id"] == room_id][-limit:]
+    return {"samples": rows}
+
+
+def _csv_cell(value: Any) -> Any:
+    if value is None or isinstance(value, float) and not math.isfinite(value):
+        return ""
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+        # Prevent user-entered source labels from executing as spreadsheet formulas.
+        return "'" + value
+    return value
+
+
+@router.get("/{room_id}/sensors.csv")
+async def export_sensor_history(room_id: str, limit: int = Query(default=5000, ge=1, le=50000)):
+    state = load_state()
+    room_or_404(state, room_id)
+    rows = [row for row in state["sensor_history"] if row["room_id"] == room_id][-limit:]
+    columns = ["timestamp", "temperature_c", "humidity_percent", "vpd_kpa", "co2_ppm",
+               "soil_moisture_percent", "soil_substrate_reference_percent",
+               "soil_substrate_index_percent", "soil_substrate_delta_pp", "soil_substrate_state",
+               "soil_calibration_status", "power_w", "energy_wh", "source"]
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(columns)
+    for row in rows:
+        export = {**row,
+                  "soil_calibration_status": row.get("soil_calibration_status") or ("calibration_required" if row.get("soil_moisture_percent") is not None else "")}
+        writer.writerow([_csv_cell(export.get(key)) for key in columns])
+    return Response(output.getvalue(), media_type="text/csv", headers={
+        "Content-Disposition": 'attachment; filename="grow-central-sensors.csv"',
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+
+@router.post("/{room_id}/sensors", dependencies=[Depends(require_write_auth)])
+async def add_sensor_sample(room_id: str, body: SensorSample):
+    with edit_state() as state:
+        room_or_404(state, room_id); row = append_sensor(state, room_id, body.model_dump()); return row
+
+
+def _measurement(state: dict[str, Any], key: str, minimum: float, maximum: float | None = None, alias: str | None = None) -> float | None:
+    value = state.get(key)
+    if value is None and alias:
+        value = state.get(alias)
+    if isinstance(value, bool):
+        return None
+    try:
+number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not math.isfinite(number) or number < minimum or (maximum is not None and number > maximum):
+        return None
+    return number
+
+
+async def capture_room_sensors_once() -> int:
+    initial = load_state()
+    if not initial["rooms"] or not initial["assignments"]:
+        return 0
+    overview = await device_overview(refresh=True)
+    combined_devices = [row for row in overview.get("devices", []) if not str(row.get("id", "")).startswith("growcentral_esp32:")]
+    combined_devices.extend(await _native_gc_devices(timeout=0.8))
+    by_id = {d["id"]: d for d in combined_devices}
+    count = 0
+    # Network reads can take seconds. Reload after them so UI edits, deletions,
+    # and sensor acceptance completed during the read cannot be overwritten.
+    with edit_state() as state:
+        for room in state["rooms"]:
+            rows = [by_id[d] for d, rid in state["assignments"].items() if rid == room["id"] and d in by_id]
+            states = [r.get("state") for r in rows if r.get("online") and isinstance(r.get("state"), dict)]
+            measurements = {
+                "temperature_c": ("temperature_c", -30, 80, "temperature"),
+                "humidity_percent": ("humidity_percent", 0, 100, "humidity"),
+                "co2_ppm": ("co2_ppm", 0, 100000, None),
+                "soil_moisture_percent": ("soil_moisture", 0, 100, None),
+                "soil_temperature_c": ("soil_temperature_c", -30, 80, "soil_temperature"),
+                "ppfd_umol_m2_s": ("ppfd_umol_m2_s", 0, 5000, "ppfd"),
+                "ec_ms_cm": ("ec_ms_cm", 0, 20, "ec"),
+                "ph": ("ph", 0, 14, None),
+                "soil_substrate_reference_percent": ("soil_substrate_reference_percent", 0, 100, None),
+                "soil_substrate_index_percent": ("soil_substrate_index_percent", 0, None, None),
+                "soil_substrate_delta_pp": ("soil_substrate_delta_pp", -100, 100, None),
+                "power_w": ("power_w", 0, None, None),
+                "energy_wh": ("energy_wh", 0, None, None),
+            }
+            payload: dict[str, Any] = {}
+            for target, arguments in measurements.items():
+                values = [value for row in states if (value := _measurement(row, *arguments)) is not None]
+                total = sum(values)
+                payload[target] = round(total if target in {"power_w", "energy_wh"} else total / len(values), 3) if values and math.isfinite(total) else None
+            calibration_states = [str((row.get('meta') or {}).get('calibration_status') or '') for row in states if isinstance(row.get('meta'), dict)]
+            if payload.get("soil_substrate_delta_pp") is not None:
+                payload["soil_substrate_state"] = classify_soil_substrate_delta(float(payload["soil_substrate_delta_pp"]))
+            if any(value == 'valid' for value in calibration_states):
+                payload['soil_calibration_status'] = 'valid'
+            elif any(value == 'required' for value in calibration_states):
+                payload['soil_calibration_status'] = 'required'
+            if all(value is None for key, value in payload.items() if key != 'soil_calibration_status'):
+                continue
+            append_sensor(state, room["id"], {**payload, "source": "assigned-devices"})
+            count += 1
+    return count
+
+
+@router.post("/capture", dependencies=[Depends(require_write_auth)])
+async def capture_now():
+    return {"ok": True, "rooms_captured": await capture_room_sensors_once()}
+
+
+async def _capture_loop() -> None:
+    while True:
+        try: await capture_room_sensors_once()
+        except Exception:
+            logger.exception("Room sensor capture failed; next interval will retry")
+        await asyncio.sleep(CAPTURE_INTERVAL_SECONDS)
+
+
+def install(app) -> None:
+    async def start_room_capture() -> None:
+        global _capture_task
+        if _capture_task is None or _capture_task.done():
+            _capture_task = asyncio.create_task(_capture_loop(), name="grow-central-room-history")
+
+    async def stop_room_capture() -> None:
+        global _capture_task
+        if _capture_task:
+            _capture_task.cancel()
+            try:
+                await _capture_task
+            except asyncio.CancelledError:
+                pass
+            _capture_task = None
+
+    app.router.add_event_handler("startup", start_room_capture)
+    app.router.add_event_handler("shutdown", stop_room_capture)
+
+@router.put("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
+async def update_room_journal(room_id: str, entry_id: str, body: JournalEntry):
+    """Edit a real room journal entry. Photo entries retain their photo metadata."""
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = next((entry for entry in state["room_journal"]
+                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
+        if row is None:
+            raise HTTPException(404, "Growbucheintrag nicht gefunden")
+        if row.get("photo_id"):
+            raise HTTPException(409, "Fotoeinträge werden über das Fotoarchiv bearbeitet")
+row.update(body.model_dump())
+        row["updated_at"] = now_iso()
+        return row
+
+
+@router.delete("/{room_id}/journal/{entry_id}", dependencies=[Depends(require_write_auth)])
+async def delete_room_journal(room_id: str, entry_id: str):
+    """Remove a journal entry without removing immutable historical events."""
+    with edit_state() as state:
+        room_or_404(state, room_id)
+        row = next((entry for entry in state["room_journal"]
+                    if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
+        if row is None:
+            raise HTTPException(404, "Growbucheintrag nicht gefunden")
+        if row.get("photo_id"):
+            raise HTTPException(409, "Fotoeintrag über Fotoarchiv löschen")
+        state["room_journal"] = [entry for entry in state["room_journal"] if entry.get("id") != entry_id]
+        return {"ok": True}
