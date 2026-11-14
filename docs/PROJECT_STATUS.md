@@ -1,48 +1,28 @@
 # Project Status – 135er-Grow Central
 
-- **Stand:** 16. Oktober 2026
-- **Version:** `alpha-0.7.5`
-- **Hauptbranch:** `master`
-- **Veröffentlichter Pi-Candidate:** **Build 431**; enthält Firmware 0.4.1 und aktuelle Korrekturen
-- **Aktuelle Sensor-Firmware im Git-Quellstand:** **0.5.2**
-- **Status:** `CANDIDATE` – reale Teilprüfung auf Pi 4 bestätigt, vollständige Hardwarevalidierung offen
-- **Entwicklungsmodus:** Open Source
+- **Stand:** 14. November 2026
+- **Projektmodus:** **Entwicklungsstopp für den Grow-Central-Pi auf Betreiberanweisung**
+- **Repository:** `jygnw29kms-bit/135er-Grow-Central`, Branch `master`
+- **Version letzter dokumentierter Kandidat:** `alpha-0.7.5`, Build 461, `CANDIDATE`
+- **Hardwarevalidierung:** Vollständige reale Abnahme nicht bestätigt
+- **Sicherung:** GitHub-Dokumentationsstand aktualisiert; **lokal installierte Pi-Dateien noch nicht vollständig in Git abgeglichen**
 
-Kanonische Quellen: [Release State](../RELEASE_STATE.md) und [Hardware Support Policy](HARDWARE_SUPPORT_POLICY.md).
+## Live-Prüfung am 14.11.2026
 
-## Architektur
+Der über MeshCentral erreichbare Host `135er-grow-central` (Debian 13) meldete laufende Dienste für API/Uvicorn (Port 8080), Provisioning-Broker, Cloud-Link-Agenten und HomeKit-Bridge. Der MeshCentral-Agent war ebenfalls aktiv. Der Ordner `/opt/135er-grow-central` ist **kein Git-Repository**; `git status` ist dort nicht möglich. Aus dem laufenden Prozessstatus folgt **keine** vollständige Geräte-, Sensor- oder Feature-Abnahme.
 
-Grow Central ist eine dauerhaft headless, lokale Raspberry-Pi-Zentrale mit Desktop-/Mobile-Weboberfläche, Räumen, Sensoren, Automationen und optionaler Cloud. Ein Universal-Image nutzt zentrale Hardwareprofile: Pi 3B/3B+ = Legacy/Lite; Pi 4/400/CM4 = Full Support Standard; Pi 5/CM5 = Full Support Performance. Drucker- und 3D-Druck-Funktionen gehören nicht zu Grow Central.
+Vorhandene systemd-Timer: `grow-central-healthcheck.timer`, `grow-central-remote-watchdog.timer` und `grow-central-history-backup.timer`. Das sind Betriebs-/Wartungsfunktionen, keine nachgewiesenen Entwicklungsjobs. Sie werden durch die Dokumentationssicherung nicht deaktiviert.
 
-## Bestätigte reale Teilprüfung
+## Entwicklungsstopp und Bewahrung
 
-Ein Pi-4-Sensortest vom 14. Oktober best?tigte USB-Aufnahme, MQTT ?ber TLS und die Bodenfeuchte-Anzeige. Der aktuelle Quellstand enth?lt diese Korrekturen direkt und verwendet keine separaten Build-369-Hotfix-Installer mehr. Der historische Befund ersetzt weiterhin keinen vollst?ndigen Plattformtest von Build 431.
+1. Keine Weiterentwicklung, automatisierten Builds, neuen Flash-Images, Deployments oder experimentellen Steuerungsänderungen am Grow-Central-Pi bis zur Freigabe.
+2. Bestehenden Betrieb und den sicheren Fernwartungsweg nicht abschalten.
+3. Keine lokalen Geheimnisse, API-Tokens, Zugangsdaten, privaten Zertifikate, Logs oder Datenbankinhalte in das öffentliche Repository übernehmen.
+4. GitHub bleibt Dokumentations- und Quellreferenz. Ein vollständiger Dateivergleich sowie die Sicherung eventueller nicht-sensitiver Pi-Abweichungen stehen noch aus.
+5. Die Test- und Releasepläne vom 12./13. November bleiben historische Planung; nicht als durchgeführt kennzeichnen.
 
-Der ursprüngliche Fehler war ein abgeschnittener CA-Transfer über USB. Das Firmware-Log meldete einen X509-Formatfehler und 307 statt 554 gespeicherte PEM-Bytes. Paketweise Übertragung stellte die Verbindung her. Der aktuelle Backendcode überträgt lange Befehle in kleinen Paketen und prüft die gespeicherte CA-Länge.
+## Letzter belegter Funktions-/Release-Stand
 
-## Implementiert, nicht pauschal hardwarevalidiert
+Der historische reale Pi-4-Sensortest vom 14. Oktober bestätigte Teile des USB-/MQTT-TLS-/Bodenfeuchte-Pfads. Build 461 ist laut [RELEASE_STATE.md](../RELEASE_STATE.md) der zuletzt dokumentierte Image-Candidate mit Sensor-Firmware 0.5.3. Ein vollständiger Test dieses Images auf allen Hardwareklassen und reale Schreibvalidierung der Mars-Hydro-Geräte sind offen.
 
-- First Boot ohne Factory-Passwörter; Setup-AP, LAN/WLAN, SSH opt-in;
-- signierte Sensoridentität, individuelle MQTT-Zugänge und TLS, geführte USB-Einrichtung;
-- Räume, Zuordnungen, Sensorhistorie und Bodenfeuchte-Anzeige;
-- Kamera-, Geräte- und Automationspfade mit modellabhängigen Berechtigungen;
-- FRITZ!, Tapo, Shelly, Home Assistant und weitere Providerpfade;
-- installierbare Home-Assistant-Komponente; Apple Home/Siri, Alexa und Google über gesondert einzurichtende HA-Brücken;
-- optionaler Cloud-Link, Diagnose und Supportarchive;
-- Final Master unter `/ui`, ergänzende Raumverwaltung/Sensor-Diagnose unter `/rooms`;
-- CSV-Historienexport, transaktionale Raumänderungen und Messwert-Plausibilitätsprüfung;
-- Laufzeit-Hinweise im Master statt fester Warnungszahlen.
-
-Lokale Automationen sind gespeicherte Definitionen. Die Darstellung „hinterlegt“ ist kein Nachweis eines laufenden Schedulers. Aktuelle Arbeitsprioritäten: [Roadmap](ROADMAP.md).
-
-## Offen
-
-- vollständiger Pi-4-Installations-, Neustart- und Dauerbetriebtest; separate Pi-3-/Pi-5-Tests;
-- reale AIR/WATER- und Substratkalibrierung sowie validierte Bewässerungsgrenzen;
-- WYSIWYG-Menüeditor als lokaler Layoutentwurf hinzugefügt; keine bestätigte Übernahme in die produktive Navigation;
-- serielle Kalibrierung aus dem Browser und ein belastbares Substratkalibrierungsmodell; Anleitung und per-Sensor-Diagnose sind unter `/rooms` implementiert;
-- BLE-Provisionierung und weitere Sensorhardware für Temperatur, pH oder EC;
-- Ende-zu-Ende-Tests der Sprachassistenten und optionalen Cloud;
-- vollständiger Realtest des neu veröffentlichten Image-Candidates 375.
-
-Anleitungen: [Bodensensor](de/SOIL_SENSOR_GUIDE.md), [Hardwarebefund](de/SENSOR_HARDWARE_TEST_2026-10-14.md), [Known Limitations](KNOWN_LIMITATIONS.md).
+Weitere technische Beschreibung und Roadmap siehe [README](../README.md), [Roadmap](ROADMAP.md), [Release State](../RELEASE_STATE.md) und [Pi-4-Testplan](de/PI4_END_TO_END_ABNAHME_2026-11-12.md).
