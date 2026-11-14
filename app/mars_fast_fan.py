@@ -4,6 +4,7 @@ from datetime import datetime,timezone
 from bleak import BleakClient
 from app.mars_hydro_ble import MZF002_NOTIFY,MZF002_WRITE
 from app.mars_legacy_telemetry import mzf002_telemetry
+from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay
 log=logging.getLogger(__name__)
 class FastFan:
  def __init__(self):
@@ -27,16 +28,37 @@ class FastFan:
      os.replace(tmp,path)
   except (ValueError,UnicodeError):pass
  async def run(self):
+  failures=0
   while True:
+   client=None
    try:
-    async with BleakClient('A0:A3:B3:5E:FD:CA',timeout=7) as c:
-     await c.start_notify(MZF002_NOTIFY,self.notify);self.client=c
-     log.info('MZF002 BLE ready')
-     while c.is_connected:await asyncio.sleep(.5)
-   except asyncio.CancelledError:raise
-   except Exception as exc:log.warning('MZF002 reconnect %s',type(exc).__name__)
-   finally:self.client=None;self.last=None;self.at=0
-   await asyncio.sleep(4)
+    address=os.getenv('GC_MZF002_BLE_ADDRESS','A0:A3:B3:5E:FD:CA')
+    # Serialize connection setup only. Never hold the lock for live sampling.
+    async with CONNECT_GATE:
+     client=BleakClient(address,timeout=10)
+     try:
+      await client.connect()
+      await client.start_notify(MZF002_NOTIFY,self.notify)
+     except BaseException:
+      if client.is_connected:
+       await client.disconnect()
+      raise
+    self.client=client
+    failures=0
+    log.info('MZF002 BLE ready')
+    while client.is_connected:
+     await asyncio.sleep(.5)
+   except asyncio.CancelledError:
+    raise
+   except Exception as exc:
+    failures+=1
+    log.warning('MZF002 reconnect %s (attempt %d)',type(exc).__name__,failures)
+   finally:
+    self.client=None;self.last=None;self.at=0
+    if client is not None and client.is_connected:
+     try:await asyncio.wait_for(client.disconnect(),timeout=5)
+     except Exception as exc:log.warning('MZF002 disconnect %s',type(exc).__name__)
+   await asyncio.sleep(reconnect_delay(max(1,failures)))
  async def control(self,action,value):
   async with self.lock:
    if not self.client or not self.client.is_connected or not self.last or time.monotonic()-self.at>8:return None

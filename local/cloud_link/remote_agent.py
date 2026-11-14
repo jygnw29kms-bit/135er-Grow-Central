@@ -62,6 +62,7 @@ READ_PATHS={
  "/api/v1/smarthome/overview",
 }
 async def serve(ws,local):
+ camera_cooldown_until=0.0
  async for raw in ws:
   try:req=json.loads(raw)
   except (ValueError,TypeError):continue
@@ -247,6 +248,10 @@ async def serve(ws,local):
    await ws.send(json.dumps(response))
    continue
   if req.get("type")=="camera_frame":
+   if time.monotonic()<camera_cooldown_until:
+    await ws.send(json.dumps({"type":"camera_result","request_id":request_id,
+                              "ok":False,"error":"camera_temporarily_unavailable"}))
+    continue
    try:
     r=await local.get(LOCAL_API+"/api/v1/camera/snapshot/cloud-preview",
        headers=local_headers(),timeout=17)
@@ -256,6 +261,11 @@ async def serve(ws,local):
     response={"type":"camera_result","request_id":request_id,"ok":True,
               "image":"data:image/jpeg;base64,"+base64.b64encode(r.content).decode()}
    except Exception as exc:
+    # An unavailable camera must not trigger hundreds of local retries per
+    # minute or stall authenticated device status forwarding.
+    if (isinstance(exc, ValueError) and str(exc) in
+        {"camera_http_503","camera_http_502","camera_http_504"}) or isinstance(exc, httpx.TimeoutException):
+     camera_cooldown_until=time.monotonic()+20.0
     response={"type":"camera_result","request_id":request_id,"ok":False,
               "error":type(exc).__name__}
    await ws.send(json.dumps(response))
