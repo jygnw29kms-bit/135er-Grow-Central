@@ -69,6 +69,16 @@
 <label>Name der Pflanze<input id="plantName" maxlength="80" required></label>
 <label>Kultur<input id="plantCrop" maxlength="80" required placeholder="z. B. Cannabis, Tomate, Basilikum"></label>
 <label>Entwicklungsphase<select id="plantPhase" required><option value="germination">Keimung</option><option value="seedling">Sämling</option><option value="vegetative">Wachstum</option><option value="flowering">Blüte</option><option value="flush">Spülen / Reife</option><option value="finish">Abschluss</option><option value="harvest">Ernte</option><option value="other">Sonstige</option></select></label>
+<label>Herstellerneutrale Mischungsbeispiele<select id="plantMixPreset">
+<option value="">Eigene Zusammensetzung eingeben</option>
+<option value="coco70">Kokos 70 % / Perlit 30 % (in der Regel nährstoffarm)</option>
+<option value="peat60">Torf 60 % / Perlit 20 % / Vermiculit 20 %</option>
+<option value="coco50">Kokos 50 % / Perlit 17 % / Vermiculit 17 % / Wurmhumus 16 %</option>
+<option value="cocopeat">Kokos 60 % / Torf 30 % / Perlit 10 %</option>
+<option value="soilcompost">Torf 60 % / Perlit 30 % / Kompost 10 %</option>
+<option value="living">Living Soil (Zusammensetzung selbst erfassen)</option>
+<option value="rockwool">Steinwolle (ohne zugesetzte Nährstoffe)</option>
+</select></label>
 <label>Substrattyp<select id="plantSubstrate" required><option value="">Bitte wählen</option><option value="peat_mix">Torf-/Erdmischung</option><option value="coco_mix">Kokos-/Perlitmischung</option><option value="living_soil">Lebendige Erde / Living Soil</option><option value="compost_mix">Kompost-/Humusmischung</option><option value="mineral_mix">Mineralisches Substrat</option><option value="rockwool">Steinwolle</option><option value="hydroponic">Hydrokultur ohne Erde</option><option value="custom">Eigene Mischung</option></select></label>
 <label>Zusammensetzung<input id="plantComposition" maxlength="500" required placeholder="z. B. Torf 65 %, Perlit 25 %, Kompost 10 %"></label>
 <label>Substrat vorgedüngt?<select id="plantPreFert" required><option value="">Bitte wählen</option><option value="yes">Ja</option><option value="no">Nein</option><option value="unknown">Unbekannt</option></select></label>
