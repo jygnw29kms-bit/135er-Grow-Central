@@ -684,6 +684,22 @@ async function loadRoomPlants(){
   renderRoomPlantProfiles();
  }catch(e){text('roomPlantProfiles','Pflanzen nicht verfügbar: '+e.message);}
 }
+const substratePresets={
+ coco70:['coco_mix','Kokos 70 %, Perlit 30 %'],
+ peat60:['peat_mix','Torf 60 %, Perlit 20 %, Vermiculit 20 %'],
+ coco50:['coco_mix','Kokos 50 %, Perlit 17 %, Vermiculit 17 %, Wurmhumus 16 %'],
+ cocopeat:['coco_mix','Kokos 60 %, Torf 30 %, Perlit 10 %'],
+ soilcompost:['compost_mix','Torf 60 %, Perlit 30 %, Kompost 10 %'],
+ living:['living_soil',''],
+ rockwool:['rockwool','Steinwolle 100 %']
+};
+function useSubstratePreset(){
+ const preset=substratePresets[$('plantMixPreset')?.value];
+ if(!preset)return;
+ $('plantSubstrate').value=preset[0];
+ if(preset[1])$('plantComposition').value=preset[1];
+ // Do not infer pre-fertilization from ingredients or overwrite the operator's feeding strategy.
+}
 function editRoomPlant(id){
  const p=growJournal.plants.find(x=>x.id===id);if(!p)return;
  const fields={plantEditId:p.id,plantName:p.name,plantCrop:p.crop,plantPhase:p.phase,plantSubstrate:p.substrate_type,
@@ -829,6 +845,7 @@ $('climateRoomSelect')?.addEventListener('change',loadClimateHistory);
 $('climateTimeSelect')?.addEventListener('change',loadClimateHistory);
 $('roomPlantForm')?.addEventListener('submit',saveRoomPlant);
 $('plantFormReset')?.addEventListener('click',resetRoomPlantForm);
+$('plantMixPreset')?.addEventListener('change',useSubstratePreset);
 $('journalForm')?.addEventListener('submit',saveJournal);
 $('journalClose')?.addEventListener('click',()=>$('journalDialog').close());
 $('journalCancel')?.addEventListener('click',()=>$('journalDialog').close());
