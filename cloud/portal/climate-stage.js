@@ -78,13 +78,21 @@ async function loadRoomPlants(){
   if(!r.ok)throw Error('HTTP '+r.status);
   const d=await r.json();if(room!==next)return;
   planted=Array.isArray(d.plants)?d.plants:[];
-  const cannabis=planted.filter(p=>/cannabis|hanf/i.test([p.strain,p.name].join(' ')));
-  if(cannabis.length===1&&phases[cannabis[0].phase]){
-   stage=phases[cannabis[0].phase];select.value=stage;
-   source.textContent='Richtwert für '+cannabis[0].name+' · '+stages[stage].label;
+  const cannabis=planted.filter(p=>p.crop==='cannabis'||(!p.crop&&/cannabis|hanf|indica|sativa|autoflower/i.test([p.strain,p.name].join(' '))));
+  const active=cannabis.filter(p=>phases[p.phase]&&p.phase!=='completed');
+  const unique=[...new Set(active.map(p=>phases[p.phase]))];
+  if(active.length>0&&unique.length===1){
+   stage=unique[0];select.value=stage;
+   source.textContent=active.length===1
+    ?'Automatisch nach Pflanze: '+active[0].name+' · '+stages[stage].label
+    :'Automatisch nach '+active.length+' Pflanzen mit gleicher Phase · '+stages[stage].label;
   }else{
    stage='';select.value='';
-   source.textContent=cannabis.length>1?'Mehrere Cannabis-Pflanzen · Phase manuell auswählen':planted.length?'Pflanzen erfasst · Cannabis-Phase manuell auswählen':'Noch keine Pflanzen erfasst · Vorschau nach Phase';
+   source.textContent=unique.length>1
+    ?'Pflanzen in unterschiedlichen Phasen: kein gemeinsamer Idealbereich. Phase manuell wählen.'
+    :cannabis.length?'Keine aktive, auswertbare Cannabis-Phase. Bitte Pflanzenstamm prüfen.'
+    :planted.length?'Keine Cannabis-Kultur erkannt. Kultur im Pflanzenstamm zuweisen.'
+    :'Noch keine Pflanzen erfasst · Richtwertvorschau nach Phase';
   }
  }catch(e){stage='';select.value='';source.textContent='Pflanzenprofil nicht abrufbar · manuelle Richtwertvorschau'}
  paint();
@@ -92,6 +100,8 @@ async function loadRoomPlants(){
 select.addEventListener('change',()=>{stage=select.value;source.textContent=stage?'Manuelle Richtwertvorschau · '+stages[stage].label:'Keine Phase ausgewählt';paint()});
 $('roomPicker')?.addEventListener('change',loadRoomPlants);
 $('stageClimateReload')?.addEventListener('click',loadRoomPlants);
+window.addEventListener('gc:plants-updated',event=>{if(event.detail?.room_id===room)loadRoomPlants()});
+setInterval(()=>{if(!document.hidden&&$('roomPicker')?.value===room)loadRoomPlants()},60000);
 const observer=new MutationObserver(paint);
 for(const id of ['tempValue','humidityValue'])if($(id))observer.observe($(id),{childList:true,characterData:true,subtree:true});
 loadRoomPlants();paint();
