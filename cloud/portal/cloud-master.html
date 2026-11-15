@@ -19,7 +19,12 @@
 <main><header class="topbar"><div><div class="eyebrow">RAUM: <span id="currentRoom" class="sr-only">—</span></div>
 <select id="roomPicker" aria-label="Aktiver Grow-Raum"><option value="">Räume laden …</option></select>
 <h1 id="pageTitle" class="sr-only">Dashboard</h1></div>
-<div class="headright"><span id="clock" class="clock">—</span><span id="networkMode" class="pill" title="Automatische Erreichbarkeitsprüfung">Verbindung prüfen …</span><span id="systemBadge" class="pill">Prüfe …</span></div></header>
+<div class="headright"><span id="clock" class="clock">—</span><span id="networkMode" class="pill" title="Aktiver Zugriffsweg: LAN oder Cloud">Verbindung prüfen …</span>
+<div class="gc-transport-status" role="group" aria-label="Verbindungs- und Bluetooth-Status">
+ <span id="systemBadge" class="pill gc-link-state" aria-live="polite">Prüfe Netzwerk …</span>
+ <span id="bleLampSignal" class="gc-signal gc-signal-unknown" aria-label="Lampe: Bluetooth noch nicht geprüft" title="FC3000 BLE-Datenqualität; RSSI wird nur angezeigt, wenn gemessen"><span class="gc-signal-label">BLE Licht</span><span class="gc-signal-bars" aria-hidden="true"><i></i><i></i><i></i></span><small id="bleLampSignalDetail">Prüfe …</small></span>
+ <span id="bleFanSignal" class="gc-signal gc-signal-unknown" aria-label="Lüfter: Bluetooth noch nicht geprüft" title="DF150-M BLE-Datenqualität; RSSI wird nur angezeigt, wenn gemessen"><span class="gc-signal-label">BLE Lüfter</span><span class="gc-signal-bars" aria-hidden="true"><i></i><i></i><i></i></span><small id="bleFanSignalDetail">Prüfe …</small></span>
+</div></div></header>
 <div class="content">
 <section id="home" class="page active">
 <div class="master-columns">
@@ -168,5 +173,5 @@
 <section id="more" class="page"><div class="intro"><h2>SYSTEM & INTEGRATIONEN</h2><p>Eine Anwendung. Alle bestätigten Geräte und Schnittstellen.</p></div>
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
-</div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="growbook">▣<small>Growbuch</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
+</div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="rooms">▣<small>Räume</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
 <div id="toast" role="status" aria-live="polite"></div><script src="/static/cloud-master-bridge.js?v=20261114-camera-3"></script><script src="/static/gc-final.js?v=20261115-camera-soil-osd-1"></script><script src="/static/growbook-plants-wiki.js?v=20261114-plantwiki-3"></script><script src="/static/tent-growing-wiki.js?v=20261114-tent-1"></script><script src="/static/room-setup.js?v=20261114-room-2"></script></body></html>
