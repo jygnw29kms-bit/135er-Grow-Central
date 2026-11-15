@@ -57,7 +57,7 @@ function masterToggle(){
  if(masterVisible){
   cameraStop();
   const iframe=$('masterFrame');
-  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261115-climate-strict-1')iframe.src='/cloud-master.html?v=20261115-climate-strict-1';
+  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261115-status-parity-1')iframe.src='/cloud-master.html?v=20261115-status-parity-1';
   masterStatus('Final Master · Verschlüsselter Cloud-Zugang');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
