@@ -19,6 +19,17 @@ SOURCE_TO_LIVE = {
     "cloud/portal/gc-final-cloud.js": "static/gc-final.js",
     "cloud/portal/gc-final-cloud.css": "static/gc-final.css",
     "cloud/portal/cloud-master-bridge.js": "static/cloud-master-bridge.js",
+    "cloud/portal/growbook-plants-wiki.js": "static/growbook-plants-wiki.js",
+    "cloud/portal/growbook-plants-wiki.css": "static/growbook-plants-wiki.css",
+    "cloud/portal/climate-stage.js": "static/climate-stage.js",
+    "cloud/portal/climate-stage.css": "static/climate-stage.css",
+    "cloud/portal/tent-growing-wiki.js": "static/tent-growing-wiki.js",
+    "cloud/portal/tent-growing-wiki.css": "static/tent-growing-wiki.css",
+    "cloud/portal/room-setup.js": "static/room-setup.js",
+    "cloud/portal/room-setup.css": "static/room-setup.css",
+    "web/soil-sensor-reference.jpg": "static/soil-sensor-reference.jpg",
+    "web/gc-manifest.webmanifest": "static/gc-manifest.webmanifest",
+    "web/device-images/mars-hydro-fc3000.webp": "static/mars-hydro-fc3000.webp",
 }
 
 
