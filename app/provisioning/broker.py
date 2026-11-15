@@ -22,3 +22,18 @@ def request_broker(action, **values):
     if not result.get('ok'):
         raise RuntimeError(result.get('error', 'Broker-Einrichtung fehlgeschlagen.'))
     return result
+
+
+async def broker_info_payload(request_fn=request_broker):
+    """Shared read-only broker health response for USB and BLE onboarding."""
+    import asyncio
+
+    try:
+        result = await asyncio.to_thread(request_fn, "info")
+        return {"ready": True, "hosts": result["hosts"]}
+    except (OSError, RuntimeError):
+        return {
+            "ready": False,
+            "hosts": [],
+            "message": "Lokaler Broker-Einrichtungsdienst nicht verfügbar.",
+        }
