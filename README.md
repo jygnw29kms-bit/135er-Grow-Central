@@ -246,3 +246,15 @@ Die freigegebenen Final-Master-Oberflächen auf `.local` und `.de` wurden durch 
 **Tests:** 44 durchgelaufen (neue Rollen-, Einladungs-, QR-, Mitglieds-HTTP-, Automations- und Warnungsfälle plus bestehende Raum-/Auth-/FRITZ-Automationsprüfungen). Ein Starlette-/HTTPX-Testbibliotheks-Hinweis ist nicht blockierend.
 
 **Technisches Design und noch offene Abnahmeschritte:** [Beta 1.0 – Räume, Rechte, Einladungen, Automationen und Push](docs/BETA1_ROOM_SHARING_AUTOMATIONS_NOTIFICATIONS.md).
+
+## Beta-1.0-Erweiterung: Zeltmitglieder, Licht-/Luftautomatik und Push-Alarme
+
+Mehrbenutzer-Zeltfreigaben sind **raumgebunden**: Besitzer, Admin, Grower und Beobachter erhalten getrennte Fähigkeiten, mit einmaligen QR-/Link-/E-Mail-/SMS-Einladungen und Widerruf. Licht- und Lüftungsregeln sind pro Raum als sichere **Vorschau** vorhanden; automatische Schaltbefehle bleiben bis zur Geräte-/Fail-Safe-Abnahme deaktiviert.
+
+Warnungen werden nach konfigurierten Temperatur-, Luftfeuchte- oder Bodenfeuchte-Grenzwerten ausgelöst, mit Hysterese, Mindestdauer, Entwarnung und optionalen Ruhezeiten. Offline-Alarmarten sind getrennt aktivierbar; absichtlich abgesteckte Mars-Hydro-Geräte verursachen standardmäßig keine Push-Nachricht.
+
+**Web-Push-Grundlage im Repository:** `app/room_push.py` enthält rollen- und raumgeprüfte Geräteabonnements, Widerrufsschutz, begrenzte Endpunkte, VAPID-Senderadapter und sichere Behandlung des Status „nicht konfiguriert“. `app/room_notifications.py` übergibt neue Alarm-Ereignisse nur bei ausdrücklicher Push-Freigabe und außerhalb der Ruhezeiten. Gleiches Push-Anzeigeverhalten ist in lokalem und Cloud-PWA-Service-Worker-Code hinterlegt. Acht gezielte Push-/Alarmtests wurden bestanden.
+
+**Wichtige Restarbeit:** Die iPhone-PWA unter `https://135ercloud.grow-central.de` benötigt einen eigenen, authentifizierten Cloud-Web-Push-Registrierungs- und Zustellweg mit Benutzeraktion, dauerhaft sicheren VAPID-Schlüsseln und echtem End-to-End-Test. Der lokale HTTP-`.local`-Zugang kann iOS-Home-Screen-Web-Push nicht ersetzen. Ein Ereignis im Posteingang oder ein angenommener Web-Push-Request darf nicht als erfolgreich auf dem iPhone zugestellt ausgewiesen werden.
+
+Details, Rollenmatrix und Release-Gates: [Beta 1.0 – Räume, Automationen und Push](docs/BETA_1_0_ROOMS_AUTOMATION_PUSH.md).
