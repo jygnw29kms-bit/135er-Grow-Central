@@ -57,7 +57,7 @@ function masterToggle(){
  if(masterVisible){
   cameraStop();
   const iframe=$('masterFrame');
-  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261114-ui-parity-1')iframe.src='/cloud-master.html?v=20261114-ui-parity-1';
+  if(iframe.getAttribute('src')!=='/cloud-master.html?v=20261115-cloud-soil-room-1')iframe.src='/cloud-master.html?v=20261115-cloud-soil-room-1';
   masterStatus('Final Master · Verschlüsselter Cloud-Zugang');
  }else{ $('masterFrame').src='about:blank';masterStatus('Cloud-Datenbrücke bereit');}
 }
