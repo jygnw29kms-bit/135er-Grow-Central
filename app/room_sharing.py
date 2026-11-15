@@ -107,6 +107,18 @@ def make_invitation(data: dict, room_id: str, request: InviteCreate, *, now: flo
     return row, token
 
 
+def invitation_qr_svg(link: str) -> str:
+    """Generate QR locally; never send invitation tokens to a third-party QR API."""
+    import io
+    import qrcode
+    from qrcode.image.svg import SvgPathImage
+
+    image = qrcode.make(link, image_factory=SvgPathImage, box_size=5, border=3)
+    out = io.BytesIO()
+    image.save(out)
+    return out.getvalue().decode("utf-8")
+
+
 def public_invite(row: dict) -> dict:
     return {key: value for key, value in row.items() if key not in {"token_hash"}}
 
@@ -138,9 +150,16 @@ async def create_invitation(room_id: str, body: InviteCreate, request: Request, 
     # Shareable token is revealed ONCE. Not logged, not returned by the list.
     # QR, SMS and email clients can share this URL. An invitation alone does
     # not authenticate a guest or grant a room API session.
+    # Avoid request Host-header spoofing: a controlled, local origin is used
+    # until authenticated account-bound invitations are supported in Cloud.
+    origin = os.getenv("GC_ROOM_JOIN_ORIGIN", "http://135er-grow-central.local").rstrip("/")
+    if not (origin.startswith("https://") or origin == "http://135er-grow-central.local"):
+        raise HTTPException(503, "Invalid join origin")
+    link = origin + "/join#invite=" + token
     return {"invitation": public_invite(row), "token_once": token,
             "join_path": "/join#invite=" + token,
-            "delivery": "manual_share", "redeem_enabled": True}
+            "share_url_once": link, "qr_svg_once": invitation_qr_svg(link),
+            "delivery": "manual_share_via_link_sms_email_or_qr", "redeem_enabled": True}
 
 
 @router.delete("/{room_id}/invitations/{invitation_id}")
