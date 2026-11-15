@@ -97,3 +97,19 @@ def test_cloud_offline_alarm_requires_room_policy_opt_in():
     assert len(events) == 1
     assert events[0]["kind"] == "connection_offline"
     assert events[0]["source"] == "cloud"
+
+
+def test_mars_offline_only_for_explicitly_assigned_room_devices():
+    from app.room_notifications import poll_once
+    policy = NotificationPolicy(notify_mars_offline=True, connection_min_down_seconds=60)
+    store = {"policies": {"room_1": policy.model_dump(), "room_2": policy.model_dump()},
+             "states": {}, "events": []}
+    rooms = {"rooms": [{"id": "room_1"}, {"id": "room_2"}],
+             "assignments": {"mars-hydro:fc3000": "room_1"}, "sensor_history": []}
+    assert poll_once(now=1000, store=store, room_state=rooms,
+                     connections={"mars_lamp": False, "mars_fan": False}) == []
+    events = poll_once(now=1061, store=store, room_state=rooms,
+                       connections={"mars_lamp": False, "mars_fan": False})
+    assert len(events) == 1
+    assert events[0]["room_id"] == "room_1"
+    assert events[0]["source"] == "mars_lamp"
