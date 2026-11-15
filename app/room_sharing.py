@@ -41,11 +41,14 @@ def _load() -> dict:
     try:
         value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return {"invitations": [], "members": []}
+        return {"invitations": [], "members": [], "sessions": {}}
     except (OSError, ValueError) as exc:
         raise HTTPException(500, "Room membership store unavailable") from exc
     if not isinstance(value, dict) or not isinstance(value.get("invitations"), list) or not isinstance(value.get("members"), list):
         raise HTTPException(500, "Invalid room membership store")
+    value.setdefault("sessions", {})
+    if not isinstance(value["sessions"], dict):
+        raise HTTPException(500, "Invalid membership session store")
     return value
 
 
@@ -136,7 +139,8 @@ async def create_invitation(room_id: str, body: InviteCreate, request: Request, 
     # QR, SMS and email clients can share this URL. An invitation alone does
     # not authenticate a guest or grant a room API session.
     return {"invitation": public_invite(row), "token_once": token,
-            "delivery": "manual_share", "redeem_enabled": False}
+            "join_path": "/join#invite=" + token,
+            "delivery": "manual_share", "redeem_enabled": True}
 
 
 @router.delete("/{room_id}/invitations/{invitation_id}")
