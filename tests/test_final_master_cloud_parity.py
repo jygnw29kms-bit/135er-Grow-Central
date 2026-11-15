@@ -45,3 +45,14 @@ def test_cloud_only_offers_final_master_after_authentication():
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
     assert "const panel=$('remoteDashboard');panel.hidden=false;" not in PORTAL
+
+
+def test_cloud_pwa_starts_at_cloud_login_not_local_pi_route():
+    import json
+    cloud_manifest = json.loads((ROOT / "cloud/portal/gc-manifest-cloud.webmanifest").read_text(encoding="utf-8"))
+    pi_manifest = json.loads((ROOT / "web/gc-manifest.webmanifest").read_text(encoding="utf-8"))
+    deploy = (ROOT / "cloud/portal/deploy_cloud_portal.sh").read_text(encoding="utf-8")
+    assert cloud_manifest["start_url"] == "/"
+    assert cloud_manifest["scope"] == "/"
+    assert pi_manifest["start_url"] == "/ui"
+    assert 'cp "$repo/cloud/portal/gc-manifest-cloud.webmanifest" "$stage/static/gc-manifest.webmanifest"' in deploy
