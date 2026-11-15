@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261114-ui-parity-1" in PORTAL
+    assert "/cloud-master.html?v=20261115-cloud-soil-room-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
@@ -56,3 +56,10 @@ def test_cloud_pwa_starts_at_cloud_login_not_local_pi_route():
     assert cloud_manifest["scope"] == "/"
     assert pi_manifest["start_url"] == "/ui"
     assert 'cp "$repo/cloud/portal/gc-manifest-cloud.webmanifest" "$stage/static/gc-manifest.webmanifest"' in deploy
+
+def test_cloud_soil_tile_survives_initial_room_selection_race():
+    assert "const dashboardRoom=rooms.find(r=>r.room_id===growJournal.roomId)||first;" in CLOUD_JS
+    assert "soilTileState.dashboard=soilTileReading(dashboardRoom);" in CLOUD_JS
+    assert "if(!document.hidden)loadClimateOverview();" in CLOUD_JS
+    assert "if(!document.hidden&&!growJournal.roomId)loadRooms();" in CLOUD_JS
+    assert "/static/gc-final.js?v=20261115-cloud-soil-room-1" in CLOUD
