@@ -30,6 +30,7 @@ from app.room_sharing import router as room_sharing_router
 from app.room_members import router as room_members_router, join_router as room_join_router
 from app.room_control_plans import router as room_control_plans_router
 from app.room_notifications import router as room_notifications_router, install as install_room_notifications
+from app.room_push import router as room_push_router
 from app.edition import router as edition_router
 from app.setup_portal import SetupPortalMiddleware
 
@@ -67,6 +68,7 @@ app.include_router(room_members_router)
 app.include_router(room_join_router)
 app.include_router(room_control_plans_router)
 app.include_router(room_notifications_router)
+app.include_router(room_push_router)
 app.include_router(edition_router)
 app.include_router(calibration_router)
 install_mdns_alias(app)
