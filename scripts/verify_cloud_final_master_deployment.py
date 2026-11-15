@@ -28,7 +28,7 @@ SOURCE_TO_LIVE = {
     "cloud/portal/room-setup.js": "static/room-setup.js",
     "cloud/portal/room-setup.css": "static/room-setup.css",
     "web/soil-sensor-reference.jpg": "static/soil-sensor-reference.jpg",
-    "web/gc-manifest.webmanifest": "static/gc-manifest.webmanifest",
+    "cloud/portal/gc-manifest-cloud.webmanifest": "static/gc-manifest.webmanifest",
     "web/device-images/mars-hydro-fc3000.webp": "static/mars-hydro-fc3000.webp",
 }
 
