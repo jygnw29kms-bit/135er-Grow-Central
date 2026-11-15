@@ -9,7 +9,7 @@ from datetime import datetime,timezone
 from bleak import BleakClient, BleakScanner
 from app.mars_fc3000_trial import context_from_live_status, encode_command
 from app.mars_hydro_ble import MZF002_NOTIFY, MZF002_WRITE, MZF002_SERVICE
-from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay
+from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay, ReconnectLogLimiter
 
 log=logging.getLogger(__name__)
 NAME="MZ_MARS_68756_FCB467AEC260"
@@ -23,6 +23,7 @@ class FastLamp:
         self.lock=asyncio.Lock()
         self.task=None
         self.saved_at=0
+        self.reconnect_log=ReconnectLogLimiter()
     def notify(self, sender, data):
         parsed=context_from_live_status(bytes(data))
         if parsed:
@@ -61,6 +62,7 @@ class FastLamp:
                         raise
                 self.client=client
                 failures=0
+                self.reconnect_log.recovered(log, "FC3000")
                 log.info("FC3000 fast BLE connected")
                 while client.is_connected:
                     await asyncio.sleep(.5)
@@ -68,7 +70,7 @@ class FastLamp:
                 raise
             except Exception as exc:
                 failures+=1
-                log.warning("FC3000 fast BLE reconnect %s: %s",type(exc).__name__,str(exc)[:140])
+                self.reconnect_log.failure(log, "FC3000", exc)
             finally:
                 self.client=None
                 self.latest=None
