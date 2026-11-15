@@ -4,7 +4,7 @@ Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=5min
 StartLimitBurst=10
-ConditionPathIsExecutable=/opt/grow-central/mesh-agent/meshagent
+ConditionPathExists=/opt/grow-central/mesh-agent/meshagent
 ConditionPathExists=/opt/grow-central/mesh-agent/meshagent.msh
 
 [Service]
