@@ -47,6 +47,11 @@ jobs:
           node --check web/room_views.js
           node --check web/usb_onboarding.js
           node --check web/sensor_pairing.js
+          node --check web/gc-final.js
+          node --check web/gc-worker.js
+          node --check cloud/portal/gc-final-cloud.js
+          node --check cloud/portal/cloud-portal.js
+          node --check cloud/portal/gc-push-worker.js
           node --check mobile/www/app.js
       - name: Verify Grow project boundaries
         run: python scripts/check-grow-project-boundaries.py
