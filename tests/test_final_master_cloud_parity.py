@@ -62,7 +62,7 @@ def test_cloud_soil_tile_survives_initial_room_selection_race():
     assert "soilTileState.dashboard=soilTileReading(dashboardRoom);" in CLOUD_JS
     assert "if(!document.hidden)loadClimateOverview();" in CLOUD_JS
     assert "if(!document.hidden&&!growJournal.roomId)loadRooms();" in CLOUD_JS
-    assert "/static/gc-final.js?v=20261115-climate-strict-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in CLOUD
 
 def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
     assert "api('/api/health')" in CLOUD_JS
