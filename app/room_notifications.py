@@ -269,7 +269,24 @@ async def _notification_loop() -> None:
                                    and fast_lamp.latest and clock - fast_lamp.at <= 30)
                 fan_online = bool(fast_fan.client and fast_fan.client.is_connected
                                   and fast_fan.last and clock - fast_fan.at <= 30)
-                poll_once(connections={"cloud": cloud_online, "mars_lamp": lamp_online, "mars_fan": fan_online})
+                emitted = poll_once(connections={"cloud": cloud_online, "mars_lamp": lamp_online, "mars_fan": fan_online})
+                if emitted:
+                    # Push is opt-in. Even a successful push-service response
+                    # is a submission, not proof of display on the handset.
+                    from app.room_push import _load as push_subscriptions, dispatch_event
+                    from app.room_sharing import _load as sharing_store
+                    policies = _load().get("policies", {})
+                    subscriptions = push_subscriptions()
+                    if subscriptions:
+                        members = sharing_store()
+                        for event in emitted:
+                            policy = NotificationPolicy.model_validate(policies.get(event["room_id"], {}))
+                            if policy.push_enabled:
+                                result = await asyncio.to_thread(
+                                    dispatch_event, event, subscriptions, sharing=members)
+                                log.info("Room push submitted room=%s accepted=%d failed=%d status=%s",
+                                         event["room_id"], result["accepted"], result["failed"], result["status"])
+
         except Exception:
             log.exception("room notification evaluation failed")
         await asyncio.sleep(60)
