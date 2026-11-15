@@ -67,3 +67,17 @@ def test_source_symlink_cannot_escape_backup_root(tmp_path):
     (root / "grow-photos" / "escape").symlink_to(root / "rooms.json")
     with pytest.raises(ValueError, match="symlink"):
         collect(root)
+
+
+def test_optional_app_configuration_is_encrypted_and_staged(tmp_path):
+    root = fixture_root(tmp_path)
+    config = tmp_path / "app.env"
+    config.write_text("GC_TEST_SECRET=not-a-real-secret\n")
+    blob = create_bundle(root, "synthetic beta backup passphrase", config_file=config)
+    assert b"GC_TEST_SECRET" not in blob
+    restored = verify_bundle(blob, "synthetic beta backup passphrase")
+    assert restored["config/app.env"] == config.read_bytes()
+    dest = tmp_path / "new-stage"
+    stage_restore(blob, "synthetic beta backup passphrase", dest)
+    assert (dest / "config/app.env").read_bytes() == config.read_bytes()
+    assert (dest / "config/app.env").stat().st_mode & 0o077 == 0
