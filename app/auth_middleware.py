@@ -26,7 +26,13 @@ class GuiAuthMiddleware(BaseHTTPMiddleware):
             or path.startswith("/api/auth/")
             or path.startswith("/static/")
         )
-        if public:
+        # Member onboarding has its own authentication boundary. Guest sessions
+        # are NEVER passed through to generic /api or the owner /ui surface.
+        member_public = path in {
+            "/join", "/api/v1/room-members/accept",
+            "/api/v1/room-members/login", "/api/v1/room-members/status",
+        }
+        if public or member_public:
             return await call_next(request)
 
         if not configured():
@@ -44,6 +50,13 @@ class GuiAuthMiddleware(BaseHTTPMiddleware):
             if path == "/":
                 return RedirectResponse("/ui", status_code=303)
             return await call_next(request)
+
+        # Separate scoped cookie: allow guests only through explicit member
+        # endpoints, whose handlers enforce the requested room+capability.
+        if path.startswith("/api/v1/room-members/"):
+            from app.room_members import member_authenticated
+            if member_authenticated(request):
+                return await call_next(request)
 
         # The scoped HA credential grants access only to its export router.
         from app.smarthome.ha_bridge import PREFIX, bridge_authenticated
