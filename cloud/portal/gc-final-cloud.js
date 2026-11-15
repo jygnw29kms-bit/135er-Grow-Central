@@ -122,6 +122,8 @@ function climateJudgementMarkup(items){
    '<div class="desc">'+(p.metrics||[]).map(climateMetricRow).filter(Boolean).join(' · ')+'</div></div>';
  }).join('');
 }
+// Retain the last climate response for phase and sensor panels.
+let climateOverview={rooms:[]};
 async function loadClimateOverview(){
  try{
   const data=await api('/api/v1/rooms/climate-overview');
