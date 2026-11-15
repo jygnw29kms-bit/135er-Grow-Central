@@ -10,7 +10,6 @@ Cloud subscription gateway and is not implicitly enabled by this Pi router.
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import os
@@ -141,7 +140,9 @@ def dispatch_event(event: dict, subscriptions: list[dict], *,
     }
     accepted = failed = 0
     for row in subscriptions:
-        if row.get("room_id") != payload["room_id"] or not valid_recipient(row, sharing):
+        if (row.get("room_id") != payload["room_id"]
+                or not valid_recipient(row, sharing)
+                or not trusted_endpoint(str(row.get("endpoint") or ""))):
             continue
         try:
             send(row, payload)
