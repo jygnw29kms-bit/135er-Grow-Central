@@ -181,16 +181,20 @@ function setMetrics(fan,lamp){
 async function refreshLive(){
  if(state.refreshBusy)return;state.refreshBusy=true;
  try{
- const [fl,ff]=await Promise.allSettled([api('/api/mars-hydro/ble/fast-lamp-status'),api('/api/mars-hydro/ble/fast-fan-status')]);
+ const [fl,ff,health]=await Promise.allSettled([api('/api/mars-hydro/ble/fast-lamp-status'),api('/api/mars-hydro/ble/fast-fan-status'),api('/api/health')]);
  const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
- const ok=lamp.fresh&&fan.fresh;
- text('heroConnection',ok?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'KEINE AKTUELLEN WERTE');
- text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');
- $('systemBadge').classList.toggle('good',ok);$('systemBadge').classList.toggle('bad',!ok);
- text('coreStatus','Grow-Pi '+(ok?'verbunden':'erreichbar'));text('coreRow','Online');
- }catch(e){text('systemBadge','Verbindungsfehler');}finally{state.refreshBusy=false;}
+ // BLE freshness is device availability, never the Cloud transport health.
+ const connected=health.status==='fulfilled'&&health.value?.ok===true;
+ const deviceLive=lamp.fresh&&fan.fresh;
+ text('heroConnection',deviceLive?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'MARS HYDRO OFFLINE');
+ text('systemBadge',connected?'Cloud-Kanal verbunden':'Cloud-Kanal prüfen');
+ $('systemBadge').classList.toggle('good',connected);$('systemBadge').classList.toggle('bad',!connected);
+ text('coreStatus',connected?'Grow-Pi verbunden':'Grow-Pi nicht erreichbar');
+ text('coreRow',connected?'Online':'Nicht erreichbar');
+ text('cloudRemoteStatus',connected?'Fernkanal verbunden':'Fernkanal nicht erreichbar');
+ }catch(e){text('systemBadge','Cloud-Kanal prüfen');text('cloudRemoteStatus','Fernkanal nicht erreichbar');}finally{state.refreshBusy=false;}
 }
 async function command(kind,action,value){
  if(state.busy[kind])return;
@@ -374,7 +378,7 @@ async function detectAccessMode(){
    if(fromCloud){
      accessMode.local=false;
      text('networkMode','Cloud');text('cloudAccessMode','HTTPS-Cloudzugang');
-     text('cloudRemoteStatus','Fernkanal separat prüfen');
+     // Cloud channel status is set by the authenticated Pi health request.
      return;
    }
    const result=await fetch('/api/health',{cache:'no-store',credentials:'same-origin',signal:controller.signal});
