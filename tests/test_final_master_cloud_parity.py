@@ -80,3 +80,18 @@ def test_cloud_climate_overview_is_declared_before_strict_mode_assignment():
     assignment = CLOUD_JS.index("climateOverview=data;", loader)
     assert declaration < loader < assignment
     assert "'use strict';" in CLOUD_JS
+
+
+def test_mobile_camera_stays_inside_final_master_viewport():
+    local_css = (ROOT / "web/gc-final.css").read_text(encoding="utf-8")
+    cloud_css = (ROOT / "cloud/portal/gc-final-cloud.css").read_text(encoding="utf-8")
+    required = (
+        "#largeCam.camframe.large{width:100%;max-width:100%;min-width:0;min-height:0;",
+        "#camera .camera-toolbar{max-width:100%;min-width:0}",
+        "#largeCam .osd{max-width:calc(100% - 16px);overflow-wrap:anywhere}",
+    )
+    for css in (local_css, cloud_css):
+        for rule in required:
+            assert rule in css
+    assert "/static/gc-final.css?v=20261115-camera-mobile-1" in LOCAL
+    assert "/static/gc-final.css?v=20261115-camera-mobile-1" in CLOUD
