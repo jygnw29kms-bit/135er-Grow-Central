@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261115-channel-health-1" in PORTAL
+    assert "/cloud-master.html?v=20261115-climate-strict-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
@@ -62,7 +62,7 @@ def test_cloud_soil_tile_survives_initial_room_selection_race():
     assert "soilTileState.dashboard=soilTileReading(dashboardRoom);" in CLOUD_JS
     assert "if(!document.hidden)loadClimateOverview();" in CLOUD_JS
     assert "if(!document.hidden&&!growJournal.roomId)loadRooms();" in CLOUD_JS
-    assert "/static/gc-final.js?v=20261115-channel-health-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-climate-strict-1" in CLOUD
 
 def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
     assert "api('/api/health')" in CLOUD_JS
@@ -71,3 +71,12 @@ def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
     assert "text('cloudRemoteStatus',connected?'Fernkanal verbunden':'Fernkanal nicht erreichbar');" in CLOUD_JS
     assert "text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');" not in CLOUD_JS
     assert "text('cloudRemoteStatus','Fernkanal separat prüfen');" not in CLOUD_JS
+
+def test_cloud_climate_overview_is_declared_before_strict_mode_assignment():
+    # Regresses the iPhone Cloud screenshot: missing declaration made both
+    # phase evaluation and soil-moisture rendering fail after an HTTP 200.
+    declaration = CLOUD_JS.index("let climateOverview={rooms:[]};")
+    loader = CLOUD_JS.index("async function loadClimateOverview(){")
+    assignment = CLOUD_JS.index("climateOverview=data;", loader)
+    assert declaration < loader < assignment
+    assert "'use strict';" in CLOUD_JS
