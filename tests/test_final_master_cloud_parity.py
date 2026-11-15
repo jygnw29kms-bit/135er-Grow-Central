@@ -163,3 +163,11 @@ def test_cloud_and_local_status_badges_have_same_structure_and_logic():
     for js in (LOCAL_JS,CLOUD_JS):
         assert "showBleQuality('lamp',lamp);" in js
         assert "showBleQuality('fan',fan);" in js
+
+
+def test_dashboard_panel_order_is_identical():
+    for html in (LOCAL, CLOUD):
+        markers = ('id="liveTiles"', 'id="homePhaseClimate"',
+                   'id="homeSoilPanel"', 'id="controlMount"')
+        positions = [html.index(m) for m in markers]
+        assert positions == sorted(positions), markers
