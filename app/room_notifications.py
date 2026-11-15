@@ -184,11 +184,13 @@ def poll_once(*, now: float | None = None, store: dict | None = None, room_state
         # Device transport outages are separate from sensor thresholds and need
         # independent opt-in (Mars Hydro can be intentionally disconnected).
         signals = connections or {}
-        for monitor, enabled in (
-            ("cloud", policy.notify_cloud_channel_offline),
-            ("mars", policy.notify_mars_offline),
+        assigned = rooms.get("assignments", {})
+        for monitor, enabled, assigned_id in (
+            ("cloud", policy.notify_cloud_channel_offline, None),
+            ("mars_lamp", policy.notify_mars_offline, "mars-hydro:fc3000"),
+            ("mars_fan", policy.notify_mars_offline, "mars-hydro:df150m"),
         ):
-            if not enabled:
+            if not enabled or (assigned_id is not None and assigned.get(assigned_id) != room_id):
                 continue
             key = f"{room_id}:connection:{monitor}"
             old_state = data.setdefault("states", {}).get(key, {})
@@ -259,7 +261,15 @@ async def _notification_loop() -> None:
                     cloud_online = cloud.get("connected")
                 except Exception:
                     pass
-                poll_once(connections={"cloud": cloud_online})
+                import time as _time
+                from app.mars_fast_lamp import fast_lamp
+                from app.mars_fast_fan import fast_fan
+                clock = _time.monotonic()
+                lamp_online = bool(fast_lamp.client and fast_lamp.client.is_connected
+                                   and fast_lamp.latest and clock - fast_lamp.at <= 30)
+                fan_online = bool(fast_fan.client and fast_fan.client.is_connected
+                                  and fast_fan.last and clock - fast_fan.at <= 30)
+                poll_once(connections={"cloud": cloud_online, "mars_lamp": lamp_online, "mars_fan": fan_online})
         except Exception:
             log.exception("room notification evaluation failed")
         await asyncio.sleep(60)
