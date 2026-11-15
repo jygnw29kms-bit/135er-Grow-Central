@@ -141,24 +141,35 @@ async def list_invitations(room_id: str, request: Request, _=Depends(_require_ow
 async def create_invitation(room_id: str, body: InviteCreate, request: Request, _=Depends(_require_owner)):
     if not _room_exists(room_id):
         raise HTTPException(404, "Room not found")
+    # Validate the controlled origin *before* persisting a one-time invitation.
+    # Reject embedded credentials, query/fragment and non-root URL paths.
+    from urllib.parse import urlsplit
+    origin = os.getenv("GC_ROOM_JOIN_ORIGIN", "http://135er-grow-central.local").rstrip("/")
+    try:
+        parsed = urlsplit(origin)
+        valid_origin = (
+            ((parsed.scheme == "https" and parsed.port in (None, 443))
+             or origin == "http://135er-grow-central.local")
+            and bool(parsed.hostname) and parsed.username is None and parsed.password is None
+            and not parsed.path and not parsed.query and not parsed.fragment
+        )
+    except ValueError:
+        valid_origin = False
+    if not valid_origin:
+        raise HTTPException(503, "Invalid join origin")
     data = _load()
     try:
         row, token = make_invitation(data, room_id, body)
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
-    _save(data)
-    # Shareable token is revealed ONCE. Not logged, not returned by the list.
-    # QR, SMS and email clients can share this URL. An invitation alone does
-    # not authenticate a guest or grant a room API session.
-    # Avoid request Host-header spoofing: a controlled, local origin is used
-    # until authenticated account-bound invitations are supported in Cloud.
-    origin = os.getenv("GC_ROOM_JOIN_ORIGIN", "http://135er-grow-central.local").rstrip("/")
-    if not (origin.startswith("https://") or origin == "http://135er-grow-central.local"):
-        raise HTTPException(503, "Invalid join origin")
+    # Shareable token is revealed ONCE. The owner is responsible for sharing
+    # the controlled link through QR, SMS, email or a messaging app.
     link = origin + "/join#invite=" + token
+    svg = invitation_qr_svg(link)
+    _save(data)
     return {"invitation": public_invite(row), "token_once": token,
             "join_path": "/join#invite=" + token,
-            "share_url_once": link, "qr_svg_once": invitation_qr_svg(link),
+            "share_url_once": link, "qr_svg_once": svg,
             "delivery": "manual_share_via_link_sms_email_or_qr", "redeem_enabled": True}
 
 
