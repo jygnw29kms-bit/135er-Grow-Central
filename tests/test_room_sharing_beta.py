@@ -70,3 +70,19 @@ def test_invitation_qr_is_generated_locally():
     assert "<svg" in image
     assert "</svg>" in image
     assert len(image) > 100
+
+
+def test_invalid_join_origin_does_not_persist_bearer_invitation(monkeypatch, tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+    monkeypatch.setattr(room_sharing, "DATA_FILE", tmp_path / "room-sharing.json")
+    monkeypatch.setattr(room_sharing, "_room_exists", lambda _: True)
+    for origin in ("https://grow-central.de@evil.invalid", "https://evil.invalid/path",
+                   "https://evil.invalid/?token=leak", "http://evil.invalid"):
+        monkeypatch.setenv("GC_ROOM_JOIN_ORIGIN", origin)
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(room_sharing.create_invitation(
+                "room_test", room_sharing.InviteCreate(role="grower"),
+                SimpleNamespace(), None))
+        assert exc.value.status_code == 503
+        assert not room_sharing.DATA_FILE.exists()
