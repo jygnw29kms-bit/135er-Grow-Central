@@ -189,3 +189,11 @@ Die lokale `/api/v1/rooms/climate-overview`-Quelle meldete für den bestehenden 
 **Behebung:** `cloud/portal/gc-final-cloud.js` verwendet die vorhandene erste Raumübersicht als Fallback, solange die Raum-ID nicht bereitsteht. Die Cloud fragt die Klimaübersicht alle 30 Sekunden auch ohne Raumzuordnung erneut ab und versucht die Raumliste bei fehlender Auswahl nach 45 Sekunden erneut zu laden. Portal-, iFrame- und Dashboard-JavaScript haben neue Cache-Versionen. Test `test_cloud_soil_tile_survives_initial_room_selection_race` sichert das Verhalten ab.
 
 **Verifikation:** Fünf Cloud-Paritätstests, JavaScript-Syntaxprüfung, 17/17 Cloud-Dateivergleich und HTTP 200 für Portal, Final Master, Parent-Skript und Dashboard-Skript. Eine visuelle Kontrolle in der tatsächlich angemeldeten iPhone-PWA ist separat erforderlich; HTTP 200 beweist keine gerenderte Live-Kachel. Sensorwerte werden nie aus dem Archiv als aktuell ausgegeben, und ungültige oder veraltete Messungen bleiben ausgeblendet.
+
+## Cloud-Fernkanal-Status unabhängig von BLE-Geräten (15.11.2026)
+
+Der Cloud-Final-Master zeigte auf dem iPhone `Verbindung prüfen`, obwohl die Cloud-Anmeldung und der WebSocket-Fernkanal aktiv waren. Ursache: Die Statuskachel war bisher an gleichzeitige **frische BLE-Werte von FC3000 und MZF002** gekoppelt; beide Geräte sind zurzeit absichtlich nicht angeschlossen. Auch der Cloud-Tab-Text `Fernkanal separat prüfen` war hart kodiert.
+
+**Korrektur:** `cloud/portal/gc-final-cloud.js` prüft `/api/health` über die bereits authentifizierte Cloud-Datenbrücke und zeigt dann `Cloud-Kanal verbunden` bzw. `Cloud-Kanal prüfen`. Der Cloud-Tab meldet passend `Fernkanal verbunden` bzw. `Fernkanal nicht erreichbar`. Die Mars-Hydro-Kacheln zeigen ihren eigenen Offline-/Messwertstatus; daraus wird kein Ausfall des Grow-Pi abgeleitet. Die drei ausgelieferten Cache-Versionen (Portal, iFrame, Master-JavaScript) wurden angepasst.
+
+Sechs Cloud-Paritätstests, JavaScript-Syntaxprüfung und der Byte-Abgleich aller 17 Cloud-Dateien sind bestanden. Eine erfolgreiche Gerätekanalabfrage wird bei physisch getrennter BLE-Hardware weiterhin keine frischen Mars-Messwerte erzeugen. Der authentifizierte Live-Blick auf dem iPhone ist gesondert zu bestätigen.
