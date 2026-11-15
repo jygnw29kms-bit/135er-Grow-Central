@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly Grow Central Pi and Cloud read-only audit
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+AccuracySec=1min
+Persistent=true
+Unit=grow-central-readiness-audit.service
+
+[Install]
+WantedBy=timers.target
