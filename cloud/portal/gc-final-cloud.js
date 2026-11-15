@@ -192,6 +192,34 @@ function setMetrics(fan,lamp){
  text('climateDetails',f?'DF150-M · reale BLE-Messung, '+n((fan.age_ms||0)/1000,1)+' s alt.':'Keine frischen DF150-M-Messwerte.');
  text('bleRow',f&&l?'Beide BLE live':f||l?'Ein Gerät live':'Keine aktuellen Gerätewerte');
 }
+function showBleQuality(kind,status){
+ const elm=$(kind==='lamp'?'bleLampSignal':'bleFanSignal');
+ if(!elm)return;
+ const detail=$(kind==='lamp'?'bleLampSignalDetail':'bleFanSignalDetail');
+ const connected=status?.connected===true;
+ const fresh=status?.fresh===true;
+ const age=Number(status?.age_ms);
+ const hasAge=Number.isFinite(age)&&age>=0;
+ const rssi=Number(status?.rssi_dbm);
+ const hasRssi=status?.rssi_dbm!=null&&Number.isFinite(rssi)&&rssi<=0&&rssi>=-120;
+ // When there is no measured RSSI, bars describe freshness/reliability of
+ // actual BLE notifications, NOT absolute radio signal strength.
+ const quality=!connected?'bad':!fresh?'warn':hasRssi?(rssi>=-65?'good':rssi>=-80?'warn':'bad'):(hasAge&&age>4500?'warn':'good');
+ elm.classList.remove('gc-signal-good','gc-signal-warn','gc-signal-bad','gc-signal-unknown');
+ elm.classList.add('gc-signal-'+quality);
+ const name=kind==='lamp'?'FC3000':'DF150-M';
+ const description=!connected?'Getrennt':!fresh?'Keine frischen Daten':hasRssi?rssi+' dBm':hasAge?n(age/1000,1)+' s alt':'Daten frisch';
+ if(detail)detail.textContent=description;
+ elm.setAttribute('aria-label',name+' Bluetooth: '+(quality==='good'?'Grün':quality==='warn'?'Gelb':'Rot')+' · '+description+(hasRssi?'':' · Datenqualität, RSSI nicht verfügbar'));
+ elm.title=hasRssi?'Gemessene BLE-Feldstärke '+rssi+' dBm':'BLE-Datenqualität nach Verbindung und Messwert-Aktualität; kein gemessener RSSI-Pegel';
+}
+function setNetworkIndicator(isConnected,isCloud){
+ const badge=$('systemBadge');if(!badge)return;
+ badge.dataset.transport=isCloud?'cloud':'lan';
+ badge.textContent=isConnected?(isCloud?'Cloud verbunden':'LAN verbunden'):(isCloud?'Cloud-Kanal getrennt':'LAN nicht erreichbar');
+ badge.classList.toggle('good',!!isConnected);
+ badge.classList.toggle('bad',!isConnected);
+}
 async function refreshLive(){
  if(state.refreshBusy)return;state.refreshBusy=true;
  try{
@@ -199,16 +227,16 @@ async function refreshLive(){
  const lamp=fl.status==='fulfilled'?fl.value:{connected:false,fresh:false};
  const fan=ff.status==='fulfilled'?ff.value:{connected:false,fresh:false};
  setControls('lamp',lamp);setControls('fan',fan);setMetrics(fan,lamp);
+ showBleQuality('lamp',lamp);showBleQuality('fan',fan);
  // BLE freshness is device availability, never the Cloud transport health.
  const connected=health.status==='fulfilled'&&health.value?.ok===true;
  const deviceLive=lamp.fresh&&fan.fresh;
  text('heroConnection',deviceLive?'BEIDE GERÄTE LIVE':lamp.fresh||fan.fresh?'EIN GERÄT LIVE':'MARS HYDRO OFFLINE');
- text('systemBadge',connected?'Cloud-Kanal verbunden':'Cloud-Kanal prüfen');
- $('systemBadge').classList.toggle('good',connected);$('systemBadge').classList.toggle('bad',!connected);
+ setNetworkIndicator(connected,true);
  text('coreStatus',connected?'Grow-Pi verbunden':'Grow-Pi nicht erreichbar');
  text('coreRow',connected?'Online':'Nicht erreichbar');
  text('cloudRemoteStatus',connected?'Fernkanal verbunden':'Fernkanal nicht erreichbar');
- }catch(e){text('systemBadge','Cloud-Kanal prüfen');text('cloudRemoteStatus','Fernkanal nicht erreichbar');}finally{state.refreshBusy=false;}
+ }catch(e){setNetworkIndicator(false,true);showBleQuality('lamp',null);showBleQuality('fan',null);text('cloudRemoteStatus','Fernkanal nicht erreichbar');}finally{state.refreshBusy=false;}
 }
 async function command(kind,action,value){
  if(state.busy[kind])return;
