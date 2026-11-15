@@ -63,3 +63,10 @@ def test_invite_store_never_exposes_raw_token(tmp_path, monkeypatch):
     assert token not in raw
     assert row["token_hash"] in raw
     assert (room_sharing.DATA_FILE.stat().st_mode & 0o077) == 0
+
+
+def test_invitation_qr_is_generated_locally():
+    image = room_sharing.invitation_qr_svg("http://135er-grow-central.local/join#invite=test")
+    assert "<svg" in image
+    assert "</svg>" in image
+    assert len(image) > 100
