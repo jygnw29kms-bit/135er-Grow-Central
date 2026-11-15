@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261115-climate-strict-1" in PORTAL
+    assert "/cloud-master.html?v=20261115-status-parity-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
@@ -62,7 +62,7 @@ def test_cloud_soil_tile_survives_initial_room_selection_race():
     assert "soilTileState.dashboard=soilTileReading(dashboardRoom);" in CLOUD_JS
     assert "if(!document.hidden)loadClimateOverview();" in CLOUD_JS
     assert "if(!document.hidden&&!growJournal.roomId)loadRooms();" in CLOUD_JS
-    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-status-parity-1" in CLOUD
 
 def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
     assert "api('/api/health')" in CLOUD_JS
@@ -93,8 +93,8 @@ def test_mobile_camera_stays_inside_final_master_viewport():
     for css in (local_css, cloud_css):
         for rule in required:
             assert rule in css
-    assert "/static/gc-final.css?v=20261115-camera-mobile-1" in LOCAL
-    assert "/static/gc-final.css?v=20261115-camera-mobile-1" in CLOUD
+    assert "/static/gc-final.css?v=20261115-status-parity-1" in LOCAL
+    assert "/static/gc-final.css?v=20261115-status-parity-1" in CLOUD
 
 
 def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
@@ -105,8 +105,8 @@ def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
         assert "cameraClimateMetrics.humidity=f&&Number.isFinite(f.humidity_rh)?f.humidity_rh:null;" in js
         assert "const overlay=parts.length?parts.join(' · '):'Keine aktuellen Messwerte';" in js
         assert "Keine aktuellen Klimamesswerte" not in js
-    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in CLOUD
-    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in LOCAL
+    assert "/static/gc-final.js?v=20261115-status-parity-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-status-parity-1" in LOCAL
 
 
 def _function_source(script, start, next_function):
