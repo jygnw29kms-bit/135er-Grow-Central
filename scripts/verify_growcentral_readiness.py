@@ -41,7 +41,7 @@ def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https:
         result["checks"][name] = {"ok": bool(passed), "detail": message}
 
     if check_services:
-        service_set = (*PI_SERVICES, *(CLOUD_SERVICES if mode in ("cloud", "all") else ())) if mode == "all" else PI_SERVICES if mode == "pi" else CLOUD_SERVICES
+        service_set = CLOUD_SERVICES if mode == "cloud" else PI_SERVICES  # all runs on the Pi; Cloud is checked remotely by HTTPS
         for name in service_set:
             status = subprocess.run(["systemctl", "is-active", name], capture_output=True, text=True, timeout=5)
             record(f"service:{name}", status.returncode == 0 and status.stdout.strip() == "active", status.stdout.strip())
