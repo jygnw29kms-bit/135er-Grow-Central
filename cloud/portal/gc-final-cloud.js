@@ -132,8 +132,10 @@ async function loadClimateOverview(){
   text('homePhaseClimate','');
   $('homePhaseClimate').innerHTML=climateJudgementMarkup(all);
   $('climatePhasePanel').innerHTML=climateJudgementMarkup(all);
-  const dashboardRoom=rooms.find(r=>r.room_id===growJournal.roomId);
-  const climateRoom=rooms.find(r=>r.room_id===$('climateRoomSelect')?.value)||dashboardRoom||first;
+  // The Cloud frame can receive telemetry before its room picker has finished loading.
+  // Use the actual first room as a fallback, never discard a fresh measured soil sample.
+  const dashboardRoom=rooms.find(r=>r.room_id===growJournal.roomId)||first;
+  const climateRoom=rooms.find(r=>r.room_id===$('climateRoomSelect')?.value)||dashboardRoom;
   soilTileState.dashboard=soilTileReading(dashboardRoom);
   soilTileState.climate=soilTileReading(climateRoom);
   updateSoilTiles();
