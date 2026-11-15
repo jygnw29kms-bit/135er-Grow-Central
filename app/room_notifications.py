@@ -11,6 +11,8 @@ import os
 import tempfile
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+from pydantic import model_validator
 from pathlib import Path
 from typing import Literal
 
@@ -62,6 +64,31 @@ class NotificationPolicy(BaseModel):
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
     push_enabled: bool = False  # Never set as delivered without a registered subscription.
+
+    @model_validator(mode="after")
+    def validate_quiet_hours(self):
+        for value in (self.quiet_hours_start, self.quiet_hours_end):
+            if value is not None:
+                try:
+                    parsed = datetime.strptime(value, "%H:%M")
+                except ValueError as exc:
+                    raise ValueError("Quiet hours must be HH:MM") from exc
+                if parsed.strftime("%H:%M") != value:
+                    raise ValueError("Quiet hours must be HH:MM")
+        if (self.quiet_hours_start is None) != (self.quiet_hours_end is None):
+            raise ValueError("Quiet hours must have a start and end")
+        return self
+
+
+def in_quiet_hours(policy: NotificationPolicy, *, now: datetime | None = None) -> bool:
+    if policy.quiet_hours_start is None:
+        return False
+    now = now or datetime.now(ZoneInfo("Europe/Berlin"))
+    minute = now.strftime("%H:%M")
+    start, end = policy.quiet_hours_start, policy.quiet_hours_end
+    if start == end:
+        return False
+    return start <= minute < end if start < end else minute >= start or minute < end
 
 
 def classify(rule: ThresholdRule, value: float | None, previous: str = "normal") -> str:
@@ -281,7 +308,7 @@ async def _notification_loop() -> None:
                         members = sharing_store()
                         for event in emitted:
                             policy = NotificationPolicy.model_validate(policies.get(event["room_id"], {}))
-                            if policy.push_enabled:
+                            if policy.push_enabled and not in_quiet_hours(policy):
                                 result = await asyncio.to_thread(
                                     dispatch_event, event, subscriptions, sharing=members)
                                 log.info("Room push submitted room=%s accepted=%d failed=%d status=%s",
