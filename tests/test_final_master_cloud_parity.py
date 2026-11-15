@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261115-cloud-soil-room-1" in PORTAL
+    assert "/cloud-master.html?v=20261115-channel-health-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
@@ -62,4 +62,12 @@ def test_cloud_soil_tile_survives_initial_room_selection_race():
     assert "soilTileState.dashboard=soilTileReading(dashboardRoom);" in CLOUD_JS
     assert "if(!document.hidden)loadClimateOverview();" in CLOUD_JS
     assert "if(!document.hidden&&!growJournal.roomId)loadRooms();" in CLOUD_JS
-    assert "/static/gc-final.js?v=20261115-cloud-soil-room-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-channel-health-1" in CLOUD
+
+def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
+    assert "api('/api/health')" in CLOUD_JS
+    assert "const connected=health.status==='fulfilled'&&health.value?.ok===true;" in CLOUD_JS
+    assert "text('systemBadge',connected?'Cloud-Kanal verbunden':'Cloud-Kanal prüfen');" in CLOUD_JS
+    assert "text('cloudRemoteStatus',connected?'Fernkanal verbunden':'Fernkanal nicht erreichbar');" in CLOUD_JS
+    assert "text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');" not in CLOUD_JS
+    assert "text('cloudRemoteStatus','Fernkanal separat prüfen');" not in CLOUD_JS
