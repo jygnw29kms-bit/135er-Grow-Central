@@ -88,6 +88,16 @@ function soilTileReading(room){
   return {value:'—',detail:'Kein gültiger Messwert',valid:false};
  return {value:n(value,1)+' %',detail:'Bodensensor · '+Math.floor(age/60000)+' Min. alt',valid:true};
 }
+// Camera OSD shows each available *fresh* measurement independently.
+let cameraClimateMetrics={temperature:null,humidity:null};
+function updateCameraClimateOverlay(){
+ const parts=[];
+ if(Number.isFinite(cameraClimateMetrics.temperature))parts.push('🌡 '+n(cameraClimateMetrics.temperature,1)+' °C');
+ if(Number.isFinite(cameraClimateMetrics.humidity))parts.push('◇ '+n(cameraClimateMetrics.humidity,1)+' % rF');
+ if(soilTileState.dashboard.valid)parts.push('🌱 Boden '+soilTileState.dashboard.value);
+ const overlay=parts.length?parts.join(' · '):'Keine aktuellen Messwerte';
+ document.querySelectorAll('.osdClimate').forEach(e=>e.textContent=overlay);
+}
 function updateSoilTiles(){
  const home=soilTileState.dashboard;
  const climate=soilTileState.climate;
@@ -102,6 +112,7 @@ function updateSoilTiles(){
   if(detail)detail.textContent=climate.detail;
   tile.dataset.sensorValid=String(climate.valid);
  }
+ updateCameraClimateOverlay();
 }
 function climateMetricRow(m){
  const title=chartMetricNames[m.metric]?.[0]||m.metric;
@@ -175,8 +186,9 @@ function setMetrics(fan,lamp){
  tiles.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
  $('climateTiles').replaceChildren(tiles);
  updateSoilTiles();
- const overlay=f?'🌡 '+n(f.temperature_c,1)+' °C    ◇ '+n(f.humidity_rh,1)+' % rF':'Keine aktuellen Klimamesswerte';
- document.querySelectorAll('.osdClimate').forEach(e=>e.textContent=overlay);
+ cameraClimateMetrics.temperature=f&&Number.isFinite(f.temperature_c)?f.temperature_c:null;
+ cameraClimateMetrics.humidity=f&&Number.isFinite(f.humidity_rh)?f.humidity_rh:null;
+ updateCameraClimateOverlay();
  text('climateDetails',f?'DF150-M · reale BLE-Messung, '+n((fan.age_ms||0)/1000,1)+' s alt.':'Keine frischen DF150-M-Messwerte.');
  text('bleRow',f&&l?'Beide BLE live':f||l?'Ein Gerät live':'Keine aktuellen Gerätewerte');
 }
