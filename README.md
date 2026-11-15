@@ -171,3 +171,13 @@ Mit `python3 scripts/check_mars_ble_freshness.py` lässt sich die Frische der **
 - **Keine blinde Löschung:** `static/gc-worker.js`, alte Portal-Quellen und installierte PWA-Caches erst nach Prüfung aktiver Referenzen und Migrationspfade entfernen. Lokale Daten, Kalibrierungen, Zugangskonfigurationen und alte Hardware-Images nicht mit flüchtigen UI-Artefakten verwechseln.
 - **Versionswahrheit:** `SOURCE_COMMIT` und `BUILD` am Pi zeigen weiterhin die ursprüngliche Image-Basis und dürfen nicht als Bestätigung eines vollständigen Source-Deployments umetikettiert werden.
 
+
+## Wartungsstand 15.11.2026: Cloud/Pi bereinigt
+
+Die alte alternative Cloud-Dashboard-HTML, der ungenutzte Cloud-Service-Worker und eine alte Plesk-Startseite sind nach Sicherung aus dem öffentlichen Webverzeichnis entfernt. Die Cloud-PWA nutzt ein eigenes Manifest mit `start_url: /`; die lokale Pi-PWA bleibt unter `/ui`. Dashboard-Elemente und Datenregeln sind weiterhin identisch. Der Live-Cloud-Deployment-Check vergleicht 17 Dateien, erkennt öffentliche Backupseiten und verbietet alte Parallel-PWA-Dateien.
+
+Die USB- und BLE-Provisionierung verwenden jetzt den gemeinsamen Brokerstatus-Handler. Im Pi-Code fasst die BLE-Verbindungspipeline wiederholte Fehlermeldungen zusammen; absichtlich nicht angeschlossene Mars-Hydro-Geräte sind regulär offline.
+
+**Automatisierte Prüfungen:** `scripts/verify_pi_installed_files.py --source-root <checkout> --runtime` erfasst den installierten aktiven Python-/PWA-Stand getrennt vom ursprünglichen Image-Marker. `scripts/verify_growcentral_readiness.py --mode all` prüft Pi und Cloud ohne Tokens/Steuerbefehle. Der neue `grow-central-readiness-audit.timer` startet diese Prüfung stündlich, zusätzlich zum bestehenden Web-Watchdog. 47 Funktions-/UI-Tests und 27 Provisionierungs-/Broker-Tests wurden bestanden; der neue Readiness-Check meldete 15/15 erfolgreich. Die echte authentifizierte iPhone-/Raum-/Sensor-End-to-End-Abnahme bleibt offen.
+
+**Ausführliches Wartungsprotokoll:** [Bereinigung und Verifikation vom 15.11.2026](docs/MAINTENANCE_CLEANUP_2026-11-15.md).
