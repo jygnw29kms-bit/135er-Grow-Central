@@ -57,6 +57,11 @@ def verify(source_root: Path, cloud_root: Path) -> int:
         ):
             print(f"EXPOSED_BACKUP {path.name} (move outside document root)")
             failures += 1
+    # Deprecated standalone Cloud UI and obsolete worker are archived, never served.
+    for old in ("static/gc-final.html", "static/gc-worker.js"):
+        if (cloud_root / old).exists():
+            print(f"LEGACY_PUBLIC {old} (archive outside document root)")
+            failures += 1
     print(f"RESULT: {len(SOURCE_TO_LIVE) - failures}/{len(SOURCE_TO_LIVE)} deployed files match")
     return 1 if failures else 0
 
