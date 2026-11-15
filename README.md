@@ -231,3 +231,18 @@ Ein iPhone-Screenshot von `135er-grow-central.local` zeigte sichtbare Abweichung
 **Korrekturen:** Die Cloud verwendet jetzt dieselbe Statusleiste, BLE-Datenqualitätsanzeige, mobile Menüfolge `Start · Geräte · Kamera · Räume · Cloud` sowie identische Styles und Status-Renderer. Der Cloud-Transport wird weiter über den authentifizierten Fernkanal geprüft; BLE-Offline bedeutet keinen Cloud-Ausfall. Das lokale Dashboard zeigt nach den fünf Messkacheln jetzt ebenfalls zuerst die Klimabewertung und Bodenfeuchte-Details und danach die Gerätesteuerkarten, entsprechend dem Cloud-Final-Master.
 
 **Schutz gegen Rückfälle:** In `tests/test_final_master_cloud_parity.py` prüfen nun 14 Tests auch byteidentische mobile Navigation, Status-Markup, Signal-Renderer und die Dashboard-Komponentenreihenfolge. Das Cloud-Deployment führt die Paritätstests vor dem Kopieren aus. Die aktualisierten Cloud-Dateien wurden geprüft (17/17 identisch; HTTP 200); die drei lokalen Final-Master-Dateien wurden auf dem Pi bytegenau mit Git abgeglichen. Cache-Versionen beider Zugänge sind synchron `20261115-status-parity-1`. Die tatsächliche Darstellung der aktualisierten Cloud-PWA auf dem iPhone ist noch nicht visuell abgenommen.
+
+## Beta 1.0: Raumfreigaben, Licht-/Lüftungsautomation und Benachrichtigungen (15.11.2026)
+
+**Integrierte Backend-Grundlage:**
+
+- Raumbezogene Rollen `Besitzer / Admin / Grower / Beobachter` mit expliziten Berechtigungen. Der vorhandene Pi-Besitzer kann Rollen und Einladungen verwalten, ohne die Maschinen-API-Kennung zu verwenden.
+- Einladungen mit 1-mal benutzbarem, zeitlich begrenztem Token; nur Token-Hash wird gespeichert. Lokal erzeugtes QR-SVG und Link zum Teilen über E-Mail/SMS/iOS-Teilen, **kein automatischer Versand**. Lokale Beitrittsseite `/join`, persönliches Passwort und getrennte Mitgliedssitzung. Mitglieder können nur ihre freigegebenen Raum-APIs benutzen; Besitzer-APIs bleiben gesperrt, Entzug wirkt sofort.
+- Pläne für Licht-Zeitfenster (auch über Mitternacht) und Lüfterstufen anhand Temperatur/Luftfeuchte mit Hysterese, Mindestschaltabstand und Verhalten bei ungültigen Sensorwerten. **Noch Simulation, keine selbstständige Hardwareumschaltung.**
+- Schwellenwarnungen für Temperatur, Luft- und Bodenfeuchte, dauerhafte Sensor-/Cloud-Verbindungsprobleme und optional zugewiesene Mars-Hydro-Geräte. Ereignisse werden im lokalen Postfach gespeichert, mit Entwarnungen und Entprellung. **iOS-Web-Push noch nicht zugestellt**, bis Cloud-Subscription/VAPID, Kontozuordnung und Opt-in geprüft sind.
+
+Die freigegebenen Final-Master-Oberflächen auf `.local` und `.de` wurden durch diese Backend-Erweiterung **nicht unterschiedlich umgebaut**. Der gemeinsame Rollen-/Einladungs-/Automationseditor für beide PWA-Zugänge sowie die Cloud-Kontoanbindung sind noch Pflichtaufgaben vor Freigabe an externe Testnutzer. Keine halbfertige GUI nur auf einem Zugangsweg veröffentlichen.
+
+**Tests:** 44 durchgelaufen (neue Rollen-, Einladungs-, QR-, Mitglieds-HTTP-, Automations- und Warnungsfälle plus bestehende Raum-/Auth-/FRITZ-Automationsprüfungen). Ein Starlette-/HTTPX-Testbibliotheks-Hinweis ist nicht blockierend.
+
+**Technisches Design und noch offene Abnahmeschritte:** [Beta 1.0 – Räume, Rechte, Einladungen, Automationen und Push](docs/BETA1_ROOM_SHARING_AUTOMATIONS_NOTIFICATIONS.md).
