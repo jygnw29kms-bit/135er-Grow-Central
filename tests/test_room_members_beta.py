@@ -90,3 +90,41 @@ def test_revocation_invalidates_sessions(monkeypatch, tmp_path):
     updated = room_sharing._load()
     assert updated["members"][0]["status"] == "revoked"
     assert updated["sessions"] == {}
+
+
+def test_owner_can_change_member_role_but_not_create_another_owner(tmp_path, monkeypatch):
+    import asyncio
+    monkeypatch.setattr(room_sharing, "DATA_FILE", tmp_path / "sharing.json")
+    data = _store()
+    data["members"] = [{"id": "member_one", "username": "friend",
+                        "room_id": "room_one", "role": "observer", "status": "active"}]
+    room_sharing._save(data)
+    result = asyncio.run(room_members.owner_change_role(
+        "room_one", "member_one", room_members.MemberRoleChange(role="grower"),
+        SimpleNamespace(), None))
+    assert result["role"] == "grower"
+    assert room_sharing._load()["members"][0]["role"] == "grower"
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        room_members.MemberRoleChange(role="owner")
+
+
+def test_guest_alerts_respect_room_authorization(monkeypatch):
+    import asyncio
+    data = _store()
+    data["members"] = [{"id": "member_one", "room_id": "room_one",
+                        "role": "observer", "status": "active"}]
+    token = "member-session-token" * 3
+    data["sessions"][hashlib.sha256(token.encode()).hexdigest()] = {
+        "member_id": "member_one", "expires_at": 9999999999}
+    monkeypatch.setattr(room_members, "_load", lambda: data)
+    monkeypatch.setattr(room_members, "authenticated", lambda request: False)
+    from app import room_notifications
+    monkeypatch.setattr(room_notifications, "_load", lambda: {
+        "events": [{"room_id": "room_one", "kind": "threshold_low"},
+                   {"room_id": "room_other", "kind": "sensor_offline"}]})
+    request = SimpleNamespace(cookies={room_members.MEMBER_COOKIE: token})
+    result = asyncio.run(room_members.member_alerts("room_one", request))
+    assert len(result["events"]) == 1
+    with pytest.raises(HTTPException):
+        asyncio.run(room_members.member_alerts("room_other", request))
