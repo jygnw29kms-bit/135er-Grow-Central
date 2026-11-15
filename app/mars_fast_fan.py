@@ -4,12 +4,13 @@ from datetime import datetime,timezone
 from bleak import BleakClient
 from app.mars_hydro_ble import MZF002_NOTIFY,MZF002_WRITE
 from app.mars_legacy_telemetry import mzf002_telemetry
-from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay
+from app.mars_ble_connect_gate import CONNECT_GATE, reconnect_delay, ReconnectLogLimiter
 log=logging.getLogger(__name__)
 class FastFan:
  def __init__(self):
   self.client=None;self.last=None;self.at=0;self.seq=0
   self.event=asyncio.Event();self.lock=asyncio.Lock();self.task=None;self.saved_at=0
+  self.reconnect_log=ReconnectLogLimiter()
  def notify(self,_,raw):
   try:
    f=bytes(raw).decode('ascii').strip().split('|');v=mzf002_telemetry(bytes(raw))
@@ -45,6 +46,7 @@ class FastFan:
       raise
     self.client=client
     failures=0
+    self.reconnect_log.recovered(log, 'MZF002')
     log.info('MZF002 BLE ready')
     while client.is_connected:
      await asyncio.sleep(.5)
@@ -52,7 +54,7 @@ class FastFan:
     raise
    except Exception as exc:
     failures+=1
-    log.warning('MZF002 reconnect %s (attempt %d)',type(exc).__name__,failures)
+    self.reconnect_log.failure(log, 'MZF002', exc)
    finally:
     self.client=None;self.last=None;self.at=0
     if client is not None and client.is_connected:
