@@ -171,3 +171,16 @@ def test_dashboard_panel_order_is_identical():
                    'id="homeSoilPanel"', 'id="controlMount"')
         positions = [html.index(m) for m in markers]
         assert positions == sorted(positions), markers
+
+
+def test_cloud_and_local_push_worker_display_identical_alerts():
+    local = (ROOT / "web/gc-worker.js").read_text(encoding="utf-8")
+    cloud = (ROOT / "cloud/portal/gc-push-worker.js").read_text(encoding="utf-8")
+    marker = "/* Real Web Push:"
+    assert marker in local and marker in cloud
+    assert local[local.index(marker):] == cloud[cloud.index(marker):]
+    assert "self.registration.showNotification(" in local
+    # Do not accidentally reinstall the old Cloud offline-cache worker.
+    assert "caches.open(" not in cloud
+    deploy = (ROOT / "cloud/portal/deploy_cloud_portal.sh").read_text(encoding="utf-8")
+    assert 'cp "$repo/cloud/portal/gc-push-worker.js" "$stage/gc-push-worker.js"' in deploy
