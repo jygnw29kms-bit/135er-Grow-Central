@@ -49,6 +49,14 @@ def verify(source_root: Path, cloud_root: Path) -> int:
             failures += 1
         else:
             print(f"MATCH   {live_name}")
+    # A publicly served backup may expose outdated forms and server metadata.
+    # Never delete it automatically: archive outside the document root first.
+    for path in sorted(cloud_root.iterdir()):
+        if path.is_file() and (
+            path.name.endswith((".backup.html", ".bak.html", ".old.html", ".orig.html"))
+        ):
+            print(f"EXPOSED_BACKUP {path.name} (move outside document root)")
+            failures += 1
     print(f"RESULT: {len(SOURCE_TO_LIVE) - failures}/{len(SOURCE_TO_LIVE)} deployed files match")
     return 1 if failures else 0
 
