@@ -19,6 +19,7 @@ SOURCE_TO_LIVE = {
     "cloud/portal/gc-final-cloud.js": "static/gc-final.js",
     "cloud/portal/gc-final-cloud.css": "static/gc-final.css",
     "cloud/portal/cloud-master-bridge.js": "static/cloud-master-bridge.js",
+    "cloud/portal/gc-push-worker.js": "gc-push-worker.js",
     "cloud/portal/growbook-plants-wiki.js": "static/growbook-plants-wiki.js",
     "cloud/portal/growbook-plants-wiki.css": "static/growbook-plants-wiki.css",
     "cloud/portal/climate-stage.js": "static/climate-stage.js",
