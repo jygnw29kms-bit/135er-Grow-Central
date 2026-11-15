@@ -181,6 +181,26 @@ async def member_add_journal(room_id: str, body: dict, request: Request):
     return await add_room_journal(room_id, validated)
 
 
+
+@router.get("/room/{room_id}/alerts")
+async def member_alerts(room_id: str, request: Request):
+    _require_room_access(request, room_id, "alerts.view")
+    from app.room_notifications import _load as load_alerts
+    data = load_alerts()
+    return {"room_id": room_id, "events": [
+        e for e in data["events"] if e.get("room_id") == room_id
+    ][-100:]}
+
+
+@router.get("/room/{room_id}/automation")
+async def member_automation(room_id: str, request: Request):
+    _require_room_access(request, room_id, "automation.view")
+    from app.room_control_plans import _load as load_plans, RoomControlPlan
+    return {"room_id": room_id,
+            "plan": load_plans().get(room_id, RoomControlPlan().model_dump()),
+            "execution": "simulation_only_not_armed"}
+
+
 @router.get("/room/{room_id}/role")
 async def member_role(room_id: str, request: Request):
     account = _require_room_access(request, room_id, "room.view")
@@ -261,3 +281,23 @@ $('loginForm').onsubmit=async e=>{e.preventDefault();try{await call('login',{use
 $('logout').onclick=async()=>{try{await call('logout',{});location.reload()}catch(err){failed(err)}};
 refresh().catch(failed);
 </script></body></html>""")
+
+
+class MemberRoleChange(BaseModel):
+    role: str = Field(pattern=r"^(admin|grower|observer)$")
+
+
+@router.patch("/owner/{room_id}/members/{member_id}")
+async def owner_change_role(room_id: str, member_id: str, body: MemberRoleChange,
+                            request: Request, _=Depends(_require_owner)):
+    data = _load()
+    member = next((m for m in data["members"]
+                   if m["room_id"] == room_id and m["id"] == member_id
+                   and m.get("status") == "active"), None)
+    if member is None:
+        raise HTTPException(404, "Member not found")
+    if body.role not in ASSIGNABLE:
+        raise HTTPException(422, "Cannot assign this role")
+    member["role"] = body.role
+    _save(data)
+    return {"ok": True, "member_id": member_id, "role": body.role}
