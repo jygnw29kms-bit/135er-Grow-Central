@@ -60,7 +60,7 @@ class AcceptBody(BaseModel):
 
 
 class MemberLogin(BaseModel):
-    username: str
+    username: str = Field(min_length=3, max_length=64)
     password: SecretStr
 
 
@@ -207,9 +207,3 @@ async def owner_revoke_member(room_id: str, member_id: str, request: Request, _=
                         if val.get("member_id") != member_id}
     _save(data)
     return {"ok": True}
-
-
-@router.get("/../join", include_in_schema=False)
-async def unused_join():
-    # Explicit /join is registered separately by install_join().
-    raise HTTPException(404)
