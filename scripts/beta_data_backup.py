@@ -15,7 +15,6 @@ import io
 import json
 import os
 import sqlite3
-import stat
 import tempfile
 import zipfile
 from pathlib import Path
@@ -31,6 +30,7 @@ FILES = frozenset({
     "ui-layout.json", "room-sharing.json", "room-notifications.json",
     "room-control-plans.json", "room-push.json", "local-api-token",
     "hardware-model", "hardware-profile", "hardware-wlan-interface",
+    "credentials.json", "credentials.key", "config/app.env",
 })
 DIRS = frozenset({"grow-photos", "homekit", "cloud-identity"})
 SQLITE = frozenset({"history.sqlite3", "mars-history.sqlite3",
@@ -99,8 +99,12 @@ def collect(root: Path) -> dict[str, bytes]:
     return selected
 
 
-def create_bundle(root: Path, passphrase: str) -> bytes:
+def create_bundle(root: Path, passphrase: str, *, config_file: Path | None = None) -> bytes:
     selected = collect(root)
+    if config_file is not None:
+        if not config_file.is_file() or config_file.is_symlink():
+            raise ValueError('Configured app environment file not readable or is a symlink')
+        selected['config/app.env'] = _read_file(config_file, 'config/app.env')
     index = {"schema": 1, "files": [
         {"path": name, "sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
         for name, data in sorted(selected.items())
@@ -182,13 +186,14 @@ def main() -> int:
     task.add_argument("--stage-restore", type=Path, help="existing archive path")
     parser.add_argument("--data-root", type=Path, default=Path("/var/lib/135er-grow-central"))
     parser.add_argument("--staging-dir", type=Path, help="new, nonexisting destination for --stage-restore")
+    parser.add_argument("--config-file", type=Path, help="encrypted export of the appliance app .env for full restore")
     args = parser.parse_args()
     password = getpass.getpass("Backup passphrase: ")
     if args.create:
         confirmation = getpass.getpass("Repeat backup passphrase: ")
         if password != confirmation:
             parser.error("Passphrases differ")
-        output = create_bundle(args.data_root, password)
+        output = create_bundle(args.data_root, password, config_file=args.config_file)
         fd = os.open(args.create, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(output)
