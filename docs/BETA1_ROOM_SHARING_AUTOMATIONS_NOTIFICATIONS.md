@@ -81,7 +81,7 @@ Implementiert: `app/room_notifications.py` und lokale Besitzer-API `/api/v1/room
 - Unterschreitungen, Überschreitungen und Entwarnung als separate Ereignisse.
 - Mindestdauer vor Auslösung, Hysterese und persistente Zustände verhindern Alarmflattern.
 - Eigenständige Sensor-Offline-Warnung, wahlweise aktiv.
-- Cloud-Verbindungsstörungen erst nach definierter Ausfalldauer und nur bei ausdrücklichem Opt-in.
+- Cloud-Verbindungsstörungen erst nach definierter Ausfalldauer und nur bei ausdrücklichem Opt-in. Mars-Hydro-Lampe und -Lüfter werden bei Opt-in einzeln nur dann geprüft, wenn das jeweilige Gerät dem Raum zugewiesen ist.
 - Absichtlich getrennte Mars-Hydro-Geräte lösen standardmäßig **keinen** Störungsalarm aus.
 - Ereignisse in einem lokalen, raumgebundenen Postfach; eine Minute Prüfintervall; Warnungsstatus nur für berechtigte Benutzer sichtbar.
 
@@ -102,7 +102,7 @@ Push muss den Zustand `ausgelöst / zugestellt / fehlgeschlagen / bestätigt / e
 
 ## Bisherige technische Nachweise
 
-- 43 Tests bestanden: Rollen, QR-Erzeugung, Einladungseinlösung, abgelaufene und widerrufene Links, Gast-API-Isolation, tatsächlicher HTTP-Ablauf bis zum Entzug, Lichtzeitpläne, Lüfterhysterese, Sensorwarnungen, Cloud-Offline-/Entwarnungslogik sowie bestehende Raum- und Automationsfälle.
+- 44 Tests bestanden: Rollen, QR-Erzeugung, Einladungseinlösung, abgelaufene und widerrufene Links, Gast-API-Isolation, tatsächlicher HTTP-Ablauf bis zum Entzug, Lichtzeitpläne, Lüfterhysterese, Sensorwarnungen, Cloud-Offline-/Entwarnungslogik sowie bestehende Raum- und Automationsfälle.
 - Neue Backend-Module auf dem Grow-Pi installiert. Lokaler Gesundheitsendpunkt HTTP 200, HomeKit/Provisionierung/Remote-Kanal weiter aktiv.
 - Kein vorhandenes Sensor-, Pflanzen-, Kamera-, Foto- oder Growbuchdatum wurde überschrieben.
 - **Kein Beta-Freigabevermerk für die Gesamtfunktion.** Cloud-Mitgliederfreigabe, Pushzustellung und Hardwareautomatik bleiben ausdrücklich unvollständig.
