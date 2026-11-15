@@ -34,9 +34,11 @@ cp "$repo/cloud/portal/tent-growing-wiki.js" "$stage/static/tent-growing-wiki.js
 cp "$repo/cloud/portal/tent-growing-wiki.css" "$stage/static/tent-growing-wiki.css"
 cp "$repo/cloud/portal/room-setup.js" "$stage/static/room-setup.js"
 cp "$repo/cloud/portal/room-setup.css" "$stage/static/room-setup.css"
-for f in brand-logo.png brand-mark.png gc-icon-192.png gc-icon-512.png gc-manifest.webmanifest soil-sensor-reference.jpg; do
+for f in brand-logo.png brand-mark.png gc-icon-192.png gc-icon-512.png soil-sensor-reference.jpg; do
  cp "$repo/web/$f" "$stage/static/$f"
 done
+# The Cloud PWA opens the Cloud login at /; /ui is exclusively a local Pi route.
+cp "$repo/cloud/portal/gc-manifest-cloud.webmanifest" "$stage/static/gc-manifest.webmanifest"
 cp "$repo/web/brand-logo.png" "$stage/brand-logo.png"
 cp "$repo/web/brand-mark.png" "$stage/brand-mark.png"
 cp "$repo/web/master-grow-hero.jpg" "$stage/master-grow-hero.jpg"
