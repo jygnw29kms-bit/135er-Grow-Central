@@ -211,3 +211,15 @@ Die angemeldete iPhone-PWA zeigte einen aktuellen Cloud-Kanal und ein tatsächli
 **Korrektur:** Beide freigegebenen Master-Stylesheets begrenzen `#largeCam` auf die verfügbare Containerbreite, setzen `min-width:0`, sichern ein 16:9-Verhältnis ohne starre Mindesthöhe, beschränken Bild und OSD auf die Rahmenbreite und erlauben mobilen Kamerabedienelementen einen responsiven Umbruch. Die lokale und die Cloud-PWA verwenden dieselbe Regel. Beide HTML-Einstiegsseiten haben aktualisierte CSS-Cacheversionen. Die Änderung wirkt nur auf die Darstellung, nicht auf Kamerasteuerung, Auflösung oder Aufnahmefunktionen.
 
 **Verifiziert:** acht Cloud-GUI-Vertragstests bestanden; die Cloud-Produktionsdateien stimmen 17/17 mit Git überein; Pi-Backend und HomeKit weiterhin aktiv. Ein erneuter echter iPhone-Screenshot zur visuellen Abnahme steht noch aus.
+
+## Verbindliche Regel: Final-Master-PWA auf `.local` und `.de` synchron halten
+
+**Ein sichtbarer Funktionsstand, zwei Zugriffswege.** Die lokale Pi-Oberfläche (`growcentral.local`/`/ui`) und der authentifizierte Cloud-Final-Master (`135ercloud.grow-central.de`) müssen in ihrer Darstellung, Navigation, den vorhandenen Messwerten, Kamerabildeinblendungen, Sensor-Gültigkeitsregeln und Bedienungsabläufen denselben bestätigten Stand haben. Transport, Anmeldesitzung und Cloud-Gerätekanal sind absichtlich unterschiedlich; deshalb sind die vollständigen JS-Dateien technisch nicht bytegleich.
+
+**Vor jedem Release verpflichtend:**
+1. Jede sichtbare Änderung in `web/gc-final.html`, `web/gc-final.js`, `web/gc-final.css` gleichzeitig für `cloud/portal/cloud-master.html`, `cloud/portal/gc-final-cloud.js`, `cloud/portal/gc-final-cloud.css` umsetzen; keine eigenständige Cloud-GUI.
+2. `tests/test_final_master_cloud_parity.py` ausführen. Der Cloud-Deploy-Workflow `cloud/portal/deploy_cloud_portal.sh` stoppt jetzt **vor dem Kopieren**, wenn ein UI-Paritätstest fehlschlägt. Der Test schützt unter anderem die fünf Dashboard-Kacheln, Sensorvalidierung, Kamera-OSD-Logik und die mobilen Kamera-Stile.
+3. Auf Pi und Cloud mit aktualisierten PWA-Cacheversionen ausrollen. Bei Fehlern die jeweilige gesicherte Version wiederherstellen, keinen nur einseitig freigegebenen Stand als fertig ausweisen.
+4. `scripts/verify_cloud_final_master_deployment.py` und `scripts/verify_pi_installed_files.py --runtime` gegen die Installationen ausführen; API und echte iPhone-Ansicht separat abnehmen.
+
+**Kamera-OSD (15.11.2026):** Die Einblendung zeigt jeden **frischen** Messwert unabhängig: Temperatur und Luftfeuchte aus dem jeweils vorhandenen Sensorsignal, Bodenfeuchte aus dem gültigen, raumgebundenen Sensor-Snapshot. Sind Mars-Hydro-Geräte absichtlich offline, darf die verfügbare Bodenfeuchte nicht verschwinden. Alte/ungültige Messungen werden nicht als live ausgegeben. Der gleiche OSD-Renderer und die gleiche mobile Kamera-CSS sind in den Paritätstests in beiden Varianten wortgleich geprüft; beide JS-/HTML-Kombinationen wurden auf Pi und Cloud ausgerollt.
