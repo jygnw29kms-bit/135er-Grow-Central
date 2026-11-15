@@ -198,3 +198,44 @@ async def save_policy(room_id: str, policy: NotificationPolicy, request: Request
     data["policies"][room_id] = policy.model_dump()
     _save(data)
     return {"room_id": room_id, "policy": policy.model_dump(), "delivery": "in_app_only_until_webpush_subscribed"}
+
+
+# Evaluate configured alert rules locally, independently of optional cloud access.
+# No push send is attempted without a specific device subscription and consent.
+_notification_task = None
+
+
+async def _notification_loop() -> None:
+    import asyncio
+    import logging
+    log = logging.getLogger(__name__)
+    while True:
+        try:
+            # Avoid creating empty database files for installations with no policy.
+            if DATA_FILE.exists():
+                poll_once()
+        except Exception:
+            log.exception("room notification evaluation failed")
+        await asyncio.sleep(60)
+
+
+def install(app) -> None:
+    import asyncio
+
+    async def start():
+        global _notification_task
+        if _notification_task is None or _notification_task.done():
+            _notification_task = asyncio.create_task(_notification_loop(), name="room-notification-evaluator")
+
+    async def stop():
+        global _notification_task
+        task, _notification_task = _notification_task, None
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    app.router.add_event_handler("startup", start)
+    app.router.add_event_handler("shutdown", stop)
