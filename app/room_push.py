@@ -161,7 +161,9 @@ async def push_status(room_id: str, request: Request):
     return {
         "room_id": room_id, "registered_devices": len(subs),
         "available": bool(os.getenv("GC_WEBPUSH_VAPID_PUBLIC_KEY")
-                          and os.getenv("GC_WEBPUSH_VAPID_PRIVATE_KEY")),
+                          and os.getenv("GC_WEBPUSH_VAPID_PRIVATE_KEY")
+                          and os.getenv("GC_WEBPUSH_SUBJECT", "").startswith(("mailto:", "https:"))
+                          and __import__("importlib.util", fromlist=["find_spec"]).find_spec("pywebpush")),
         "vapid_public_key": os.getenv("GC_WEBPUSH_VAPID_PUBLIC_KEY", ""),
         "delivery": "requires_https_installed_pwa_and_permission",
     }
