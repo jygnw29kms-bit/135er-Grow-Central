@@ -1,0 +1,16 @@
+[Unit]
+Description=Grow Central read-only Pi and Cloud readiness audit
+After=network-online.target 135er-grow-central.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=growcentral
+Group=growcentral
+WorkingDirectory=/opt/135er-grow-central
+ExecStart=/usr/bin/python3 /opt/135er-grow-central/scripts/verify_growcentral_readiness.py --mode all
+SuccessExitStatus=1
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
