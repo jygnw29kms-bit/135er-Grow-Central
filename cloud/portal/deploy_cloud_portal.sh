@@ -8,6 +8,15 @@ work=$(mktemp -d /tmp/gc-cloud-deploy.XXXXXXXX)
 trap 'rm -rf "$work"' EXIT
 git clone -q --depth 1 --branch master https://github.com/jygnw29kms-bit/135er-Grow-Central.git "$work/repo"
 repo="$work/repo"
+# Do not deploy a divergent Cloud GUI. Keep .local and .de Final Master in lockstep.
+python3 - "$repo/tests/test_final_master_cloud_parity.py" <<'PYTEST'
+import runpy, sys
+tests = runpy.run_path(sys.argv[1])
+for name, check in sorted(tests.items()):
+    if name.startswith("test_") and callable(check):
+        check()
+        print("GUI parity OK:", name)
+PYTEST
 stage="$work/web"
 mkdir -p "$stage/static"
 test -s "$repo/cloud/portal/index.html"
