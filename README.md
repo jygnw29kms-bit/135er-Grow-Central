@@ -258,3 +258,9 @@ Warnungen werden nach konfigurierten Temperatur-, Luftfeuchte- oder Bodenfeuchte
 **Wichtige Restarbeit:** Die iPhone-PWA unter `https://135ercloud.grow-central.de` benötigt einen eigenen, authentifizierten Cloud-Web-Push-Registrierungs- und Zustellweg mit Benutzeraktion, dauerhaft sicheren VAPID-Schlüsseln und echtem End-to-End-Test. Der lokale HTTP-`.local`-Zugang kann iOS-Home-Screen-Web-Push nicht ersetzen. Ein Ereignis im Posteingang oder ein angenommener Web-Push-Request darf nicht als erfolgreich auf dem iPhone zugestellt ausgewiesen werden.
 
 Details, Rollenmatrix und Release-Gates: [Beta 1.0 – Räume, Automationen und Push](docs/BETA_1_0_ROOMS_AUTOMATION_PUSH.md).
+
+### Push-Zwischenstand der Testinstallation
+
+Nach der Implementierung ist die neue raumgebundene Push-API auf dem Grow-Pi installiert. Backend, HomeKit und Fernkanal blieben aktiv; unauthentifizierter Zugriff auf die API bleibt HTTP 401. Der Cloud-Push-only-Worker wurde als **noch nicht registrierte** Datei unter `/gc-push-worker.js` ausgeliefert; die Cloud-Deploymentprüfung umfasst jetzt **18/18** Dateien, die GUI-/Worker-Parität 15 erfolgreiche Tests. Acht Push-/Alarm-Sicherheits- und Regeltests bestanden.
+
+**Kein iPhone-Push-Zustellnachweis:** Es fehlt weiterhin der Cloud-Account-gebundene Registrierungs- und Eventtransport, der VAPID-Produktionsschlüssel sowie die Aktivierung nach einer expliziten Benutzeraktion in der installierten HTTPS-PWA. Die lokale API und der Web-Push-Worker allein machen die Funktion nicht fertig. Bis dahin nur Ereignisposteingang und validierte Regeln als funktional kennzeichnen.
