@@ -67,7 +67,7 @@ def test_cloud_soil_tile_survives_initial_room_selection_race():
 def test_cloud_link_status_does_not_depend_on_disconnected_mars_hydro_devices():
     assert "api('/api/health')" in CLOUD_JS
     assert "const connected=health.status==='fulfilled'&&health.value?.ok===true;" in CLOUD_JS
-    assert "text('systemBadge',connected?'Cloud-Kanal verbunden':'Cloud-Kanal prüfen');" in CLOUD_JS
+    assert "setNetworkIndicator(connected,true);" in CLOUD_JS
     assert "text('cloudRemoteStatus',connected?'Fernkanal verbunden':'Fernkanal nicht erreichbar');" in CLOUD_JS
     assert "text('systemBadge',ok?'Live verbunden':'Verbindung prüfen');" not in CLOUD_JS
     assert "text('cloudRemoteStatus','Fernkanal separat prüfen');" not in CLOUD_JS
@@ -132,3 +132,34 @@ def test_local_and_cloud_mobile_camera_styles_are_identical():
     cloud_css = (ROOT / "cloud/portal/gc-final-cloud.css").read_text(encoding="utf-8")
     assert marker in local_css and marker in cloud_css
     assert local_css[local_css.index(marker):].strip() == cloud_css[cloud_css.index(marker):].strip()
+
+
+def test_cloud_and_local_mobile_navigation_match_exactly():
+    pattern = r'<nav class="mobilebar"[^>]*>.*?</nav>'
+    local_nav = re.search(pattern, LOCAL, re.S)
+    cloud_nav = re.search(pattern, CLOUD, re.S)
+    assert local_nav and cloud_nav
+    assert local_nav.group(0) == cloud_nav.group(0)
+    assert 'data-page="rooms"' in cloud_nav.group(0)
+    assert 'data-page="growbook"' not in cloud_nav.group(0)
+
+
+def test_cloud_and_local_status_badges_have_same_structure_and_logic():
+    pattern = r'<div class="gc-transport-status"[^>]*>.*?</div>'
+    local_status = re.search(pattern, LOCAL, re.S)
+    cloud_status = re.search(pattern, CLOUD, re.S)
+    assert local_status and cloud_status
+    assert local_status.group(0) == cloud_status.group(0)
+    for identifier in ('bleLampSignal','bleFanSignal','systemBadge'):
+        assert 'id="'+identifier+'"' in cloud_status.group(0)
+    for name in ("showBleQuality","setNetworkIndicator"):
+        marker = "function "+name+"("
+        # Transport selection is allowed to differ, presentation must not.
+        start_a = LOCAL_JS.index(marker)
+        start_b = CLOUD_JS.index(marker)
+        stop_a = LOCAL_JS.index("\n}",start_a)+2
+        stop_b = CLOUD_JS.index("\n}",start_b)+2
+        assert LOCAL_JS[start_a:stop_a] == CLOUD_JS[start_b:stop_b]
+    for js in (LOCAL_JS,CLOUD_JS):
+        assert "showBleQuality('lamp',lamp);" in js
+        assert "showBleQuality('fan',fan);" in js
