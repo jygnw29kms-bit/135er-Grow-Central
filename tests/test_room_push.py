@@ -39,3 +39,14 @@ def test_no_configured_sender_is_not_fake_delivery(monkeypatch):
     result = dispatch_event({"room_id": "room_a", "kind": "warning"}, [], sharing={"members": []})
     assert result["status"] == "not_configured"
     assert result["accepted"] == 0
+
+
+def test_stored_malicious_endpoint_is_not_sent_even_if_file_was_modified():
+    event = {"room_id": "room_a", "kind": "sensor_offline"}
+    rows = [{"room_id": "room_a", "actor": "owner",
+             "endpoint": "https://127.0.0.1/admin", "keys": {}}]
+    submitted = []
+    result = dispatch_event(event, rows, sharing={"members": []},
+                            send=lambda row, data: submitted.append(row))
+    assert result["accepted"] == 0
+    assert submitted == []
