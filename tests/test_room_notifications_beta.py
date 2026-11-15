@@ -67,3 +67,33 @@ def test_mars_disconnect_is_not_alarm_by_default():
     assert NotificationPolicy().notify_mars_offline is False
     assert NotificationPolicy().notify_cloud_channel_offline is False
     assert NotificationPolicy().push_enabled is False
+
+
+def test_cloud_disconnect_requires_sustained_outage_and_reports_recovery():
+    from app.room_notifications import connection_transition
+    state = {}
+    state, event = connection_transition("cloud", False, state, now=1000, minimum_down_seconds=300)
+    assert event is None
+    state, event = connection_transition("cloud", False, state, now=1299, minimum_down_seconds=300)
+    assert event is None
+    state, event = connection_transition("cloud", False, state, now=1300, minimum_down_seconds=300)
+    assert event == "connection_offline"
+    state, event = connection_transition("cloud", False, state, now=2000, minimum_down_seconds=300)
+    assert event is None
+    state, event = connection_transition("cloud", True, state, now=2001, minimum_down_seconds=300)
+    assert event == "connection_recovered"
+    state, event = connection_transition("cloud", None, state, now=2002, minimum_down_seconds=300)
+    assert event is None
+
+
+def test_cloud_offline_alarm_requires_room_policy_opt_in():
+    from app.room_notifications import poll_once
+    store = {"policies": {"room_test": NotificationPolicy(
+        notify_cloud_channel_offline=True, connection_min_down_seconds=60
+    ).model_dump()}, "states": {}, "events": []}
+    rooms = {"rooms": [{"id": "room_test"}], "sensor_history": []}
+    assert poll_once(now=1000, store=store, room_state=rooms, connections={"cloud": False}) == []
+    events = poll_once(now=1060, store=store, room_state=rooms, connections={"cloud": False})
+    assert len(events) == 1
+    assert events[0]["kind"] == "connection_offline"
+    assert events[0]["source"] == "cloud"
