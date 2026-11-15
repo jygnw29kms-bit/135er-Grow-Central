@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Literal
 
@@ -95,6 +96,48 @@ def fan_desired(plan: FanPlan, *, temperature: float | None, humidity: float | N
             "reason": "threshold_boost" if boost else "base"}
 
 
+def preview_from_sample(
+    plan: RoomControlPlan,
+    sample: dict,
+    *,
+    now: datetime | None = None,
+    max_sensor_age_seconds: float = 120,
+) -> dict:
+    """Simulate a plan with *fresh* room telemetry. Never issue a device command."""
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        raise ValueError("now must include timezone")
+    sample_time = None
+    try:
+        sample_time = datetime.fromisoformat(str(sample.get("timestamp", "")).replace("Z", "+00:00"))
+        if sample_time.tzinfo is None:
+            sample_time = None
+    except ValueError:
+        pass
+    age = (now - sample_time).total_seconds() if sample_time else None
+    fresh = age is not None and 0 <= age <= max_sensor_age_seconds
+
+    def sensor(name: str) -> float | None:
+        value = sample.get(name) if fresh else None
+        if type(value) not in (int, float):
+            return None
+        import math
+        return float(value) if math.isfinite(value) else None
+
+    minute = now.astimezone(ZoneInfo("Europe/Berlin")).strftime("%H:%M")
+    return {
+        "light": light_desired(plan.light, minute=minute),
+        "fan": fan_desired(plan.fan, temperature=sensor("temperature_c"),
+                           humidity=sensor("humidity_percent"), was_boosted=False),
+        "sensor_fresh": bool(fresh),
+        "sensor_age_seconds": round(age, 1) if fresh else None,
+        "sample_timestamp": sample.get("timestamp") if fresh else None,
+        "control_enabled_in_config": plan.enabled,
+        "execution": "simulation_only_no_device_command",
+        "notice": "Hysteresis preview assumes fan was not previously boosted; live actuation disabled",
+    }
+
+
 def _load() -> dict:
     try:
         value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -144,7 +187,6 @@ async def preview_plan(room_id: str, request: Request, _=Depends(_require_owner)
     if not _room_exists(room_id):
         raise HTTPException(404, "Room not found")
     plan = RoomControlPlan.model_validate(_load().get(room_id, {}))
-    now = datetime.now().strftime("%H:%M")
-    return {"room_id": room_id, "light": light_desired(plan.light, minute=now),
-            "fan": fan_desired(plan.fan, temperature=None, humidity=None, was_boosted=False),
-            "execution": "simulation_only_no_device_command"}
+    from app.rooms import load_state, _latest_sensor_snapshot
+    sample = _latest_sensor_snapshot(load_state(), room_id)
+    return {"room_id": room_id, **preview_from_sample(plan, sample)}
