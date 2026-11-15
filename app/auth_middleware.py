@@ -53,7 +53,7 @@ class GuiAuthMiddleware(BaseHTTPMiddleware):
 
         # Separate scoped cookie: allow guests only through explicit member
         # endpoints, whose handlers enforce the requested room+capability.
-        if path.startswith("/api/v1/room-members/"):
+        if path.startswith(("/api/v1/room-members/", "/api/v1/room-push/")):
             from app.room_members import member_authenticated
             if member_authenticated(request):
                 return await call_next(request)
