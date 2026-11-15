@@ -181,3 +181,11 @@ Die USB- und BLE-Provisionierung verwenden jetzt den gemeinsamen Brokerstatus-Ha
 **Automatisierte Prüfungen:** `scripts/verify_pi_installed_files.py --source-root <checkout> --runtime` erfasst den installierten aktiven Python-/PWA-Stand getrennt vom ursprünglichen Image-Marker. `scripts/verify_growcentral_readiness.py --mode all` prüft Pi und Cloud ohne Tokens/Steuerbefehle. Der neue `grow-central-readiness-audit.timer` startet diese Prüfung stündlich, zusätzlich zum bestehenden Web-Watchdog. 47 Funktions-/UI-Tests und 27 Provisionierungs-/Broker-Tests wurden bestanden; der neue Readiness-Check meldete 15/15 erfolgreich. Die echte authentifizierte iPhone-/Raum-/Sensor-End-to-End-Abnahme bleibt offen.
 
 **Ausführliches Wartungsprotokoll:** [Bereinigung und Verifikation vom 15.11.2026](docs/MAINTENANCE_CLEANUP_2026-11-15.md).
+
+## Cloudlink: Bodenfeuchte bei lokal vorhandenem Sensor (15.11.2026)
+
+Die lokale `/api/v1/rooms/climate-overview`-Quelle meldete für den bestehenden Grow-Raum eine frische kalibrierte Bodenfeuchtemessung (bei der Diagnose 88,834 %); der authentifizierte Cloud-Remote-Agent fragte dieselbe Klimaübersicht erfolgreich ab (HTTP 200). Im Cloud-Final-Master wurde der Dashboard-Raum zuvor ausschließlich über `growJournal.roomId` gefunden. Bei einer noch nicht initialisierten Raum-ID konnte dadurch trotz vorhandener Daten eine leere Kachel erscheinen.
+
+**Behebung:** `cloud/portal/gc-final-cloud.js` verwendet die vorhandene erste Raumübersicht als Fallback, solange die Raum-ID nicht bereitsteht. Die Cloud fragt die Klimaübersicht alle 30 Sekunden auch ohne Raumzuordnung erneut ab und versucht die Raumliste bei fehlender Auswahl nach 45 Sekunden erneut zu laden. Portal-, iFrame- und Dashboard-JavaScript haben neue Cache-Versionen. Test `test_cloud_soil_tile_survives_initial_room_selection_race` sichert das Verhalten ab.
+
+**Verifikation:** Fünf Cloud-Paritätstests, JavaScript-Syntaxprüfung, 17/17 Cloud-Dateivergleich und HTTP 200 für Portal, Final Master, Parent-Skript und Dashboard-Skript. Eine visuelle Kontrolle in der tatsächlich angemeldeten iPhone-PWA ist separat erforderlich; HTTP 200 beweist keine gerenderte Live-Kachel. Sensorwerte werden nie aus dem Archiv als aktuell ausgegeben, und ungültige oder veraltete Messungen bleiben ausgeblendet.
