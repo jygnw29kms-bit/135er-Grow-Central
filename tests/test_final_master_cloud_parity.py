@@ -95,3 +95,15 @@ def test_mobile_camera_stays_inside_final_master_viewport():
             assert rule in css
     assert "/static/gc-final.css?v=20261115-camera-mobile-1" in LOCAL
     assert "/static/gc-final.css?v=20261115-camera-mobile-1" in CLOUD
+
+
+def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
+    for js in (LOCAL_JS, CLOUD_JS):
+        assert "function updateCameraClimateOverlay(){" in js
+        assert "if(soilTileState.dashboard.valid)parts.push('🌱 Boden '+soilTileState.dashboard.value);" in js
+        assert "cameraClimateMetrics.temperature=f&&Number.isFinite(f.temperature_c)?f.temperature_c:null;" in js
+        assert "cameraClimateMetrics.humidity=f&&Number.isFinite(f.humidity_rh)?f.humidity_rh:null;" in js
+        assert "const overlay=parts.length?parts.join(' · '):'Keine aktuellen Messwerte';" in js
+        assert "Keine aktuellen Klimamesswerte" not in js
+    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in CLOUD
+    assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in LOCAL
