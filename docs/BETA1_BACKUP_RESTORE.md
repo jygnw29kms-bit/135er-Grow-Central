@@ -14,15 +14,15 @@ Die folgenden Befehle erzeugen beziehungsweise prüfen ein lokal verschlüsselte
 
 ```bash
 sudo install -d -m 700 /var/backups/grow-central/manual
-sudo python3 /opt/135er-grow-central/scripts/beta_data_backup.py \
+sudo /opt/135er-grow-central/.venv/bin/python /opt/135er-grow-central/scripts/beta_data_backup.py \
   --create /var/backups/grow-central/manual/gc-beta1-encrypted.gcb \
   --data-root /var/lib/135er-grow-central \
   --config-file /opt/135er-grow-central/.env
 
-sudo python3 /opt/135er-grow-central/scripts/beta_data_backup.py \
+sudo /opt/135er-grow-central/.venv/bin/python /opt/135er-grow-central/scripts/beta_data_backup.py \
   --verify /var/backups/grow-central/manual/gc-beta1-encrypted.gcb
 
-sudo python3 /opt/135er-grow-central/scripts/beta_data_backup.py \
+sudo /opt/135er-grow-central/.venv/bin/python /opt/135er-grow-central/scripts/beta_data_backup.py \
   --stage-restore /var/backups/grow-central/manual/gc-beta1-encrypted.gcb \
   --staging-dir /var/backups/grow-central/manual/restored-test
 ```
@@ -44,7 +44,7 @@ Eine vollständige Wiederherstellung erfordert den Nachweis, dass die neuen Prog
 
 ## Was bereits nachgewiesen ist
 
-Fünf isolierte Tests mit **synthetischen** Daten: Verschlüsselung, falsches Passwort, Manipulation, SQLite-Snapshot, Foto-/Schlüsselrückgabe, Ausschluss bestehender Login-Sitzungen, restriktive Dateirechte und zusätzlicher verschlüsselter Konfigurationsexport. Kein echtes Nutzerdatum wurde in diesen Tests gelesen.
+Das Werkzeug ist auf dem Test-Pi installiert; **noch kein echter Export ausgeführt**. Fünf isolierte Tests mit **synthetischen** Daten: Verschlüsselung, falsches Passwort, Manipulation, SQLite-Snapshot, Foto-/Schlüsselrückgabe, Ausschluss bestehender Login-Sitzungen, restriktive Dateirechte und zusätzlicher verschlüsselter Konfigurationsexport. Kein echtes Nutzerdatum wurde in diesen Tests gelesen.
 
 ## Offene Abnahme
 
