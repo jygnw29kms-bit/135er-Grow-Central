@@ -1,0 +1,63 @@
+{
+  "target_release": "1.0.0-beta.1",
+  "status": "blocked",
+  "policy": "No beta release tag until every mandatory gate is verified with evidence",
+  "mandatory_gates": [
+    {
+      "id": "gui_parity",
+      "title": "Identical .local/.de Final Master user experience",
+      "status": "verified_automated",
+      "evidence": "tests/test_final_master_cloud_parity.py; Cloud/Pi comparison from 2026-11-15",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "member_roles",
+      "title": "Owner invitations, scoped roles, immediate revocation",
+      "status": "verified_local_only",
+      "evidence": "39 local role/invitation/automation/alert tests passed on 2026-11-15",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "cloud_guest_identity",
+      "title": "Guest sessions and room roles enforced on Cloud remote transport",
+      "status": "blocked",
+      "evidence": "",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "web_push",
+      "title": "Explicit-consent Cloud iOS Web Push, revoked-member stop, recovery and quiet hours",
+      "status": "blocked",
+      "evidence": "Local opt-in code and push-only Cloud worker exist; authenticated Cloud registration and VAPID live test still missing",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "automation_failsafe",
+      "title": "Light/fan scheduling and control with real hardware fail-safe tests",
+      "status": "simulation_only",
+      "evidence": "Room automation preview uses fresh data, no device writes; Mars Hydro currently disconnected",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "growbook_e2e",
+      "title": "Create room/plant, calibrate soil probe, log reading and camera photo",
+      "status": "partially_verified",
+      "evidence": "Local room and camera regressions passed, authenticated multiuser E2E incomplete",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "install_and_recovery",
+      "title": "Fresh Pi4 image, first boot, backup/restore and rollback",
+      "status": "blocked",
+      "evidence": "",
+      "manual_acceptance_required": true
+    },
+    {
+      "id": "ios_beta_acceptance",
+      "title": "Real iPhone PWA installed, alerts displayed and Cloud/Local visually accepted",
+      "status": "partially_verified",
+      "evidence": "Soil and camera screenshots accepted before later multiuser/push changes",
+      "manual_acceptance_required": true
+    }
+  ]
+}
