@@ -639,7 +639,9 @@ $('roomPicker')?.addEventListener('change',async e=>{
  await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
-setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadClimateOverview();},30000);
+setInterval(()=>{if(!document.hidden)loadClimateOverview();},30000);
+// Recover from a transient Cloud-bridge timeout during the initial room list load.
+setInterval(()=>{if(!document.hidden&&!growJournal.roomId)loadRooms();},45000);
 
 renderControls();tick();page('home');refreshLive();loadRooms();loadSmart();loadHomekit();detectAccessMode();renderIcons();cloudRefresh();
 cameraLoad();
