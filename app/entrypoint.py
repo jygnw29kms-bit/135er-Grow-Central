@@ -26,6 +26,9 @@ from app.provisioning.ble import install_observer as install_ble_observer
 from app.runtime_health import router as runtime_health_router
 from app.maintenance import router as maintenance_router
 from app.grow_alerts import router as grow_alerts_router
+from app.room_sharing import router as room_sharing_router
+from app.room_control_plans import router as room_control_plans_router
+from app.room_notifications import router as room_notifications_router, install as install_room_notifications
 from app.edition import router as edition_router
 from app.setup_portal import SetupPortalMiddleware
 
@@ -58,12 +61,16 @@ app.include_router(cloud_status_router)
 app.include_router(runtime_health_router)
 app.include_router(maintenance_router)
 app.include_router(grow_alerts_router)
+app.include_router(room_sharing_router)
+app.include_router(room_control_plans_router)
+app.include_router(room_notifications_router)
 app.include_router(edition_router)
 app.include_router(calibration_router)
 install_mdns_alias(app)
 install_rooms(app)
 install_mars_history(app)
 install_automation(app)
+install_room_notifications(app)
 
 install_observer(app)
 install_ble_observer(app)
