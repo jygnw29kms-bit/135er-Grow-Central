@@ -27,7 +27,7 @@ from app.devices.gc_identity import verify_message
 from app.devices.gc_esp32_protocol import parse_announcement
 from app.devices.gc_trust import TrustStore
 from app.devices.gc_calibration import CalibrationStore
-from .broker import request_broker
+from .broker import request_broker, broker_info_payload
 
 class USBRoute(APIRoute):
     def get_route_handler(self):
@@ -502,11 +502,7 @@ async def usb_devices():
 
 @router.get('/broker')
 async def broker_options():
-    try:
-        result = await asyncio.to_thread(request_broker, 'info')
-        return {'ready': True, 'hosts': result['hosts']}
-    except (OSError, RuntimeError):
-        return {'ready': False, 'hosts': [], 'message': 'Lokaler Broker-Einrichtungsdienst nicht verfügbar.'}
+    return await broker_info_payload(request_broker)
 
 
 @router.post('/{port_id}/inspect')
