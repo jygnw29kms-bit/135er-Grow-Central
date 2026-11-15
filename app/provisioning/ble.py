@@ -24,7 +24,7 @@ from app.devices.gc_identity import verify_message
 from app.devices.gc_esp32_protocol import parse_announcement
 from app.devices.gc_trust import TrustStore
 from app.devices.gc_calibration import CalibrationStore
-from .broker import request_broker
+from .broker import request_broker, broker_info_payload
 
 SERVICE_UUID='7b0d0001-6f2a-4c2d-9d8a-135e2c000001'
 CONTROL_UUID='7b0d0002-6f2a-4c2d-9d8a-135e2c000001'
@@ -164,11 +164,7 @@ async def inspect_api(device_id:str):
 
 @router.get('/broker')
 async def broker_options():
-    try:
-        result=await asyncio.to_thread(request_broker,'info')
-        return {'ready':True,'hosts':result['hosts']}
-    except (OSError,RuntimeError):
-        return {'ready':False,'hosts':[],'message':'Lokaler Broker-Einrichtungsdienst nicht verfügbar.'}
+    return await broker_info_payload(request_broker)
 
 
 def install_observer(app):
