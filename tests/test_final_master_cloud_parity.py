@@ -107,3 +107,28 @@ def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
         assert "Keine aktuellen Klimamesswerte" not in js
     assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in CLOUD
     assert "/static/gc-final.js?v=20261115-camera-soil-osd-1" in LOCAL
+
+
+def _function_source(script, start, next_function):
+    begin = script.index(start)
+    end = script.index(next_function, begin)
+    return script[begin:end].strip()
+
+
+def test_local_and_cloud_camera_osd_have_exact_same_implementation():
+    # Transport handlers may differ; user-visible OSD rendering must not.
+    start = "let cameraClimateMetrics={temperature:null,humidity:null};"
+    end = "function updateSoilTiles(){"
+    assert _function_source(LOCAL_JS, start, end) == _function_source(CLOUD_JS, start, end)
+    # Update call must remain in the shared soil-rendering flow.
+    for script in (LOCAL_JS, CLOUD_JS):
+        update = _function_source(script, "function updateSoilTiles(){", "function setMetrics(")
+        assert "updateCameraClimateOverlay();" in update
+
+
+def test_local_and_cloud_mobile_camera_styles_are_identical():
+    marker = "/* Camera layout: prevent wide iPhone frames from expanding the page/iframe. */"
+    local_css = (ROOT / "web/gc-final.css").read_text(encoding="utf-8")
+    cloud_css = (ROOT / "cloud/portal/gc-final-cloud.css").read_text(encoding="utf-8")
+    assert marker in local_css and marker in cloud_css
+    assert local_css[local_css.index(marker):].strip() == cloud_css[cloud_css.index(marker):].strip()
