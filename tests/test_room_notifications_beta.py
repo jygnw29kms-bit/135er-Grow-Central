@@ -1,0 +1,69 @@
+"""Threshold, hysteresis, freshness and notification-inbox tests."""
+from datetime import datetime, timezone
+
+import pytest
+from pydantic import ValidationError
+
+from app.room_notifications import ThresholdRule, NotificationPolicy, classify, update_alert_state, poll_once
+
+
+def test_hysteresis_does_not_flap():
+    rule = ThresholdRule(metric="humidity_percent", minimum=40, maximum=70, hysteresis=3)
+    assert classify(rule, 39, "normal") == "low"
+    assert classify(rule, 41, "low") == "low"
+    assert classify(rule, 43, "low") == "normal"
+    assert classify(rule, 71, "normal") == "high"
+    assert classify(rule, 68, "high") == "high"
+    assert classify(rule, 67, "high") == "normal"
+
+
+def test_minimum_duration_and_recovery():
+    rule = ThresholdRule(metric="soil_moisture_percent", minimum=30, min_duration_seconds=120)
+    state, event = update_alert_state(rule, 20, {}, now=1000)
+    assert event is None
+    state, event = update_alert_state(rule, 20, state, now=1119)
+    assert event is None
+    state, event = update_alert_state(rule, 20, state, now=1120)
+    assert event["kind"] == "threshold_low"
+    state, event = update_alert_state(rule, 20, state, now=1300)
+    assert event is None
+    state, event = update_alert_state(rule, 40, state, now=1301)
+    assert event is None
+    state, event = update_alert_state(rule, 40, state, now=1421)
+    assert event["kind"] == "recovered"
+
+
+def test_missing_data_cannot_trigger_threshold_alert():
+    rule = ThresholdRule(metric="temperature_c", maximum=30)
+    state, event = update_alert_state(rule, None, {}, now=1000)
+    assert event is None
+    assert state["candidate"] is None
+
+
+def test_invalid_rule_settings_are_rejected():
+    with pytest.raises(ValidationError):
+        ThresholdRule(metric="humidity_percent", minimum=90, maximum=50)
+    with pytest.raises(ValidationError):
+        ThresholdRule(metric="soil_moisture_percent")
+
+
+def test_explicit_opt_in_and_inbox_only():
+    at = datetime(2026, 11, 15, 14, 0, tzinfo=timezone.utc).timestamp()
+    data = {"policies": {"room_test": NotificationPolicy(rules=[
+        ThresholdRule(metric="soil_moisture_percent", maximum=70, min_duration_seconds=60)
+    ]).model_dump()}, "states": {}, "events": []}
+    rooms = {"rooms": [{"id": "room_test"}], "sensor_history": [{
+        "room_id": "room_test", "timestamp": datetime.fromtimestamp(at,timezone.utc).isoformat(),
+        "soil_moisture_percent": 88.8, "soil_calibration_status": "valid",
+    }]}
+    assert poll_once(store=data, room_state=rooms, now=at) == []
+    events = poll_once(store=data, room_state=rooms, now=at+61)
+    assert len(events) == 1
+    assert events[0]["delivery"] == "in_app_pending"
+    assert poll_once(store=data, room_state=rooms, now=at+62) == []
+
+
+def test_mars_disconnect_is_not_alarm_by_default():
+    assert NotificationPolicy().notify_mars_offline is False
+    assert NotificationPolicy().notify_cloud_channel_offline is False
+    assert NotificationPolicy().push_enabled is False
