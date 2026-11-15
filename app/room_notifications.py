@@ -55,6 +55,7 @@ class ThresholdRule(BaseModel):
 class NotificationPolicy(BaseModel):
     rules: list[ThresholdRule] = Field(default_factory=list, max_length=16)
     sensor_offline_after_seconds: int = Field(default=900, ge=300, le=86400)
+    connection_min_down_seconds: int = Field(default=300, ge=60, le=3600)
     notify_sensor_offline: bool = False
     notify_cloud_channel_offline: bool = False
     notify_mars_offline: bool = False
@@ -100,6 +101,24 @@ def update_alert_state(rule: ThresholdRule, value: float | None, row: dict, *, n
     return state, event
 
 
+def connection_transition(name: str, is_connected: bool | None, state: dict, *,
+                          now: float, minimum_down_seconds: int) -> tuple[dict, str | None]:
+    """Alert only on sustained outage, recover once; unknown is not offline."""
+    value = dict(state)
+    if is_connected is None:
+        return value, None
+    if is_connected:
+        was_down = value.get("reported_down", False)
+        value.update({"down_since": None, "reported_down": False})
+        return value, "connection_recovered" if was_down else None
+    if value.get("down_since") is None:
+        value["down_since"] = now
+    if not value.get("reported_down") and now - value["down_since"] >= minimum_down_seconds:
+        value["reported_down"] = True
+        return value, "connection_offline"
+    return value, None
+
+
 def _load() -> dict:
     try:
         value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -130,7 +149,7 @@ def _latest_sample(state: dict, room_id: str) -> dict:
     return next((row for row in reversed(state.get("sensor_history", [])) if row.get("room_id") == room_id), {})
 
 
-def poll_once(*, now: float | None = None, store: dict | None = None, room_state: dict | None = None) -> list[dict]:
+def poll_once(*, now: float | None = None, store: dict | None = None, room_state: dict | None = None, connections: dict[str, bool | None] | None = None) -> list[dict]:
     """Evaluate configured room thresholds and queue inbox events, never send Push."""
     now = time.time() if now is None else now
     data = _load() if store is None else store
@@ -162,6 +181,26 @@ def poll_once(*, now: float | None = None, store: dict | None = None, room_state
             if event:
                 event = {**event, "room_id": room_id, "rule_index": index, "delivery": "in_app_pending"}
                 emitted.append(event)
+        # Device transport outages are separate from sensor thresholds and need
+        # independent opt-in (Mars Hydro can be intentionally disconnected).
+        signals = connections or {}
+        for monitor, enabled in (
+            ("cloud", policy.notify_cloud_channel_offline),
+            ("mars", policy.notify_mars_offline),
+        ):
+            if not enabled:
+                continue
+            key = f"{room_id}:connection:{monitor}"
+            old_state = data.setdefault("states", {}).get(key, {})
+            next_state, change = connection_transition(
+                monitor, signals.get(monitor), old_state, now=now,
+                minimum_down_seconds=policy.connection_min_down_seconds,
+            )
+            data["states"][key] = next_state
+            if change:
+                emitted.append({"room_id": room_id, "kind": change,
+                                "source": monitor, "at": datetime.fromtimestamp(now, timezone.utc).isoformat(),
+                                "delivery": "in_app_pending"})
         # Stale readings are handled as a dedicated, explicit opt-in alert.
         if policy.notify_sensor_offline:
             key = f"{room_id}:sensor_offline"
@@ -213,7 +252,14 @@ async def _notification_loop() -> None:
         try:
             # Avoid creating empty database files for installations with no policy.
             if DATA_FILE.exists():
-                poll_once()
+                cloud_online = None
+                try:
+                    from app.cloud_status import cloud_status
+                    cloud = await cloud_status()
+                    cloud_online = cloud.get("connected")
+                except Exception:
+                    pass
+                poll_once(connections={"cloud": cloud_online})
         except Exception:
             log.exception("room notification evaluation failed")
         await asyncio.sleep(60)
