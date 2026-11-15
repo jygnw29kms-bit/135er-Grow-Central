@@ -207,3 +207,57 @@ async def owner_revoke_member(room_id: str, member_id: str, request: Request, _=
                         if val.get("member_id") != member_id}
     _save(data)
     return {"ok": True}
+
+
+# Public onboarding is intentionally separate from the owner-only Final Master.
+# The member cookie never grants access to /ui or any unscoped appliance API.
+join_router = APIRouter()
+
+
+@join_router.get("/join", response_class=HTMLResponse)
+async def join_page():
+    return HTMLResponse("""<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071411">
+<title>Grow Central · Raumfreigabe</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:20px;background:#071411;color:#d9e9e4;font:16px system-ui,Arial,sans-serif}
+main{max-width:580px;margin:30px auto}header{padding:22px 0;border-bottom:1px solid #2a4941}
+h1{font-size:1.7rem;font-weight:650}section{padding:20px;border:1px solid #385750;border-radius:16px;background:#12201f;margin-top:18px}
+label{display:block;margin:14px 0 4px}input,textarea{display:block;width:100%;background:#0b1717;color:#fff;border:1px solid #587169;padding:12px;border-radius:8px;font:inherit}
+button{background:#5cdfa7;border:0;border-radius:8px;padding:12px 18px;margin-top:14px;color:#071411;font-weight:700;cursor:pointer}
+button.secondary{background:#263c38;color:#d9e9e4}
+small{color:#9bb2a9}#error{color:#ff9d9d;min-height:24px}#content{white-space:pre-wrap}
+</style></head><body><main>
+<header><h1>Grow Central · Raumfreigabe</h1><p>Dein Zugang gilt nur für den freigegebenen Raum.</p></header>
+<section id="invite"><h2>Einladung annehmen</h2><p>Vergib einen eigenen Benutzernamen und ein sicheres Passwort.</p>
+<form id="accept"><label>Benutzername<input id="username" autocomplete="username" required minlength="3" maxlength="64"></label>
+<label>Passwort<input id="password" type="password" autocomplete="new-password" required minlength="12"></label>
+<button>Einladung annehmen</button></form></section>
+<section id="login"><h2>Bereits Mitglied?</h2>
+<form id="loginForm"><label>Benutzername<input id="loginName" autocomplete="username"></label>
+<label>Passwort<input id="loginPass" type="password" autocomplete="current-password"></label>
+<button class="secondary">Anmelden</button></form></section>
+<section id="room" hidden><h2 id="roomName">Raum</h2><small id="myRole"></small>
+<p id="content"></p><button class="secondary" id="logout">Abmelden</button></section>
+<p id="error" role="alert"></p><small>Nur sichere Freigaben. Keine zusätzlichen Adminrechte durch den Einladungslink.</small>
+</main><script>
+const $=id=>document.getElementById(id);
+const token=new URLSearchParams(location.hash.slice(1)).get('invite');
+if(!token)$('invite').hidden=true;
+history.replaceState(null,'',location.pathname);
+async function call(path,data){const r=await fetch('/api/v1/room-members/'+path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined,credentials:'same-origin'});const v=await r.json().catch(()=>({}));if(!r.ok)throw Error(v.detail||'Fehler '+r.status);return v}
+async function refresh(){const me=await call('status');if(!me.authenticated)return;
+$('invite').hidden=true;$('login').hidden=true;$('room').hidden=false;
+$('myRole').textContent='Rolle: '+me.role;
+const d=await call('room/'+encodeURIComponent(me.room_id));
+$('roomName').textContent=d.room.name;
+$('content').textContent='Pflanzen: '+(d.plants.map(p=>p.name+' ('+p.phase+')').join(', ')||'Keine');
+}
+function failed(e){$('error').textContent=e.message}
+$('accept').onsubmit=async e=>{e.preventDefault();try{await call('accept',{invite_token:token,username:$('username').value,password:$('password').value});await refresh()}catch(err){failed(err)}};
+$('loginForm').onsubmit=async e=>{e.preventDefault();try{await call('login',{username:$('loginName').value,password:$('loginPass').value});await refresh()}catch(err){failed(err)}};
+$('logout').onclick=async()=>{try{await call('logout',{});location.reload()}catch(err){failed(err)}};
+refresh().catch(failed);
+</script></body></html>""")
