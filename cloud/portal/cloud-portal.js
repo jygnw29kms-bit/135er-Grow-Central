@@ -84,7 +84,8 @@ function masterHandleResult(data){
   else if(data.type==='room_result')masterReply(data.request_id,200,{room_id:data.room_id,device_id:data.device_id,ok:true});
   else if(data.type==='journal_result')masterReply(data.request_id,200,{
    id:data.entry_id,room_id:data.room_id,verified:data.verified===true,
-   snapshot_present:data.snapshot_present===true,snapshot_captured_at:data.snapshot_captured_at||null
+   snapshot_present:data.snapshot_present===true,snapshot_captured_at:data.snapshot_captured_at||null,
+   operation:data.operation||'create'
   });
   else masterReply(data.request_id,200,data.data||{ok:true,entry_id:data.entry_id});
  }else masterReply(data.request_id,503,{detail:data.error||'Keine Gerätebestätigung'});
@@ -150,6 +151,21 @@ window.addEventListener('message',event=>{
  if(method==='GET'){
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'read',request_id:msg.id,path:msg.path}));return;
+ }
+ const journalMutation=/^\\/api\\/v1\\/rooms\\/(room_[A-Za-z0-9_-]+)\\/journal\\/(entry_[A-Za-z0-9_-]+)$/.exec(msg.path);
+ if(journalMutation&&(method==='PUT'||method==='DELETE')){
+  const room_id=journalMutation[1],entry_id=journalMutation[2],payload=msg.body;
+  if(method==='PUT'&&(!payload||typeof payload.title!=='string'||!payload.title.trim()||
+      typeof payload.plant_id!=='string'||!/^plant_[A-Za-z0-9_-]+$/.test(payload.plant_id))){
+   masterReply(msg.id,422,{detail:'Titel und vollständiges Pflanzenprofil erforderlich'});return;
+  }
+  if(!window.confirm(method==='PUT'?'Growbucheintrag auf dem Pi ändern?':'Growbucheintrag auf dem Pi löschen?')){
+   masterReply(msg.id,409,{detail:'Nicht bestätigt'});return;
+  }
+  trackMaster(msg.id);
+  remoteSocket.send(JSON.stringify({type:method==='PUT'?'journal_update':'journal_delete',
+   request_id:msg.id,room_id,entry_id,confirm_write:true,
+   ...(method==='PUT'?{title:payload.title,text:payload.text||'',category:payload.category,plant_id:payload.plant_id}:{})}));return;
  }
  let payload=msg.body;
  if(typeof payload!=='object'||payload===null){masterReply(msg.id,400,{detail:'Ungültige Eingabe'});return}
