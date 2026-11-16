@@ -40,6 +40,7 @@ def ensure_schema(engine: Engine) -> None:
              device_id VARCHAR(36) NOT NULL,
              room_id VARCHAR(120) NOT NULL,
              account_id VARCHAR(36) NOT NULL,
+             owner_account_id VARCHAR(36) NOT NULL,
              role VARCHAR(12) NOT NULL,
              joined_at BIGINT NOT NULL,
              revoked_at BIGINT,
@@ -65,7 +66,7 @@ def get_membership_role(engine: Engine, device_id: str, room_id: str,
           JOIN accounts a ON a.id=m.account_id
           WHERE m.device_id=:d AND m.room_id=:r AND m.account_id=:a
           AND m.revoked_at IS NULL AND d.revoked_at IS NULL
-          AND d.account_id IS NOT NULL AND a.status='active'
+          AND d.account_id=m.owner_account_id AND a.status='active'
         """), {"d": device_id, "r": room_id, "a": account_id}).scalar()
     return role if role in ROLES else None
 
@@ -167,17 +168,18 @@ def build_router(
               WHERE device_id=:d AND room_id=:r AND account_id=:a
             """), {"d": row["device_id"], "r": row["room_id"], "a": account_id}).first()
             values = {"d": row["device_id"], "r": row["room_id"],
-                      "a": account_id, "role": row["role"], "now": current}
+                      "a": account_id, "owner": row["creator_account_id"],
+                      "role": row["role"], "now": current}
             if matched:
                 db.execute(text("""
-                  UPDATE cloud_room_memberships SET role=:role,revoked_at=NULL
+                  UPDATE cloud_room_memberships SET role=:role,owner_account_id=:owner,revoked_at=NULL
                   WHERE device_id=:d AND room_id=:r AND account_id=:a
                 """), values)
             else:
                 db.execute(text("""
                   INSERT INTO cloud_room_memberships
-                  (device_id,room_id,account_id,role,joined_at)
-                  VALUES (:d,:r,:a,:role,:now)
+                  (device_id,room_id,account_id,owner_account_id,role,joined_at)
+                  VALUES (:d,:r,:a,:owner,:role,:now)
                 """), values)
         return {"ok": True, "device_id": row["device_id"],
                 "room_id": row["room_id"], "role": row["role"],
@@ -192,7 +194,7 @@ def build_router(
               FROM cloud_room_memberships m
               JOIN devices d ON d.id=m.device_id
               WHERE m.account_id=:a AND m.revoked_at IS NULL
-                AND d.revoked_at IS NULL AND d.account_id IS NOT NULL
+                AND d.revoked_at IS NULL AND d.account_id=m.owner_account_id
             """), {"a": account_id}).mappings().all()
         return {"memberships": [dict(row) for row in rows],
                 "remote_access": "not_activated"}
