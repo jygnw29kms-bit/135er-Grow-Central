@@ -55,7 +55,7 @@
  let cameraImage=null,cameraTimer=null,cameraPending=false;
  const transparent='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
  function frameRequest(){
-  if(!cameraImage||cameraPending||document.hidden)return;
+  if(!cameraImage||cameraPending||document.hidden||cameraImage.dataset.cameraPaused==='1')return;
   if(!cameraImage.isConnected){cameraImage=null;return}
   cameraPending=true;
   ask('camera').then(result=>{
