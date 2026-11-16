@@ -1,5 +1,15 @@
 # Grow Central · aktueller Projektstatus
 
+## Beta-1.0-GUI-Abnahme und Kamera-Watchdog (16.11.2026)
+
+**Manuelle Abnahme:** 72 von 110 Einzelprüfungen bestanden, 8 Fehler, 30 offen. Separat: sieben Benutzerverwaltungsfunktionen in LAN und Cloud noch nicht als vollständige Final-Master-GUI verfügbar. Dieses Dokument ist keine Produktivfreigabe.
+
+**Diagnose auf Live-Pi (nur lesend):** Logitech C920 USB-ID 046d:082d, /dev/video1 und /dev/video2 vorhanden; ffmpeg hält /dev/video1 offen. Lokaler Stream antwortet HTTP 200, Cloud-Vorschau meldet wiederholt 503. Mehrfache lokale Stream-Aufrufe können sich gegenseitig verdrängen, weil derzeit ein aktiver globaler Capture-Prozess verwendet wird. Kamera-Frame-Lieferung und die Ursache der Stream-Konkurrenz sind noch nicht end-to-end abgenommen.
+
+**Reparatur-Branch:** `fix/beta1-gui-camera-controls-20261116` / Draft-PR #102, ausdrücklich **nicht produktiv deployed**. Entwickelt sind: owner-geschützte bounded Watchdog-Diagnose ohne Bild-/Token-Speicherung (Frame-Alter, ffmpeg-Ausfall, Stream-Verdrängung und Preview-503), Kamera-Start/Stopp-Bedienelemente in LAN/Cloud, Schalterzustand Rot/Aus und Grün/Ein nur auf Basis frischer BLE-Rückmeldung, Growbuch-Navigation im lokalen HTML sowie gleiche Darstellung gespeicherter Messmomentaufnahmen in LAN und Cloud.
+
+**Verbleibende Beta-Blocker:** F-001 vollständiger Kamerabildnachweis, F-003 Growbuch-Snapshot von Pi bis Cloud mit echter Pflanze/korrekt abgeschlossenem Pflanzenprofil, F-004 Schreib-Synchronisierung LAN↔Cloud, F-005 Besitzer-/Mitglieder-GUI und sichere Cloud-Gast-ACL, F-002 Kamerastopp im echten Browser. V-002 vollständige visuelle Parität und V-001 Farbschalter benötigen reale Endabnahme. Kein Release mit unkontrolliertem Guest-WebSocket.
+
 **Stand:** 14. November 2026 · **Entwicklung freigegeben** · **Raspberry-Pi-Quellstand abgeglichen**
 
 ## Maßgeblicher Pi-Livestand
