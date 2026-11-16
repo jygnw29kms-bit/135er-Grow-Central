@@ -16,6 +16,8 @@ SOURCE_TO_LIVE = {
     "cloud/portal/index.html": "index.html",
     "cloud/portal/cloud-master.html": "cloud-master.html",
     "cloud/portal/cloud-portal.js": "cloud-portal.js",
+    "cloud/portal/join-room.html": "join-room.html",
+    "cloud/portal/join-room.js": "join-room.js",
     "cloud/portal/gc-final-cloud.js": "static/gc-final.js",
     "cloud/portal/gc-final-cloud.css": "static/gc-final.css",
     "cloud/portal/cloud-master-bridge.js": "static/cloud-master-bridge.js",
