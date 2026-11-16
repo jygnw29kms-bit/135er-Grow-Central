@@ -226,3 +226,31 @@ def test_cloud_login_branding_moved_into_hero_not_header():
     assert 'body:has(#account:not([hidden])) .gc-login-brand{display:none}' in entry
     # The public login is a separate view, not a substitute Final Master.
     assert 'id="masterMount"' in entry
+
+
+def test_sidebar_branding_matches_cloud_login_composition():
+    local = re.search(r'<a class="brand gc-sidebar-brand"[^>]*>.*?</a>', LOCAL, re.S)
+    cloud = re.search(r'<a class="brand gc-sidebar-brand"[^>]*>.*?</a>', CLOUD, re.S)
+    assert local and cloud
+    # Only the href intentionally differs: local /ui vs authenticated Cloud /.
+    assert local.group(0).replace('href="/ui"', 'href="/"') == cloud.group(0)
+    for html in (LOCAL, CLOUD):
+        assert 'class="gc-sidebar-brand-symbol"' in html
+        assert 'class="gc-sidebar-brand-title"' in html
+        assert 'class="gc-sidebar-brand-subtitle"' in html
+        assert 'src="/static/brand-mark.png"' in local.group(0)
+        assert '<span>135er-</span><span class="gc-grow">Grow</span>' in html
+        assert 'ENVIRONMENT CONTROL SYSTEM' in html
+        assert '<img src="/static/brand-logo.png"' not in html
+    login = (ROOT / "cloud/portal/index.html").read_text(encoding="utf-8")
+    assert 'gc-login-wordmark' in login
+    for path in ("web/gc-final.css", "cloud/portal/gc-final-cloud.css"):
+        css = (ROOT / path).read_text(encoding="utf-8")
+        assert '/* Final Master sidebar identity:' in css
+        assert '.gc-sidebar-brand-symbol img{display:block;width:46px;' in css
+        assert 'mix-blend-mode:screen' in css
+    marker = "/* Final Master sidebar identity:"
+    end = "/* Approved Final Master masthead:"
+    local_css = (ROOT / "web/gc-final.css").read_text(encoding="utf-8")
+    cloud_css = (ROOT / "cloud/portal/gc-final-cloud.css").read_text(encoding="utf-8")
+    assert local_css[local_css.index(marker):local_css.index(end)] == cloud_css[cloud_css.index(marker):cloud_css.index(end)]
