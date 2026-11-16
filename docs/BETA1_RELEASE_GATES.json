@@ -14,7 +14,7 @@
       "id": "member_roles",
       "title": "Owner invitations, scoped roles, immediate revocation",
       "status": "verified_local_only",
-      "evidence": "39 local role/invitation/automation/alert tests passed on 2026-11-15",
+      "evidence": "49 scoped backend/HTTP role, invitation, alert, automation, backup and gate tests passed 2026-11-16; delegated room-admin invite and revoke verified locally; Cloud guest access still unavailable",
       "manual_acceptance_required": true
     },
     {
@@ -49,7 +49,7 @@
       "id": "install_and_recovery",
       "title": "Fresh Pi4 image, first boot, backup/restore and rollback",
       "status": "blocked",
-      "evidence": "",
+      "evidence": "Read-only Pi room/reference/SQLite/photo integrity audit PASS on 2026-11-16 (1 room, 1 plant, 488+ measurements, 4 SQLite DBs); staging-only backup tested, fresh-image restore still not verified",
       "manual_acceptance_required": true
     },
     {
