@@ -37,7 +37,22 @@ body:has(#masterMount:not([hidden])) .gc-master-toolbar{height:40px;box-sizing:b
 body:has(#masterMount:not([hidden])) .gc-master-toolbar button{padding:5px 12px;font-size:12px}
 body:has(#masterMount:not([hidden])) #masterMount{border:0;border-radius:0;margin:0}
 body:has(#masterMount:not([hidden])) #masterFrame{height:calc(100dvh - 40px);min-height:450px}
-@media(max-width:620px){body:has(#masterMount:not([hidden])) .gc-master-toolbar span{font-size:10px}body:has(#masterMount:not([hidden])) .gc-master-toolbar button{font-size:11px}}</style></head><body><header><img src="/brand-logo.png" alt="Grow Central" style="width:220px;max-width:65vw;height:62px;object-fit:contain;object-position:left"> <span style="font-size:12px;letter-spacing:.12em;color:#9cbea9">CLOUD / SECURE ACCESS</span></header><main><div style="display:flex;align-items:center;gap:18px"><img src="/brand-mark.png" alt="" style="width:60px;height:60px;object-fit:contain"><small>LOCAL FIRST · SECURE CLOUD<br>GROW CENTRAL ENVIRONMENT SYSTEM</small></div><h1>Deine Geräte.<br>Ein sicherer Zugang.</h1><p>Verwalte deine gekoppelten Grow-Central-Geräte. Fernsteuerung erscheint erst nach erfolgreicher Verbindung.</p><section id="login"><h2>Cloud-Anmeldung</h2><form id="form"><label>E-Mail<input id="email" type="email" autocomplete="username" required></label><label>Passwort<input id="password" type="password" autocomplete="current-password" required></label><button>Anmelden</button></form><p id="msg" role="status"></p><a href="/pair">Gerät koppeln</a></section><section id="account" hidden class="gc-workspace">
+@media(max-width:620px){body:has(#masterMount:not([hidden])) .gc-master-toolbar span{font-size:10px}body:has(#masterMount:not([hidden])) .gc-master-toolbar button{font-size:11px}}
+/* Approved Cloud login composition: branding above hero instead of tiny top-left logo. */
+header.gc-public-topline{min-height:65px;display:flex;align-items:center;padding:14px clamp(22px,7vw,90px);background:linear-gradient(115deg,#061712,#102f22 80%,#123f2b);border-bottom:1px solid #2b6550;font-size:12px;font-weight:600;letter-spacing:.18em;color:#bfded0}
+header.gc-public-topline span{font-size:12px;color:#c4e5d3}
+.gc-login-brand{display:flex;align-items:center;flex-wrap:wrap;gap:3px;max-width:570px;margin:0 0 33px;padding:16px 20px 14px;border:1px solid #378866;border-radius:12px;background:linear-gradient(115deg,#071711e8,#0d271ecf);box-shadow:0 10px 35px #0003;min-height:102px}
+.gc-login-brand img{display:block;width:min(100%,470px);height:auto;max-height:70px;object-fit:contain;object-position:left}
+.gc-login-brand small{display:block;flex:1 1 100%;font-size:10px;letter-spacing:.23em;color:#b6cfc0;margin-left:4px}
+body:has(#account:not([hidden])) .gc-login-brand{display:none}
+body:has(#account:not([hidden])) .gc-public-topline{display:none}
+@media(max-width:620px){
+ header.gc-public-topline{min-height:54px;padding:12px 20px}
+ .gc-login-brand{padding:12px 14px;min-height:84px;margin-bottom:24px;max-width:100%}
+ .gc-login-brand img{max-height:58px}
+ .gc-login-brand small{font-size:8px;letter-spacing:.12em}
+}
+</style></head><body><header class="gc-public-topline"><span>CLOUD / SECURE ACCESS</span></header><main><div class="gc-login-brand" aria-label="135er Grow Central Environment Control System"><img src="/brand-logo.png" alt="135er-Grow Central"><small>ENVIRONMENT CONTROL SYSTEM</small></div><h1>Deine Geräte.<br>Ein sicherer Zugang.</h1><p>Verwalte deine gekoppelten Grow-Central-Geräte. Fernsteuerung erscheint erst nach erfolgreicher Verbindung.</p><section id="login"><h2>Cloud-Anmeldung</h2><form id="form"><label>E-Mail<input id="email" type="email" autocomplete="username" required></label><label>Passwort<input id="password" type="password" autocomplete="current-password" required></label><button>Anmelden</button></form><p id="msg" role="status"></p><a href="/pair">Gerät koppeln</a></section><section id="account" hidden class="gc-workspace">
 <div class="gc-dashboard-heading"><div><span class="gc-kicker">GROW CENTRAL / CLOUD LIVE</span><h2>Environment Control</h2><p id="summary">Geräteliste lädt …</p></div><div class="gc-toolbar"><button id="refresh" type="button">Werte aktualisieren</button><button id="logout" type="button">Abmelden</button></div></div>
 <div class="gc-master-toolbar"><button id="masterToggle" type="button">Final-Master-GUI öffnen</button><span id="masterStatus">Original-Oberfläche, Cloud-Datenbrücke</span></div><div id="masterMount" hidden><iframe id="masterFrame" title="Grow Central Final Master" src="about:blank" loading="lazy" referrerpolicy="same-origin"></iframe></div><div id="remoteDashboard" hidden>
 <div class="gc-cloud-layout">
