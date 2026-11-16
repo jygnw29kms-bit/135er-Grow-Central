@@ -82,6 +82,10 @@ function masterHandleResult(data){
   else if(data.type==='photo_result')masterReply(data.request_id,200,{photo_id:data.photo_id,ok:true});
   else if(data.type==='plant_result')masterReply(data.request_id,200,{id:data.plant_id,ok:true});
   else if(data.type==='room_result')masterReply(data.request_id,200,{room_id:data.room_id,device_id:data.device_id,ok:true});
+  else if(data.type==='journal_result')masterReply(data.request_id,200,{
+   id:data.entry_id,room_id:data.room_id,verified:data.verified===true,
+   snapshot_present:data.snapshot_present===true,snapshot_captured_at:data.snapshot_captured_at||null
+  });
   else masterReply(data.request_id,200,data.data||{ok:true,entry_id:data.entry_id});
  }else masterReply(data.request_id,503,{detail:data.error||'Keine Gerätebestätigung'});
  return true;
@@ -161,7 +165,11 @@ window.addEventListener('message',event=>{
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'control',request_id:msg.id,kind,action,value,confirm_physical_change:true}));return;
  }
- if(method==='POST'&&msg.path.startsWith('/api/v1/rooms/')&&msg.path.endsWith('/journal')){
+ if(method==='POST'&&/^\\/api\\/v1\\/rooms\\/room_[A-Za-z0-9_-]+\\/journal$/.test(msg.path)){
+  if(!payload||typeof payload.title!=='string'||!payload.title.trim()||
+     typeof payload.plant_id!=='string'||!/^plant_[A-Za-z0-9_-]+$/.test(payload.plant_id)){
+   masterReply(msg.id,422,{detail:'Bitte vollständiges Pflanzenprofil und Titel auswählen'});return;
+  }
   if(!window.confirm('Neuen Growbucheintrag auf dem Pi speichern?')){masterReply(msg.id,409,{detail:'Nicht bestätigt'});return}
   const room_id=msg.path.split('/')[4];
   trackMaster(msg.id);
