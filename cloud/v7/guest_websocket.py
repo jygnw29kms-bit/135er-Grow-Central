@@ -140,6 +140,10 @@ class CloudGuestRemote:
         if not isinstance(message, dict):
             return False
         internal_id = message.get("request_id")
+        # Late or revoked guest replies must NEVER fall back to the owner's
+        # device-wide broadcast, even after their pending request expires.
+        if self.broker.is_guest_request_id(internal_id) and not self.broker.has_pending(internal_id):
+            return True
         if not self.broker.has_pending(internal_id):
             return False
         # Reserved guest IDs are *always* suppressed from the general
