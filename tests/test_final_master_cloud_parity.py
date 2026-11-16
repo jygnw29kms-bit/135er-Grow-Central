@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261115-status-parity-1" in PORTAL
+    assert "/cloud-master.html?v=20261116-masthead-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
@@ -93,8 +93,8 @@ def test_mobile_camera_stays_inside_final_master_viewport():
     for css in (local_css, cloud_css):
         for rule in required:
             assert rule in css
-    assert "/static/gc-final.css?v=20261115-status-parity-1" in LOCAL
-    assert "/static/gc-final.css?v=20261115-status-parity-1" in CLOUD
+    assert "/static/gc-final.css?v=20261116-masthead-1" in LOCAL
+    assert "/static/gc-final.css?v=20261116-masthead-1" in CLOUD
 
 
 def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
@@ -184,3 +184,37 @@ def test_cloud_and_local_push_worker_display_identical_alerts():
     assert "caches.open(" not in cloud
     deploy = (ROOT / "cloud/portal/deploy_cloud_portal.sh").read_text(encoding="utf-8")
     assert 'cp "$repo/cloud/portal/gc-push-worker.js" "$stage/gc-push-worker.js"' in deploy
+
+
+def test_approved_dashboard_hero_is_top_header_on_both_access_paths():
+    for document in (LOCAL, CLOUD):
+        assert document.count('class="dashboard-masthead"') == 1
+        assert document.count('class="hero hero-master"') == 1
+        assert document.index('<main><div class="dashboard-masthead"') < document.index('<header class="topbar">')
+        assert document.index('<header class="topbar">') < document.index('<section id="home"')
+        assert document.index('<section id="home"') < document.index('<section id="liveTiles"')
+        assert 'id="roomPicker"' in document
+    local_masthead = re.search(r'<div class="dashboard-masthead"[^>]*>.*?</article></div>', LOCAL, re.S)
+    cloud_masthead = re.search(r'<div class="dashboard-masthead"[^>]*>.*?</article></div>', CLOUD, re.S)
+    assert local_masthead and cloud_masthead
+    assert local_masthead.group(0) == cloud_masthead.group(0)
+    marker = "/* Approved Final Master masthead:"
+    local_css = (ROOT / "web/gc-final.css").read_text(encoding="utf-8")
+    cloud_css = (ROOT / "cloud/portal/gc-final-cloud.css").read_text(encoding="utf-8")
+    end = "/* Camera layout:"
+    assert marker in local_css and marker in cloud_css
+    assert local_css[local_css.index(marker):local_css.index(end)].strip() == cloud_css[cloud_css.index(marker):cloud_css.index(end)].strip()
+    assert 'main:has(#home:not(.active))>.dashboard-masthead{display:none}' in local_css
+
+
+def test_cloud_login_branding_moved_into_hero_not_header():
+    entry = (ROOT / "cloud/portal/index.html").read_text(encoding="utf-8")
+    assert 'class="gc-public-topline"' in entry
+    assert 'class="gc-login-brand"' in entry
+    assert entry.index('<header class="gc-public-topline"') < entry.index('<main>')
+    assert entry.index('<main>') < entry.index('<div class="gc-login-brand"')
+    assert entry.index('<div class="gc-login-brand"') < entry.index('<h1>')
+    assert 'src="/brand-logo.png"' in entry
+    assert 'body:has(#account:not([hidden])) .gc-login-brand{display:none}' in entry
+    # The public login is a separate view, not a substitute Final Master.
+    assert 'id="masterMount"' in entry
