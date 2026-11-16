@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const text=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=0)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
-const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false};
+const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false,cameraPaused:false};
 const pages={home:'Dashboard',growbook:'Growbuch',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
 let timer=0;
 function notify(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>e.classList.remove('show'),4200);}
@@ -59,8 +59,8 @@ function setControls(kind,status){
  const percent=active?latest[level]:null;
  document.querySelectorAll('[data-control="'+kind+'"]').forEach(root=>{
    const sw=root.querySelector('[data-power]'),badge=root.querySelector('[data-power-status]'),slider=root.querySelector('[data-slider]'),apply=root.querySelector('[data-apply]');
-   if(badge){badge.textContent=active?(latest.power_on?'● Ein':'Aus'):'Keine Daten';badge.classList.toggle('on',active&&latest.power_on);}
-   if(sw){sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];sw.setAttribute('aria-pressed',String(active&&!!latest.power_on));}
+   if(badge){badge.textContent=active?(latest.power_on?'● Ein':'Aus'):'Keine Daten';badge.classList.toggle('on',active&&latest.power_on);badge.dataset.state=active?(latest.power_on?'on':'off'):'unknown';}
+   if(sw){sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];sw.setAttribute('aria-pressed',String(active&&!!latest.power_on));sw.dataset.state=active?(latest.power_on?'on':'off'):'unknown';sw.setAttribute('aria-label',(kind==='lamp'?'Licht':'Lüfter')+' '+(active?(latest.power_on?'einschalten? Aktuell eingeschaltet':'einschalten? Aktuell ausgeschaltet'):'nicht erreichbar'));}
    if(slider){slider.disabled=!active||!latest.power_on||state.busy[kind];if(!state.sliderEdit[kind]&&percent!=null)slider.value=percent;}
    if(apply)apply.disabled=!active||!latest.power_on||state.busy[kind];
  });
@@ -306,6 +306,7 @@ async function loadHistory(){
  }catch(e){text('historyData','Archivdaten derzeit nicht erreichbar');}
 }
 function updateCamera(force=false){
+ if(state.cameraPaused){state.activeCam=null;return;}
  const target=state.page==='camera'?'largeCam':state.page==='home'?'homeCam':null;
  if(state.activeCam===target&&!force)return;
  document.querySelectorAll('.camframe img').forEach(img=>img.remove());
@@ -392,7 +393,8 @@ async function cameraApply(control){
  }catch(e){notify('Kamera: '+e.message);}finally{if(button)button.disabled=false;}
 }
 $('cameraMode')?.addEventListener('change',e=>{cam.resolution=e.target.value;updateCamera(true);});
-$('cameraRefresh')?.addEventListener('click',()=>cameraLoad());
+$('cameraRefresh')?.addEventListener('click',()=>{state.cameraPaused=false;$('cameraStop').disabled=false;cameraLoad();});
+$('cameraStop')?.addEventListener('click',()=>{state.cameraPaused=true;state.activeCam=null;document.querySelectorAll('.camframe img').forEach(img=>{img.removeAttribute('src');img.remove()});document.querySelectorAll('.camframe .camblank').forEach(el=>{el.textContent='Kameraübertragung beendet';el.style.display='block'});$('cameraStop').disabled=true;notify('Kameraübertragung in dieser Sitzung beendet');});
 $('cameraSettingsToggle')?.addEventListener('click',async()=>{
  const panel=$('cameraSettingsPanel');panel.hidden=!panel.hidden;
  $('cameraSettingsToggle').setAttribute('aria-expanded',String(!panel.hidden));
