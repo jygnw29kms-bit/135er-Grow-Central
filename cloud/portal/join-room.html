@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071411"><meta name="referrer" content="no-referrer">
+<title>Grow Central · Raumeinladung</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top right,#204735,#071511 60%);color:#e0f5e9;font:16px/1.5 system-ui,Arial,sans-serif}
+header{border-bottom:1px solid #365d49;padding:20px max(22px,calc((100vw - 760px)/2));font-weight:700;letter-spacing:.04em}
+header a{color:#8aefb8;text-decoration:none}
+main{max-width:760px;padding:24px;margin:24px auto}h1{font-size:clamp(27px,5vw,40px);font-weight:600}
+.panel{border:1px solid #365c48;border-radius:16px;padding:24px;margin:18px 0;background:#142722}
+label{display:block;margin-top:12px}input,textarea{width:100%;font:inherit;background:#0b1915;color:#effff5;border:1px solid #577b67;padding:12px;border-radius:9px;margin-top:5px}
+button{background:#77e6a7;color:#072012;font:inherit;font-weight:700;border:0;padding:12px 17px;border-radius:9px;margin-top:15px;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#30493b;color:#e4f9e8}
+small{color:#acbfb0}#status{min-height:24px}#status.error{color:#ffaaaa}#status.success{color:#94f0b3}
+[hidden]{display:none!important}ul{padding-left:22px}li{margin:6px 0}p{color:#c0d6c7}
+</style></head><body><header><a href="/">Grow Central</a> · RAUMFREIGABE</header><main>
+<h1>Einladung zu einem Grow-Raum</h1>
+<p>Du bekommst ausschließlich Zugriff auf den Raum, den sein Besitzer freigegeben hat. Ein eigener Cloud-Account ist erforderlich.</p>
+<div id="status" role="status" aria-live="polite"></div>
+<section class="panel" id="accountPanel">
+<h2>Mit Cloud-Account anmelden</h2>
+<form id="loginForm"><label>E-Mail<input type="email" id="email" autocomplete="email" maxlength="254" required></label>
+<label>Passwort<input type="password" id="password" autocomplete="current-password" required></label>
+<button type="submit" id="loginButton">Anmelden und Einladung annehmen</button></form>
+<details><summary>Noch kein Cloud-Account?</summary><p>Nutze dieselben Zugangsdaten nicht mehrfach und vergib ein eigenes langes Passwort.</p>
+<form id="registerForm"><label>E-Mail<input type="email" id="registerEmail" autocomplete="email" maxlength="254" required></label>
+<label>Neues Passwort<input type="password" id="registerPassword" autocomplete="new-password" minlength="12" required></label>
+<button type="submit" id="registerButton" class="secondary">Account erstellen und Einladung annehmen</button></form></details>
+</section>
+<section class="panel" id="roomPanel" hidden>
+<h2>Dein freigegebener Raum</h2><p id="membership"></p>
+<button id="loadRoom" type="button">Raumdaten aktualisieren</button>
+<h3>Pflanzen</h3><ul id="plants"></ul><h3>Growbuch</h3><ul id="journal"></ul>
+<p><small>Nur vom Besitzer freigegebene Raumdaten. Keine allgemeine Geräteübersicht und keine ungeprüfte Gerätesteuerung.</small></p>
+<button type="button" id="logout" class="secondary">Abmelden</button>
+</section>
+</main><script src="/join-room.js?v=20261116-beta-room-1" defer></script></body></html>
