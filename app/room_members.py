@@ -201,6 +201,25 @@ async def member_automation(room_id: str, request: Request):
             "execution": "simulation_only_not_armed"}
 
 
+@router.post("/room/{room_id}/invitations")
+async def member_invite(room_id: str, request: Request, body: dict):
+    """Allow a room admin to invite only Growers or Observers in that room.
+
+    Owner invitation management remains on its original owner-only endpoint.
+    Delegated invites cannot grant permissions beyond the inviter's role.
+    """
+    actor = _require_room_access(request, room_id, "members.invite")
+    from app.room_sharing import InviteCreate, issue_invitation
+    from pydantic import ValidationError
+    try:
+        invitation = InviteCreate.model_validate(body)
+    except ValidationError as exc:
+        raise HTTPException(422, "Invalid invitation details") from exc
+    if not allowed(actor["role"], "members.invite"):
+        raise HTTPException(403, "Invitations are not permitted")
+    return issue_invitation(room_id, invitation, inviter_role=actor["role"])
+
+
 @router.get("/room/{room_id}/role")
 async def member_role(room_id: str, request: Request):
     account = _require_room_access(request, room_id, "room.view")
