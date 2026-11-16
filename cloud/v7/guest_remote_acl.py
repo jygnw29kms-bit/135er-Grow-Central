@@ -32,6 +32,7 @@ ROLE_PERMISSIONS = {
     "observer": frozenset({"room.view", "journal.view", "devices.view"}),
 }
 EXPECTED_RESULT = {"read": "read_result", "journal_create": "journal_result"}
+GUEST_REQUEST_PREFIX = "gc_guest_"
 MAX_PENDING_PER_SESSION = 24
 PENDING_TTL_SECONDS = 30
 
@@ -126,11 +127,16 @@ class GuestRequestBroker:
         if (not isinstance(original_id, str) or not 1 <= len(original_id) <= 64
                 or not re.fullmatch(r"[a-zA-Z0-9_-]+", original_id)):
             raise GuestRequestDenied("Invalid request identifier")
-        internal_id = secrets.token_urlsafe(24)
+        internal_id = GUEST_REQUEST_PREFIX + secrets.token_urlsafe(24)
         self._pending[internal_id] = Pending(
             session_id, original_id, expected_type, now + PENDING_TTL_SECONDS
         )
         return {**normalized, "request_id": internal_id}
+
+    @staticmethod
+    def is_guest_request_id(internal_id: object) -> bool:
+        """Identify guest-owned correlation IDs even after expiry or disconnect."""
+        return isinstance(internal_id, str) and internal_id.startswith(GUEST_REQUEST_PREFIX)
 
     def has_pending(self, internal_id: str) -> bool:
         """Detect and consume malformed guest replies without owner broadcast."""
