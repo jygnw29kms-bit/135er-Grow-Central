@@ -52,6 +52,15 @@ def verify(source_root: Path, cloud_root: Path) -> int:
             failures += 1
         else:
             print(f"MATCH   {live_name}")
+    # /favicon.ico is generated deterministically from the canonical PWA icon.
+    from scripts.build_cloud_favicon import favicon_bytes
+    ico = cloud_root / "favicon.ico"
+    icon = source_root / "web/gc-icon-192.png"
+    if not ico.is_file() or not icon.is_file() or ico.read_bytes() != favicon_bytes(icon.read_bytes()):
+        print("DIFF    favicon.ico (missing or does not match canonical app icon)")
+        failures += 1
+    else:
+        print("MATCH   favicon.ico (generated)")
     # A publicly served backup may expose outdated forms and server metadata.
     # Never delete it automatically: archive outside the document root first.
     for path in sorted(cloud_root.iterdir()):
@@ -65,7 +74,7 @@ def verify(source_root: Path, cloud_root: Path) -> int:
         if (cloud_root / old).exists():
             print(f"LEGACY_PUBLIC {old} (archive outside document root)")
             failures += 1
-    print(f"RESULT: {len(SOURCE_TO_LIVE) - failures}/{len(SOURCE_TO_LIVE)} deployed files match")
+    print(f"RESULT: {len(SOURCE_TO_LIVE) + 1 - failures}/{len(SOURCE_TO_LIVE) + 1} deployed files match")
     return 1 if failures else 0
 
 
