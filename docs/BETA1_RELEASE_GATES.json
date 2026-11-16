@@ -20,8 +20,8 @@
     {
       "id": "cloud_guest_identity",
       "title": "Guest sessions and room roles enforced on Cloud remote transport",
-      "status": "blocked",
-      "evidence": "",
+      "status": "partially_verified",
+      "evidence": "Cloud owner-account-bound collaboration API deployed on Plesk 2026-11-16; 33 isolated Cloud membership/ACL/integration tests passed; unauthenticated invite HTTP 401; device reconnect confirmed. Guest remote WebSocket and UI acceptance remain blocked.",
       "manual_acceptance_required": true
     },
     {
