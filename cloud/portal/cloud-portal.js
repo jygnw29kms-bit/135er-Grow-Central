@@ -90,6 +90,44 @@ window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.source!==$('masterFrame')?.contentWindow)return;
  const msg=event.data;
  if(!msg||msg.source!=='gc-cloud-master'||typeof msg.id!=='string'||msg.id.length>64)return;
+ if(msg.kind==='owner-members'){
+  // Never forward account credentials into the embedded Final Master frame.
+  // Each operation goes through the owner's authenticated Cloud account API.
+  const roomId=msg.room_id, suffix=msg.suffix||'',method=msg.method||'GET';
+  if(!accessToken||!currentDeviceId){masterReply(msg.id,401,{detail:'Besitzer-Anmeldung erforderlich'});return}
+  if(!/^room_[A-Za-z0-9_-]{1,110}$/.test(roomId)||
+     !/^(\/invitations(?:\/invite_[0-9a-f]{24,32})?|\/members(?:\/[A-Za-z0-9_-]{1,128})?)$/.test(suffix)||
+     !['GET','POST','PATCH','DELETE'].includes(method)){
+   masterReply(msg.id,400,{detail:'Unzulässiger Verwaltungsaufruf'});return;
+  }
+  const invite=suffix.startsWith('/invitations');
+  const allowed=(invite&&((method==='GET'&&suffix==='/invitations')||
+     (method==='POST'&&suffix==='/invitations')||
+     (method==='DELETE'&&suffix!=='/invitations')))||
+     (!invite&&((method==='GET'&&suffix==='/members')||
+     (method==='PATCH'&&suffix!=='/members')||
+     (method==='DELETE'&&suffix!=='/members')));
+  if(!allowed){masterReply(msg.id,403,{detail:'Verwaltungsoperation gesperrt'});return}
+  if(method==='POST'||method==='PATCH'){
+   if(!msg.body||!['admin','grower','observer'].includes(msg.body.role)||
+      (method==='POST'&&(!Number.isInteger(msg.body.ttl_hours)||msg.body.ttl_hours<1||msg.body.ttl_hours>168))){
+    masterReply(msg.id,400,{detail:'Ungültige Rolle oder Ablaufzeit'});return
+   }
+  }
+  const url='/api/v2/collaboration/devices/'+encodeURIComponent(currentDeviceId)+
+    '/rooms/'+encodeURIComponent(roomId)+suffix;
+  const headers={Authorization:'Bearer '+accessToken,Accept:'application/json'};
+  const init={method,headers,cache:'no-store'};
+  if(method==='POST'||method==='PATCH'){
+   headers['Content-Type']='application/json';
+   init.body=JSON.stringify({role:msg.body.role,...(method==='POST'?{ttl_hours:msg.body.ttl_hours}:{})});
+  }
+  fetch(url,init).then(async response=>{
+    let data={};try{data=await response.json()}catch{}
+    masterReply(msg.id,response.status,data);
+  }).catch(()=>masterReply(msg.id,503,{detail:'Cloud-Konten-API nicht erreichbar'}));
+  return;
+ }
  if(!accessToken||!remoteSocket||remoteSocket.readyState!==WebSocket.OPEN){
   masterReply(msg.id,503,{detail:'Cloud-Gerätekanal nicht erreichbar'});return
  }

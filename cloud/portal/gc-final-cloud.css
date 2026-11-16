@@ -168,7 +168,7 @@ main{min-width:0}
 .mobilebar{display:none}
 @media(max-width:1370px){.shell{grid-template-columns:188px minmax(0,1fr)}.master-columns{grid-template-columns:minmax(0,2fr) minmax(270px,.8fr)}.metric{padding:10px;gap:6px}.metric strong{font-size:22px}.control-image{min-height:155px}}
 @media(max-width:1120px){.master-columns{grid-template-columns:1fr}.master-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.activity-panel{grid-column:span 2}.camera-panel .camframe{height:235px}}
-@media(max-width:820px){.shell{display:block}.sidebar{display:none}.topbar{flex-wrap:wrap;padding:10px 12px}.content{padding:12px 10px 90px}.topbar .eyebrow{display:none}.topbar #roomPicker{min-width:155px}.clock{font-size:10px}.headright{gap:5px}.pill{font-size:10px;padding:6px 9px}.master-primary,.master-right{gap:10px}.hero-overlay{padding:20px}.hero-brand h2{font-size:27px}.hero-brand span{font-size:16px}.hero p{margin-left:0}.tilegrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{min-height:75px}.master-control-mount>.controls{grid-template-columns:1fr}.master-right{display:flex}.journal-body{grid-template-columns:1fr}.journal-entries{max-height:150px}.mobilebar{position:fixed;bottom:0;left:0;right:0;z-index:90;background:#0d1518f4;border-top:1px solid #304445;display:grid;grid-template-columns:repeat(5,1fr);padding:7px 4px calc(7px + env(safe-area-inset-bottom))}.mobilebar button{border:0;background:none;color:#9fbbb3;min-height:48px;font-size:20px;display:flex;flex-direction:column;align-items:center;gap:2px}.mobilebar small{font-size:10px}.mobilebar button.selected{color:var(--green)}#toast{bottom:86px;left:10px;right:10px;max-width:none}}
+@media(max-width:820px){.shell{display:block}.sidebar{display:none}.topbar{flex-wrap:wrap;padding:10px 12px}.content{padding:12px 10px 90px}.topbar .eyebrow{display:none}.topbar #roomPicker{min-width:155px}.clock{font-size:10px}.headright{gap:5px}.pill{font-size:10px;padding:6px 9px}.master-primary,.master-right{gap:10px}.hero-overlay{padding:20px}.hero-brand h2{font-size:27px}.hero-brand span{font-size:16px}.hero p{margin-left:0}.tilegrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{min-height:75px}.master-control-mount>.controls{grid-template-columns:1fr}.master-right{display:flex}.journal-body{grid-template-columns:1fr}.journal-entries{max-height:150px}.mobilebar{position:fixed;bottom:0;left:0;right:0;z-index:90;background:#0d1518f4;border-top:1px solid #304445;display:grid;grid-template-columns:repeat(6,1fr);padding:7px 4px calc(7px + env(safe-area-inset-bottom))}.mobilebar button{border:0;background:none;color:#9fbbb3;min-height:48px;font-size:20px;display:flex;flex-direction:column;align-items:center;gap:2px}.mobilebar small{font-size:10px}.mobilebar button.selected{color:var(--green)}#toast{bottom:86px;left:10px;right:10px;max-width:none}}
 @media(min-width:821px) and (max-width:1370px){.controlhead h3{font-size:15px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
@@ -272,3 +272,16 @@ main:has(#home:not(.active))>.dashboard-masthead{display:none}
 .control .power-action[data-state="off"],.control .switch[data-state="off"]{background:#65232b;border:1px solid #ea6775;color:#fff1f3}
 .control .power-action[data-state="unknown"],.control .switch[data-state="unknown"]{background:#283136;border:1px solid #69777b;color:#d3dadb}
 .control .power-action:disabled{opacity:.58;cursor:not-allowed}
+
+/* Beta 1.0 owner management, shared visual contract. */
+.gc-owner-panel{display:grid;gap:14px;max-width:1050px}
+.gc-owner-panel .panel{min-width:0}
+.gc-owner-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.gc-owner-form label{display:grid;gap:5px;color:var(--sub);font-size:12px}
+.gc-owner-form select{min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--panel2);color:var(--text)}
+.gc-member-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;border-top:1px solid var(--border);padding:10px 0}
+.gc-member-row span{overflow-wrap:anywhere}
+.gc-member-row select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px}
+.gc-invite-once{display:grid;justify-items:start;gap:8px;margin-top:12px;max-width:100%}
+.gc-invite-once input{width:100%;min-width:0;padding:10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:7px}
+.gc-invite-once img{max-width:100%;background:white;border-radius:8px;padding:6px}
