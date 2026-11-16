@@ -12,7 +12,7 @@ import secrets
 from dataclasses import dataclass
 from typing import Callable
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy import Engine
 
 from guest_remote_acl import GuestRequestBroker, GuestRequestDenied
@@ -70,7 +70,7 @@ class CloudGuestRemote:
                 if role is None:
                     await ws.close(code=4403)
                     return
-            except (ValueError, KeyError, TypeError, asyncio.TimeoutError):
+            except (HTTPException, ValueError, KeyError, TypeError, asyncio.TimeoutError):
                 await ws.close(code=4401)
                 return
             # The guest session has its own registry and is NEVER inserted
