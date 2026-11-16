@@ -35,6 +35,8 @@ cp "$repo/cloud/portal/cloud-master.html" "$stage/cloud-master.html"
 cp "$repo/cloud/portal/cloud-portal.js" "$stage/cloud-portal.js"
 cp "$repo/cloud/portal/join-room.html" "$stage/join-room.html"
 cp "$repo/cloud/portal/join-room.js" "$stage/join-room.js"
+# Generate deterministic /favicon.ico from the same canonical 192px PNG used by the PWA.
+python3 "$repo/scripts/build_cloud_favicon.py" --source "$repo/web/gc-icon-192.png" --output "$stage/favicon.ico"
 # Push-only worker is distinct from the retired Cloud offline-cache worker.
 node --check "$repo/cloud/portal/gc-push-worker.js"
 cp "$repo/cloud/portal/gc-push-worker.js" "$stage/gc-push-worker.js"
