@@ -79,9 +79,9 @@ class InviteCreate(BaseModel):
     ttl_hours: int = Field(default=48, ge=1, le=168)
 
 
-def make_invitation(data: dict, room_id: str, request: InviteCreate, *, now: float | None = None) -> tuple[dict, str]:
+def make_invitation(data: dict, room_id: str, request: InviteCreate, *, now: float | None = None, inviter_role: str = "owner") -> tuple[dict, str]:
     now = time.time() if now is None else now
-    if not assignable("owner", request.role):
+    if not assignable(inviter_role, request.role):
         raise ValueError("role cannot be granted")
     active = sum(
         1 for row in data["invitations"]
@@ -123,22 +123,14 @@ def public_invite(row: dict) -> dict:
     return {key: value for key, value in row.items() if key not in {"token_hash"}}
 
 
-@router.get("/policy")
-async def sharing_policy(request: Request, _=Depends(_require_owner)):
-    return {"roles": permission_matrix(), "invitation_methods": ["qr", "link", "email", "sms"],
-            "delivery": "share_link_only_no_automatic_sms_email", "redemption": "pending_member_identity_integration"}
 
+def issue_invitation(room_id: str, body: InviteCreate, *, inviter_role: str = "owner") -> dict:
+    """Generate an invitation with a role verified on the server.
 
-@router.get("/{room_id}/invitations")
-async def list_invitations(room_id: str, request: Request, _=Depends(_require_owner)):
-    if not _room_exists(room_id):
-        raise HTTPException(404, "Room not found")
-    data = _load()
-    return {"invitations": [public_invite(row) for row in data["invitations"] if row["room_id"] == room_id]}
-
-
-@router.post("/{room_id}/invitations")
-async def create_invitation(room_id: str, body: InviteCreate, request: Request, _=Depends(_require_owner)):
+    Never allow a delegated admin to create another admin or owner.
+    """
+    if not assignable(inviter_role, body.role):
+        raise HTTPException(403, "Cannot assign the requested role")
     if not _room_exists(room_id):
         raise HTTPException(404, "Room not found")
     # Validate the controlled origin *before* persisting a one-time invitation.
@@ -159,7 +151,7 @@ async def create_invitation(room_id: str, body: InviteCreate, request: Request, 
         raise HTTPException(503, "Invalid join origin")
     data = _load()
     try:
-        row, token = make_invitation(data, room_id, body)
+        row, token = make_invitation(data, room_id, body, inviter_role=inviter_role)
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     # Shareable token is revealed ONCE. The owner is responsible for sharing
@@ -171,6 +163,27 @@ async def create_invitation(room_id: str, body: InviteCreate, request: Request, 
             "join_path": "/join#invite=" + token,
             "share_url_once": link, "qr_svg_once": svg,
             "delivery": "manual_share_via_link_sms_email_or_qr", "redeem_enabled": True}
+
+
+@router.get("/policy")
+async def sharing_policy(request: Request, _=Depends(_require_owner)):
+    return {"roles": permission_matrix(), "invitation_methods": ["qr", "link", "email", "sms"],
+            "delivery": "share_link_only_no_automatic_sms_email", "redemption": "pending_member_identity_integration"}
+
+
+@router.get("/{room_id}/invitations")
+async def list_invitations(room_id: str, request: Request, _=Depends(_require_owner)):
+    if not _room_exists(room_id):
+        raise HTTPException(404, "Room not found")
+    data = _load()
+    return {"invitations": [public_invite(row) for row in data["invitations"] if row["room_id"] == room_id]}
+
+
+@router.post("/{room_id}/invitations")
+async def create_invitation(room_id: str, body: InviteCreate, request: Request, _=Depends(_require_owner)):
+    if not _room_exists(room_id):
+        raise HTTPException(404, "Room not found")
+    return issue_invitation(room_id, body)
 
 
 @router.delete("/{room_id}/invitations/{invitation_id}")
