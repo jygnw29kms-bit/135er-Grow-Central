@@ -69,6 +69,7 @@ def test_owner_invites_registered_account_and_one_time_redeems(tmp_path):
     assert created["role"] == "grower"
     assert created["remote_access"] if "remote_access" in created else True
     assert created["share_url_once"].startswith("https://135ercloud.grow-central.de/#room-invite=")
+    assert created["qr_svg_once"].lstrip().startswith("<?xml") or "<svg" in created["qr_svg_once"]
     assert "token_once" in created
     with engine.connect() as db:
         stored = db.execute(text("SELECT token_hash FROM cloud_room_invitations")).scalar()
