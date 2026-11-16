@@ -646,6 +646,12 @@ async function journalRequest(method,path,body){
  const response=await fetch(path,opts);
  let data={};try{data=await response.json();}catch{}
  if(!response.ok)throw new Error(typeof data?.detail==='string'?data.detail:'HTTP '+response.status);
+ // For journal mutations, only a Pi-confirmed readback counts as saved/deleted.
+ // Unknown outcomes must never be retried automatically.
+ if((method==='PUT'||method==='DELETE')&&/\\/journal\\/entry_[A-Za-z0-9_-]+$/.test(path)){
+  if(data.verified!==true||data.operation!==(method==='PUT'?'update':'delete'))
+   throw Error('Schreibstatus unklar. Eintrag auf dem Pi prüfen, nicht erneut automatisch senden.');
+ }
  return data;
 }
 async function saveJournal(event){
