@@ -249,6 +249,19 @@ main{min-width:0}
 @media(max-width:1370px){#liveTiles.tilegrid,#climateTiles .tilegrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:820px){#liveTiles.tilegrid,#climateTiles .tilegrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* Final Master sidebar identity: same composed brand as Cloud sign-in, compact in 210px rail. */
+.sidebar .gc-sidebar-brand{display:block;margin:0 1px 12px;padding:8px 5px 12px;text-decoration:none;border-bottom:1px solid #2c423d;min-width:0}
+.gc-sidebar-brand-main{display:flex;align-items:center;gap:7px;min-width:0}
+.gc-sidebar-brand-symbol{display:flex;flex:0 0 47px;align-items:center;justify-content:center;height:55px;padding-right:6px;border-right:1px solid #527f6c}
+.gc-sidebar-brand-symbol img{display:block;width:46px;height:46px;object-fit:contain;mix-blend-mode:screen}
+.gc-sidebar-brand-copy{display:flex;flex:1 1 auto;min-width:0;flex-direction:column;justify-content:center;gap:4px}
+.gc-sidebar-brand-title{font:700 15px/1.15 "Trebuchet MS",Arial,sans-serif;letter-spacing:-.055em;white-space:nowrap;color:#e1f8eb}
+.gc-sidebar-brand-title .gc-grow{color:#74e7a8}
+.gc-sidebar-brand-title .gc-central{margin-left:.2em}
+.gc-sidebar-brand-subtitle{font:500 7px/1.25 "Trebuchet MS",Arial,sans-serif;letter-spacing:.075em;color:#a8cbbb;white-space:normal}
+.sidebar .gc-sidebar-brand:hover{background:#12241f;border-radius:8px}
+.sidebar .gc-sidebar-brand:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
 /* Approved Final Master masthead: same hierarchy on .local and Cloud. */
 .dashboard-masthead{width:100%;max-width:1950px;margin:0 auto;padding:12px 14px 0;min-width:0}
 .dashboard-masthead .hero-master{width:100%;min-height:148px}
