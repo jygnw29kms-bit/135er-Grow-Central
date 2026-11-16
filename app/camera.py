@@ -428,7 +428,25 @@ async def camera_control_set(request: CameraControlRequest):
 
 @router.get("/snapshot")
 async def camera_snapshot(camera_id: str | None = None, width: int | None = None, height: int | None = None):
-    await _stop_active_stream("snapshot")
+    # A snapshot is a reader, not an instruction to terminate another viewer.
+    # When a live capture exists, reuse its most recent complete JPEG.
+    active = _ACTIVE_STREAM_PROCESS is not None and _ACTIVE_STREAM_PROCESS.returncode is None
+    cached = _LATEST_JPEG if active and _LATEST_JPEG is not None and time.monotonic() - _LATEST_JPEG_AT <= 5 else None
+    if active:
+        if cached is None:
+            _camera_diagnostic_event("snapshot_waiting_for_live_frame", pid=_ACTIVE_STREAM_PROCESS.pid)
+            raise HTTPException(503, "live camera stream has no fresh complete frame")
+        try:
+            resolved_id, device, mode = _resolve_capture_mode(camera_id, width, height)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(503, str(exc)) from exc
+        return Response(content=cached, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store", "X-GrowCentral-Camera": resolved_id,
+                                 "X-GrowCentral-Video-Device": device,
+                                 "X-GrowCentral-Resolution": f'{mode["width"]}x{mode["height"]}',
+                                 "X-GrowCentral-Frame-Source": "shared-live-stream"})
     try:
         data, resolved_id, device, mode = await asyncio.to_thread(_snapshot_sync, camera_id, width, height)
     except ValueError as exc:
