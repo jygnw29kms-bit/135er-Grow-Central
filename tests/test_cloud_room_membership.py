@@ -77,7 +77,7 @@ def test_owner_invites_registered_account_and_one_time_redeems(tmp_path):
     body = {"invite_token": created["token_once"]}
     resp = client.post("/api/v2/collaboration/accept", json=body, headers=headers("alice"))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["remote_access"] == "not_activated"
+    assert resp.json()["remote_access"] == "guest_scoped"
     assert mod.get_membership_role(engine, DEV, ROOM, "alice") == "grower"
     reused = client.post("/api/v2/collaboration/accept", json=body, headers=headers("bob"))
     assert reused.status_code == 400
@@ -169,3 +169,40 @@ def test_disabled_original_owner_blocks_all_guest_access(tmp_path):
     assert mod.get_membership_role(engine, DEV, ROOM, "alice") is None
     assert client.get("/api/v2/collaboration/my-rooms",
                       headers=headers("alice")).json()["memberships"] == []
+
+
+def test_disabled_guest_is_not_listed_in_owner_or_guest_membership_results(tmp_path):
+    engine, client = env(tmp_path)
+    created = invitation(client, role="observer")
+    response = client.post("/api/v2/collaboration/accept",
+                           json={"invite_token": created["token_once"]},
+                           headers=headers("alice"))
+    assert response.status_code == 200
+    own = client.get(f"/api/v2/collaboration/devices/{DEV}/rooms/{ROOM}/members",
+                     headers=headers("owner"))
+    assert any(row["account_id"] == "alice" for row in own.json()["members"])
+    with engine.begin() as db:
+        db.execute(text("UPDATE accounts SET status='disabled' WHERE id='alice'"))
+    # A still-valid access token must not make a disabled account visible or
+    # allow a guest membership to be represented as active.
+    mine = client.get("/api/v2/collaboration/my-rooms", headers=headers("alice"))
+    assert mine.status_code == 200
+    assert mine.json()["memberships"] == []
+    roster = client.get(f"/api/v2/collaboration/devices/{DEV}/rooms/{ROOM}/members",
+                        headers=headers("owner"))
+    assert roster.status_code == 200
+    assert all(row["account_id"] != "alice" for row in roster.json()["members"])
+    assert mod.get_membership_role(engine, DEV, ROOM, "alice") is None
+
+
+def test_join_response_reports_live_guest_transport_not_stale_disabled_state(tmp_path):
+    _, client = env(tmp_path)
+    created = invitation(client)
+    assert created["acceptance_ui"] == "cloud_join_page"
+    accepted = client.post("/api/v2/collaboration/accept",
+                           json={"invite_token": created["token_once"]},
+                           headers=headers("alice"))
+    assert accepted.status_code == 200
+    assert accepted.json()["remote_access"] == "guest_scoped"
+    rooms = client.get("/api/v2/collaboration/my-rooms", headers=headers("alice"))
+    assert rooms.json()["remote_access"] == "guest_scoped"
