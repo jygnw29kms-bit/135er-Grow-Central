@@ -6,8 +6,8 @@
     {
       "id": "gui_parity",
       "title": "Identical .local/.de Final Master user experience",
-      "status": "verified_automated",
-      "evidence": "tests/test_final_master_cloud_parity.py; Cloud/Pi comparison from 2026-11-15",
+      "status": "partially_verified",
+      "evidence": "15 automated GUI parity tests PASS for common navigation, status, telemetry, camera and push workers. Full Rooms/owner sharing panels still differ between .local and .de; tracked as GitHub issue #101. Visual parity not signed off.",
       "manual_acceptance_required": true
     },
     {
