@@ -10,7 +10,7 @@
 <button data-page="devices"><i data-icon="layers"></i> Geräte</button>
 <button data-page="climate"><i data-icon="thermometer"></i> Klima</button>
 <button data-page="camera"><i data-icon="camera"></i> Kamera</button>
-
+<button data-page="growbook"><i data-icon="book"></i> Growbuch</button>
 <button data-page="rooms"><i data-icon="grid"></i> Räume</button>
 <button data-page="homekit"><i data-icon="house"></i> Apple Home</button>
 <button data-page="cloud"><i data-icon="cloud"></i> Cloud</button>
@@ -160,7 +160,8 @@
 <article class="panel"><h3>Langzeitverlauf · alle verfügbaren Messgrößen</h3><label>Raum<select id="climateRoomSelect"></select></label><label>Zeitraum<select id="climateTimeSelect"><option value="24">Letzte 24 Stunden</option><option value="168">Letzte 7 Tage</option><option value="720">Letzte 30 Tage</option><option value="2160">Letzte 90 Tage</option><option value="0">Gesamter verfügbarer Verlauf</option></select></label><div id="climateHistoryCharts">Lade historische Messwerte …</div></article><article class="panel"><h3>Messquelle und Aktualität</h3><p id="climateDetails" class="desc">Verbindung wird geprüft.</p><p class="desc">CO₂, PPFD und weitere Werte erscheinen erst nach Anschluss eines passenden Sensors. CFM und Pa sind keine gemessenen Werte.</p></article></section>
 <section id="camera" class="page"><div class="intro"><h2>Live-Kamera</h2><p>Lokaler Kamerastream mit aktueller Zeit, Temperatur und Luftfeuchte.</p></div><article class="panel"><div id="largeCam" class="camframe large"><div class="camblank">Kamera wird geprüft</div><div class="osd"><span class="osdClock">—</span><span class="osdClimate">Keine aktuellen Messwerte</span></div></div><div class="camera-toolbar">
   <div class="camera-field"><label for="cameraMode">Bildauflösung</label><select id="cameraMode" aria-label="Kameraauflösung"><option value="">Kamera wird erkannt …</option></select></div>
-  <button type="button" id="cameraRefresh" class="subtle">Kamera aktualisieren</button>
+  <button type="button" id="cameraRefresh" class="subtle">Kamera starten / aktualisieren</button>
+  <button type="button" id="cameraStop" class="subtle">Übertragung beenden</button>
   <button type="button" id="cameraSettingsToggle" class="subtle" aria-expanded="false">Bildeinstellungen</button>
 </div><div id="cameraSettingsPanel" hidden><div id="cameraControls" class="camera-controls"></div><p id="cameraSettingsStatus" class="desc">Nur tatsächlich von der C920 unterstützte Einstellungen.</p></div>
 <p class="desc">Einstellungen werden nur nach Bestätigung an die angeschlossene Kamera übertragen.</p></article></section>
