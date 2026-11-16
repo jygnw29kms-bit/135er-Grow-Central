@@ -1,4 +1,9 @@
 'use strict';
+// Invitation links are issued as /#room-invite=<secret>. The fragment never
+// reaches the server; redirect only to our same-origin account-bound join page.
+if(location.hash.startsWith('#room-invite=')){
+ location.replace('/join-room.html'+location.hash);
+}
 const $=id=>document.getElementById(id);
 let accessToken='',refreshToken='';
 let reconnectTimer=null,reconnectAttempts=0;
