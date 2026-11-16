@@ -137,7 +137,7 @@ def build_router(
         return {"share_url_once": public_url.rstrip("/") + "/#room-invite=" + raw_token,
                 "token_once": raw_token, "room_id": room_id,
                 "role": body.role, "expires_at": current + body.ttl_hours * 3600,
-                "delivery": "manual_share_only", "acceptance_ui": "pending"}
+                "delivery": "manual_share_only", "acceptance_ui": "cloud_join_page"}
 
     @router.post("/accept")
     def accept(body: RedeemInput, authorization: str | None = Header(default=None)):
@@ -185,7 +185,7 @@ def build_router(
                 """), values)
         return {"ok": True, "device_id": row["device_id"],
                 "room_id": row["room_id"], "role": row["role"],
-                "remote_access": "not_activated"}
+                "remote_access": "guest_scoped"}
 
     @router.get("/my-rooms")
     def my_rooms(authorization: str | None = Header(default=None)):
@@ -196,12 +196,14 @@ def build_router(
               FROM cloud_room_memberships m
               JOIN devices d ON d.id=m.device_id
               JOIN accounts o ON o.id=m.owner_account_id
+              JOIN accounts guest ON guest.id=m.account_id
               WHERE m.account_id=:a AND m.revoked_at IS NULL
+                AND guest.status='active'
                 AND d.revoked_at IS NULL AND d.account_id=m.owner_account_id
                 AND o.status='active'
             """), {"a": account_id}).mappings().all()
         return {"memberships": [dict(row) for row in rows],
-                "remote_access": "not_activated"}
+                "remote_access": "guest_scoped"}
 
     @router.get("/devices/{device_id}/rooms/{room_id}/members")
     def members(device_id: str, room_id: str,
@@ -211,8 +213,10 @@ def build_router(
         valid_room(room_id)
         with engine.connect() as db:
             rows = db.execute(text("""
-              SELECT account_id,role,joined_at FROM cloud_room_memberships
-              WHERE device_id=:d AND room_id=:r AND revoked_at IS NULL
+              SELECT m.account_id,m.role,m.joined_at FROM cloud_room_memberships m
+              JOIN accounts a ON a.id=m.account_id
+              WHERE m.device_id=:d AND m.room_id=:r AND m.revoked_at IS NULL
+                AND a.status='active'
             """), {"d": device_id, "r": room_id}).mappings().all()
         return {"members": [dict(row) for row in rows]}
 
