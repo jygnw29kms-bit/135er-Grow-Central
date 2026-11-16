@@ -20,7 +20,7 @@ const document={getElementById:el,createElement:tag=>({tag,textContent:''})};
 const token='V'.repeat(44);
 const location={hash:'#room-invite='+token,pathname:'/join-room.html',origin:'https://135ercloud.grow-central.de',protocol:'https:'};
 const room='room_betatest',device='aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
-const fakeWindow={};
+let requestSequence=0;
 class Socket {
  static OPEN=1;
  constructor(url){this.url=url;this.readyState=Socket.OPEN;Socket.last=this;
@@ -50,7 +50,7 @@ const fetch=async(url,options)=>{
 const ctx={
  document,location,history:{replaceState:(...args)=>historyCalls.push(args)},
  fetch,WebSocket:Socket,URL,URLSearchParams,
- crypto:{randomUUID:()=> '12345678-1234-4234-8234-123456789012'},
+ crypto:{randomUUID:()=> '12345678-1234-4234-8234-'+String(++requestSequence).padStart(12,'0')},
  setTimeout,clearTimeout,console,Promise,
 };
 vm.createContext(ctx);
