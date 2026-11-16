@@ -249,4 +249,5 @@ async def preview_plan(room_id: str, request: Request, _=Depends(_require_owner)
     plan = RoomControlPlan.model_validate(_load().get(room_id, {}))
     from app.rooms import load_state, _latest_sensor_snapshot
     sample = _latest_sensor_snapshot(load_state(), room_id)
-    return {"room_id": room_id, **preview_from_sample(plan, sample)}
+    return {"room_id": room_id, **preview_from_sample(plan, sample),
+            "safety_interlocks": evaluate_actuation_safety(plan, sample)}
