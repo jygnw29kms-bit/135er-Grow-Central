@@ -334,7 +334,7 @@ async def serve(ws,local):
    continue
   if req.get("type")!="read":continue
   path=req.get("path")
-  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices|live-snapshot)(\?limit=[0-9]{1,3})?",path)
+  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/room_[A-Za-z0-9_-]{1,110}/(?:journal(?:/entry_[A-Za-z0-9_-]{1,110})?|plants|events|devices|live-snapshot)(?:\\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
   is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
   # Only authenticated room-scoped historical readings are permitted through
