@@ -1,5 +1,12 @@
 # 135er-Grow Central · Canonical Release State
 
+## Beta 1.0: eingefrorener privater Einzelzelt-Umfang (16.11.2026)
+
+Die aktuelle **Betreiber-App** ist ausdrücklich auf **ein privates Growzelt** begrenzt. Raspberry Pi 4 steuert offlinefähig lokal, während der gesicherte Cloud-/iPhone-PWA-Zugriff **verbindlich erhalten** bleibt. Benutzerverwaltung, echte Geräte-/Growbuch-/Kamerafunktionen, Sicherheit, Automationen und iOS-Benachrichtigungen gehören zum bereits vereinbarten Beta-Umfang. **Keine neuen Features, Mehrzelt-/Enterprise-Funktionen oder Optikwechsel** mehr bis zum Abschluss der Pflichtpunkte, anschließend ausschließlich Bugfixing und Sicherheits-/Regressionstests. Die vorgegebene aktuelle 135er-Branding-Sidebar bleibt unverändert.
+
+**Verbindlicher Abgleich und Abschlusskriterien:** [Beta-1.0-Scope-Freeze und Git/GUI-Abnahme](docs/BETA1_FINAL_SCOPE_AND_FREEZE_2026-11-16.md). Zum Stichtag 72/110 manuelle Checks OK, 8 Fehler und 30 offen; Beta ist **nicht freigegeben**. Ältere allgemeine Hardware-/Open-Source-/Produktpassagen sind kein neuer Beta-Entwicklungsauftrag. Die bestehende Quellcode-Lizenz wird hierdurch nicht geändert.
+
+
 ## Verifizierter Pi-Livestand und Git-Synchronisierung · 14. November 2026
 
 **Der Entwicklungsstopp ist aufgehoben.** Der installierte Raspberry Pi 4 meldet `SOURCE_COMMIT=be24ba9097c2e98eb1e3f302b5992c004d2e6e29` und `BUILD=operator-be24ba9097c2-base508` (`OPERATOR_PROVISIONED`). Dieser Betreiber-Livestand ist die Referenz für die synchronisierte Laufzeit, nicht der ältere veröffentlichte Image-Candidate 461.
