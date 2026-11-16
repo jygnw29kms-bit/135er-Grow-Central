@@ -48,6 +48,8 @@ jobs:
           node --check web/usb_onboarding.js
           node --check web/sensor_pairing.js
           node --check web/gc-final.js
+          node --check web/owner-members.js
+          node --check cloud/portal/owner-members.js
           node --check web/gc-worker.js
           node --check cloud/portal/gc-final-cloud.js
           node --check cloud/portal/cloud-portal.js
