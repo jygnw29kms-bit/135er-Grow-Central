@@ -60,7 +60,7 @@ def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https:
         # Read-only data integrity is part of hourly appliance readiness.
         # Never log contents of rooms, member records, credentials or growbook.
         try:
-            from scripts.check_beta1_data_integrity import audit as audit_data
+            from check_beta1_data_integrity import audit as audit_data
             integrity = audit_data(Path("/var/lib/135er-grow-central"))
             record("pi:data-integrity", integrity["ok"],
                    f"{len(integrity['errors'])} errors, {len(integrity['warnings'])} warnings")
