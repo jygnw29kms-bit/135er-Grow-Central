@@ -132,9 +132,16 @@ def build_router(
             """), {"h": hashed, "d": device_id, "r": room_id, "owner": account_id,
                    "role": body.role, "created": current,
                    "expires": current + body.ttl_hours * 3600})
-        # Fragment keeps the secret out of web server access logs. The
-        # Cloud PWA must implement its own join form before this is usable.
-        return {"share_url_once": public_url.rstrip("/") + "/#room-invite=" + raw_token,
+        # One-time QR stays in the authenticated response. Never use
+        # third-party QR generation or persist the bearer link/QR.
+        from io import BytesIO
+        import qrcode
+        from qrcode.image.svg import SvgPathImage
+        share_url = public_url.rstrip("/") + "/#room-invite=" + raw_token
+        qr_code = qrcode.make(share_url, image_factory=SvgPathImage, box_size=5, border=3)
+        output = BytesIO()
+        qr_code.save(output)
+        return {"share_url_once": share_url, "qr_svg_once": output.getvalue().decode("utf-8"),
                 "token_once": raw_token, "room_id": room_id,
                 "role": body.role, "expires_at": current + body.ttl_hours * 3600,
                 "delivery": "manual_share_only", "acceptance_ui": "cloud_join_page"}
