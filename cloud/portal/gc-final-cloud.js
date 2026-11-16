@@ -624,8 +624,12 @@ function openJournalForm(id=null){
  const plantSelect=$('journalPlant');
  if(plantSelect){
   plantSelect.replaceChildren();
-  const blank=document.createElement('option');blank.value='';blank.textContent='Allgemeiner Raumeintrag';plantSelect.append(blank);
-  for(const plant of growJournal.plants){
+  const blank=document.createElement('option');blank.value='';blank.textContent='Pflanze wählen';plantSelect.append(blank);
+  // Same mandatory plant-profile gate as the local Final Master.
+  const ready=plant=>plant.name&&plant.crop&&plant.phase&&plant.substrate_type&&
+    plant.substrate_components&&plant.container_type&&plant.nutrition_plan&&
+    ['yes','no','unknown'].includes(plant.substrate_pre_fertilized);
+  for(const plant of growJournal.plants.filter(ready)){
    const option=document.createElement('option');option.value=plant.id;option.textContent=plant.name;plantSelect.append(option);
   }
   plantSelect.value=row?.plant_id||'';
@@ -652,6 +656,7 @@ async function saveJournal(event){
  const payload={category:$('journalCategory').value,title:$('journalTitle').value.trim(),text:$('journalText').value.trim(),plant_id:$('journalPlant')?.value||null};
  try{
   if(!payload.title)throw Error('Bitte einen Titel eingeben.');
+  if(!payload.plant_id)throw Error('Bitte zuerst ein vollständiges Pflanzenprofil auswählen.');
   const photo=$('journalPhoto').files[0];
   if(photo&&!growJournal.editingId){
    if(!['image/jpeg','image/png','image/webp'].includes(photo.type))throw Error('Nur JPG, PNG oder WebP erlaubt.');
@@ -661,7 +666,11 @@ async function saveJournal(event){
   }else if(growJournal.editingId){
    await journalRequest('PUT',journalPath()+'/journal/'+encodeURIComponent(growJournal.editingId),payload);
   }else{
-   await api(journalPath()+'/journal',payload);
+   const receipt=await api(journalPath()+'/journal',payload);
+   // Cloud write is successful only after the Pi has confirmed a persisted
+   // readback with the original timestamped sensor snapshot.
+   if(receipt.verified!==true||receipt.snapshot_present!==true||!receipt.id)
+    throw Error('Speicherstatus unklar. Eintrag auf dem Pi prüfen; nicht erneut automatisch senden.');
   }
   $('journalDialog').close();growJournal.editingId=null;
   await loadJournal();await loadRecentEvents();
