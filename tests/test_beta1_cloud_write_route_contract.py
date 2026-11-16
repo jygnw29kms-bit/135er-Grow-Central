@@ -38,4 +38,4 @@ def test_cloud_disallows_unscoped_mutation_and_implicit_retries():
     assert "new RegExp('^/api/v1/rooms/(room_" in PORTAL
     assert "journal_delete_not_verified" in AGENT
     assert "no_retry" in AGENT
-    assert "kein automatischer" not in PORTAL.lower() or "Kein automatischer" in PORTAL
+    assert "Kein automatischer Wiederholungsversuch" in PORTAL
