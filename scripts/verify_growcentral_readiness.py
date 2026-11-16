@@ -34,7 +34,7 @@ def http(url: str, *, method: str = "GET") -> tuple[int, dict[str, str], bytes]:
         return error.code, dict(error.headers.items()), b""
 
 
-def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https://135ercloud.grow-central.de") -> dict:
+def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https://135ercloud.grow-central.de", data_root: Path | None = Path("/var/lib/135er-grow-central")) -> dict:
     result = {"mode": mode, "checks": {}, "warnings": []}
 
     def record(name: str, passed: bool, message: str = "") -> None:
@@ -60,11 +60,15 @@ def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https:
         # Read-only data integrity is part of hourly appliance readiness.
         # Never log contents of rooms, member records, credentials or growbook.
         try:
+            from scripts.check_beta1_data_integrity import audit as audit_data
+        except ModuleNotFoundError:
             from check_beta1_data_integrity import audit as audit_data
-            integrity = audit_data(Path("/var/lib/135er-grow-central"))
-            record("pi:data-integrity", integrity["ok"],
-                   f"{len(integrity['errors'])} errors, {len(integrity['warnings'])} warnings")
-            result["warnings"].extend("data integrity: " + item for item in integrity["warnings"])
+        try:
+            integrity = audit_data(data_root) if data_root is not None else None
+            if integrity is not None:
+                record("pi:data-integrity", integrity["ok"],
+                       f"{len(integrity['errors'])} errors, {len(integrity['warnings'])} warnings")
+                result["warnings"].extend("data integrity: " + item for item in integrity["warnings"])
         except Exception as exc:
             record("pi:data-integrity", False, type(exc).__name__)
         # These are presence checks, not proof of valid measurements.
@@ -97,8 +101,11 @@ def main() -> int:
     parser.add_argument("--mode", choices=("pi", "cloud", "all"), default="all")
     parser.add_argument("--skip-services", action="store_true", help="for network-only checks")
     parser.add_argument("--cloud-origin", default="https://135ercloud.grow-central.de")
+    parser.add_argument("--skip-data-integrity", action="store_true", help="only for synthetic CI/network checks")
     args = parser.parse_args()
-    output = check(args.mode, check_services=not args.skip_services, cloud_origin=args.cloud_origin.rstrip("/"))
+    output = check(args.mode, check_services=not args.skip_services,
+                   cloud_origin=args.cloud_origin.rstrip("/"),
+                   data_root=None if args.skip_data_integrity else Path("/var/lib/135er-grow-central"))
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0 if output["ok"] else 1
 
