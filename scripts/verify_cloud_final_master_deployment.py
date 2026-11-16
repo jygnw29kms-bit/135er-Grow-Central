@@ -53,7 +53,7 @@ def verify(source_root: Path, cloud_root: Path) -> int:
         else:
             print(f"MATCH   {live_name}")
     # /favicon.ico is generated deterministically from the canonical PWA icon.
-    from scripts.build_cloud_favicon import favicon_bytes
+    from build_cloud_favicon import favicon_bytes
     ico = cloud_root / "favicon.ico"
     icon = source_root / "web/gc-icon-192.png"
     if not ico.is_file() or not icon.is_file() or ico.read_bytes() != favicon_bytes(icon.read_bytes()):
