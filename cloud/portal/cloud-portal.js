@@ -152,7 +152,7 @@ window.addEventListener('message',event=>{
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'read',request_id:msg.id,path:msg.path}));return;
  }
- const journalMutation=/^\\/api\\/v1\\/rooms\\/(room_[A-Za-z0-9_-]+)\\/journal\\/(entry_[A-Za-z0-9_-]+)$/.exec(msg.path);
+ const journalMutation=new RegExp('^/api/v1/rooms/(room_[A-Za-z0-9_-]+)/journal/(entry_[A-Za-z0-9_-]+)$').exec(msg.path);
  if(journalMutation&&(method==='PUT'||method==='DELETE')){
   const room_id=journalMutation[1],entry_id=journalMutation[2],payload=msg.body;
   if(method==='PUT'&&(!payload||typeof payload.title!=='string'||!payload.title.trim()||
@@ -181,7 +181,7 @@ window.addEventListener('message',event=>{
   trackMaster(msg.id);
   remoteSocket.send(JSON.stringify({type:'control',request_id:msg.id,kind,action,value,confirm_physical_change:true}));return;
  }
- if(method==='POST'&&/^\\/api\\/v1\\/rooms\\/room_[A-Za-z0-9_-]+\\/journal$/.test(msg.path)){
+ if(method==='POST'&&new RegExp('^/api/v1/rooms/room_[A-Za-z0-9_-]+/journal$').test(msg.path)){
   if(!payload||typeof payload.title!=='string'||!payload.title.trim()||
      typeof payload.plant_id!=='string'||!/^plant_[A-Za-z0-9_-]+$/.test(payload.plant_id)){
    masterReply(msg.id,422,{detail:'Bitte vollständiges Pflanzenprofil und Titel auswählen'});return;
