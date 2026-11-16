@@ -723,6 +723,30 @@ function journalEntryPreview(row){
  return '<button type="button" class="journal-entry '+(row.id===growJournal.selectedId?'active':'')+'" data-journal-select="'+esc(row.id)+'">'+
  '<span>'+esc(catLabels[row.category]||row.category||'Eintrag')+'</span><small>'+shortDate(row.created_at)+'</small><span aria-hidden="true">›</span></button>';
 }
+function journalSnapshotMarkup(row){
+ const snapshot=row?.sensor_snapshot;
+ if(!snapshot||!snapshot.captured_at)return '<p class="desc">Zu diesem Eintrag ist keine Messmomentaufnahme gespeichert.</p>';
+ const historical=snapshot.historical_snapshot||{};
+ const items=[];
+ const add=(label,value,unit)=>{if(Number.isFinite(value))items.push(label+': '+n(value,1)+' '+unit)};
+ add('Temperatur',historical.temperature_c,'°C');
+ add('Luftfeuchte',historical.humidity_percent,'% rF');
+ add('Bodenfeuchte',historical.soil_moisture_percent,'%');
+ add('VPD',historical.vpd_kpa,'kPa');
+ for(const [id,values] of Object.entries(snapshot.devices||{})){
+  const parts=[];
+  if(Number.isFinite(values.temperature_c))parts.push(n(values.temperature_c,1)+' °C');
+  if(Number.isFinite(values.humidity_rh))parts.push(n(values.humidity_rh,1)+' % rF');
+  if(Number.isFinite(values.rpm))parts.push(n(values.rpm)+' RPM');
+  if(values.power_on===true||values.power_on===false)parts.push(values.power_on?'Ein':'Aus');
+  if(parts.length)items.push(id+': '+parts.join(' · '));
+ }
+ const observed=historical.timestamp||null;
+ return '<p class="desc">Messmomentaufnahme: '+esc(niceDate(snapshot.captured_at))+'</p>'+
+   (observed?'<p class="desc">Archivwert gemessen: '+esc(niceDate(observed))+'</p>':'')+
+   (items.length?items.map(x=>'<p class="desc">'+esc(x)+'</p>').join(''):
+    '<p class="desc">Keine gültigen zugeordneten Messwerte zum Aufnahmezeitpunkt.</p>');
+}
 function journalEntryDetail(row){
  if(!row)return '<p class="empty-text">Noch keine Einträge vorhanden. Über „Eintrag“ kannst du die erste Beobachtung anlegen.</p>';
  const safeId=esc(row.id);
@@ -731,7 +755,9 @@ function journalEntryDetail(row){
  return '<header><h4>'+esc(row.title||catLabels[row.category]||'Eintrag')+'</h4><div class="toolbar">'+editor+
  '<button type="button" data-journal-delete="'+safeId+'">Löschen</button></div></header>'+
  '<small>'+niceDate(row.created_at)+' · '+esc(catLabels[row.category]||row.category||'')+'</small>'+
- '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+photo;
+ '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+
+ (row.plant_id?'<p class="desc">Pflanze: '+esc(growJournal.plants.find(p=>p.id===row.plant_id)?.name||row.plant_id)+'</p>':'')+
+ journalSnapshotMarkup(row)+photo;
 }
 function renderJournal(){
  const entries=growJournal.entries;
