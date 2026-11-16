@@ -249,6 +249,23 @@ main{min-width:0}
 @media(max-width:1370px){#liveTiles.tilegrid,#climateTiles .tilegrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:820px){#liveTiles.tilegrid,#climateTiles .tilegrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* Approved Final Master masthead: same hierarchy on .local and Cloud. */
+.dashboard-masthead{width:100%;max-width:1950px;margin:0 auto;padding:12px 14px 0;min-width:0}
+.dashboard-masthead .hero-master{width:100%;min-height:148px}
+.dashboard-masthead .hero-overlay{max-width:100%;min-height:148px;display:flex;flex-direction:column;justify-content:center}
+.dashboard-masthead .hero-brand{max-width:100%;min-width:0}
+.dashboard-masthead .hero-overlay p{max-width:720px}
+main:has(#home:not(.active))>.dashboard-masthead{display:none}
+@media(max-width:820px){
+ .dashboard-masthead{padding:10px 10px 0}
+ .dashboard-masthead .hero-master{min-height:126px}
+ .dashboard-masthead .hero-overlay{min-height:126px;padding:16px}
+ .dashboard-masthead .hero-brand{max-width:100%}
+ .dashboard-masthead .hero-brand h2{font-size:clamp(22px,6vw,32px)}
+ .dashboard-masthead .hero-overlay p{font-size:12px;line-height:1.45}
+}
+@media(max-width:390px){.dashboard-masthead .hero-overlay{padding:13px}}
+
 /* Camera layout: prevent wide iPhone frames from expanding the page/iframe. */
 #camera.page,#camera .panel,#largeCam{min-width:0;max-width:100%}
 #largeCam.camframe.large{width:100%;max-width:100%;min-width:0;min-height:0;aspect-ratio:16/9;height:auto}
