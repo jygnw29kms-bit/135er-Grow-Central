@@ -766,10 +766,25 @@ def live_room_snapshot(room_id: str, state: dict[str, Any] | None = None) -> dic
     from app.mars_fast_fan import fast_fan
     state = state if state is not None else load_state()
     snapshot = _latest_sensor_snapshot(state, room_id)
+    captured_at = now_iso()
+    sample_age_seconds = None
+    if snapshot.get("timestamp"):
+        try:
+            sampled = datetime.fromisoformat(str(snapshot["timestamp"]).replace("Z", "+00:00"))
+            captured = datetime.fromisoformat(captured_at.replace("Z", "+00:00"))
+            if sampled.tzinfo is not None:
+                sample_age_seconds = round((captured - sampled).total_seconds(), 1)
+        except (ValueError, TypeError, OverflowError):
+            pass
+    # The normal 5-minute archive interval is not a proof of live telemetry.
+    # Preserve the original sample timestamp and explicitly flag older readings.
+    historical_fresh = sample_age_seconds is not None and 0 <= sample_age_seconds <= 600
     result: dict[str, Any] = {
-        "captured_at": now_iso(),
+        "captured_at": captured_at,
         "room_id": room_id,
         "historical_snapshot": snapshot or None,
+        "historical_age_seconds": sample_age_seconds,
+        "historical_fresh": historical_fresh,
         "devices": {},
     }
     assignments = state["assignments"]
