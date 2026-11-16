@@ -140,3 +140,18 @@ def test_malicious_room_name_and_owner_self_redeem_denied(tmp_path):
     self_redeem = client.post("/api/v2/collaboration/accept",
                               json={"invite_token": created["token_once"]}, headers=headers("owner"))
     assert self_redeem.status_code == 403
+
+
+def test_owner_transfer_invalidates_prior_guest_memberships(tmp_path):
+    engine, client = env(tmp_path)
+    created = invitation(client, role="grower")
+    assert client.post("/api/v2/collaboration/accept",
+                       json={"invite_token": created["token_once"]},
+                       headers=headers("alice")).status_code == 200
+    assert mod.get_membership_role(engine, DEV, ROOM, "alice") == "grower"
+    with engine.begin() as db:
+        db.execute(text("UPDATE devices SET account_id='other' WHERE id=:d"),
+                   {"d": DEV})
+    assert mod.get_membership_role(engine, DEV, ROOM, "alice") is None
+    assert client.get("/api/v2/collaboration/my-rooms",
+                      headers=headers("alice")).json()["memberships"] == []
