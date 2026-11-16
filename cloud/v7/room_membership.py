@@ -117,6 +117,15 @@ def build_router(
         current = clock()
         raw_token = secrets.token_urlsafe(32)
         hashed = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        # One-time QR stays in the authenticated response. Never use
+        # third-party QR generation or persist the bearer link/QR.
+        from io import BytesIO
+        import qrcode
+        from qrcode.image.svg import SvgPathImage
+        share_url = public_url.rstrip("/") + "/#room-invite=" + raw_token
+        qr_code = qrcode.make(share_url, image_factory=SvgPathImage, box_size=5, border=3)
+        output = BytesIO()
+        qr_code.save(output)
         with engine.begin() as db:
             n = db.execute(text("""
               SELECT COUNT(*) FROM cloud_room_invitations
@@ -132,15 +141,6 @@ def build_router(
             """), {"h": hashed, "d": device_id, "r": room_id, "owner": account_id,
                    "role": body.role, "created": current,
                    "expires": current + body.ttl_hours * 3600})
-        # One-time QR stays in the authenticated response. Never use
-        # third-party QR generation or persist the bearer link/QR.
-        from io import BytesIO
-        import qrcode
-        from qrcode.image.svg import SvgPathImage
-        share_url = public_url.rstrip("/") + "/#room-invite=" + raw_token
-        qr_code = qrcode.make(share_url, image_factory=SvgPathImage, box_size=5, border=3)
-        output = BytesIO()
-        qr_code.save(output)
         return {"share_url_once": share_url, "qr_svg_once": output.getvalue().decode("utf-8"),
                 "token_once": raw_token, "room_id": room_id,
                 "role": body.role, "expires_at": current + body.ttl_hours * 3600,
