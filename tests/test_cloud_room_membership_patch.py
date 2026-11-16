@@ -33,7 +33,7 @@ def test_patch_adds_only_endpoint_registration():
     assert "app.include_router(_gc_room_router(" in updated
     assert "guest_remote_acl" not in updated
     assert "device_connect" not in updated
-    assert updated.startswith(SAMPLE.strip())
+    assert updated.startswith(SAMPLE.rstrip())
 
 
 def test_second_patch_is_idempotent():
