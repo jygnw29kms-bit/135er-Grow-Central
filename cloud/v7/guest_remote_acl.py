@@ -132,6 +132,10 @@ class GuestRequestBroker:
         )
         return {**normalized, "request_id": internal_id}
 
+    def has_pending(self, internal_id: str) -> bool:
+        """Detect and consume malformed guest replies without owner broadcast."""
+        return isinstance(internal_id, str) and internal_id in self._pending
+
     def route_reply(self, message: dict, *, now: float | None = None) -> tuple[str, dict] | None:
         now = time.monotonic() if now is None else now
         if not isinstance(message, dict):
