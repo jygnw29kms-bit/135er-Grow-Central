@@ -15,6 +15,7 @@
 <button data-page="rooms"><i data-icon="grid"></i> Räume</button>
 <button data-page="homekit"><i data-icon="house"></i> Apple Home</button>
 <button data-page="cloud"><i data-icon="cloud"></i> Cloud</button>
+<button data-page="members"><i data-icon="users"></i> Benutzer</button>
 <button data-page="more"><i data-icon="settings"></i> System</button></nav>
 <div class="sidefoot"><span id="coreStatus" class="status-dot">Verbinde …</span><small>Grow Central · Local First</small></div></aside>
 <main><div class="dashboard-masthead" aria-label="Grow Central Dashboard"><article class="hero hero-master">
@@ -192,8 +193,21 @@
 </article>
 <article class="panel" style="margin-top:16px"><h3>Fernzugriff</h3><p class="desc">Die Anmeldung und Kopplung erfolgen verschlüsselt über die Grow-Central-Cloud. Die Freigabe eines Geräts ist Voraussetzung für den Zugriff von unterwegs. Ob der Fernzugriffskanal bereitsteht, wird separat geprüft.</p></article>
 </section>
+<section id="members" class="page"><div class="intro"><h2>BENUTZERVERWALTUNG</h2><p>Besitzerzugriff für das ausgewählte Growzelt. Alle Rechte werden auf dem Server geprüft.</p></div>
+<div id="gcMembers" class="gc-owner-panel">
+ <article class="panel"><header class="panelhead"><h3>Besitzer und Mitglieder</h3><button type="button" class="subtle" id="gcOwnerRefresh">Aktualisieren</button></header>
+ <p class="desc" id="gcMembersStatus" role="status">Besitzerrechte werden geprüft …</p>
+ <div id="gcMemberList"></div>
+ </article>
+ <article class="panel"><h3>Einladung erstellen</h3><p class="desc">Einmaliger Link für ein eigenes Benutzerkonto. Kein automatischer SMS-/E-Mail-Versand.</p>
+ <div class="gc-owner-form"><label>Rolle <select id="gcInviteRole"><option value="grower">Grower</option><option value="observer">Beobachter</option><option value="admin">Administrator</option></select></label>
+ <label>Gültigkeit <select id="gcInviteTtl"><option value="24">24 Stunden</option><option value="48" selected>48 Stunden</option><option value="168">7 Tage</option></select></label>
+ <button type="button" id="gcCreateInvitation" class="primary-btn">Einladung erzeugen</button></div>
+ <div id="gcInvitationOnce" class="gc-invite-once" aria-live="polite"></div></article>
+ <article class="panel"><h3>Offene Einladungen</h3><div id="gcInvitationList"></div></article>
+</div></section>
 <section id="more" class="page"><div class="intro"><h2>SYSTEM & INTEGRATIONEN</h2><p>Eine Anwendung. Alle bestätigten Geräte und Schnittstellen.</p></div>
 <article class="panel"><h3>GROW CENTRAL · SYSTEM</h3><div class="statusrow"><span>Software</span><strong id="aboutVersion">Lade Version …</strong></div><div class="statusrow"><span>FC3000</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>DF150-M</span><strong>Lokale BLE-Steuerung</strong></div><div class="statusrow"><span>FRITZ! / Tapo</span><strong>Geräteabhängig</strong></div><div class="statusrow"><span>HomeKit</span><strong>Bridge eingebunden</strong></div><div class="statusrow"><span>Sensoren</span><strong>Nur bestätigte Messwerte</strong></div></article>
 <article class="panel" style="margin-top:16px"><h3>WEITERE FUNKTIONEN</h3><p class="desc">Kalibrierung, Anlagen-Konfiguration, Anbauprofile und Editor bleiben im Projekt dokumentiert, werden aber erst nach erfolgreicher Funktionsabnahme hier freigeschaltet. Keine zweite Oberfläche und keine unfertigen Schalter.</p></article></section>
 </div></main></div><nav class="mobilebar" aria-label="Mobile Navigation"><button data-page="home">⌂<small>Start</small></button><button data-page="devices">▣<small>Geräte</small></button><button data-page="camera">▧<small>Kamera</small></button><button data-page="rooms">▣<small>Räume</small></button><button data-page="cloud">☁<small>Cloud</small></button></nav>
-<div id="toast" role="status" aria-live="polite"></div><script src="/static/gc-final.js?v=20261115-status-parity-1"></script></body></html>
+<div id="toast" role="status" aria-live="polite"></div><script src="/static/gc-final.js?v=20261115-status-parity-1"></script><script src="/static/owner-members.js?v=20261116-beta1-owner-1"></script></body></html>
