@@ -21,7 +21,7 @@
       "id": "cloud_guest_identity",
       "title": "Guest sessions and room roles enforced on Cloud remote transport",
       "status": "partially_verified",
-      "evidence": "Cloud owner-account-bound collaboration API deployed on Plesk 2026-11-16; 33 isolated Cloud membership/ACL/integration tests passed; unauthenticated invite HTTP 401; device reconnect confirmed. Guest remote WebSocket and UI acceptance remain blocked.",
+      "evidence": "Cloud owner-account memberships and guest WebSocket installed on Plesk; Cloud room-invite landing/login/redeem/view deployed 2026-11-16 (20/20 Cloud file parity). 33 isolated guest WebSocket/ACL tests, 19 GUI/source tests, one simulated complete JS guest join smoke passed. Late replies after revocation are suppressed by reserved guest request IDs. Two real Cloud accounts, owner invite UI, role changes and device-based acceptance still require verification.",
       "manual_acceptance_required": true
     },
     {
