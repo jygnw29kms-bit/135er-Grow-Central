@@ -5,7 +5,7 @@ const text=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=0)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false,cameraPaused:false};
-const pages={home:'Dashboard',growbook:'Growbuch',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
+const pages={home:'Dashboard',growbook:'Growbuch',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',members:'Benutzer',more:'Mehr'};
 let timer=0;
 function notify(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>e.classList.remove('show'),4200);}
 async function api(url,body){
