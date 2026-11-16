@@ -64,9 +64,11 @@ def get_membership_role(engine: Engine, device_id: str, room_id: str,
           SELECT m.role FROM cloud_room_memberships m
           JOIN devices d ON d.id=m.device_id
           JOIN accounts a ON a.id=m.account_id
+          JOIN accounts o ON o.id=m.owner_account_id
           WHERE m.device_id=:d AND m.room_id=:r AND m.account_id=:a
           AND m.revoked_at IS NULL AND d.revoked_at IS NULL
           AND d.account_id=m.owner_account_id AND a.status='active'
+          AND o.status='active'
         """), {"d": device_id, "r": room_id, "a": account_id}).scalar()
     return role if role in ROLES else None
 
@@ -193,8 +195,10 @@ def build_router(
               SELECT m.device_id,m.room_id,m.role
               FROM cloud_room_memberships m
               JOIN devices d ON d.id=m.device_id
+              JOIN accounts o ON o.id=m.owner_account_id
               WHERE m.account_id=:a AND m.revoked_at IS NULL
                 AND d.revoked_at IS NULL AND d.account_id=m.owner_account_id
+                AND o.status='active'
             """), {"a": account_id}).mappings().all()
         return {"memberships": [dict(row) for row in rows],
                 "remote_access": "not_activated"}
