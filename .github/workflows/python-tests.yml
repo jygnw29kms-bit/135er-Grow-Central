@@ -37,7 +37,7 @@ jobs:
           install -m 0755 "$(command -v mosquitto)" "$RUNNER_TEMP/gc-mosquitto-test"
           echo "GC_TEST_MOSQUITTO=$RUNNER_TEMP/gc-mosquitto-test" >> "$GITHUB_ENV"
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt pytest flask
+      - run: pip install -r requirements.txt pytest flask 'SQLAlchemy>=2,<3' httpx2
       - run: python -m pip check
       - run: python -m compileall -q app shared cloud local image-builder/firstboot
       - name: JavaScript syntax checks
