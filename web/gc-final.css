@@ -293,3 +293,9 @@ main:has(#home:not(.active))>.dashboard-masthead{display:none}
  #camera .camera-toolbar button{flex:1 1 auto;min-width:0;white-space:normal}
  #largeCam .osd{max-width:calc(100% - 16px);overflow-wrap:anywhere}
 }
+
+/* Beta 1.0: switch colours reflect confirmed live hardware state. */
+.control .power-action[data-state="on"],.control .switch[data-state="on"]{background:#155237;border:1px solid #48bd81;color:#dcffeb}
+.control .power-action[data-state="off"],.control .switch[data-state="off"]{background:#65232b;border:1px solid #ea6775;color:#fff1f3}
+.control .power-action[data-state="unknown"],.control .switch[data-state="unknown"]{background:#283136;border:1px solid #69777b;color:#d3dadb}
+.control .power-action:disabled{opacity:.58;cursor:not-allowed}
