@@ -199,8 +199,9 @@ async def serve(ws,local):
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
       and isinstance(title,str) and 1<=len(title.strip())<=120
       and isinstance(note,str) and len(note)<=5000
-      and (plant_id is None or (isinstance(plant_id,str) and re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id)))
-      and category in {"note","observation","watering","feeding","training","other"}
+      and isinstance(plant_id,str) and bool(re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id))
+      and category in {"note","watering","feeding","training","defoliation","pest",
+                       "flowering","photo","observation","diagnosis","repotting","harvest","other"}
       and req.get("confirm_write") is True)
    if not valid:
     await ws.send(json.dumps({"type":"journal_result","request_id":request_id,"ok":False,
@@ -212,8 +213,24 @@ async def serve(ws,local):
     result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
     result.raise_for_status()
     entry=result.json()
+    entry_id=entry.get("id")
+    if not isinstance(entry_id,str) or not re.fullmatch(r"entry_[A-Za-z0-9_-]{1,110}",entry_id):
+     raise RuntimeError("journal_write_missing_entry_id")
+    # A write acknowledgment alone does not prove that the Pi can read the
+    # entry back from its authoritative persisted room state.
+    check=await local.get(LOCAL_API+path+"/"+entry_id,headers=local_headers(),timeout=8)
+    check.raise_for_status()
+    saved=check.json()
+    if (not isinstance(saved,dict) or saved.get("id")!=entry_id or
+        saved.get("room_id")!=room_id or saved.get("plant_id")!=plant_id or
+        saved.get("title")!=title.strip()):
+     raise RuntimeError("journal_readback_mismatch")
+    snapshot=saved.get("sensor_snapshot")
+    if not isinstance(snapshot,dict) or not snapshot.get("captured_at"):
+     raise RuntimeError("journal_snapshot_missing")
     response={"type":"journal_result","request_id":request_id,"ok":True,"room_id":room_id,
-              "entry_id":str(entry.get("id",""))[:128]}
+              "entry_id":entry_id,"verified":True,"snapshot_present":True,
+              "snapshot_captured_at":snapshot["captured_at"]}
    except Exception as exc:
     response={"type":"journal_result","request_id":request_id,"ok":False,
               "error":type(exc).__name__,"no_retry":True}
