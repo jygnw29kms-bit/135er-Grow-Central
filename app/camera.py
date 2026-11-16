@@ -40,6 +40,27 @@ _ACTIVE_STREAM_TOKEN: object | None = None
 _ACTIVE_STREAM_PROCESS: asyncio.subprocess.Process | None = None
 _LATEST_JPEG: bytes | None = None
 _LATEST_JPEG_AT: float = 0.0
+_CAMERA_WATCHDOG_EVENTS: list[dict[str, Any]] = []
+_CAMERA_WATCHDOG_COUNTS: dict[str, int] = {}
+
+
+def _camera_diagnostic_event(reason: str, *, pid: int | None = None, detail: str = "") -> None:
+    """Bounded in-memory history; never record frames, session tokens or user data."""
+    _CAMERA_WATCHDOG_COUNTS[reason] = _CAMERA_WATCHDOG_COUNTS.get(reason, 0) + 1
+    _CAMERA_WATCHDOG_EVENTS.append({"at": time.time(), "reason": reason, "pid": pid, "detail": detail[:200]})
+    del _CAMERA_WATCHDOG_EVENTS[:-32]
+    log.warning("Camera capture diagnostic: %s pid=%s %s", reason, pid, detail[:200])
+
+
+def _camera_watchdog_snapshot() -> dict[str, Any]:
+    process = _ACTIVE_STREAM_PROCESS
+    age = None if not _LATEST_JPEG_AT else round(max(0.0, time.monotonic() - _LATEST_JPEG_AT), 2)
+    return {"capture_active": process is not None and process.returncode is None,
+            "capture_pid": process.pid if process else None,
+            "capture_returncode": process.returncode if process else None,
+            "last_complete_frame_age_seconds": age,
+            "watchdog_counts": dict(_CAMERA_WATCHDOG_COUNTS),
+            "recent_events": list(_CAMERA_WATCHDOG_EVENTS)}
 
 
 def _cache_jpeg_chunks(buffer: bytearray, chunk: bytes) -> None:
@@ -91,7 +112,9 @@ async def camera_cloud_preview():
             frame = captured if 1000 <= len(captured) <= 145000 else await asyncio.to_thread(_scaled_cloud_frame, captured)
         else:
             frame = cached if 1000 <= len(cached) <= 145000 else await asyncio.to_thread(_scaled_cloud_frame, cached)
-    except (RuntimeError, subprocess.TimeoutExpired):
+    except (RuntimeError, subprocess.TimeoutExpired) as exc:
+        reason = "preview_unavailable_while_stream_active" if _ACTIVE_STREAM_PROCESS is not None else "preview_capture_failed"
+        _camera_diagnostic_event(reason, pid=getattr(_ACTIVE_STREAM_PROCESS, "pid", None), detail=type(exc).__name__)
         raise HTTPException(503, "preview encoding unavailable")
     return Response(content=frame, media_type="image/jpeg",
                     headers={"Cache-Control": "no-store", "X-GrowCentral-Frame-Source": "shared-live-stream"})
@@ -373,6 +396,12 @@ async def camera_status(refresh: bool = False):
     return await asyncio.to_thread(_status_sync, force=refresh)
 
 
+@router.get("/diagnostics", dependencies=[Depends(require_write_auth)])
+async def camera_diagnostics():
+    """Owner-only diagnostic counters and process state, without camera images."""
+    return _camera_watchdog_snapshot()
+
+
 @router.get("/controls")
 async def camera_controls(camera_id: str | None = None):
     try:
@@ -429,6 +458,8 @@ async def _camera_stream_watchdog(token: object, process: asyncio.subprocess.Pro
         if _stream_is_stale(heartbeat["last_frame"], timeout=CAMERA_FRAME_TIMEOUT):
             log.warning("Camera watchdog: no complete JPEG for %.1fs; terminating stalled ffmpeg pid=%s",
                         time.monotonic() - heartbeat["last_frame"], process.pid)
+            _camera_diagnostic_event("missing_complete_frames", pid=process.pid,
+                                     detail=f"age={time.monotonic()-heartbeat['last_frame']:.1f}s")
             append_audit("camera.stream.watchdog", reason="missing_frames", pid=process.pid)
             await _stop_active_stream("watchdog_missing_frames", expected_token=token)
             return
@@ -479,6 +510,7 @@ async def _claim_stream(token: object) -> None:
         _ACTIVE_STREAM_PROCESS = None
     await _terminate_process(old_process)
     if replaced:
+        _camera_diagnostic_event("competing_stream_replacement", pid=getattr(old_process, "pid", None))
         append_audit("camera.stream.replaced")
 
 
@@ -526,9 +558,13 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
                 chunk = await asyncio.wait_for(process.stdout.read(64 * 1024), timeout=CAMERA_FRAME_TIMEOUT)
             except asyncio.TimeoutError:
                 log.warning("Camera stream stalled: no ffmpeg output for %.1fs", CAMERA_FRAME_TIMEOUT)
+                _camera_diagnostic_event("missing_ffmpeg_output", pid=process.pid,
+                                         detail=f"timeout={CAMERA_FRAME_TIMEOUT}s")
                 append_audit("camera.stream.watchdog", reason="missing_output", pid=process.pid)
                 break
             if not chunk:
+                _camera_diagnostic_event("ffmpeg_output_ended", pid=process.pid,
+                                         detail=f"returncode={process.returncode}")
                 break
             before = _LATEST_JPEG_AT
             _cache_jpeg_chunks(jpeg_buffer, chunk)
@@ -550,6 +586,8 @@ async def _mjpeg_stream(resolved_id: str, device: str, mode: dict[str, Any]):
                 detail = (await asyncio.wait_for(stderr_task, timeout=1)).decode("utf-8", errors="replace").strip()[:240]
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 stderr_task.cancel()
+        if detail:
+            _camera_diagnostic_event("ffmpeg_stderr", pid=getattr(process, "pid", None), detail=detail)
         append_audit("camera.stream.closed", camera_id=resolved_id, result="ffmpeg_error" if detail else "closed", detail=detail)
 
 
