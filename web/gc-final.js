@@ -743,8 +743,15 @@ function journalSnapshotMarkup(row){
   if(parts.length)items.push(id+': '+parts.join(' · '));
  }
  const observed=historical.timestamp||null;
+ const measuredAge=Number.isFinite(snapshot.historical_age_seconds)?snapshot.historical_age_seconds:
+  (observed?((new Date(snapshot.captured_at)).getTime()-(new Date(observed)).getTime())/1000:null);
+ const historicalFresh=typeof snapshot.historical_fresh==='boolean'?snapshot.historical_fresh:
+  (Number.isFinite(measuredAge)&&measuredAge>=0&&measuredAge<=600);
+ const ageText=Number.isFinite(measuredAge)&&measuredAge>=0?' · '+Math.ceil(measuredAge/60)+' min alt':'';
  return '<p class="desc">Messmomentaufnahme: '+esc(niceDate(snapshot.captured_at))+'</p>'+
-   (observed?'<p class="desc">Archivwert gemessen: '+esc(niceDate(observed))+'</p>':'')+
+   (observed?'<p class="desc">Archivwert gemessen: '+esc(niceDate(observed))+
+     (historicalFresh?' · zum Eintragszeitpunkt frisch':' · veraltet/ungeprüft')+esc(ageText)+'</p>':
+     '<p class="desc">Keine zeitlich zugeordnete Archivmessung vorhanden.</p>')+
    (items.length?items.map(x=>'<p class="desc">'+esc(x)+'</p>').join(''):
     '<p class="desc">Keine gültigen zugeordneten Messwerte zum Aufnahmezeitpunkt.</p>');
 }
