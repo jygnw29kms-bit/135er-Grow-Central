@@ -36,6 +36,11 @@
   if(encoded.length>165000)throw new Error('Foto ist für die Cloud-Vorschau zu groß');
   return {...body,image_data_url:encoded};
  }
+ window.gcCloudOwnerRequest=async(method,roomId,suffix,body)=>{
+  const result=await ask('owner-members',{method,room_id:roomId,suffix,body});
+  if(result.status<200||result.status>=300)throw Error(result.data?.detail||'Cloud-Mitgliederzugriff HTTP '+result.status);
+  return result.data||{};
+ };
  window.fetch=(input,init={})=>{
   let url;
   try{url=new URL(typeof input==='string'?input:input.url,location.href)}
