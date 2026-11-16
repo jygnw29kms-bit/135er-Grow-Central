@@ -193,14 +193,59 @@ async def serve(ws,local):
               "error":type(exc).__name__,"no_retry":True}
    await ws.send(json.dumps(response))
    continue
+  if req.get("type") in {"journal_update","journal_delete"}:
+   room_id=req.get("room_id");entry_id=req.get("entry_id")
+   method="PUT" if req["type"]=="journal_update" else "DELETE"
+   valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
+      and isinstance(entry_id,str) and re.fullmatch(r"entry_[A-Za-z0-9_-]{1,110}",entry_id)
+      and req.get("confirm_write") is True)
+   if method=="PUT":
+    title=req.get("title");note=req.get("text","");category=req.get("category","note");plant_id=req.get("plant_id")
+    valid=valid and isinstance(title,str) and 1<=len(title.strip())<=120 and isinstance(note,str) and len(note)<=5000
+    valid=valid and isinstance(plant_id,str) and bool(re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id))
+    valid=valid and category in {"note","watering","feeding","training","defoliation","pest","flowering",
+                                  "photo","observation","diagnosis","repotting","harvest","other"}
+   if not valid:
+    await ws.send(json.dumps({"type":"journal_result","request_id":request_id,"ok":False,"error":"invalid_journal_mutation","no_retry":True}))
+    continue
+   path="/api/v1/rooms/"+room_id+"/journal/"+entry_id
+   try:
+    if method=="PUT":
+     body={"title":title.strip(),"text":note,"category":category,"plant_id":plant_id}
+     write=await local.put(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
+    else:
+     write=await local.delete(LOCAL_API+path,headers=local_headers(),timeout=10)
+    write.raise_for_status()
+    # A confirmed write is followed by a scoped readback, never a speculative UI update.
+    check=await local.get(LOCAL_API+path,headers=local_headers(),timeout=8)
+    if method=="DELETE":
+     if check.status_code!=404:raise RuntimeError("journal_delete_not_verified")
+     response={"type":"journal_result","request_id":request_id,"ok":True,"entry_id":entry_id,
+               "room_id":room_id,"verified":True,"operation":"delete"}
+    else:
+     check.raise_for_status()
+     saved=check.json()
+     if (not isinstance(saved,dict) or saved.get("id")!=entry_id or saved.get("room_id")!=room_id
+        or saved.get("plant_id")!=plant_id or saved.get("title")!=title.strip()
+        or not isinstance(saved.get("sensor_snapshot"),dict)):
+      raise RuntimeError("journal_update_readback_mismatch")
+     response={"type":"journal_result","request_id":request_id,"ok":True,"entry_id":entry_id,
+               "room_id":room_id,"verified":True,"snapshot_present":bool(saved["sensor_snapshot"].get("captured_at")),
+               "operation":"update"}
+   except Exception as exc:
+    response={"type":"journal_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="journal_create":
    room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
    plant_id=req.get("plant_id")
    valid=(isinstance(room_id,str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,120}",room_id)
       and isinstance(title,str) and 1<=len(title.strip())<=120
       and isinstance(note,str) and len(note)<=5000
-      and (plant_id is None or (isinstance(plant_id,str) and re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id)))
-      and category in {"note","observation","watering","feeding","training","other"}
+      and isinstance(plant_id,str) and bool(re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id))
+      and category in {"note","watering","feeding","training","defoliation","pest",
+                       "flowering","photo","observation","diagnosis","repotting","harvest","other"}
       and req.get("confirm_write") is True)
    if not valid:
     await ws.send(json.dumps({"type":"journal_result","request_id":request_id,"ok":False,
@@ -212,8 +257,24 @@ async def serve(ws,local):
     result=await local.post(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
     result.raise_for_status()
     entry=result.json()
+    entry_id=entry.get("id")
+    if not isinstance(entry_id,str) or not re.fullmatch(r"entry_[A-Za-z0-9_-]{1,110}",entry_id):
+     raise RuntimeError("journal_write_missing_entry_id")
+    # A write acknowledgment alone does not prove that the Pi can read the
+    # entry back from its authoritative persisted room state.
+    check=await local.get(LOCAL_API+path+"/"+entry_id,headers=local_headers(),timeout=8)
+    check.raise_for_status()
+    saved=check.json()
+    if (not isinstance(saved,dict) or saved.get("id")!=entry_id or
+        saved.get("room_id")!=room_id or saved.get("plant_id")!=plant_id or
+        saved.get("title")!=title.strip()):
+     raise RuntimeError("journal_readback_mismatch")
+    snapshot=saved.get("sensor_snapshot")
+    if not isinstance(snapshot,dict) or not snapshot.get("captured_at"):
+     raise RuntimeError("journal_snapshot_missing")
     response={"type":"journal_result","request_id":request_id,"ok":True,"room_id":room_id,
-              "entry_id":str(entry.get("id",""))[:128]}
+              "entry_id":entry_id,"verified":True,"snapshot_present":True,
+              "snapshot_captured_at":snapshot["captured_at"]}
    except Exception as exc:
     response={"type":"journal_result","request_id":request_id,"ok":False,
               "error":type(exc).__name__,"no_retry":True}
@@ -273,7 +334,7 @@ async def serve(ws,local):
    continue
   if req.get("type")!="read":continue
   path=req.get("path")
-  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/[a-zA-Z0-9_-]{1,120}/(journal|plants|events|devices|live-snapshot)(\?limit=[0-9]{1,3})?",path)
+  is_room_path=isinstance(path,str) and re.fullmatch(r"/api/v1/rooms/room_[A-Za-z0-9_-]{1,110}/(?:journal(?:/entry_[A-Za-z0-9_-]{1,110})?|plants|events|devices|live-snapshot)(?:\\?limit=[0-9]{1,3})?",path)
   is_camera_query=isinstance(path,str) and re.fullmatch(r"/api/v1/camera/controls\?camera_id=cam[0-9]{1,3}",path)
   is_smart_query=path=="/api/v1/smarthome/overview?refresh=true"
   # Only authenticated room-scoped historical readings are permitted through

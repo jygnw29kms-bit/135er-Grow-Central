@@ -138,6 +138,66 @@ def preview_from_sample(
     }
 
 
+
+def evaluate_actuation_safety(
+    plan: RoomControlPlan,
+    sample: dict,
+    *,
+    device_status: dict | None = None,
+    last_switch_at: dict[str, datetime] | None = None,
+    manual_override: bool = False,
+    now: datetime | None = None,
+) -> dict:
+    """Pure safety evaluation. It never sends commands or grants actuation.
+
+    Unknown actuator feedback, stale sensor samples and an operator override
+    must be visible blockers, not guessed states. Time is handled as aware UTC
+    instants, so repeated/skipped local DST hours do not defeat min-switch gaps.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+    preview = preview_from_sample(plan, sample, now=now)
+    devices = device_status or {}
+    changed = last_switch_at or {}
+    items = {}
+    for kind, desired in (("light", preview["light"]), ("fan", preview["fan"])):
+        blockers = []
+        if not plan.enabled:
+            blockers.append("plan_not_enabled")
+        if manual_override:
+            blockers.append("manual_override")
+        if not preview["sensor_fresh"]:
+            # Light schedules can be previewed without sensors; never command
+            # equipment until the full local-health gate is verified.
+            blockers.append("room_sample_stale_or_unavailable")
+        status = devices.get(kind)
+        if not isinstance(status, dict) or not status.get("fresh") or type(status.get("power_on")) is not bool:
+            blockers.append("actuator_state_unconfirmed")
+        if kind == "fan" and desired.get("speed_percent") is None:
+            blockers.append("sensor_policy_manual_hold")
+        last = changed.get(kind)
+        if last is not None:
+            if not isinstance(last, datetime) or last.tzinfo is None:
+                blockers.append("last_switch_time_invalid")
+            else:
+                elapsed = (now - last).total_seconds()
+                minimum = plan.light.min_switch_gap_seconds if kind == "light" else plan.fan.min_switch_gap_seconds
+                if elapsed < 0 or elapsed < minimum:
+                    blockers.append("minimum_switch_gap_or_clock_regression")
+        else:
+            blockers.append("switch_history_unknown")
+        items[kind] = {
+            "desired": desired,
+            "safe_to_simulate": not blockers,
+            "blocked_by": blockers,
+            "actuation_allowed": False,
+            "action": "dry_run_only",
+        }
+    return {"execution": "simulation_only_no_device_command", "devices": items,
+            "manual_override": manual_override, "sensor_fresh": preview["sensor_fresh"]}
+
+
 def _load() -> dict:
     try:
         value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -189,4 +249,5 @@ async def preview_plan(room_id: str, request: Request, _=Depends(_require_owner)
     plan = RoomControlPlan.model_validate(_load().get(room_id, {}))
     from app.rooms import load_state, _latest_sensor_snapshot
     sample = _latest_sensor_snapshot(load_state(), room_id)
-    return {"room_id": room_id, **preview_from_sample(plan, sample)}
+    return {"room_id": room_id, **preview_from_sample(plan, sample),
+            "safety_interlocks": evaluate_actuation_safety(plan, sample)}
