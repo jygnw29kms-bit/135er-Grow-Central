@@ -139,6 +139,66 @@ def build_router(
                 "role": body.role, "expires_at": current + body.ttl_hours * 3600,
                 "delivery": "manual_share_only", "acceptance_ui": "cloud_join_page"}
 
+    def public_invitation_id(token_hash: str) -> str:
+        # A second digest is an opaque management identifier. Never disclose
+        # a redeemable token or the stored bearer digest in list responses.
+        return "invite_" + hashlib.sha256(token_hash.encode("ascii")).hexdigest()[:32]
+
+    @router.get("/devices/{device_id}/rooms/{room_id}/invitations")
+    def list_invitations(device_id: str, room_id: str,
+                         authorization: str | None = Header(default=None)):
+        account_id = account(authorization)
+        owner(device_id, account_id)
+        valid_room(room_id)
+        now = clock()
+        with engine.connect() as db:
+            rows = db.execute(text("""
+              SELECT token_hash,role,created_at,expires_at
+              FROM cloud_room_invitations
+              WHERE device_id=:d AND room_id=:r AND creator_account_id=:owner
+                AND expires_at>:now AND redeemed_by IS NULL AND revoked_at IS NULL
+              ORDER BY created_at DESC LIMIT :maximum
+            """), {"d": device_id, "r": room_id, "owner": account_id,
+                   "now": now, "maximum": MAX_PENDING_INVITES}).mappings().all()
+        return {"room_id": room_id, "pending": [
+            {"id": public_invitation_id(row["token_hash"]),
+             "role": row["role"], "created_at": row["created_at"],
+             "expires_at": row["expires_at"]}
+            for row in rows]}
+
+    @router.delete("/devices/{device_id}/rooms/{room_id}/invitations/{invitation_id}")
+    def revoke_invitation(device_id: str, room_id: str, invitation_id: str,
+                          authorization: str | None = Header(default=None)):
+        account_id = account(authorization)
+        owner(device_id, account_id)
+        valid_room(room_id)
+        if not re.fullmatch(r"invite_[0-9a-f]{32}", invitation_id):
+            raise HTTPException(404, "Invitation not found")
+        now = clock()
+        # Resolve only among this owner's room invitations. Never accept a
+        # redeemable bearer token in the revoke URL or return its digest.
+        with engine.begin() as db:
+            rows = db.execute(text("""
+              SELECT token_hash FROM cloud_room_invitations
+              WHERE device_id=:d AND room_id=:r AND creator_account_id=:owner
+                AND expires_at>:now AND redeemed_by IS NULL AND revoked_at IS NULL
+            """), {"d": device_id, "r": room_id,
+                   "owner": account_id, "now": now}).mappings().all()
+            matched = next((row["token_hash"] for row in rows
+                            if public_invitation_id(row["token_hash"]) == invitation_id), None)
+            if matched is None:
+                raise HTTPException(404, "Invitation not found")
+            changed = db.execute(text("""
+              UPDATE cloud_room_invitations SET revoked_at=:now
+              WHERE token_hash=:hash AND device_id=:d AND room_id=:r
+                AND creator_account_id=:owner AND redeemed_by IS NULL
+                AND revoked_at IS NULL AND expires_at>:now
+            """), {"now": now, "hash": matched, "d": device_id,
+                   "r": room_id, "owner": account_id})
+            if changed.rowcount != 1:
+                raise HTTPException(409, "Invitation already claimed or revoked")
+        return {"ok": True, "id": invitation_id, "revoked": True}
+
     @router.post("/accept")
     def accept(body: RedeemInput, authorization: str | None = Header(default=None)):
         account_id = account(authorization)
