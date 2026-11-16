@@ -93,8 +93,8 @@ def test_mobile_camera_stays_inside_final_master_viewport():
     for css in (local_css, cloud_css):
         for rule in required:
             assert rule in css
-    assert "/static/gc-final.css?v=20261116-masthead-1" in LOCAL
-    assert "/static/gc-final.css?v=20261116-masthead-1" in CLOUD
+    assert "/static/gc-final.css?v=20261116-sidebar-brand-1" in LOCAL
+    assert "/static/gc-final.css?v=20261116-sidebar-brand-1" in CLOUD
 
 
 def test_camera_osd_shows_fresh_soil_without_mars_hydro_ble():
