@@ -206,3 +206,58 @@ def test_join_response_reports_live_guest_transport_not_stale_disabled_state(tmp
     assert accepted.json()["remote_access"] == "guest_scoped"
     rooms = client.get("/api/v2/collaboration/my-rooms", headers=headers("alice"))
     assert rooms.json()["remote_access"] == "guest_scoped"
+
+
+def test_owner_can_list_and_cancel_pending_room_invitations(tmp_path):
+    engine, client = env(tmp_path)
+    created = invitation(client, role="observer")
+    token = created["token_once"]
+    url = f"/api/v2/collaboration/devices/{DEV}/rooms/{ROOM}/invitations"
+    listing = client.get(url, headers=headers("owner"))
+    assert listing.status_code == 200
+    rows = listing.json()["pending"]
+    assert len(rows) == 1
+    public_id = rows[0]["id"]
+    assert public_id.startswith("invite_")
+    assert rows[0]["role"] == "observer"
+    # No redeemable secret, token hash, or token prefix in owner listings.
+    assert token not in listing.text
+    assert "token_hash" not in listing.text
+    assert "token_once" not in listing.text
+    assert client.get(url, headers=headers("alice")).status_code == 403
+    assert client.delete(f"{url}/{public_id}", headers=headers("alice")).status_code == 403
+    assert client.delete(f"{url}/../{public_id}", headers=headers("owner")).status_code in (404, 422)
+    cancelled = client.delete(f"{url}/{public_id}", headers=headers("owner"))
+    assert cancelled.status_code == 200
+    assert cancelled.json()["revoked"] is True
+    assert client.get(url, headers=headers("owner")).json()["pending"] == []
+    cannot_redeem = client.post("/api/v2/collaboration/accept",
+                                json={"invite_token": token}, headers=headers("bob"))
+    assert cannot_redeem.status_code == 400
+    assert client.delete(f"{url}/{public_id}", headers=headers("owner")).status_code == 404
+    with engine.connect() as db:
+        assert db.execute(text("SELECT revoked_at FROM cloud_room_invitations")).scalar() is not None
+
+
+def test_redeemed_invitation_is_not_revokeable_and_wrong_room_is_isolated(tmp_path):
+    _, client = env(tmp_path)
+    created = invitation(client)
+    url = f"/api/v2/collaboration/devices/{DEV}/rooms/{ROOM}/invitations"
+    pending_id = client.get(url, headers=headers("owner")).json()["pending"][0]["id"]
+    response = client.post("/api/v2/collaboration/accept",
+                           json={"invite_token": created["token_once"]},
+                           headers=headers("alice"))
+    assert response.status_code == 200
+    assert client.get(url, headers=headers("owner")).json()["pending"] == []
+    assert client.delete(f"{url}/{pending_id}", headers=headers("owner")).status_code == 404
+
+    another = invitation(client)
+    pending = client.get(url, headers=headers("owner")).json()["pending"]
+    assert len(pending) == 1
+    other_room_url = f"/api/v2/collaboration/devices/{DEV}/rooms/room_unrelated/invitations"
+    assert client.get(other_room_url, headers=headers("owner")).json()["pending"] == []
+    assert client.delete(f"{other_room_url}/{pending[0]['id']}",
+                         headers=headers("owner")).status_code == 404
+    assert client.post("/api/v2/collaboration/accept",
+                       json={"invite_token": another["token_once"]},
+                       headers=headers("bob")).status_code == 200
