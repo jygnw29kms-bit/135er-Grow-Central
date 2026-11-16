@@ -16,7 +16,12 @@
 <button data-page="cloud"><i data-icon="cloud"></i> Cloud</button>
 <button data-page="more"><i data-icon="settings"></i> System</button></nav>
 <div class="sidefoot"><span id="coreStatus" class="status-dot">Verbinde …</span><small>Grow Central · Local First</small></div></aside>
-<main><header class="topbar"><div><div class="eyebrow">RAUM: <span id="currentRoom" class="sr-only">—</span></div>
+<main><div class="dashboard-masthead" aria-label="Grow Central Dashboard"><article class="hero hero-master">
+  <div class="hero-overlay">
+   <div class="hero-brand"><img src="/static/brand-mark.png" alt="" aria-hidden="true"><div><h2>Grow Central</h2><span>Environment Control</span></div></div>
+   <p>Zentrale Steuerung und Überwachung deines Grows.<br>Klima, Licht, Lüftung, Kamera und Growbuch an einem Ort.</p>
+  </div>
+ </article></div><header class="topbar"><div><div class="eyebrow">RAUM: <span id="currentRoom" class="sr-only">—</span></div>
 <select id="roomPicker" aria-label="Aktiver Grow-Raum"><option value="">Räume laden …</option></select>
 <h1 id="pageTitle" class="sr-only">Dashboard</h1></div>
 <div class="headright"><span id="clock" class="clock">—</span><span id="networkMode" class="pill" title="Aktiver Zugriffsweg: LAN oder Cloud">Verbindung prüfen …</span>
@@ -29,12 +34,7 @@
 <section id="home" class="page active">
 <div class="master-columns">
 <div class="master-primary">
- <article class="hero hero-master">
-  <div class="hero-overlay">
-   <div class="hero-brand"><img src="/static/brand-mark.png" alt="" aria-hidden="true"><div><h2>Grow Central</h2><span>Environment Control</span></div></div>
-   <p>Zentrale Steuerung und Überwachung deines Grows.<br>Klima, Licht, Lüftung, Kamera und Growbuch an einem Ort.</p>
-  </div>
- </article>
+
  <section id="liveTiles" class="tilegrid" aria-label="Live-Telemetrie">
   <article class="metric"><span class="metric-icon" data-icon="thermometer"></span><div><span>Temperatur</span><strong id="tempValue">—</strong><small id="tempAge">Warte auf Sensorwert</small></div></article>
   <article class="metric"><span class="metric-icon" data-icon="droplets"></span><div><span>Luftfeuchte</span><strong id="humidityValue">—</strong><small>DF150-M · BLE</small></div></article>
