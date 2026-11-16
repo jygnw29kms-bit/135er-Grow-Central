@@ -1,13 +1,13 @@
 {
   "target_release": "1.0.0-beta.1",
   "status": "blocked",
-  "policy": "No beta release tag until every mandatory gate is verified with evidence",
+  "policy": "Mandatory gates, real Pi/iPhone LAN+Cloud user acceptance and critical defect closure required; green CI alone never releases beta",
   "mandatory_gates": [
     {
       "id": "gui_parity",
       "title": "Identical .local/.de Final Master user experience",
       "status": "partially_verified",
-      "evidence": "15 automated GUI parity tests PASS for common navigation, status, telemetry, camera and push workers. Full Rooms/owner sharing panels still differ between .local and .de; tracked as GitHub issue #101. Visual parity not signed off.",
+      "evidence": "15 automated GUI parity tests PASS for common navigation, status, telemetry, camera and push workers. Full Rooms/owner sharing panels still differ between .local and .de; tracked as GitHub issue #101. Visual parity not signed off. 2026-11-16 manual GUI test: navigable on both paths but not exactly identical. Current 135er Sidebar brand is mandatory; draft PR #103 must be rebased to current master before merge.",
       "manual_acceptance_required": true
     },
     {
@@ -21,14 +21,14 @@
       "id": "cloud_guest_identity",
       "title": "Guest sessions and room roles enforced on Cloud remote transport",
       "status": "partially_verified",
-      "evidence": "Cloud owner-account memberships and guest WebSocket installed on Plesk; Cloud room-invite landing/login/redeem/view deployed 2026-11-16 (20/20 Cloud file parity). 33 isolated guest WebSocket/ACL tests, 19 GUI/source tests, one simulated complete JS guest join smoke passed. Late replies after revocation are suppressed by reserved guest request IDs. Two real Cloud accounts, owner invite UI, role changes and device-based acceptance still require verification. 2026-11-16: 38 Cloud membership/guest WebSocket/ACL tests passed; listings now exclude disabled guest accounts and live guest transport is identified accurately. Updated Cloud module deployed, HTTPS 200, unauthenticated membership request 401. Two real account and role-revocation iPhone acceptance still open. 2026-11-16: 40 membership/guest ACL tests passed; owner-only pending invite list and revocation deployed, disabled guests filtered from member listings. Protected Cloud API 401 unauthenticated; full owner GUI and real account/iPhone acceptance remain outstanding.",
+      "evidence": "Cloud owner-account memberships and guest WebSocket installed on Plesk; Cloud room-invite landing/login/redeem/view deployed 2026-11-16 (20/20 Cloud file parity). 33 isolated guest WebSocket/ACL tests, 19 GUI/source tests, one simulated complete JS guest join smoke passed. Late replies after revocation are suppressed by reserved guest request IDs. Two real Cloud accounts, owner invite UI, role changes and device-based acceptance still require verification. 2026-11-16: 38 Cloud membership/guest WebSocket/ACL tests passed; listings now exclude disabled guest accounts and live guest transport is identified accurately. Updated Cloud module deployed, HTTPS 200, unauthenticated membership request 401. Two real account and role-revocation iPhone acceptance still open. 2026-11-16: 40 membership/guest ACL tests passed; owner-only pending invite list and revocation deployed, disabled guests filtered from member listings. Protected Cloud API 401 unauthenticated; full owner GUI and real account/iPhone acceptance remain outstanding. Manual 2026-11-16: owner/member controls still absent from Final Master despite API and deployed join path; cannot mark verified before two-account iPhone LAN/Cloud ACL and revocation test.",
       "manual_acceptance_required": true
     },
     {
       "id": "web_push",
       "title": "Explicit-consent Cloud iOS Web Push, revoked-member stop, recovery and quiet hours",
       "status": "blocked",
-      "evidence": "Local opt-in code and push-only Cloud worker exist; authenticated Cloud registration and VAPID live test still missing",
+      "evidence": "Local opt-in code and push-only Cloud worker exist; authenticated Cloud registration and VAPID live test still missing Push delivery not yet confirmed on real iPhone; do not claim released.",
       "manual_acceptance_required": true
     },
     {
@@ -42,7 +42,7 @@
       "id": "growbook_e2e",
       "title": "Create room/plant, calibrate soil probe, log reading and camera photo",
       "status": "partially_verified",
-      "evidence": "Local room and camera regressions passed, authenticated multiuser E2E incomplete",
+      "evidence": "Local room and camera regressions passed, authenticated multiuser E2E incomplete 2026-11-16 manual: snapshots not properly shown/linked in either Final Master; F-003 still open.",
       "manual_acceptance_required": true
     },
     {
@@ -56,8 +56,36 @@
       "id": "ios_beta_acceptance",
       "title": "Real iPhone PWA installed, alerts displayed and Cloud/Local visually accepted",
       "status": "partially_verified",
-      "evidence": "Soil and camera screenshots accepted before later multiuser/push changes",
+      "evidence": "Soil and camera screenshots accepted before later multiuser/push changes 2026-11-16 operator review: 72/110 OK, 8 failed and 30 not tested; no authorization to declare entire beta passed.",
       "manual_acceptance_required": true
     }
-  ]
+  ],
+  "scope_freeze": {
+    "as_of": "2026-11-16",
+    "document": "docs/BETA1_FINAL_SCOPE_AND_FREEZE_2026-11-16.md",
+    "operator_model": "private_single_tent",
+    "local_offline_control_required": true,
+    "secure_cloud_pwa_required": true,
+    "users_are_scoped_to_same_tent": true,
+    "branding_contract": "current_135er_sidebar_brand_lan_cloud",
+    "new_features_allowed": false,
+    "stabilization_only_after_mandatory_features_complete": true,
+    "manual_gui_acceptance": {
+      "total_checks": 110,
+      "ok": 72,
+      "failed": 8,
+      "not_tested": 30,
+      "missing_owner_member_gui_paths": 14
+    },
+    "known_defects": [
+      "F-001",
+      "F-002",
+      "F-003",
+      "F-004",
+      "F-005",
+      "V-001",
+      "V-002"
+    ],
+    "no_production_release_without_manual_security_and_hardware_acceptance": true
+  }
 }
