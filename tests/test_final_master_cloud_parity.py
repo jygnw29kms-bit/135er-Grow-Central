@@ -40,7 +40,7 @@ def test_soil_measurements_and_phase_judgement_are_not_local_only():
 def test_cloud_only_offers_final_master_after_authentication():
     assert "if(!masterVisible)masterToggle();" in PORTAL
     assert "$('masterToggle').hidden=masterVisible;" in PORTAL
-    assert "/cloud-master.html?v=20261116-masthead-1" in PORTAL
+    assert "/cloud-master.html?v=20261116-sidebar-brand-1" in PORTAL
     assert "Live-Dashboard anzeigen" not in PORTAL
     # Never expose the legacy telemetry panel during WebSocket authentication.
     assert "const panel=$('remoteDashboard');panel.hidden=true;" in PORTAL
