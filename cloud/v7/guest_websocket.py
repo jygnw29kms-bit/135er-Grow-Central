@@ -16,7 +16,12 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy import Engine
 
 from guest_remote_acl import GuestRequestBroker, GuestRequestDenied
-from room_membership import get_membership_role
+try:
+    # Production Cloud backend installs the account module under this name.
+    from cloud_room_membership import get_membership_role
+except ImportError:
+    # Standalone repository regression tests use the source module name.
+    from room_membership import get_membership_role
 
 
 @dataclass
