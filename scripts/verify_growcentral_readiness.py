@@ -57,6 +57,16 @@ def check(mode: str, *, check_services: bool = True, cloud_origin: str = "https:
             record("pi:rooms-auth-protection", code in (401, 403), f"HTTP {code}")
         except OSError as exc:
             record("pi:rooms-auth-protection", False, type(exc).__name__)
+        # Read-only data integrity is part of hourly appliance readiness.
+        # Never log contents of rooms, member records, credentials or growbook.
+        try:
+            from scripts.check_beta1_data_integrity import audit as audit_data
+            integrity = audit_data(Path("/var/lib/135er-grow-central"))
+            record("pi:data-integrity", integrity["ok"],
+                   f"{len(integrity['errors'])} errors, {len(integrity['warnings'])} warnings")
+            result["warnings"].extend("data integrity: " + item for item in integrity["warnings"])
+        except Exception as exc:
+            record("pi:data-integrity", False, type(exc).__name__)
         # These are presence checks, not proof of valid measurements.
         if not list(Path("/dev/serial/by-id").glob("*")):
             result["warnings"].append("no USB serial sensor currently present")
