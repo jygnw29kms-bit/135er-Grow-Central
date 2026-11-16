@@ -170,3 +170,29 @@ def test_invalid_type_reserved_reply_never_broadcast(tmp_path):
     assert handled is True
     assert alice.outbound == []
     assert remote.broker.pending_count == 0
+
+
+def test_late_or_revoked_guest_reply_never_reaches_owner_broadcast(tmp_path):
+    engine = setup(tmp_path)
+    remote = remote_for(engine)
+    alice = Socket()
+    remote.sessions["s1"] = GuestSocketState(alice, DEVICE, ROOM, "alice", "alice")
+    sent = remote.broker.prepare(
+        {"type": "read", "request_id": "late", "path": f"/api/v1/rooms/{ROOM}/plants"},
+        session_id="s1", room_id=ROOM, role="grower",
+    )
+    internal_id = sent["request_id"]
+    assert internal_id.startswith("gc_guest_")
+    remote.broker.revoke_session("s1")
+    remote.sessions.pop("s1")
+    # Even after revocation, the delayed response must be consumed privately.
+    handled = asyncio.run(remote.dispatch_device_result(DEVICE, json.dumps({
+        "type": "read_result", "request_id": internal_id, "ok": True,
+        "data": {"plants": [{"room_id": ROOM, "name": "private"}]},
+    })))
+    assert handled is True
+    assert alice.outbound == []
+    # Ordinary owner responses retain their existing forwarding behavior.
+    assert asyncio.run(remote.dispatch_device_result(DEVICE, json.dumps({
+        "type": "read_result", "request_id": "owner_read_1", "ok": True,
+    }))) is False
