@@ -155,3 +155,17 @@ def test_owner_transfer_invalidates_prior_guest_memberships(tmp_path):
     assert mod.get_membership_role(engine, DEV, ROOM, "alice") is None
     assert client.get("/api/v2/collaboration/my-rooms",
                       headers=headers("alice")).json()["memberships"] == []
+
+
+def test_disabled_original_owner_blocks_all_guest_access(tmp_path):
+    engine, client = env(tmp_path)
+    created = invitation(client, role="observer")
+    response = client.post("/api/v2/collaboration/accept",
+                           json={"invite_token": created["token_once"]},
+                           headers=headers("alice"))
+    assert response.status_code == 200
+    with engine.begin() as db:
+        db.execute(text("UPDATE accounts SET status='disabled' WHERE id='owner'"))
+    assert mod.get_membership_role(engine, DEV, ROOM, "alice") is None
+    assert client.get("/api/v2/collaboration/my-rooms",
+                      headers=headers("alice")).json()["memberships"] == []
