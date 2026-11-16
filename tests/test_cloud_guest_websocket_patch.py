@@ -25,7 +25,7 @@ async def remote_connect(ws: WebSocket):
 async def device_connect():
     while True:
         payload = await ws.receive_text()
-        await broadcast_to_clients(device_id, payload)
+            await broadcast_to_clients(device_id, payload)
 # GROW_CENTRAL_BETA_ROOM_COLLABORATION_V1
 '''
 
