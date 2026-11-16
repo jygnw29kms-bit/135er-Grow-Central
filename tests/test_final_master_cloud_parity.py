@@ -214,7 +214,15 @@ def test_cloud_login_branding_moved_into_hero_not_header():
     assert entry.index('<header class="gc-public-topline"') < entry.index('<main>')
     assert entry.index('<main>') < entry.index('<div class="gc-login-brand"')
     assert entry.index('<div class="gc-login-brand"') < entry.index('<h1>')
-    assert 'src="/brand-logo.png"' in entry
+    assert 'class="gc-login-symbol"' in entry
+    assert 'src="/static/brand-mark.png"' in entry
+    assert 'class="gc-login-wordmark"' in entry
+    assert 'class="gc-login-title"' in entry
+    assert 'class="gc-login-subtitle"' in entry
+    assert '<span>135er-</span><span class="gc-grow">Grow</span><span>Central</span>' in entry
+    assert 'mix-blend-mode:screen' in entry
+    assert '.gc-login-symbol{height:82px' in entry
+    assert 'src="/brand-logo.png"' not in entry
     assert 'body:has(#account:not([hidden])) .gc-login-brand{display:none}' in entry
     # The public login is a separate view, not a substitute Final Master.
     assert 'id="masterMount"' in entry
