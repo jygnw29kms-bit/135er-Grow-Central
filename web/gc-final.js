@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const text=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=0)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
-const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false};
+const state={page:'home',lamp:null,fan:null,smart:null,hk:null,activeCam:null,busy:{lamp:false,fan:false},sliderEdit:{lamp:false,fan:false},refreshBusy:false,cameraPaused:false};
 const pages={home:'Dashboard',growbook:'Growbuch',devices:'Geräte',climate:'Klima',camera:'Live-Kamera',history:'Verlauf',rooms:'Räume',homekit:'Apple Home',cloud:'Cloud',more:'Mehr'};
 let timer=0;
 function notify(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>e.classList.remove('show'),4200);}
@@ -59,8 +59,8 @@ function setControls(kind,status){
  const percent=active?latest[level]:null;
  document.querySelectorAll('[data-control="'+kind+'"]').forEach(root=>{
    const sw=root.querySelector('[data-power]'),badge=root.querySelector('[data-power-status]'),slider=root.querySelector('[data-slider]'),apply=root.querySelector('[data-apply]');
-   if(badge){badge.textContent=active?(latest.power_on?'● Ein':'Aus'):'Keine Daten';badge.classList.toggle('on',active&&latest.power_on);}
-   if(sw){sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];sw.setAttribute('aria-pressed',String(active&&!!latest.power_on));}
+   if(badge){badge.textContent=active?(latest.power_on?'● Ein':'Aus'):'Keine Daten';badge.classList.toggle('on',active&&latest.power_on);badge.dataset.state=active?(latest.power_on?'on':'off'):'unknown';}
+   if(sw){sw.classList.toggle('on',active&&latest.power_on);sw.disabled=!active||state.busy[kind];sw.setAttribute('aria-pressed',String(active&&!!latest.power_on));sw.dataset.state=active?(latest.power_on?'on':'off'):'unknown';sw.setAttribute('aria-label',(kind==='lamp'?'Licht':'Lüfter')+' '+(active?(latest.power_on?'einschalten? Aktuell eingeschaltet':'einschalten? Aktuell ausgeschaltet'):'nicht erreichbar'));}
    if(slider){slider.disabled=!active||!latest.power_on||state.busy[kind];if(!state.sliderEdit[kind]&&percent!=null)slider.value=percent;}
    if(apply)apply.disabled=!active||!latest.power_on||state.busy[kind];
  });
@@ -466,6 +466,7 @@ async function loadHistory(){
  }catch(e){text('historyData','Archivdaten derzeit nicht erreichbar');}
 }
 function updateCamera(force=false){
+ if(state.cameraPaused){state.activeCam=null;return;}
  const target=state.page==='camera'?'largeCam':state.page==='home'?'homeCam':null;
  if(state.activeCam===target&&!force)return;
  document.querySelectorAll('.camframe img').forEach(img=>img.remove());
@@ -552,7 +553,8 @@ async function cameraApply(control){
  }catch(e){notify('Kamera: '+e.message);}finally{if(button)button.disabled=false;}
 }
 $('cameraMode')?.addEventListener('change',e=>{cam.resolution=e.target.value;updateCamera(true);});
-$('cameraRefresh')?.addEventListener('click',()=>cameraLoad());
+$('cameraRefresh')?.addEventListener('click',()=>{state.cameraPaused=false;$('cameraStop').disabled=false;cameraLoad();});
+$('cameraStop')?.addEventListener('click',()=>{state.cameraPaused=true;state.activeCam=null;document.querySelectorAll('.camframe img').forEach(img=>{img.removeAttribute('src');img.remove()});document.querySelectorAll('.camframe .camblank').forEach(el=>{el.textContent='Kameraübertragung beendet';el.style.display='block'});$('cameraStop').disabled=true;notify('Kameraübertragung in dieser Sitzung beendet');});
 $('cameraSettingsToggle')?.addEventListener('click',async()=>{
  const panel=$('cameraSettingsPanel');panel.hidden=!panel.hidden;
  $('cameraSettingsToggle').setAttribute('aria-expanded',String(!panel.hidden));
@@ -721,6 +723,30 @@ function journalEntryPreview(row){
  return '<button type="button" class="journal-entry '+(row.id===growJournal.selectedId?'active':'')+'" data-journal-select="'+esc(row.id)+'">'+
  '<span>'+esc(catLabels[row.category]||row.category||'Eintrag')+'</span><small>'+shortDate(row.created_at)+'</small><span aria-hidden="true">›</span></button>';
 }
+function journalSnapshotMarkup(row){
+ const snapshot=row?.sensor_snapshot;
+ if(!snapshot||!snapshot.captured_at)return '<p class="desc">Zu diesem Eintrag ist keine Messmomentaufnahme gespeichert.</p>';
+ const historical=snapshot.historical_snapshot||{};
+ const items=[];
+ const add=(label,value,unit)=>{if(Number.isFinite(value))items.push(label+': '+n(value,1)+' '+unit)};
+ add('Temperatur',historical.temperature_c,'°C');
+ add('Luftfeuchte',historical.humidity_percent,'% rF');
+ add('Bodenfeuchte',historical.soil_moisture_percent,'%');
+ add('VPD',historical.vpd_kpa,'kPa');
+ for(const [id,values] of Object.entries(snapshot.devices||{})){
+  const parts=[];
+  if(Number.isFinite(values.temperature_c))parts.push(n(values.temperature_c,1)+' °C');
+  if(Number.isFinite(values.humidity_rh))parts.push(n(values.humidity_rh,1)+' % rF');
+  if(Number.isFinite(values.rpm))parts.push(n(values.rpm)+' RPM');
+  if(values.power_on===true||values.power_on===false)parts.push(values.power_on?'Ein':'Aus');
+  if(parts.length)items.push(id+': '+parts.join(' · '));
+ }
+ const observed=historical.timestamp||null;
+ return '<p class="desc">Messmomentaufnahme: '+esc(niceDate(snapshot.captured_at))+'</p>'+
+   (observed?'<p class="desc">Archivwert gemessen: '+esc(niceDate(observed))+'</p>':'')+
+   (items.length?items.map(x=>'<p class="desc">'+esc(x)+'</p>').join(''):
+    '<p class="desc">Keine gültigen zugeordneten Messwerte zum Aufnahmezeitpunkt.</p>');
+}
 function journalEntryDetail(row){
  if(!row)return '<p class="empty-text">Noch keine Einträge vorhanden. Über „Eintrag“ kannst du die erste Beobachtung anlegen.</p>';
  const safeId=esc(row.id);
@@ -729,7 +755,9 @@ function journalEntryDetail(row){
  return '<header><h4>'+esc(row.title||catLabels[row.category]||'Eintrag')+'</h4><div class="toolbar">'+editor+
  '<button type="button" data-journal-delete="'+safeId+'">Löschen</button></div></header>'+
  '<small>'+niceDate(row.created_at)+' · '+esc(catLabels[row.category]||row.category||'')+'</small>'+
- '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+photo;
+ '<p>'+esc(row.text||row.note||'Keine weiteren Notizen.')+'</p>'+
+ (row.plant_id?'<p class="desc">Pflanze: '+esc(growJournal.plants.find(p=>p.id===row.plant_id)?.name||row.plant_id)+'</p>':'')+
+ journalSnapshotMarkup(row)+photo;
 }
 function renderJournal(){
  const entries=growJournal.entries;
@@ -973,6 +1001,12 @@ $('roomPicker')?.addEventListener('change',async e=>{
  await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+// Read-only synchronization: pick up journal edits from the other authorized access path.
+// Never replace in-progress form input or open edit dialogs.
+setInterval(()=>{
+ if(document.hidden||!growJournal.roomId||document.querySelector('dialog[open]'))return;
+ if(state.page==='growbook'||state.page==='rooms')loadJournal();
+},20000);
 setInterval(()=>{if(!document.hidden)loadClimateOverview();},30000);
 setInterval(()=>{if(!document.hidden&&state.page==='devices')loadSoilUsb();},6000);
 
