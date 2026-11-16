@@ -690,6 +690,7 @@ book:'<path d="M12 6C9 4 5 4 2 5v14c4-1 7 0 10 2 3-2 6-3 10-2V5c-3-1-7-1-10 1z"/
 grid:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
 house:'<path d="m3 11 9-8 9 8v10H3z"/><path d="M9 21v-7h6v7"/>',
 cloud:'<path d="M5 19a5 5 0 0 1-1-10 8 8 0 0 1 15 1 4 4 0 0 1-1 9z"/>',
+users:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 6a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1"/>',
 settings:'<circle cx="12" cy="12" r="3"/><path d="M9 2h6l1 3 2 1 3-1 2 5-3 2v2l3 2-2 5-3-1-2 1-1 3H9l-1-3-2-1-3 1-2-5 3-2v-2L1 10l2-5 3 1 2-1z"/>',
 wifi:'<path d="M2 8a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0m-11 4a5 5 0 0 1 8 0"/><circle cx="12" cy="20" r="1"/>',
 history:'<path d="M3 12a9 9 0 1 0 3-7"/><path d="M3 3v5h5M12 7v5l4 3"/>'
