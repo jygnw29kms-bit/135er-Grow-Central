@@ -1001,6 +1001,12 @@ $('roomPicker')?.addEventListener('change',async e=>{
  await Promise.all([loadJournal(),loadRecentEvents(),loadClimateOverview()]);
 });
 setInterval(()=>{if(!document.hidden&&growJournal.roomId)loadRecentEvents();},60000);
+// Read-only synchronization: pick up journal edits from the other authorized access path.
+// Never replace in-progress form input or open edit dialogs.
+setInterval(()=>{
+ if(document.hidden||!growJournal.roomId||document.querySelector('dialog[open]'))return;
+ if(state.page==='growbook'||state.page==='rooms')loadJournal();
+},20000);
 setInterval(()=>{if(!document.hidden)loadClimateOverview();},30000);
 setInterval(()=>{if(!document.hidden&&state.page==='devices')loadSoilUsb();},6000);
 
