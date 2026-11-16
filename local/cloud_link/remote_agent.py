@@ -193,6 +193,50 @@ async def serve(ws,local):
               "error":type(exc).__name__,"no_retry":True}
    await ws.send(json.dumps(response))
    continue
+  if req.get("type") in {"journal_update","journal_delete"}:
+   room_id=req.get("room_id");entry_id=req.get("entry_id")
+   method="PUT" if req["type"]=="journal_update" else "DELETE"
+   valid=(isinstance(room_id,str) and re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}",room_id)
+      and isinstance(entry_id,str) and re.fullmatch(r"entry_[A-Za-z0-9_-]{1,110}",entry_id)
+      and req.get("confirm_write") is True)
+   if method=="PUT":
+    title=req.get("title");note=req.get("text","");category=req.get("category","note");plant_id=req.get("plant_id")
+    valid=valid and isinstance(title,str) and 1<=len(title.strip())<=120 and isinstance(note,str) and len(note)<=5000
+    valid=valid and isinstance(plant_id,str) and bool(re.fullmatch(r"plant_[A-Za-z0-9_-]{1,110}",plant_id))
+    valid=valid and category in {"note","watering","feeding","training","defoliation","pest","flowering",
+                                  "photo","observation","diagnosis","repotting","harvest","other"}
+   if not valid:
+    await ws.send(json.dumps({"type":"journal_result","request_id":request_id,"ok":False,"error":"invalid_journal_mutation","no_retry":True}))
+    continue
+   path="/api/v1/rooms/"+room_id+"/journal/"+entry_id
+   try:
+    if method=="PUT":
+     body={"title":title.strip(),"text":note,"category":category,"plant_id":plant_id}
+     write=await local.put(LOCAL_API+path,headers=local_headers(),json=body,timeout=10)
+    else:
+     write=await local.delete(LOCAL_API+path,headers=local_headers(),timeout=10)
+    write.raise_for_status()
+    # A confirmed write is followed by a scoped readback, never a speculative UI update.
+    check=await local.get(LOCAL_API+path,headers=local_headers(),timeout=8)
+    if method=="DELETE":
+     if check.status_code!=404:raise RuntimeError("journal_delete_not_verified")
+     response={"type":"journal_result","request_id":request_id,"ok":True,"entry_id":entry_id,
+               "room_id":room_id,"verified":True,"operation":"delete"}
+    else:
+     check.raise_for_status()
+     saved=check.json()
+     if (not isinstance(saved,dict) or saved.get("id")!=entry_id or saved.get("room_id")!=room_id
+        or saved.get("plant_id")!=plant_id or saved.get("title")!=title.strip()
+        or not isinstance(saved.get("sensor_snapshot"),dict)):
+      raise RuntimeError("journal_update_readback_mismatch")
+     response={"type":"journal_result","request_id":request_id,"ok":True,"entry_id":entry_id,
+               "room_id":room_id,"verified":True,"snapshot_present":bool(saved["sensor_snapshot"].get("captured_at")),
+               "operation":"update"}
+   except Exception as exc:
+    response={"type":"journal_result","request_id":request_id,"ok":False,
+              "error":type(exc).__name__,"no_retry":True}
+   await ws.send(json.dumps(response))
+   continue
   if req.get("type")=="journal_create":
    room_id=req.get("room_id");title=req.get("title");note=req.get("text","");category=req.get("category","note")
    plant_id=req.get("plant_id")
