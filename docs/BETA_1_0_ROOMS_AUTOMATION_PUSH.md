@@ -73,3 +73,19 @@ Ein Push-Versand an den Push-Dienst ist auch noch **kein Zustell- oder Anzeige-N
 `.local` und `.de` behalten eine identische Final-Master-GUI. Zugang, Authentifizierung, WebSocket-Transport und origin-spezifische PWA-Service-Worker dürfen technisch abweichen, **Rechte, Menüs, Alarmregeln und Benachrichtigungseinstellungen nicht**. UI-Paritätstests sind vor jedem Cloud-Deployment Pflicht.
 
 **Beta 1.0 ist erst freigabefähig**, wenn Einladungs-/Rollenberechtigungen auch im Cloud-Zugang tatsächlich greifen, Automation bei angeschlossenen Geräten verifiziert ist (oder klar als Vorschau ausgewiesen wird), Alarmzustände langfristig gespeichert werden, und iOS Push an ein abonniertes Gerät durchgehend nachweislich zugestellt werden kann.
+
+
+## Cloud-Konten und sichere Gastverbindung (Entwicklungsstand 16.11.2026)
+
+**Backend integriert:** Die produktive Cloud-API auf dem Plesk-Server hat jetzt zusätzlich die Account-gebundenen Endpunkte unter `/api/v2/collaboration`:
+
+- Der authentifizierte Gerätebesitzer kann Einladungen für ein konkretes Gerät und eine Raum-ID mit Rolle `admin`, `grower` oder `observer` erzeugen. Der Token erscheint nur einmal als `/#room-invite=...` (URL-Fragment statt Server-Query), in der Datenbank liegt nur ein SHA-256-Digest.
+- Ein bereits mit eigenem Cloud-Konto angemeldeter Empfänger kann den einmaligen Token über `POST /api/v2/collaboration/accept` einlösen.
+- Mitgliedschaften sind an Geräte-ID, Raum-ID, eigenes Cloud-Konto **und das ursprüngliche Besitzerkonto** gebunden. Gerätewiderruf oder Besitzerwechsel entzieht die effektive Berechtigung. Besitzer können Rollen ändern und Mitglieder widerrufen.
+- Kein Zugriff auf globale Gerätedaten durch Mitgliedschaft allein. Eine separate Gastverbindung darf erst später mit `get_membership_role()` **für jede Nachricht** und `GuestRequestBroker` für private Antwortzustellung eingebunden werden.
+
+**Strikt noch deaktiviert:** Die bisherige `/api/v2/remote/connect`-Verbindung bleibt ausschließlich für das Cloud-Gerätebesitzerkonto zugelassen. Sie verteilt Antworten bisher geräteweit und darf **niemals** mit Gastkonten geöffnet werden, bevor Routing und Zugriffsschutz angepasst sind. Die künftige Gast-ACL in `cloud/v7/guest_remote_acl.py` ist getestet, aber noch nicht an den produktiven WebSocket angeschlossen. Sie erlaubt streng raumgebundene Leseabfragen und bestätigte Growbuch-Einträge für Grower/Admin, niemals Hardwaresteuerung oder kameraweiten Zugriff.
+
+Die Cloud-PWA zeigt noch keinen fertigen Einladungsannahme-Assistenten; der in der API generierte `/#room-invite=...`-Link hat daher die explizite Kennzeichnung `acceptance_ui: pending`. Eine echte Einladung an eine andere Person und die Visualisierung beider PWA-Zugänge bleiben Abnahmen. `.local` und `.de` dürfen keine voneinander abweichenden Benutzeroberflächen bekommen.
+
+**Prüfstand:** 33 isolierte Cloud-Konten-/WebSocket-ACL-/Integrationsprüfungen bestanden, produktive Cloud-API nach Restart gesund, WebSocket-Geräteverbindung wiederhergestellt, unauthentifizierter API-Zugriff auf Einladungserstellung HTTP 401. Die additive Cloud-Integration ist in `cloud/v7/room_membership.py` und `scripts/patch_cloud_room_membership.py` versioniert. Für einen Rollback wurde auf dem Cloud-Server eine Sicherung der vorherigen `app.py` angelegt. Bis zum Gast-WebSocket-End-to-End-Test bleibt Beta 1.0 **nicht freigegeben**.
