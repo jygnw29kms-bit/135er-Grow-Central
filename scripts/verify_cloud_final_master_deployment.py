@@ -19,6 +19,7 @@ SOURCE_TO_LIVE = {
     "cloud/portal/join-room.html": "join-room.html",
     "cloud/portal/join-room.js": "join-room.js",
     "cloud/portal/gc-final-cloud.js": "static/gc-final.js",
+    "cloud/portal/owner-members.js": "static/owner-members.js",
     "cloud/portal/gc-final-cloud.css": "static/gc-final.css",
     "cloud/portal/cloud-master-bridge.js": "static/cloud-master-bridge.js",
     "cloud/portal/gc-push-worker.js": "gc-push-worker.js",
