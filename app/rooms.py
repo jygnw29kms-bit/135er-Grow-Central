@@ -870,6 +870,23 @@ async def room_journal(room_id: str):
     return {"entries": [e for e in reversed(state["room_journal"]) if e["room_id"] == room_id]}
 
 
+@router.get("/{room_id}/journal/{entry_id}")
+async def room_journal_entry(room_id: str, entry_id: str):
+    """Read back a persisted entry and its original sensor snapshot by room/id.
+
+    Explicit room binding prevents cross-room lookup. This endpoint is also
+    suitable for narrow Cloud write verification instead of downloading the
+    potentially large whole journal after each write.
+    """
+    state = load_state()
+    room_or_404(state, room_id)
+    row = next((entry for entry in state["room_journal"]
+                if entry.get("room_id") == room_id and entry.get("id") == entry_id), None)
+    if row is None:
+        raise HTTPException(404, "Growbucheintrag nicht gefunden")
+    return row
+
+
 @router.post("/{room_id}/journal", dependencies=[Depends(require_write_auth)])
 async def add_room_journal(room_id: str, body: JournalEntry):
     with edit_state() as state:
