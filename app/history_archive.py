@@ -45,7 +45,12 @@ UNITS = {
 }
 def connect():
     DATA_FILE.parent.mkdir(parents=True,exist_ok=True)
+    if DATA_FILE.is_symlink():
+        raise ValueError("History database path may not be a symlink")
     db=sqlite3.connect(DATA_FILE,timeout=10)
+    # Existing archives can predate the restricted umask. Do not leave room
+    # telemetry world-readable merely because it survived earlier releases.
+    os.chmod(DATA_FILE, 0o600)
     db.row_factory=sqlite3.Row
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA journal_mode=WAL")
