@@ -81,3 +81,83 @@ def test_optional_app_configuration_is_encrypted_and_staged(tmp_path):
     stage_restore(blob, "synthetic beta backup passphrase", dest)
     assert (dest / "config/app.env").read_bytes() == config.read_bytes()
     assert (dest / "config/app.env").stat().st_mode & 0o077 == 0
+
+
+def _repack_encrypted(blob: bytes, password: str, edit):
+    """Create deliberately malformed, but correctly encrypted, test archives."""
+    import io
+    import json
+    import os
+    import zipfile
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from scripts.beta_data_backup import _key
+    prefix = len(MAGIC)
+    salt, nonce = blob[prefix:prefix + 16], blob[prefix + 16:prefix + 28]
+    raw = AESGCM(_key(password, salt)).decrypt(nonce, blob[prefix + 28:], MAGIC)
+    with zipfile.ZipFile(io.BytesIO(raw)) as src:
+        members = [(item, src.read(item)) for item in src.infolist()]
+    members = edit(members)
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as dst:
+        for item, data in members:
+            dst.writestr(item, data)
+    fresh_salt, fresh_nonce = os.urandom(16), os.urandom(12)
+    return MAGIC + fresh_salt + fresh_nonce + AESGCM(_key(password, fresh_salt)).encrypt(
+        fresh_nonce, output.getvalue(), MAGIC)
+
+
+def test_restore_rejects_manifest_negative_or_oversized_entries(tmp_path):
+    import json
+    root = fixture_root(tmp_path)
+    password = "synthetic beta backup passphrase"
+    original = create_bundle(root, password)
+
+    for invalid in (-1, 100 * 1024 * 1024):
+        def corrupt(members):
+            changed = []
+            for item, data in members:
+                if item.filename == "manifest.json":
+                    manifest = json.loads(data)
+                    manifest["files"][0]["size"] = invalid
+                    data = json.dumps(manifest).encode()
+                changed.append((item, data))
+            return changed
+
+        archive = _repack_encrypted(original, password, corrupt)
+        with pytest.raises(ValueError, match="Unsafe archive manifest entry"):
+            verify_bundle(archive, password)
+
+
+def test_restore_rejects_duplicate_zip_file_names(tmp_path):
+    root = fixture_root(tmp_path)
+    password = "synthetic beta backup passphrase"
+    original = create_bundle(root, password)
+
+    def duplicate(members):
+        return members + [members[-1]]
+
+    archive = _repack_encrypted(original, password, duplicate)
+    with pytest.raises(ValueError, match="Unexpected or duplicate"):
+        verify_bundle(archive, password)
+
+
+def test_restore_rejects_zip_symlink_even_with_valid_hash(tmp_path):
+    import zipfile
+    root = fixture_root(tmp_path)
+    password = "synthetic beta backup passphrase"
+    original = create_bundle(root, password)
+
+    def symlink(members):
+        changed = []
+        for item, data in members:
+            if item.filename == "data/rooms.json":
+                link = zipfile.ZipInfo(item.filename)
+                link.create_system = 3
+                link.external_attr = (0o120777 << 16)
+                item = link
+            changed.append((item, data))
+        return changed
+
+    archive = _repack_encrypted(original, password, symlink)
+    with pytest.raises(ValueError, match="Unsafe ZIP member type"):
+        verify_bundle(archive, password)
