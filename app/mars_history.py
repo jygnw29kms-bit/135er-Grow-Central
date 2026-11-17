@@ -30,7 +30,10 @@ LAMP = "MZ_MARS_68756_FCB467AEC260"
 
 def connect() -> sqlite3.Connection:
     DB.parent.mkdir(parents=True, exist_ok=True)
+    if DB.is_symlink():
+        raise ValueError("Mars history database path may not be a symlink")
     db = sqlite3.connect(DB, timeout=8)
+    os.chmod(DB, 0o600)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA busy_timeout=8000")
     db.execute("PRAGMA journal_mode=WAL")
