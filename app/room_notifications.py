@@ -92,8 +92,9 @@ def in_quiet_hours(policy: NotificationPolicy, *, now: datetime | None = None) -
 
 
 def classify(rule: ThresholdRule, value: float | None, previous: str = "normal") -> str:
-    """Hysteresis prevents one-reading alarm flapping."""
-    if value is None:
+    """Hysteresis prevents alarm flapping; invalid samples never mean recovery."""
+    import math
+    if value is None or type(value) not in (int, float) or not math.isfinite(value):
         return "unknown"
     if rule.minimum is not None:
         clear_at = rule.minimum + rule.hysteresis
@@ -202,7 +203,9 @@ def poll_once(*, now: float | None = None, store: dict | None = None, room_state
             metric = sample.get(rule.metric)
             if rule.metric == "soil_moisture_percent" and sample.get("soil_calibration_status") != "valid":
                 metric = None
-            value = float(metric) if fresh and type(metric) in (float, int) else None
+            import math
+            value = (float(metric) if fresh and type(metric) in (float, int)
+                     and math.isfinite(metric) else None)
             state, event = update_alert_state(rule, value, state, now=now)
             data["states"][key] = state
             if event:
