@@ -139,24 +139,47 @@ def verify_bundle(blob: bytes, passphrase: str) -> dict[str, bytes]:
         if index.get("schema") != 1:
             raise ValueError("Unknown backup schema")
         entries = index.get("files", [])
-        if not isinstance(entries, list) or len(entries) > 10000:
+        if not isinstance(entries, list) or not 1 <= len(entries) <= 10000:
             raise ValueError("Invalid archive file list")
-        names = [item["path"] for item in entries]
+        # Validate the untrusted manifest and ZIP directory *before* reading
+        # any individual member into memory. AES integrity does not guarantee
+        # that a deliberately created archive has reasonable decompression sizes.
+        names = []
+        manifest_total = 0
+        for item in entries:
+            if not isinstance(item, dict):
+                raise ValueError("Invalid archive manifest entry")
+            name, length, digest = item.get("path"), item.get("size"), item.get("sha256")
+            if (not isinstance(name, str) or not _allowed(name)
+                    or type(length) is not int or not 0 <= length <= MAX_FILE
+                    or not isinstance(digest, str) or len(digest) != 64
+                    or any(ch not in "0123456789abcdef" for ch in digest)):
+                raise ValueError("Unsafe archive manifest entry")
+            manifest_total += length
+            if manifest_total > MAX_BUNDLE:
+                raise ValueError("Archive exceeds maximum restore size")
+            names.append(name)
         if len(names) != len(set(names)) or "rooms.json" not in names:
             raise ValueError("Missing/duplicate critical data")
-        if set(z.namelist()) != {"manifest.json"} | {"data/" + n for n in names}:
-            raise ValueError("Unexpected archive members")
-        total = 0
+        expected = {"manifest.json"} | {"data/" + n for n in names}
+        info = z.infolist()
+        archive_names = [row.filename for row in info]
+        if len(archive_names) != len(expected) or set(archive_names) != expected:
+            raise ValueError("Unexpected or duplicate archive members")
+        listed = {row.filename: row for row in info}
         for item in entries:
             name = item["path"]
-            if not _allowed(name):
-                raise ValueError("Unsafe archive path")
-            if item["size"] > MAX_FILE:
-                raise ValueError("Oversized data")
-            content = z.read("data/" + name)
-            total += len(content)
-            if total > MAX_BUNDLE or len(content) != item["size"]:
+            record = listed["data/" + name]
+            # Reject an archive symlink, special file or decompression bomb.
+            mode = (record.external_attr >> 16) & 0o170000
+            if mode not in (0, 0o100000) or record.is_dir():
+                raise ValueError("Unsafe ZIP member type")
+            if record.file_size != item["size"] or record.file_size > MAX_FILE:
                 raise ValueError("Archive size mismatch")
+            with z.open(record, "r") as stream:
+                content = stream.read(item["size"] + 1)
+                if len(content) != item["size"] or stream.read(1):
+                    raise ValueError("Archive decompression size mismatch")
             if hashlib.sha256(content).hexdigest() != item["sha256"]:
                 raise ValueError("Archive checksum mismatch")
             files[name] = content
