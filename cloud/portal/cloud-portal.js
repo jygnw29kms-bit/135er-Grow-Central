@@ -31,13 +31,14 @@ async function cloudPushEnable(){
  if(!accessToken||!currentDeviceId)throw Error('Bitte zuerst Cloud-Anmeldung durchführen');
  if(!isSecureContext||!('serviceWorker' in navigator)||!('PushManager' in window))
   throw Error('Nur installierte HTTPS-PWA mit Web Push unterstützt');
+ if(Notification.permission==='denied')throw Error('Benachrichtigungen im iPhone-System gesperrt');
+ // iOS requires notification permission to follow the *direct* user gesture.
+ // Avoid a network await before requestPermission(), which loses activation.
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw Error('Keine Benachrichtigungsberechtigung');
  const data=await cloudPushStatus();
  if(!data||!data.can_subscribe||!data.vapid_public_key)
   throw Error('Cloud-Push-Server noch nicht bereit');
- if(Notification.permission==='denied')throw Error('Benachrichtigungen im iPhone-System gesperrt');
- // iOS prompts only from a deliberate click; never request permission on login.
- const permission=await Notification.requestPermission();
- if(permission!=='granted')throw Error('Keine Benachrichtigungsberechtigung');
  const registration=await navigator.serviceWorker.register('/gc-push-worker.js',{scope:'/'});
  const previous=await registration.pushManager.getSubscription();
  const subscription=previous||await registration.pushManager.subscribe({
