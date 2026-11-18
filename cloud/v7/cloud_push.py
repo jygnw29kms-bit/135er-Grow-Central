@@ -60,6 +60,61 @@ def ensure_schema(engine: Engine) -> None:
           ON gc_cloud_push_subscriptions(account_id, device_id)"""))
 
 
+
+def submit_owner_alert(
+    engine: Engine, device_id: str, event: dict, *,
+    send: Callable[[dict, dict], object] | None = None,
+) -> dict:
+    """Trusted in-process dispatch adapter, NOT an exposed HTTP endpoint.
+
+    Call only after the Cloud relay has validated event origin, its bound Pi
+    identity and its room. Push acceptance is not proof of handset display.
+    """
+    if not DEVICE.fullmatch(device_id):
+        raise ValueError("Invalid device ID")
+    if not isinstance(event, dict) or event.get("room_id") is None:
+        raise ValueError("Missing room-bound event")
+    room_id = event.get("room_id")
+    if not isinstance(room_id, str) or not re.fullmatch(r"room_[A-Za-z0-9_-]{1,110}", room_id):
+        raise ValueError("Invalid room ID")
+    private = os.getenv("GC_CLOUD_VAPID_PRIVATE_KEY", "")
+    subject = os.getenv("GC_CLOUD_WEBPUSH_SUBJECT", "")
+    if send is None:
+        if not private or not subject.startswith(("mailto:", "https:")):
+            return {"accepted": 0, "failed": 0, "status": "not_configured"}
+        try:
+            from pywebpush import webpush
+        except ImportError:
+            return {"accepted": 0, "failed": 0, "status": "sender_not_installed"}
+        def send(subscription: dict, data: dict) -> object:
+            import json
+            return webpush(subscription_info=subscription,
+                           data=json.dumps(data, separators=(",", ":")),
+                           vapid_private_key=private,
+                           vapid_claims={"sub": subject}, timeout=8)
+    with engine.connect() as db:
+        rows = db.execute(text("""SELECT s.endpoint, s.p256dh, s.auth
+              FROM gc_cloud_push_subscriptions s
+              JOIN accounts a ON a.id=s.account_id
+              JOIN devices d ON d.id=s.device_id AND d.account_id=s.account_id
+              WHERE s.device_id=:d AND a.status='active' AND d.revoked_at IS NULL"""),
+              {"d": device_id}).all()
+    payload = {"title": "Grow Central · Alarm",
+               "body": str(event.get("message") or event.get("kind") or "Statusänderung")[:180],
+               "room_id": room_id, "kind": str(event.get("kind") or "")[:80],
+               "url": "/"}
+    accepted = failed = 0
+    for endpoint, p256dh, auth in rows:
+        if not trusted_endpoint(endpoint):
+            continue
+        try:
+            send({"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}}, payload)
+            accepted += 1
+        except Exception:
+            failed += 1
+    return {"accepted": accepted, "failed": failed,
+            "status": "submitted" if accepted else "not_submitted"}
+
 def build_router(
     engine: Engine, *, account_from_access: Callable[[str], str],
     get_device_for_account: Callable[[str, str], object],
