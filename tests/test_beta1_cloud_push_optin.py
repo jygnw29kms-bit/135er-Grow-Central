@@ -116,3 +116,40 @@ def test_cloud_optin_is_a_user_click_and_token_stays_out_of_iframe():
         ROOT / "cloud/v7/cloud_push.py").read_text(encoding="utf-8")
     assert "app.include_router(_gc_push_router(" in patch
     assert "token" not in html.lower() or "token" not in html[:200]
+
+
+def test_dispatch_skips_revoked_and_disabled_accounts(tmp_path, monkeypatch):
+    from sqlalchemy import text
+    client, engine = make_api(tmp_path, monkeypatch)
+    with engine.begin() as db:
+        db.execute(text("""CREATE TABLE accounts
+            (id VARCHAR(36) PRIMARY KEY, status VARCHAR(20) NOT NULL)"""))
+        db.execute(text("""CREATE TABLE devices
+            (id VARCHAR(100) PRIMARY KEY, account_id VARCHAR(36) NOT NULL,
+             revoked_at BIGINT)"""))
+        db.execute(text("INSERT INTO accounts VALUES ('owner1','active')"))
+        db.execute(text("INSERT INTO devices VALUES ('device_1','owner1',NULL)"))
+    target = "/api/v2/push/devices/device_1/subscriptions"
+    assert client.post(target, headers=headers("owner1"), json=VALID).status_code == 201
+    sent = []
+    event = {"room_id": "room_alpha", "kind": "threshold_high", "message": "Luftfeuchte zu hoch"}
+    result = mod.submit_owner_alert(engine, "device_1", event,
+                                    send=lambda subscription, payload: sent.append((subscription, payload)))
+    assert result["accepted"] == 1
+    assert result["status"] == "submitted"
+    assert sent[0][1]["body"] == "Luftfeuchte zu hoch"
+    with engine.begin() as db:
+        db.execute(text("UPDATE accounts SET status='disabled' WHERE id='owner1'"))
+    assert mod.submit_owner_alert(engine, "device_1", event, send=lambda *_: sent.append(1))["accepted"] == 0
+    with engine.begin() as db:
+        db.execute(text("UPDATE accounts SET status='active' WHERE id='owner1'"))
+        db.execute(text("UPDATE devices SET revoked_at=1234 WHERE id='device_1'"))
+    assert mod.submit_owner_alert(engine, "device_1", event, send=lambda *_: sent.append(1))["accepted"] == 0
+    assert len(sent) == 1
+
+
+def test_dispatch_rejects_incorrect_room_identity_before_sending(tmp_path, monkeypatch):
+    _, engine = make_api(tmp_path, monkeypatch)
+    import pytest
+    with pytest.raises(ValueError):
+        mod.submit_owner_alert(engine, "device_1", {"room_id": "../../etc"}, send=lambda *_: None)
