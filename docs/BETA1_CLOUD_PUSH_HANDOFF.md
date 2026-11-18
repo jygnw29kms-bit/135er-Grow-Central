@@ -22,10 +22,10 @@ Für Folgeprüfungen gibt es jetzt `scripts/check_cloud_push_readiness.py`. Beis
 python3 scripts/check_cloud_push_readiness.py \
   --backend /opt/135er-growcentral-cloud/app.py \
   --venv-python /opt/135er-growcentral-cloud/venv/bin/python \
-  --push-worker /var/www/vhosts/EXAKTER-WEBROOT/gc-push-worker.js
+  --push-worker /var/www/vhosts/grow-central.de/135ercloud.grow-central.de/gc-push-worker.js
 ```
 
-Der letzte Webroot muss aus der tatsächlichen Cloud-Konfiguration ermittelt werden; `EXAKTER-WEBROOT` ist ausdrücklich **kein** bereits bestätigter Pfad. Exit 1 bedeutet: nicht freigabefähig. Installation/Update muss als atomarer, rücksetzbarer Vorgang erfolgen.
+Der Service-Worker-Pfad wurde auf dem produktiven Plesk-Rootserver **lesend bestätigt**. Die Cloud-API läuft unter `/opt/135er-growcentral-cloud` mit dem lokalen Uvicorn-Port `18765`; keine Konfiguration wurde verändert. Exit 1 bedeutet: nicht freigabefähig. Installation/Update muss als atomarer, rücksetzbarer Vorgang erfolgen.
 
 ## Installationsabfolge (noch NICHT ausgeführt)
 
