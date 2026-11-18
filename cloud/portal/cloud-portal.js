@@ -8,6 +8,65 @@ const $=id=>document.getElementById(id);
 let accessToken='',refreshToken='';
 let reconnectTimer=null,reconnectAttempts=0;
 let currentDeviceId=null;
+// Beta 1.0: explicit iOS Home-Screen push registration, bound to Cloud owner account.
+// Browser subscription secrets never enter the embedded device iframe.
+function pushMessage(value){if($('gcPushStatus'))$('gcPushStatus').textContent=value}
+function pushKey(bytes){
+ const input=bytes.replace(/-/g,'+').replace(/_/g,'/');
+ const raw=atob(input.padEnd(Math.ceil(input.length/4)*4,'='));
+ return Uint8Array.from(raw,letter=>letter.charCodeAt(0));
+}
+async function cloudPushStatus(){
+ if(!accessToken||!currentDeviceId){pushMessage('Nicht angemeldet / kein Gerät');return null}
+ const res=await fetch('/api/v2/push/devices/'+encodeURIComponent(currentDeviceId)+'/status',
+  {headers:{Authorization:'Bearer '+accessToken},cache:'no-store'});
+ if(!res.ok){pushMessage('Push-API noch nicht freigegeben (HTTP '+res.status+')');return null}
+ const data=await res.json();
+ pushMessage(data.can_subscribe?
+  data.registered_devices+' registrierte Geräte. Zustellung noch nicht verifiziert.':
+  'Push-Server noch nicht vollständig konfiguriert.');
+ return data;
+}
+async function cloudPushEnable(){
+ if(!accessToken||!currentDeviceId)throw Error('Bitte zuerst Cloud-Anmeldung durchführen');
+ if(!isSecureContext||!('serviceWorker' in navigator)||!('PushManager' in window))
+  throw Error('Nur installierte HTTPS-PWA mit Web Push unterstützt');
+ if(Notification.permission==='denied')throw Error('Benachrichtigungen im iPhone-System gesperrt');
+ // iOS requires notification permission to follow the *direct* user gesture.
+ // Avoid a network await before requestPermission(), which loses activation.
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw Error('Keine Benachrichtigungsberechtigung');
+ const data=await cloudPushStatus();
+ if(!data||!data.can_subscribe||!data.vapid_public_key)
+  throw Error('Cloud-Push-Server noch nicht bereit');
+ const registration=await navigator.serviceWorker.register('/gc-push-worker.js',{scope:'/'});
+ const previous=await registration.pushManager.getSubscription();
+ const subscription=previous||await registration.pushManager.subscribe({
+  userVisibleOnly:true,applicationServerKey:pushKey(data.vapid_public_key)});
+ const target='/api/v2/push/devices/'+encodeURIComponent(currentDeviceId)+'/subscriptions';
+ const response=await fetch(target,{method:'POST',cache:'no-store',
+  headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+  body:JSON.stringify(subscription.toJSON())});
+ if(!response.ok)throw Error('Cloud-Registrierung HTTP '+response.status);
+ pushMessage('iPhone-Push registriert. Die echte Alarmzustellung muss noch getestet werden.');
+}
+async function cloudPushDisable(){
+ if(!accessToken||!currentDeviceId)throw Error('Bitte zuerst Cloud-Anmeldung durchführen');
+ const registration=await navigator.serviceWorker.getRegistration('/gc-push-worker.js');
+ const subscription=registration?await registration.pushManager.getSubscription():null;
+ if(!subscription){pushMessage('Auf diesem Gerät ist keine Push-Subscription aktiv.');return}
+ const endpoint=subscription.endpoint;
+ const bytes=new TextEncoder().encode(endpoint);
+ const sha=await crypto.subtle.digest('SHA-256',bytes);
+ const digest=Array.from(new Uint8Array(sha),x=>x.toString(16).padStart(2,'0')).join('');
+ const res=await fetch('/api/v2/push/devices/'+encodeURIComponent(currentDeviceId)+
+  '/subscriptions/'+digest,{method:'DELETE',headers:{Authorization:'Bearer '+accessToken},cache:'no-store'});
+ if(!res.ok)throw Error('Serverseitiger Widerruf fehlgeschlagen (HTTP '+res.status+')');
+ await subscription.unsubscribe();
+ pushMessage('Push für dieses iPhone serverseitig widerrufen.');
+}
+$('gcPushEnable')?.addEventListener('click',()=>cloudPushEnable().catch(e=>pushMessage(e.message)));
+$('gcPushDisable')?.addEventListener('click',()=>cloudPushDisable().catch(e=>pushMessage(e.message)));
 async function listDevices(){
  const res=await fetch('/api/v2/account/devices',{headers:{Authorization:'Bearer '+accessToken},cache:'no-store'});
  if(!res.ok)throw Error('Geräteliste HTTP '+res.status);
@@ -23,6 +82,7 @@ async function listDevices(){
  if(!devices.length)target.textContent='Noch keine aktiven Geräte gekoppelt.';
  if(!devices.length){remoteClose();return;}
  const selected=devices[0].id;
+ queueMicrotask(()=>cloudPushStatus().catch(()=>pushMessage('Push-Status nicht erreichbar')));
  if(selected===currentDeviceId&&remoteSocket&&(remoteSocket.readyState===WebSocket.OPEN||remoteSocket.readyState===WebSocket.CONNECTING)){
   refreshDeviceData();
  }else remoteOpen(selected);
