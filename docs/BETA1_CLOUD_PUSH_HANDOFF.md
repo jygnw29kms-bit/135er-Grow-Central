@@ -12,6 +12,21 @@
 - Accounts mit `status != active` und widerrufene Geräte werden bei jedem internen Versand ausgeschlossen. Keine Geheimnisse in HTTP-Antworten, Logs, Git, Nutzeroberfläche oder Diagnosetext.
 - Im Fehlerfall keine automatische Wiederholung eines alarmierenden Ereignisses ohne Idempotenz-/Deduplikationsgarantie.
 
+## Tatsächlicher Rootserver-Preflight (18.11.2026, nur lesend)
+
+Plesk-Cloud-Dienste `135er-growcentral-cloud.service`, `135er-growcentral-cloud-admin.service` und `135er-growcentral-cloud-platform.service` waren **aktiv**. Die vorhandene Cloud-Kollaborations-API war eingebunden. Im verwendeten `/opt/135er-growcentral-cloud/venv/bin/python` waren **qrcode=False**, **pywebpush=False**; `/opt/135er-growcentral-cloud/cloud_push.py` war **nicht vorhanden**. Damit kann der Server derzeit weder den neuen Cloud-Push-Adapter laden, noch ist die QR-Laufzeitabhängigkeit für die bestehende Cloud-Einladungsfunktion nachgewiesen.
+
+Für Folgeprüfungen gibt es jetzt `scripts/check_cloud_push_readiness.py`. Beispiel (nur boolesche Werte, keine Secrets):
+
+```bash
+python3 scripts/check_cloud_push_readiness.py \
+  --backend /opt/135er-growcentral-cloud/app.py \
+  --venv-python /opt/135er-growcentral-cloud/venv/bin/python \
+  --push-worker /var/www/vhosts/EXAKTER-WEBROOT/gc-push-worker.js
+```
+
+Der letzte Webroot muss aus der tatsächlichen Cloud-Konfiguration ermittelt werden; `EXAKTER-WEBROOT` ist ausdrücklich **kein** bereits bestätigter Pfad. Exit 1 bedeutet: nicht freigabefähig. Installation/Update muss als atomarer, rücksetzbarer Vorgang erfolgen.
+
 ## Installationsabfolge (noch NICHT ausgeführt)
 
 1. Aktuelle Cloud-Backend-Sicherung / Restorepunkt, bestehendes DB-Schema, Admin-/Owner-ACL und Service-Version erfassen. Für Cloud-System `cloud/v7/cloud_push.py` und das Werkzeug `scripts/patch_cloud_push.py` separat bereitstellen.
